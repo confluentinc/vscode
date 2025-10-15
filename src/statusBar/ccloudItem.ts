@@ -1,5 +1,6 @@
-import { StatusBarAlignment, StatusBarItem, window } from "vscode";
-import { CCloudStatusSummary, Incident, ScheduledMaintenance } from "../ccloudStatus/types";
+import type { StatusBarItem } from "vscode";
+import { StatusBarAlignment, window } from "vscode";
+import type { CCloudStatusSummary, Incident, ScheduledMaintenance } from "../ccloudStatus/types";
 import { IconNames } from "../constants";
 import {
   ACTIVE_INCIDENT_STATUS_ORDER,

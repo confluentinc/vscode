@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
 import { CCloudResourceLoader } from "../loaders";
-import { CCloudEnvironment } from "../models/environment";
+import type { CCloudEnvironment } from "../models/environment";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 
 export type envFilter = (env: CCloudEnvironment) => boolean;

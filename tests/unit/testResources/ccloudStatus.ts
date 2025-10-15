@@ -1,20 +1,22 @@
 import { randomUUID } from "crypto";
-import {
+import type {
   AffectedComponent,
-  AffectedComponentFromJSON,
   CCloudStatusSummary,
-  CCloudStatusSummaryFromJSON,
   Incident,
-  IncidentFromJSON,
   ScheduledMaintenance,
-  ScheduledMaintenanceFromJSON,
   StatusComponent,
-  StatusComponentFromJSON,
   StatusPage,
-  StatusPageFromJSON,
   StatusUpdate,
-  StatusUpdateFromJSON,
   SummaryStatus,
+} from "../../../src/ccloudStatus/types";
+import {
+  AffectedComponentFromJSON,
+  CCloudStatusSummaryFromJSON,
+  IncidentFromJSON,
+  ScheduledMaintenanceFromJSON,
+  StatusComponentFromJSON,
+  StatusPageFromJSON,
+  StatusUpdateFromJSON,
   SummaryStatusFromJSON,
 } from "../../../src/ccloudStatus/types";
 

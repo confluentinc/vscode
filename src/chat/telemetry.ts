@@ -1,8 +1,9 @@
-import { ChatResultFeedback, ChatResultFeedbackKind } from "vscode";
+import type { ChatResultFeedback } from "vscode";
+import { ChatResultFeedbackKind } from "vscode";
 import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../extensionSettings/constants";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { ToolCallMetadata } from "./tools/types";
-import { CustomChatResult } from "./types";
+import type { ToolCallMetadata } from "./tools/types";
+import type { CustomChatResult } from "./types";
 
 export function handleFeedback(feedback: ChatResultFeedback): void {
   logUsage(UserEvent.CopilotInteraction, {

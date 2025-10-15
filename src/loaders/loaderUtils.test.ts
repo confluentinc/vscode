@@ -11,17 +11,18 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/f
 import { TEST_CCLOUD_ORGANIZATION_ID } from "../../tests/unit/testResources/organization";
 import { createResponseError, createTestTopicData } from "../../tests/unit/testUtils";
 import { TopicV3Api } from "../clients/kafkaRest";
-import { TopicData } from "../clients/kafkaRest/models";
-import {
+import type { TopicData } from "../clients/kafkaRest/models";
+import type {
   GetSchemaByVersionRequest,
   Schema as ResponseSchema,
-  SubjectsV1Api,
 } from "../clients/schemaRegistryRest";
-import { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
+import { SubjectsV1Api } from "../clients/schemaRegistryRest";
+import type { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
 import * as loaderUtils from "../loaders/loaderUtils";
-import { Schema, SchemaType, Subject } from "../models/schema";
-import * as sidecar from "../sidecar";
-import { SidecarHandle } from "../sidecar";
+import type { Schema } from "../models/schema";
+import { SchemaType, Subject } from "../models/schema";
+import type * as sidecar from "../sidecar";
+import type { SidecarHandle } from "../sidecar";
 import * as privateNetworking from "../utils/privateNetworking";
 
 // as from fetchTopics() result.

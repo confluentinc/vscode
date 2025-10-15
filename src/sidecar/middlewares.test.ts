@@ -1,9 +1,11 @@
 import sinon from "sinon";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { ConnectedState, RequestContext } from "../clients/sidecar";
+import type { RequestContext } from "../clients/sidecar";
+import { ConnectedState } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated } from "../emitters";
-import { getResourceManager, ResourceManager } from "../storage/resourceManager";
+import type { ResourceManager } from "../storage/resourceManager";
+import { getResourceManager } from "../storage/resourceManager";
 import { SIDECAR_CONNECTION_ID_HEADER } from "./constants";
 import { CCloudAuthStatusMiddleware } from "./middlewares";
 

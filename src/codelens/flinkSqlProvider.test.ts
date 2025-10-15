@@ -1,7 +1,9 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { CodeLens, Position, Range, TextDocument, Uri } from "vscode";
-import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
+import type { CodeLens, TextDocument } from "vscode";
+import { Position, Range, Uri } from "vscode";
+import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
+import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedResourceManager } from "../../tests/stubs/extensionStorage";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
@@ -10,17 +12,18 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/f
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
-import { CCloudResourceLoader } from "../loaders";
+import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId } from "../models/resource";
+import type { EnvironmentId } from "../models/resource";
 import * as ccloud from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
-import { getResourceManager, ResourceManager } from "../storage/resourceManager";
-import { UriMetadata } from "../storage/types";
+import type { ResourceManager } from "../storage/resourceManager";
+import { getResourceManager } from "../storage/resourceManager";
+import type { UriMetadata } from "../storage/types";
+import type { CatalogDatabase } from "./flinkSqlProvider";
 import {
-  CatalogDatabase,
   FlinkSqlCodelensProvider,
   getCatalogDatabaseFromMetadata,
   getComputePoolFromMetadata,

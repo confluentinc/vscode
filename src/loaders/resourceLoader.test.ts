@@ -21,15 +21,17 @@ import {
   createTestTopicData,
   getTestExtensionContext,
 } from "../../tests/unit/testUtils";
-import { TopicData } from "../clients/kafkaRest";
+import type { TopicData } from "../clients/kafkaRest";
 import { SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import * as errors from "../errors";
-import { ConnectionId } from "../models/resource";
-import { Schema, Subject } from "../models/schema";
+import type { ConnectionId } from "../models/resource";
+import type { Subject } from "../models/schema";
+import { Schema } from "../models/schema";
 import * as notifications from "../notifications";
-import { SidecarHandle } from "../sidecar";
-import { getResourceManager, ResourceManager } from "../storage/resourceManager";
+import type { SidecarHandle } from "../sidecar";
+import type { ResourceManager } from "../storage/resourceManager";
+import { getResourceManager } from "../storage/resourceManager";
 import { clearWorkspaceState } from "../storage/utils";
 import { CCloudResourceLoader } from "./ccloudResourceLoader";
 import { DirectResourceLoader } from "./directResourceLoader";

@@ -1,6 +1,6 @@
 import { CCLOUD_BASE_PATH } from "../../../src/constants";
+import type { CCloudFlinkDbKafkaCluster } from "../../../src/models/kafkaCluster";
 import {
-  CCloudFlinkDbKafkaCluster,
   CCloudKafkaCluster,
   DirectKafkaCluster,
   LocalKafkaCluster,

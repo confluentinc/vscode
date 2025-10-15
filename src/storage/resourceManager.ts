@@ -1,25 +1,19 @@
 import { Mutex } from "async-mutex";
-import { SecretStorage, Uri } from "vscode";
-import { AuthCallbackEvent } from "../authn/types";
-import {
-  ConnectedState,
-  ConnectionSpec,
-  ConnectionSpecFromJSON,
-  ConnectionSpecToJSON,
-} from "../clients/sidecar";
+import type { SecretStorage, Uri } from "vscode";
+import type { AuthCallbackEvent } from "../authn/types";
+import type { ConnectionSpec } from "../clients/sidecar";
+import { ConnectedState, ConnectionSpecFromJSON, ConnectionSpecToJSON } from "../clients/sidecar";
 import { getExtensionContext } from "../context/extension";
-import { FormConnectionType } from "../directConnections/types";
+import type { FormConnectionType } from "../directConnections/types";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
-import { Environment, EnvironmentType, getEnvironmentClass } from "../models/environment";
+import type { Environment, EnvironmentType } from "../models/environment";
+import { getEnvironmentClass } from "../models/environment";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkUdf } from "../models/flinkUDF";
-import {
-  CCloudFlinkDbKafkaCluster,
-  KafkaClusterType,
-  getKafkaClusterClass,
-} from "../models/kafkaCluster";
-import {
+import type { CCloudFlinkDbKafkaCluster, KafkaClusterType } from "../models/kafkaCluster";
+import { getKafkaClusterClass } from "../models/kafkaCluster";
+import type {
   ConnectionId,
   EnvironmentId,
   IEnvProviderRegion,
@@ -27,10 +21,12 @@ import {
   ISchemaRegistryResource,
 } from "../models/resource";
 import { Subject } from "../models/schema";
-import { SchemaRegistryType, getSchemaRegistryClass } from "../models/schemaRegistry";
+import type { SchemaRegistryType } from "../models/schemaRegistry";
+import { getSchemaRegistryClass } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { SecretStorageKeys, UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
-import { GlobalState, UriMetadata, UriMetadataMap, WorkspaceState } from "./types";
+import type { UriMetadataKeys } from "./constants";
+import { SecretStorageKeys, WorkspaceStorageKeys } from "./constants";
+import type { GlobalState, UriMetadata, UriMetadataMap, WorkspaceState } from "./types";
 import { getGlobalState, getSecretStorage, getWorkspaceState } from "./utils";
 
 const logger = new Logger("storage.resourceManager");

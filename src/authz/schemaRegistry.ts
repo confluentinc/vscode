@@ -1,9 +1,10 @@
-import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
+import type { SubjectsV1Api } from "../clients/schemaRegistryRest";
+import { ResponseError } from "../clients/schemaRegistryRest";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { isCCloud } from "../models/resource";
-import { KafkaTopic } from "../models/topic";
+import type { KafkaTopic } from "../models/topic";
 import { showWarningNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
 

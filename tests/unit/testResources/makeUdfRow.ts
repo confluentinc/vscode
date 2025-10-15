@@ -1,4 +1,4 @@
-import { RawUdfSystemCatalogRow } from "../../../src/loaders/ccloudResourceLoaderUtils";
+import type { RawUdfSystemCatalogRow } from "../../../src/loaders/ccloudResourceLoaderUtils";
 
 /**
  * Make a function-describing row as if from UDF_SYSTEM_CATALOG_QUERY.

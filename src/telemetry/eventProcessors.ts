@@ -1,4 +1,4 @@
-import { Event } from "@sentry/node";
+import type { Event } from "@sentry/node";
 import { env, workspace } from "vscode";
 import { observabilityContext } from "../context/observability";
 

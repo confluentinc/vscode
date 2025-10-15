@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { commands, ThemeIcon, window } from "vscode";
+import type { ThemeIcon } from "vscode";
+import { commands, window } from "vscode";
 import {
   getStubbedCCloudResourceLoader,
   getStubbedDirectResourceLoader,
@@ -14,10 +15,10 @@ import {
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
 import { IconNames } from "../constants";
-import { LocalResourceLoader } from "../loaders";
+import type { LocalResourceLoader } from "../loaders";
 import { KafkaTopic } from "../models/topic";
 import { topicQuickPick } from "./topics";
-import { QuickPickItemWithValue } from "./types";
+import type { QuickPickItemWithValue } from "./types";
 
 describe("quickpicks/topics.ts topicQuickPick()", function () {
   let sandbox: sinon.SinonSandbox;

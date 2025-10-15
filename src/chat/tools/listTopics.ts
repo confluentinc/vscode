@@ -1,22 +1,20 @@
-import {
+import type {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
-  LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolConfirmationMessages,
   LanguageModelToolInvocationOptions,
   LanguageModelToolInvocationPrepareOptions,
-  LanguageModelToolResult,
-  MarkdownString,
   PreparedToolInvocation,
   ProviderResult,
 } from "vscode";
+import { LanguageModelTextPart, LanguageModelToolResult, MarkdownString } from "vscode";
 import { ResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
-import { KafkaCluster } from "../../models/kafkaCluster";
-import { ConnectionId, EnvironmentId } from "../../models/resource";
-import { KafkaTopic } from "../../models/topic";
+import type { KafkaCluster } from "../../models/kafkaCluster";
+import type { ConnectionId, EnvironmentId } from "../../models/resource";
+import type { KafkaTopic } from "../../models/topic";
 import { summarizeTopic } from "../summarizers/topics";
 import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 

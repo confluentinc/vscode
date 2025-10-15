@@ -1,5 +1,5 @@
-import { LanguageModelToolCallPart } from "vscode";
-import { TextOnlyToolResultPart } from "./base";
+import type { LanguageModelToolCallPart } from "vscode";
+import type { TextOnlyToolResultPart } from "./base";
 
 /**
  * Object representing the request/response of a single tool call, stored in the `ChatResult`

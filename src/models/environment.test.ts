@@ -1,5 +1,6 @@
 import * as assert from "assert";
-import { MarkdownString, ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
+import type { MarkdownString } from "vscode";
+import { ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
@@ -21,7 +22,7 @@ import {
 } from "./environment";
 import { CCloudFlinkComputePool } from "./flinkComputePool";
 import { CCloudKafkaCluster, DirectKafkaCluster, LocalKafkaCluster } from "./kafkaCluster";
-import { EnvironmentId } from "./resource";
+import type { EnvironmentId } from "./resource";
 import { CCloudSchemaRegistry, DirectSchemaRegistry, LocalSchemaRegistry } from "./schemaRegistry";
 
 describe("models/environment.ts DirectEnvironment", () => {

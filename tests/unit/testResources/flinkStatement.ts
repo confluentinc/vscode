@@ -1,8 +1,8 @@
-import { ColumnDetails, SqlV1StatementStatus } from "../../../src/clients/flinkSql";
+import type { ColumnDetails, SqlV1StatementStatus } from "../../../src/clients/flinkSql";
 import { ConnectionType } from "../../../src/clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
 import { FlinkStatement, Phase } from "../../../src/models/flinkStatement";
-import { EnvironmentId, OrganizationId } from "../../../src/models/resource";
+import type { EnvironmentId, OrganizationId } from "../../../src/models/resource";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_PROVIDER, TEST_CCLOUD_REGION } from "./environments";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "./flinkComputePool";
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "./kafkaCluster";

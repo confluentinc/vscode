@@ -1,5 +1,5 @@
-import { Subject } from "../../models/schema";
-import { KafkaTopic } from "../../models/topic";
+import type { Subject } from "../../models/schema";
+import type { KafkaTopic } from "../../models/topic";
 
 /** Create a Markdown-formatted list of {@link KafkaTopic} names and their children as {@link Subject}. */
 export function summarizeTopic(topic: KafkaTopic): string {

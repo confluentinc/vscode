@@ -1,18 +1,21 @@
 import { randomUUID } from "crypto";
 import { platform } from "os";
-import { Disposable, Uri, ViewColumn, WebviewPanel, commands, env, window } from "vscode";
-import { AuthErrors, ConnectedState, Connection, ConnectionType } from "./clients/sidecar";
+import type { Disposable, Uri, WebviewPanel } from "vscode";
+import { ViewColumn, commands, env, window } from "vscode";
+import type { AuthErrors, ConnectedState, Connection } from "./clients/sidecar";
+import { ConnectionType } from "./clients/sidecar";
 import { DirectConnectionManager } from "./directConnectManager";
 import { getCredentialsType } from "./directConnections/credentials";
-import { SupportedAuthTypes } from "./directConnections/types";
+import type { SupportedAuthTypes } from "./directConnections/types";
 import { directConnectionsChanged } from "./emitters";
 import { KRB5_CONFIG_PATH } from "./extensionSettings/constants";
-import { ConnectionId } from "./models/resource";
+import type { ConnectionId } from "./models/resource";
 import { showInfoNotificationWithButtons } from "./notifications";
-import { CustomConnectionSpec, getResourceManager } from "./storage/resourceManager";
+import type { CustomConnectionSpec } from "./storage/resourceManager";
+import { getResourceManager } from "./storage/resourceManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
-import { PostResponse, TestResponse, post } from "./webview/direct-connect-form";
+import type { PostResponse, TestResponse, post } from "./webview/direct-connect-form";
 import connectionFormTemplate from "./webview/direct-connect-form.html";
 
 type MessageSender = OverloadUnion<typeof post>;

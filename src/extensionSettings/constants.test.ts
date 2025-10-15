@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { extensions } from "vscode";
 import { EXTENSION_ID } from "../constants";
-import { ExtensionConfiguration } from "./base";
+import type { ExtensionConfiguration } from "./base";
 import {
   ALLOW_OLDER_SCHEMA_VERSIONS,
   CHAT_SEND_ERROR_DATA,

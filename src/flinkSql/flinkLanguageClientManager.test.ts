@@ -2,14 +2,15 @@ import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
-import { AddressInfo, WebSocketServer } from "ws";
-import {
-  eventEmitterStubs,
+import type { AddressInfo } from "ws";
+import { WebSocketServer } from "ws";
+import type {
   StubbedEventEmitters,
-  vscodeEventRegistrationStubs,
   VscodeEventRegistrationStubs,
 } from "../../tests/stubs/emitters";
-import { getStubbedSecretStorage, StubbedSecretStorage } from "../../tests/stubs/extensionStorage";
+import { eventEmitterStubs, vscodeEventRegistrationStubs } from "../../tests/stubs/emitters";
+import type { StubbedSecretStorage } from "../../tests/stubs/extensionStorage";
+import { getStubbedSecretStorage } from "../../tests/stubs/extensionStorage";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
@@ -22,20 +23,17 @@ import * as flinkSqlProvider from "../codelens/flinkSqlProvider";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
-import { CCloudResourceLoader } from "../loaders";
+import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId } from "../models/resource";
+import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import type { CCloudKafkaCluster } from "../models/kafkaCluster";
+import type { EnvironmentId } from "../models/resource";
 import * as ccloud from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
 import { SecretStorageKeys, UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-import {
-  ComputePoolInfo,
-  FlinkLanguageClientManager,
-  FLINKSQL_LANGUAGE_ID,
-} from "./flinkLanguageClientManager";
+import type { ComputePoolInfo } from "./flinkLanguageClientManager";
+import { FlinkLanguageClientManager, FLINKSQL_LANGUAGE_ID } from "./flinkLanguageClientManager";
 import * as languageClient from "./languageClient";
 
 describe("FlinkLanguageClientManager", () => {

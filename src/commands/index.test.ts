@@ -9,7 +9,7 @@ import {
 import { ConnectionType } from "../clients/sidecar";
 import * as errors from "../errors";
 import * as featureFlags from "../featureFlags/evaluation";
-import { ConnectionId, IResourceBase } from "../models/resource";
+import type { ConnectionId, IResourceBase } from "../models/resource";
 import * as notifications from "../notifications";
 import * as telemetry from "../telemetry/events";
 import { titleCase } from "../utils";

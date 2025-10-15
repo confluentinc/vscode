@@ -1,6 +1,7 @@
 import archiver from "archiver";
 import { createWriteStream } from "fs";
-import { Uri, commands, window, workspace } from "vscode";
+import type { Uri } from "vscode";
+import { commands, window, workspace } from "vscode";
 import { Logger } from "../../logging";
 
 const logger = new Logger("commands.utils.zipFiles");

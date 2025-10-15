@@ -1,6 +1,6 @@
 import Sinon from "sinon";
-import * as vscode from "vscode";
-import { UserEvent } from "./events";
+import type * as vscode from "vscode";
+import type { UserEvent } from "./events";
 import { sendTelemetryIdentifyEvent } from "./telemetry";
 import * as telemetry from "./telemetryLogger";
 

@@ -5,7 +5,7 @@ import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notif
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 
 import { LOCAL_CONNECTION_ID } from "../constants";
-import { SidecarHandle } from "../sidecar";
+import type { SidecarHandle } from "../sidecar";
 import { getLocalResources } from "./local";
 
 describe("local.ts getLocalResources()", () => {

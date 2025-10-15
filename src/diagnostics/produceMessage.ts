@@ -1,4 +1,4 @@
-import { JSONSchema } from "vscode-json-languageservice";
+import type { JSONSchema } from "vscode-json-languageservice";
 
 export const PRODUCE_MESSAGE_SCHEMA: JSONSchema = {
   $schema: "http://json-schema.org/draft-07/schema#",

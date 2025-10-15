@@ -1,14 +1,14 @@
 import { createHash } from "crypto";
 import { toKafkaTopicOperations } from "../authz/types";
-import { TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
-import { Schema as ResponseSchema, SubjectsV1Api } from "../clients/schemaRegistryRest";
+import type { TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
+import type { Schema as ResponseSchema, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { isResponseError } from "../errors";
-import { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
+import type { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
 import { Logger } from "../logging";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import type { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud } from "../models/resource";
 import { Schema, SchemaType, Subject, subjectMatchesTopicName } from "../models/schema";
-import { SchemaRegistry } from "../models/schemaRegistry";
+import type { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
 import {

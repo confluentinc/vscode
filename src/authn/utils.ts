@@ -1,4 +1,5 @@
-import { authentication, AuthenticationGetSessionOptions, AuthenticationSession } from "vscode";
+import type { AuthenticationGetSessionOptions, AuthenticationSession } from "vscode";
+import { authentication } from "vscode";
 import { AUTH_PROVIDER_ID } from "../constants";
 
 /**
