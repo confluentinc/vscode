@@ -6,7 +6,7 @@ import { isResponseError, logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { FlinkArtifact } from "../models/flinkArtifact";
-import { FlinkUdf } from "../models/flinkUDF";
+import { FlinkUdf } from "../models/flinkSystemCatalog";
 import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,

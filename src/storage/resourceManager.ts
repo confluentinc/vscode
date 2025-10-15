@@ -13,7 +13,7 @@ import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { Environment, EnvironmentType, getEnvironmentClass } from "../models/environment";
 import { FlinkArtifact } from "../models/flinkArtifact";
-import { FlinkUdf } from "../models/flinkUDF";
+import { FlinkUdf } from "../models/flinkSystemCatalog";
 import {
   CCloudFlinkDbKafkaCluster,
   KafkaClusterType,
