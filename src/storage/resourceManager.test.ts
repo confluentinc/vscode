@@ -32,7 +32,7 @@ import {
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { FlinkArtifact } from "../models/flinkArtifact";
-import { FlinkUdf } from "../models/flinkUDF";
+import { FlinkUdf } from "../models/flinkSystemCatalog";
 import {
   CCloudFlinkDbKafkaCluster,
   CCloudKafkaCluster,

@@ -21,7 +21,7 @@ import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
 import { EventChangeType, SubjectChangeEvent } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
-import { TopicFetchError } from "../loaders/loaderUtils";
+import { TopicFetchError } from "../loaders/utils/loaderUtils";
 import { CCloudEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId } from "../models/resource";
