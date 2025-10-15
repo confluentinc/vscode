@@ -202,14 +202,15 @@ describe("flinkArtifacts", () => {
       region: "australiaeast",
       environment: " env-123456",
     };
-
-    const mockProgress = {
-      report: sandbox.stub(),
-    } as vscode.Progress<unknown>;
     const params = { ...mockParams };
     const uploadUrl = { ...mockPresignedUrlResponse };
 
+    let mockProgress: vscode.Progress<unknown>;
+
     beforeEach(() => {
+      mockProgress = {
+        report: sandbox.stub(),
+      } as vscode.Progress<unknown>;
       withProgressStub = sandbox.stub(vscode.window, "withProgress").callsFake((_, callback) => {
         const mockToken = {} as vscode.CancellationToken;
         return Promise.resolve(callback(mockProgress, mockToken));
@@ -217,24 +218,13 @@ describe("flinkArtifacts", () => {
     });
 
     it("should report progress correctly through all steps", async () => {
-      const progressReportStub = sandbox.stub();
-      withProgressStub.callsFake(async (options, callback) => {
-        return await callback(
-          {
-            report: progressReportStub,
-          },
-          {} as vscode.CancellationToken,
-        );
-      });
-
       sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
       sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
       sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").resolves(mockCreateResponse);
 
       await handleWithProgressForUploadArtifact(params, mockProgress);
 
-      sinon.assert.calledOnce(withProgressStub);
-
+      const progressReportStub = mockProgress.report as sinon.SinonStub;
       sinon.assert.calledThrice(progressReportStub);
       sinon.assert.calledWithMatch(progressReportStub.getCall(0), {
         message: sinon.match(/Requesting presigned upload URL/),
