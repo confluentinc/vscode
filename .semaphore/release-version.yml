@@ -92,7 +92,8 @@ blocks:
                 NOTES_FLAGS="--generate-notes --notes-start-tag $PREV_TAG"
               else
                 echo "Looking up the latest non-prerelease GitHub release tag..."
-                PREV_TAG=$(gh release list --limit 10 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease == false) | .tagName' | head -n 1)
+                RELEASES_URL="https://api.github.com/repos/confluentinc/vscode/releases"
+                PREV_TAG=$(curl -s ${RELEASES_URL} | jq -r '.[] | select(.prerelease == false) | .tag_name' | head -n 1)
                 if [ -z "$PREV_TAG" ]; then
                   echo "No previous non-prerelease tag found. Skipping automatic release notes generation."
                   NOTES_FLAGS=""
