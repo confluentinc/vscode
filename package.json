@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.8.0-36",
+  "version": "1.8.0-37",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -720,6 +720,12 @@
         "command": "confluent.support.saveSupportZip",
         "title": "Save Support File (.zip)",
         "category": "Confluent: Support"
+      },
+      {
+        "command": "confluent.testInspectJar",
+        "icon": "$(file-binary)",
+        "title": "Inspect JAR File",
+        "category": "Confluent: Flink Artifacts"
       },
       {
         "command": "confluent.topic.consume",
@@ -1598,6 +1604,10 @@
           "when": "true"
         },
         {
+          "command": "confluent.testInspectJar",
+          "when": "false"
+        },
+        {
           "command": "confluent.topic.consume",
           "when": "true"
         },
@@ -2125,6 +2135,11 @@
           "command": "confluent.uploadArtifact",
           "group": "confluent@1",
           "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && resourceExtname == .jar"
+        },
+        {
+          "command": "confluent.testInspectJar",
+          "group": "confluent@2",
+          "when": "isDevelopment && resourceExtname == .jar"
         }
       ],
       "confluent.flinkdatabase.viewMode": [
@@ -2498,6 +2513,8 @@
     "@types/sinon": "^17.0.3",
     "@types/tail": "^2.2.3",
     "@types/vscode": "^1.96.0",
+    "@types/yauzl": "^2.10.3",
+    "@types/yazl": "^3.3.0",
     "@types/ws": "^8.5.13",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",
@@ -2523,7 +2540,8 @@
     "sanitize-html": "^2.14.0",
     "sinon": "^18.0.1",
     "typescript": "^5.4.2",
-    "typescript-eslint": "^8.25.0"
+    "typescript-eslint": "^8.25.0",
+    "yazl": "^2.5.1"
   },
   "dependencies": {
     "@segment/analytics-node": "^2.1.2",
@@ -2550,6 +2568,7 @@
     "vscode-json-languageservice": "^5.4.2",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
+    "yauzl": "^2.10.0",
     "ws": "^8.18.0"
   }
 }
