@@ -5,8 +5,10 @@ description: "Unit testing practices with Mocha, Sinon, and Assert"
 
 # Unit Testing with Mocha, Sinon, and Assert
 
-Tests should be run with `npx gulp test` (use `--coverage` flag for Istanbul reports). When writing
-unit tests for this extension:
+Tests should be run with `npx gulp test` (use `--coverage` flag for Istanbul reports). Specific
+tests can be run by name with `npx gulp test -t "test name here"`.
+
+When writing unit tests for this extension:
 
 ## Test Structure and Naming
 
