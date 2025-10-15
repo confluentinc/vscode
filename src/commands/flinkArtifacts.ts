@@ -14,6 +14,7 @@ import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
   showInfoNotificationWithButtons,
+  showWarningNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
@@ -21,6 +22,7 @@ import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegat
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import { detectClassesAndRegisterUDFs } from "./utils/udfRegistration";
 import {
+  ArtifactUploadParams,
   buildUploadErrorMessage,
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
@@ -40,6 +42,39 @@ import {
  * If not provided, the user will be prompted for all necessary information.
  */
 
+export async function handleWithProgressForUploadArtifact(
+  params: ArtifactUploadParams | undefined,
+  progress: vscode.Progress<{ message?: string; increment?: number }>,
+) {
+  const response = await executeArtifactUpload(params, progress);
+  const viewArtifactsButton = "View Artifacts";
+  if (response) {
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "upload",
+      status: "succeeded",
+      kind: "CloudProviderUpload",
+      cloud: params?.cloud,
+      region: params?.region,
+    });
+    void showInfoNotificationWithButtons(
+      `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
+      {
+        "Register UDFs": async () => {
+          if (params?.selectedFile) {
+            await detectClassesAndRegisterUDFs({ selectedFile: params.selectedFile });
+          }
+        },
+        [viewArtifactsButton]: async () => {
+          await setFlinkArtifactsViewModeCommand();
+        },
+      },
+    );
+  } else {
+    void showWarningNotificationWithButtons(
+      `Artifact upload completed, but no response was returned from Confluent Cloud.`,
+    );
+  }
+}
 export async function uploadArtifactCommand(
   item?: CCloudFlinkComputePool | CCloudKafkaCluster | vscode.Uri,
 ): Promise<void> {
@@ -55,24 +90,7 @@ export async function uploadArtifactCommand(
         cancellable: false,
       },
       async (progress) => {
-        const response = await executeArtifactUpload(params, progress);
-        if (response) {
-          logUsage(UserEvent.FlinkArtifactAction, {
-            action: "upload",
-            status: "succeeded",
-            kind: "CloudProviderUpload",
-            cloud: params.cloud,
-            region: params.region,
-          });
-          void showInfoNotificationWithButtons(
-            `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
-            {
-              "Register UDFs": async () => {
-                await detectClassesAndRegisterUDFs({ selectedFile: params.selectedFile });
-              },
-            },
-          );
-        }
+        await handleWithProgressForUploadArtifact(params, progress);
       },
     );
   } catch (err) {
