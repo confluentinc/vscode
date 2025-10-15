@@ -23,6 +23,10 @@ global_job_config:
     commands:
       - checkout
       - make ci-bin-sem-cache-restore
+  epilogue:
+    always:
+      commands:
+        - make ci-bin-sem-cache-store
 
 blocks:
   - name: "Linux x64: Playwright E2E Tests"
@@ -62,7 +66,6 @@ blocks:
         always:
           commands:
             - make remove-test-env
-            - make ci-bin-sem-cache-store
             - make cache-docker-images
             - make store-test-results-to-semaphore
             - make merge-blob-reports
@@ -165,7 +168,6 @@ blocks:
         always:
           commands:
             - Remove-Item .env -ErrorAction SilentlyContinue
-            - make ci-bin-sem-cache-store
             # Cache Docker images if Docker is available
             - |
               try {
