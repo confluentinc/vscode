@@ -20,6 +20,7 @@ import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
+import { detectClassesAndRegisterUDFs } from "./utils/udfRegistration";
 import {
   ArtifactUploadParams,
   buildUploadErrorMessage,
@@ -58,6 +59,11 @@ export async function handleWithProgressForUploadArtifact(
     void showInfoNotificationWithButtons(
       `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
       {
+        "Register UDFs": async () => {
+          if (params?.selectedFile) {
+            await detectClassesAndRegisterUDFs({ selectedFile: params.selectedFile });
+          }
+        },
         [viewArtifactsButton]: async () => {
           await setFlinkArtifactsViewModeCommand();
         },
