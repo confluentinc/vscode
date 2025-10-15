@@ -147,10 +147,6 @@ blocks:
             - npx gulp bundle
             - VSIX_FILE=$(find out/ -name "*.vsix")
             - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename "${VSIX_FILE}") --force
-            # NOTE: If you see micro-versions in the VSIX filename and this isn't for a pre-release,
-            # it's because the wrong commit SHA was used. Look for a commit with a message like
-            # 'chore: version bump v1.7.0' before any other commits that start incrementing micro-
-            # versions (like 'chore: version bump v1.7.1-1 [ci skip]').
   - name: "Upload VSIX Files to GitHub Release"
     dependencies: ["Package VSIX Files"]
     task:
