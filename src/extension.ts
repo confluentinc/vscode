@@ -54,7 +54,6 @@ import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { registerLocalResourceWorkflows } from "./docker/workflows/workflowInitialization";
 import { DocumentMetadataManager } from "./documentMetadataManager";
-import { FlinkStatementDocumentProvider } from "./documentProviders/flinkStatement";
 import { MESSAGE_URI_SCHEME, MessageDocumentProvider } from "./documentProviders/message";
 import { SCHEMA_URI_SCHEME, SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
@@ -587,11 +586,7 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
 function setupDocumentProviders(): vscode.Disposable[] {
   const disposables: vscode.Disposable[] = [];
   // any document providers set here must provide their own `scheme` to register with
-  const providerClasses = [
-    SchemaDocumentProvider,
-    MessageDocumentProvider,
-    FlinkStatementDocumentProvider,
-  ];
+  const providerClasses = [SchemaDocumentProvider, MessageDocumentProvider];
   for (const providerClass of providerClasses) {
     const provider = new providerClass();
     disposables.push(

@@ -20,7 +20,6 @@ import {
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import * as flinkSqlProvider from "../codelens/flinkSqlProvider";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
@@ -149,12 +148,6 @@ describe("FlinkLanguageClientManager", () => {
       const document = { languageId: "plaintext", uri } as vscode.TextDocument;
       assert.strictEqual(flinkManager.isAppropriateDocument(document), false);
     });
-
-    it("should return false for read-only FlinkStatement URIs", () => {
-      const uri = vscode.Uri.parse(`${FLINKSTATEMENT_URI_SCHEME}://test-statement`);
-      const document = { languageId: FLINKSQL_LANGUAGE_ID, uri } as vscode.TextDocument;
-      assert.strictEqual(flinkManager.isAppropriateDocument(document), false);
-    });
   });
 
   describe("isAppropriateUri", () => {
@@ -164,11 +157,6 @@ describe("FlinkLanguageClientManager", () => {
         assert.strictEqual(flinkManager.isAppropriateUri(uri), true);
       });
     }
-
-    it("should return false for read-only FlinkStatement URIs", () => {
-      const uri = vscode.Uri.parse(`${FLINKSTATEMENT_URI_SCHEME}://test-statement`);
-      assert.strictEqual(flinkManager.isAppropriateUri(uri), false);
-    });
   });
 
   describe("lookupComputePoolInfo", () => {
@@ -1160,8 +1148,8 @@ describe("FlinkLanguageClientManager", () => {
         sinon.assert.notCalled(maybeStartLanguageClientStub);
       });
 
-      it("should not call maybeStartLanguageClient if new document is flinksql-y but not an appropriate uri", async () => {
-        const documentUri = vscode.Uri.parse(`${FLINKSTATEMENT_URI_SCHEME}:///fake/path/test.txt`);
+      it("should not call maybeStartLanguageClient if new document is flinksql-y but not a file/untitled uri", async () => {
+        const documentUri = vscode.Uri.parse("some-other-scheme:///fake/path/test.txt");
         flinkManager["lastDocUri"] = null; // No last document
 
         openTextDocumentStub.resolves({
@@ -1204,8 +1192,8 @@ describe("FlinkLanguageClientManager", () => {
         sinon.assert.notCalled(maybeStartLanguageClientStub);
       });
 
-      it("Should not call maybeStartLanguageClient when active editor is flinksql but not a valid uri", async () => {
-        const fakeUri = vscode.Uri.parse(`${FLINKSTATEMENT_URI_SCHEME}:///fake/path/test.flinksql`);
+      it("Should not call maybeStartLanguageClient when active editor is flinksql but not a file/untitled uri", async () => {
+        const fakeUri = vscode.Uri.parse("some-other-scheme:///fake/path/test.flinksql");
         const fakeDocument = {
           languageId: FLINKSQL_LANGUAGE_ID,
           uri: fakeUri,
