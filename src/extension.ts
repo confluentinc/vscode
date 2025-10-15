@@ -78,6 +78,7 @@ import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageCl
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
+import { FlinkStatementResultsPanelProvider } from "./panelProviders/flinkStatementResults";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { createLocalConnection, getLocalConnection } from "./sidecar/connections/local";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
@@ -204,13 +205,16 @@ async function _activateExtension(
   context.subscriptions.push(settingsListener);
 
   // set up the different view providers
-
   const resourceViewProvider = ResourceViewProvider.getInstance();
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
   const flinkDatabaseViewProvider = FlinkDatabaseViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
+
+  // ...and any panel view providers
+  const flinkStatementResultsPanelProvider = FlinkStatementResultsPanelProvider.getInstance();
+
   const viewProviderDisposables: vscode.Disposable[] = [
     resourceViewProvider,
     topicViewProvider,
@@ -218,6 +222,7 @@ async function _activateExtension(
     supportViewProvider,
     statementsViewProvider,
     flinkDatabaseViewProvider,
+    flinkStatementResultsPanelProvider,
   ];
   logger.info("View providers initialized");
   // explicitly "reset" the Topics & Schemas views so no resources linger during reactivation/update
