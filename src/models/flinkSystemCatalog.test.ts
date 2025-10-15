@@ -4,13 +4,15 @@ import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import {
+  FlinkRelationType,
   FlinkUdfParameter,
   FlinkUdfTreeItem,
   createFlinkUdfToolTip,
   formatSqlType,
+  toRelationType,
 } from "./flinkSystemCatalog";
 
-describe("flinkUDF.ts", () => {
+describe("flinkSystemCatalogs.ts", () => {
   describe("formatSqlType", () => {
     it("should remove max varchar size", () => {
       const result = formatSqlType("VARCHAR(2147483647)");
@@ -169,6 +171,18 @@ describe("flinkUDF.ts", () => {
       const udf = createFlinkUDF("testFunc");
       const tooltip = createFlinkUdfToolTip(udf);
       assert.match(tooltip.value, /Parameters: `None`/);
+    });
+  });
+
+  describe("toRelationType", () => {
+    it("should convert valid strings to FlinkRelationType enum", () => {
+      assert.strictEqual(toRelationType("BASE TABLE"), FlinkRelationType.BaseTable);
+      assert.strictEqual(toRelationType("VIEW"), FlinkRelationType.View);
+      assert.strictEqual(toRelationType("SYSTEM TABLE"), FlinkRelationType.SystemTable);
+      assert.strictEqual(toRelationType("EXTERNAL TABLE"), FlinkRelationType.ExternalTable);
+    });
+    it("should throw an error for unknown relation types", () => {
+      assert.throws(() => toRelationType("UNKNOWN"), /Unknown relation type: UNKNOWN/);
     });
   });
 });

@@ -327,6 +327,7 @@ export class FlinkRelationColumn {
   }
 }
 
+/** Corresponding to a ROW column which itself holds an open-ended number of sub-columns. */
 export class CompositeFlinkRelationColumn extends FlinkRelationColumn {
   /** Sub-columns for this ROW column */
   readonly columns: FlinkRelationColumn[];
@@ -356,7 +357,7 @@ export class CompositeFlinkRelationColumn extends FlinkRelationColumn {
   getTreeItem(): TreeItem {
     const item = super.getTreeItem();
 
-    // I gots me some kids, so bring on the expandy arrow
+    // Having sub-columns, make it collapsible
     item.collapsibleState = TreeItemCollapsibleState.Collapsed;
 
     return item;
