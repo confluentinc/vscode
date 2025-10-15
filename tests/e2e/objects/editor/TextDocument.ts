@@ -1,4 +1,4 @@
-import { Locator, Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { executeVSCodeCommand } from "../../utils/commands";
 import { Quickpick } from "../quickInputs/Quickpick";
 

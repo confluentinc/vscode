@@ -1,4 +1,4 @@
-import { Locator, Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 /**
  * Object representing a VS Code {@link https://code.visualstudio.com/api/ux-guidelines/quick-picks quickpick}.

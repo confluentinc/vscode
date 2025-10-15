@@ -1,4 +1,5 @@
-import { ElectronApplication, FrameLocator, Page, expect } from "@playwright/test";
+import type { ElectronApplication, FrameLocator, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
 import path from "path";
 import { TextDocument } from "../objects/editor/TextDocument";

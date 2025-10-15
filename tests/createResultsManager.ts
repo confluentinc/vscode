@@ -2,19 +2,14 @@ import * as assert from "assert";
 import { ObservableScope } from "inertial";
 import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "../src/clients/flinkSql";
 import { DEFAULT_RESULTS_LIMIT } from "../src/flinkSql/flinkStatementResults";
-import {
-  FlinkStatementResultsManager,
-  MessageType,
-} from "../src/flinkSql/flinkStatementResultsManager";
+import type { MessageType } from "../src/flinkSql/flinkStatementResultsManager";
+import { FlinkStatementResultsManager } from "../src/flinkSql/flinkStatementResultsManager";
 import { CCloudResourceLoader } from "../src/loaders/ccloudResourceLoader";
-import { FlinkStatement } from "../src/models/flinkStatement";
-import * as sidecar from "../src/sidecar";
-import { SidecarHandle } from "../src/sidecar";
-import { WebviewStorage } from "../src/webview/comms/comms";
-import {
-  FlinkStatementResultsViewModel,
-  ResultsViewerStorageState,
-} from "../src/webview/flink-statement-results";
+import type { FlinkStatement } from "../src/models/flinkStatement";
+import type * as sidecar from "../src/sidecar";
+import type { WebviewStorage } from "../src/webview/comms/comms";
+import type { ResultsViewerStorageState } from "../src/webview/flink-statement-results";
+import { FlinkStatementResultsViewModel } from "../src/webview/flink-statement-results";
 import { eventually } from "./eventually";
 import { loadFixtureFromFile } from "./fixtures/utils";
 import { getSidecarStub } from "./stubs/sidecar";
@@ -70,7 +65,7 @@ export async function createTestResultsManagerContext(
   vm: FlinkStatementResultsViewModel;
 }> {
   // Create sidecar and API mocks
-  const mockSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
+  const mockSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle> = getSidecarStub(sandbox);
 
   const flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
   mockSidecar.getFlinkSqlStatementsApi.returns(flinkSqlStatementsApi);
