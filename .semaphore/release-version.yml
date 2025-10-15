@@ -36,6 +36,7 @@ global_job_config:
 
 blocks:
   - name: "Parameter Verification"
+    dependencies: []
     task:
       jobs:
         - name: "Parameter Verification"
