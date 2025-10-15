@@ -1,5 +1,4 @@
 import { TextDocument, Uri, workspace } from "vscode";
-import { FLINKSTATEMENT_URI_SCHEME } from "./documentProviders/flinkStatement";
 import { Logger } from "./logging";
 import { getResourceManager } from "./storage/resourceManager";
 import { UriMetadataMap } from "./storage/types";
@@ -8,7 +7,7 @@ import { DisposableCollection } from "./utils/disposables";
 const logger = new Logger("documentMetadataManager");
 
 // Central list of supported URI schemes
-const SUPPORTED_URI_SCHEMES = ["file", "untitled", FLINKSTATEMENT_URI_SCHEME];
+const SUPPORTED_URI_SCHEMES = ["file", "untitled"];
 
 /** Manager for VS Code {@link TextDocument}s that tracks metadata across document lifecycle events */
 export class DocumentMetadataManager extends DisposableCollection {
@@ -72,7 +71,7 @@ export class DocumentMetadataManager extends DisposableCollection {
       const uri: Uri = Uri.parse(uriString);
 
       const scheme = uri.scheme;
-      if (!["untitled", FLINKSTATEMENT_URI_SCHEME].includes(scheme)) continue;
+      if (scheme !== "untitled") continue;
 
       const unsavedDoc: TextDocument | undefined = workspace.textDocuments.find(
         (doc) => doc.uri.toString() === uriString,
