@@ -195,7 +195,6 @@ describe("flinkArtifacts", () => {
     });
   });
   describe("handleWithProgressForUploadArtifact", () => {
-    let withProgressStub: sinon.SinonStub;
     const mockCreateResponse = {
       display_name: "test-artifact",
       cloud: "Azure",
@@ -211,10 +210,6 @@ describe("flinkArtifacts", () => {
       mockProgress = {
         report: sandbox.stub(),
       } as vscode.Progress<unknown>;
-      withProgressStub = sandbox.stub(vscode.window, "withProgress").callsFake((_, callback) => {
-        const mockToken = {} as vscode.CancellationToken;
-        return Promise.resolve(callback(mockProgress, mockToken));
-      });
     });
 
     it("should report progress correctly through all steps", async () => {
