@@ -1,4 +1,5 @@
-import { expect, Locator } from "@playwright/test";
+import type { Locator } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";

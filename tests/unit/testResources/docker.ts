@@ -1,7 +1,7 @@
-import { CancellationToken } from "vscode";
-import { ContainerInspectResponse } from "../../../src/clients/docker";
+import type { CancellationToken } from "vscode";
+import type { ContainerInspectResponse } from "../../../src/clients/docker";
 import { DEFAULT_DOCKER_NETWORK } from "../../../src/docker/constants";
-import { KafkaBrokerConfig } from "../../../src/docker/workflows/confluent-local";
+import type { KafkaBrokerConfig } from "../../../src/docker/workflows/confluent-local";
 
 // this should be moved even further up if needed for more tests
 export const TEST_CANCELLATION_TOKEN: CancellationToken = {

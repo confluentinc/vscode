@@ -1,12 +1,10 @@
 import { randomUUID } from "crypto";
+import type { Connection, ConnectionSpec, UserInfo } from "../../../src/clients/sidecar";
 import {
   ConnectedState,
-  Connection,
   ConnectionFromJSON,
-  ConnectionSpec,
   ConnectionSpecFromJSON,
   ConnectionType,
-  UserInfo,
 } from "../../../src/clients/sidecar";
 import {
   CCLOUD_AUTH_CALLBACK_URI,
@@ -15,9 +13,9 @@ import {
   LOCAL_CONNECTION_ID,
   LOCAL_CONNECTION_SPEC,
 } from "../../../src/constants";
-import { ConnectionId } from "../../../src/models/resource";
+import type { ConnectionId } from "../../../src/models/resource";
 import { SIDECAR_PORT } from "../../../src/sidecar/constants";
-import { CustomConnectionSpec } from "../../../src/storage/resourceManager";
+import type { CustomConnectionSpec } from "../../../src/storage/resourceManager";
 import { TEST_CCLOUD_ORGANIZATION } from "./organization";
 
 export const TEST_CCLOUD_USER: UserInfo = {

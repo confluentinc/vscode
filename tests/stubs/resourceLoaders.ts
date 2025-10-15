@@ -1,4 +1,4 @@
-import { SinonSandbox, SinonStub, SinonStubbedInstance } from "sinon";
+import type { SinonSandbox, SinonStub, SinonStubbedInstance } from "sinon";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../../src/constants";
 import {
   CCloudResourceLoader,
@@ -6,7 +6,7 @@ import {
   LocalResourceLoader,
   ResourceLoader,
 } from "../../src/loaders";
-import { ConnectionId } from "../../src/models/resource";
+import type { ConnectionId } from "../../src/models/resource";
 import { TEST_DIRECT_CONNECTION_ID } from "../unit/testResources/connection";
 
 /**
