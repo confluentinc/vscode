@@ -66,30 +66,4 @@ describe("utils/jarInspector", () => {
       message: /JAR file not readable/i,
     });
   });
-
-  it("throws for non .jar extension", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "jarInspectorTest-"));
-    const fakePath = path.join(tmpDir, "notAJar.txt");
-    fs.writeFileSync(fakePath, "data");
-    let threw = false;
-    try {
-      await listJarContents(fakePath);
-    } catch (e) {
-      threw = true;
-      assert.match((e as Error).message, /does not have \.jar extension/i);
-    }
-    assert.ok(threw);
-  });
-
-  it("throws when file is unreadable or missing", async () => {
-    const missing = path.join(os.tmpdir(), "jarInspectorTest-missing", "missing.jar");
-    let threw = false;
-    try {
-      await listJarContents(missing);
-    } catch (e) {
-      threw = true;
-      assert.match((e as Error).message, /JAR file not readable/i);
-    }
-    assert.ok(threw);
-  });
 });
