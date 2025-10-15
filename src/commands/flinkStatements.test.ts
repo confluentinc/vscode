@@ -1,8 +1,7 @@
 import assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
-
-import { TextDocument } from "vscode-json-languageservice";
+import { TextDocument } from "vscode";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
@@ -111,7 +110,7 @@ describe("commands/flinkStatements.ts", () => {
 
       sinon.assert.calledOnce(showTextDocumentStub);
       const document: TextDocument = showTextDocumentStub.firstCall.args[0];
-      assert.strictEqual(vscode.Uri.parse(document.uri).scheme, "untitled");
+      assert.strictEqual(document.uri.scheme, "untitled");
       sinon.assert.calledWithExactly(showTextDocumentStub, document, { preview: false });
     });
 
