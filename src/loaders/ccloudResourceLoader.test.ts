@@ -2,7 +2,8 @@ import assert from "assert";
 import * as sinon from "sinon";
 
 import { loadFixtureFromFile } from "../../tests/fixtures/utils";
-import { StubbedEventEmitters, eventEmitterStubs } from "../../tests/stubs/emitters";
+import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
+import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedResourceManager } from "../../tests/stubs/extensionStorage";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
@@ -16,29 +17,32 @@ import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { makeUdfFunctionRow } from "../../tests/unit/testResources/makeUdfRow";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
-import {
+import type {
   ArtifactV1FlinkArtifactList,
-  ArtifactV1FlinkArtifactListApiVersionEnum,
   ArtifactV1FlinkArtifactListDataInner,
+} from "../clients/flinkArtifacts";
+import {
+  ArtifactV1FlinkArtifactListApiVersionEnum,
   ArtifactV1FlinkArtifactListDataInnerApiVersionEnum,
   ArtifactV1FlinkArtifactListDataInnerKindEnum,
   ArtifactV1FlinkArtifactListKindEnum,
   FlinkArtifactsArtifactV1Api,
 } from "../clients/flinkArtifacts";
+import type { FcpmV2RegionList, FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
 import {
-  FcpmV2RegionList,
   FcpmV2RegionListApiVersionEnum,
-  FcpmV2RegionListDataInner,
   FcpmV2RegionListDataInnerApiVersionEnum,
   FcpmV2RegionListDataInnerKindEnum,
   FcpmV2RegionListKindEnum,
   RegionsFcpmV2Api,
 } from "../clients/flinkComputePool";
-import {
+import type {
   GetSqlv1Statement200Response,
   SqlV1StatementList,
-  SqlV1StatementListApiVersionEnum,
   SqlV1StatementListDataInner,
+} from "../clients/flinkSql";
+import {
+  SqlV1StatementListApiVersionEnum,
   SqlV1StatementListDataInnerApiVersionEnum,
   SqlV1StatementListDataInnerKindEnum,
   SqlV1StatementListKindEnum,
@@ -50,20 +54,22 @@ import * as graphqlCCloud from "../graphql/ccloud";
 import * as graphqlOrgs from "../graphql/organizations";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
-import { FlinkUdf } from "../models/flinkUDF";
-import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId } from "../models/resource";
-import * as sidecar from "../sidecar";
-import { SidecarHandle } from "../sidecar";
-import { ResourceManager } from "../storage/resourceManager";
+import type { FlinkStatement } from "../models/flinkStatement";
+import { Phase, restFlinkStatementToModel } from "../models/flinkStatement";
+import type { FlinkUdf } from "../models/flinkUDF";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import type { EnvironmentId } from "../models/resource";
+import type * as sidecar from "../sidecar";
+import type { SidecarHandle } from "../sidecar";
+import type { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 import {
   CCloudResourceLoader,
   loadArtifactsForProviderRegion,
   loadProviderRegions,
 } from "./ccloudResourceLoader";
-import { RawUdfSystemCatalogRow } from "./ccloudResourceLoaderUtils";
+import type { RawUdfSystemCatalogRow } from "./ccloudResourceLoaderUtils";
 
 describe("CCloudResourceLoader", () => {
   let sandbox: sinon.SinonSandbox;

@@ -12,15 +12,17 @@ import {
 } from "../../tests/unit/testResources/connection";
 import { ConnectedState, ConnectionType } from "../clients/sidecar";
 import * as errorModule from "../errors";
-import { DirectEnvironment } from "../models/environment";
-import { DirectKafkaCluster } from "../models/kafkaCluster";
-import { DirectSchemaRegistry } from "../models/schemaRegistry";
+import type { DirectEnvironment } from "../models/environment";
+import type { DirectKafkaCluster } from "../models/kafkaCluster";
+import type { DirectSchemaRegistry } from "../models/schemaRegistry";
 import * as notifications from "../notifications";
-import { SidecarHandle } from "../sidecar";
+import type { SidecarHandle } from "../sidecar";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
-import { CustomConnectionSpec, ResourceManager } from "../storage/resourceManager";
+import type { CustomConnectionSpec } from "../storage/resourceManager";
+import { ResourceManager } from "../storage/resourceManager";
 import * as telemetry from "../telemetry/events";
-import { ConnectionEventAction, ConnectionEventBody } from "../ws/messageTypes";
+import type { ConnectionEventBody } from "../ws/messageTypes";
+import { ConnectionEventAction } from "../ws/messageTypes";
 import { getDirectResources } from "./direct";
 
 /**

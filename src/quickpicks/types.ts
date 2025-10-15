@@ -1,4 +1,4 @@
-import { QuickPickItem } from "vscode";
+import type { QuickPickItem } from "vscode";
 
 /**
  * Extension of {@link QuickPickItem} to include an associated `value` for easier matching on

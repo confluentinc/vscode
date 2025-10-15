@@ -1,12 +1,11 @@
-import {
-  ContainerApi,
+import type {
   ContainerCreateOperationRequest,
   ContainerCreateResponse,
   ContainerInspectResponse,
   ContainerListRequest,
   ContainerSummary,
-  ResponseError,
 } from "../clients/docker";
+import { ContainerApi, ResponseError } from "../clients/docker";
 import { Logger } from "../logging";
 import { defaultRequestInit } from "./configs";
 import { MANAGED_CONTAINER_LABEL } from "./constants";

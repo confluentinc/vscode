@@ -1,5 +1,5 @@
 import { tryToCreateConnection, tryToDeleteConnection, tryToGetConnection } from ".";
-import { Connection } from "../../clients/sidecar";
+import type { Connection } from "../../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../../constants";
 import { ContextValues, getContextValue } from "../../context/values";
 import {

@@ -1,8 +1,5 @@
-import {
-  LanguageModelChatMessage,
-  LanguageModelToolCallPart,
-  LanguageModelToolResultPart,
-} from "vscode";
+import type { LanguageModelToolCallPart, LanguageModelToolResultPart } from "vscode";
+import { LanguageModelChatMessage } from "vscode";
 import { PARTICIPANT_ID } from "./constants";
 
 /**

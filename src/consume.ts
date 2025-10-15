@@ -1,7 +1,8 @@
 import { utcTicks } from "d3-time";
 import { Data } from "dataclass";
 import { ObservableScope } from "inertial";
-import { commands, env, ExtensionContext, Uri, ViewColumn, WebviewPanel, window } from "vscode";
+import type { ExtensionContext, WebviewPanel } from "vscode";
+import { commands, env, Uri, ViewColumn, window } from "vscode";
 import {
   canAccessSchemaForTopic,
   showNoSchemaAccessWarningNotification,
@@ -18,14 +19,10 @@ import { LOCAL_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context/extension";
 import { showJsonPreview } from "./documentProviders/message";
 import { logError } from "./errors";
-import {
-  CCloudResourceLoader,
-  DirectResourceLoader,
-  LocalResourceLoader,
-  ResourceLoader,
-} from "./loaders";
+import type { ResourceLoader } from "./loaders";
+import { CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader } from "./loaders";
 import { Logger } from "./logging";
-import { ConnectionId, EnvironmentId } from "./models/resource";
+import type { ConnectionId, EnvironmentId } from "./models/resource";
 import { type KafkaTopic } from "./models/topic";
 import { showErrorNotificationWithButtons } from "./notifications";
 import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";

@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { languages, TextEditor, window } from "vscode";
+import type { TextEditor } from "vscode";
+import { languages, window } from "vscode";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_SCHEMA,
@@ -8,10 +9,12 @@ import {
   TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { SchemaString, SchemasV1Api } from "../clients/schemaRegistryRest";
+import type { SchemaString } from "../clients/schemaRegistryRest";
+import { SchemasV1Api } from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
-import { Schema, SchemaType } from "../models/schema";
-import { SidecarHandle } from "../sidecar";
+import type { Schema } from "../models/schema";
+import { SchemaType } from "../models/schema";
+import type { SidecarHandle } from "../sidecar";
 import {
   openReadOnlySchemaDocument,
   prettifySchemaDefinition,

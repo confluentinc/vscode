@@ -1,13 +1,14 @@
 import * as assert from "assert";
 import { randomUUID } from "crypto";
 import * as sinon from "sinon";
-import { ChatErrorDetails, LanguageModelTextPart, LanguageModelToolCallPart } from "vscode";
+import type { ChatErrorDetails } from "vscode";
+import { LanguageModelTextPart, LanguageModelToolCallPart } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../extensionSettings/constants";
 import { sanitizeFeedbackResult } from "./telemetry";
 import { TextOnlyToolResultPart } from "./tools/base";
-import { ToolCallMetadata } from "./tools/types";
-import { CustomChatResult } from "./types";
+import type { ToolCallMetadata } from "./tools/types";
+import type { CustomChatResult } from "./types";
 
 const fakeModelInfo = {
   id: "gpt-4o",

@@ -1,12 +1,16 @@
 import * as assert from "assert";
-import { LDElectronMainClient, LDFlagChangeset, LDFlagSet } from "launchdarkly-electron-client-sdk";
+import type {
+  LDElectronMainClient,
+  LDFlagChangeset,
+  LDFlagSet,
+} from "launchdarkly-electron-client-sdk";
 import * as sinon from "sinon";
 import { env } from "vscode";
 import { EXTENSION_ID, EXTENSION_VERSION } from "../constants";
 import * as clientModule from "./client";
 import { FEATURE_FLAG_DEFAULTS, FeatureFlag, FeatureFlags } from "./constants";
 import * as handlers from "./handlers";
-import { DisabledVersion } from "./types";
+import type { DisabledVersion } from "./types";
 
 describe("featureFlags/handlers", function () {
   let sandbox: sinon.SinonSandbox;

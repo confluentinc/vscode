@@ -1,11 +1,13 @@
-import { Disposable, EventEmitter as VscodeEventEmitter, window } from "vscode";
+import type { Disposable } from "vscode";
+import { EventEmitter as VscodeEventEmitter, window } from "vscode";
 // our message callback routing internally using node's EventEmitter for .once() support + per-event-type callbacks, lacking in VSCode's EventEmitter implementation
 import { EventEmitter as NodeEventEmitter } from "node:events";
 import WebSocket from "ws";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { DisposableCollection } from "../utils/disposables";
-import { Message, MessageBodyDecoders, MessageType, validateMessageBody } from "../ws/messageTypes";
+import type { Message } from "../ws/messageTypes";
+import { MessageBodyDecoders, MessageType, validateMessageBody } from "../ws/messageTypes";
 
 const logger = new Logger("websocketManager");
 

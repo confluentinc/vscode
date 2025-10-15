@@ -1,9 +1,9 @@
-import { SubjectNameStrategy } from "../../diagnostics/produceMessage";
+import type { SubjectNameStrategy } from "../../diagnostics/produceMessage";
 import { ALLOW_OLDER_SCHEMA_VERSIONS } from "../../extensionSettings/constants";
 import { ResourceLoader } from "../../loaders";
-import { Schema } from "../../models/schema";
-import { SchemaRegistry } from "../../models/schemaRegistry";
-import { KafkaTopic } from "../../models/topic";
+import type { Schema } from "../../models/schema";
+import type { SchemaRegistry } from "../../models/schemaRegistry";
+import type { KafkaTopic } from "../../models/topic";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { schemaVersionQuickPick } from "../schemas";
 import { getSubjectNameForStrategy } from "./schemaSubjects";

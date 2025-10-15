@@ -14,39 +14,37 @@ import {
   TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { ProduceRecordRequest, RecordsV3Api, ResponseError } from "../clients/kafkaRest";
+import type { ProduceRecordRequest } from "../clients/kafkaRest";
+import { RecordsV3Api, ResponseError } from "../clients/kafkaRest";
 import { ConfluentCloudProduceRecordsResourceApi } from "../clients/sidecar";
 import { MessageViewerConfig } from "../consume";
 import { JSON_DIAGNOSTIC_COLLECTION } from "../diagnostics/constants";
-import {
-  PRODUCE_MESSAGE_SCHEMA,
-  ProduceMessage,
-  SubjectNameStrategy,
-} from "../diagnostics/produceMessage";
+import type { ProduceMessage } from "../diagnostics/produceMessage";
+import { PRODUCE_MESSAGE_SCHEMA, SubjectNameStrategy } from "../diagnostics/produceMessage";
 import * as jsonParsing from "../documentParsing/json";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
-import { CCloudResourceLoader } from "../loaders";
+import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { KafkaTopic } from "../models/topic";
 import * as schemaQuickPicks from "../quickpicks/schemas";
 import * as uriQuickpicks from "../quickpicks/uris";
 import * as schemaSubjectUtils from "../quickpicks/utils/schemaSubjects";
 import * as schemaUtils from "../quickpicks/utils/schemas";
-import { SidecarHandle } from "../sidecar";
+import type { SidecarHandle } from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import * as fileUtils from "../utils/file";
-import { ExecutionResult } from "../utils/workerPool";
+import type { ExecutionResult } from "../utils/workerPool";
+import type { ProduceResult } from "./topics";
 import {
   handleSchemaValidationErrors,
   produceMessage,
   ProduceMessageBadRequestError,
   produceMessagesFromDocument,
-  ProduceResult,
   queryTopicWithFlink,
   summarizeErrors,
 } from "./topics";
-import { ProduceMessageSchemaOptions } from "./utils/types";
+import type { ProduceMessageSchemaOptions } from "./utils/types";
 
 const fakeMessage = {
   key: "test-key",

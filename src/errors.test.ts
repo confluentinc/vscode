@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { createResponseError } from "../tests/unit/testUtils";
-import { ResponseError } from "./clients/sidecar";
+import type { ResponseError } from "./clients/sidecar";
 import {
   extractResponseBody,
   getNestedErrorChain,

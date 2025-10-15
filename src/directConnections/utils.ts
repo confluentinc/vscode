@@ -1,9 +1,5 @@
-import {
-  instanceOfKafkaClusterConfig,
-  instanceOfSchemaRegistryConfig,
-  KafkaClusterConfig,
-  SchemaRegistryConfig,
-} from "../clients/sidecar";
+import type { KafkaClusterConfig, SchemaRegistryConfig } from "../clients/sidecar";
+import { instanceOfKafkaClusterConfig, instanceOfSchemaRegistryConfig } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH } from "../constants";
 
 /**

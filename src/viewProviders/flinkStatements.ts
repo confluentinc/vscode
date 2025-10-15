@@ -1,4 +1,5 @@
-import { Disposable, EventEmitter, TreeDataProvider, TreeItem, Uri } from "vscode";
+import type { Disposable, EventEmitter, TreeDataProvider, TreeItem } from "vscode";
+import { Uri } from "vscode";
 import { ContextValues } from "../context/values";
 import {
   currentFlinkStatementsResourceChanged,
@@ -12,10 +13,12 @@ import {
   STATEMENT_POLLING_LIMIT,
 } from "../extensionSettings/constants";
 import { FlinkStatementManager } from "../flinkSql/flinkStatementManager";
-import { CCloudResourceLoader, ResourceLoader } from "../loaders";
+import type { CCloudResourceLoader } from "../loaders";
+import { ResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FlinkStatement, FlinkStatementId, FlinkStatementTreeItem } from "../models/flinkStatement";
+import type { FlinkStatement, FlinkStatementId } from "../models/flinkStatement";
+import { FlinkStatementTreeItem } from "../models/flinkStatement";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { ParentedBaseViewProvider } from "./baseModels/parentedBase";
 import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./utils/search";

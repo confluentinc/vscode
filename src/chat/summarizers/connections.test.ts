@@ -11,7 +11,8 @@ import {
   TEST_DIRECT_CONNECTION,
   TEST_LOCAL_CONNECTION,
 } from "../../../tests/unit/testResources/connection";
-import { ConnectedState, Connection, ConnectionFromJSON } from "../../clients/sidecar";
+import type { Connection } from "../../clients/sidecar";
+import { ConnectedState, ConnectionFromJSON } from "../../clients/sidecar";
 import * as contextValues from "../../context/values";
 import {
   summarizeCCloudConnection,

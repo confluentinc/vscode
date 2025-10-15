@@ -12,7 +12,8 @@ import sinon from "sinon";
 import * as ccloudStateHandling from "../../authn/ccloudStateHandling";
 import { ConnectedState } from "../../clients/sidecar/models";
 import { connectionStable, directConnectionCreated, environmentChanged } from "../../emitters";
-import { ConnectionEventAction, ConnectionEventBody } from "../../ws/messageTypes";
+import type { ConnectionEventBody } from "../../ws/messageTypes";
+import { ConnectionEventAction } from "../../ws/messageTypes";
 import { connectionEventHandler, isConnectionStable } from "./watcherUtils";
 
 describe("connectionEventHandler", () => {

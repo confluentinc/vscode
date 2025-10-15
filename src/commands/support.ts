@@ -1,7 +1,8 @@
 import { homedir } from "os";
 import { join, normalize } from "path";
 
-import { commands, Disposable, env, Uri, window, workspace } from "vscode";
+import type { Disposable } from "vscode";
+import { commands, env, Uri, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { EXTENSION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
@@ -10,7 +11,8 @@ import { FlinkLanguageClientManager } from "../flinkSql/flinkLanguageClientManag
 import { EXTENSION_OUTPUT_CHANNEL, Logger } from "../logging";
 import { SIDECAR_LOGFILE_NAME } from "../sidecar/constants";
 import { getSidecarFormattedLogfilePath, getSidecarLogfilePath } from "../sidecar/logging";
-import { createZipFile, ZipContentEntry, ZipFileEntry } from "./utils/zipFiles";
+import type { ZipContentEntry, ZipFileEntry } from "./utils/zipFiles";
+import { createZipFile } from "./utils/zipFiles";
 
 const logger = new Logger("commands.support");
 

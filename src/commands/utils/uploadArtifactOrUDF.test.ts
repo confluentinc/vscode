@@ -13,21 +13,21 @@ import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../../tests/unit/testResources";
+import type { PresignedUploadUrlArtifactV1PresignedUrl200Response } from "../../clients/flinkArtifacts";
 import {
   ArtifactV1FlinkArtifactMetadataFromJSON,
   FlinkArtifactsArtifactV1Api,
-  PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../../clients/flinkArtifacts";
 import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
-import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
-import { ConnectionType } from "../../clients/sidecar";
-import { CCloudResourceLoader } from "../../loaders";
+import type { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
+import type { ConnectionType } from "../../clients/sidecar";
+import type { CCloudResourceLoader } from "../../loaders";
 import { FlinkArtifact } from "../../models/flinkArtifact";
-import { ConnectionId, EnvironmentId } from "../../models/resource";
+import type { ConnectionId, EnvironmentId } from "../../models/resource";
 import * as notifications from "../../notifications";
-import { SidecarHandle } from "../../sidecar";
+import type { SidecarHandle } from "../../sidecar";
 import * as fsWrappers from "../../utils/fsWrappers";
 import * as uploadArtifactModule from "./uploadArtifactOrUDF";
 import {

@@ -1,9 +1,9 @@
 import { MarkdownString } from "vscode";
-import { Environment } from "../../models/environment";
-import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
-import { CCloudKafkaCluster } from "../../models/kafkaCluster";
+import type { Environment } from "../../models/environment";
+import type { CCloudFlinkComputePool } from "../../models/flinkComputePool";
+import type { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import { isCCloud } from "../../models/resource";
-import { CCloudSchemaRegistry } from "../../models/schemaRegistry";
+import type { CCloudSchemaRegistry } from "../../models/schemaRegistry";
 
 export function summarizeEnvironment(env: Environment): string {
   const summary = new MarkdownString()

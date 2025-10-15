@@ -1,25 +1,21 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import {
+import type {
   ProduceRecordRequest,
   ProduceRequest,
   ProduceRequestHeader,
   ProduceResponse,
   RecordsV3Api,
-  ResponseError,
-  type UpdateKafkaTopicConfigBatchRequest,
 } from "../clients/kafkaRest";
-import {
+import { ResponseError, type UpdateKafkaTopicConfigBatchRequest } from "../clients/kafkaRest";
+import type {
   ProduceRequest as CCloudProduceRequest,
   ConfluentCloudProduceRecordsResourceApi,
 } from "../clients/sidecar";
 import { MessageViewerConfig } from "../consume";
 import { JSON_DIAGNOSTIC_COLLECTION } from "../diagnostics/constants";
-import {
-  PRODUCE_MESSAGE_SCHEMA,
-  ProduceMessage,
-  SubjectNameStrategy,
-} from "../diagnostics/produceMessage";
+import type { ProduceMessage, SubjectNameStrategy } from "../diagnostics/produceMessage";
+import { PRODUCE_MESSAGE_SCHEMA } from "../diagnostics/produceMessage";
 import { validateDocument } from "../diagnostics/validateDocument";
 import { getRangeForDocument } from "../documentParsing/json";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
@@ -27,15 +23,16 @@ import { isResponseError, logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import type { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud } from "../models/resource";
-import { Schema } from "../models/schema";
+import type { Schema } from "../models/schema";
 import { KafkaTopic } from "../models/topic";
 import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   showErrorNotificationWithButtons,
 } from "../notifications";
-import { schemaKindMultiSelect, SchemaKindSelection } from "../quickpicks/schemas";
+import type { SchemaKindSelection } from "../quickpicks/schemas";
+import { schemaKindMultiSelect } from "../quickpicks/schemas";
 import { uriQuickpick } from "../quickpicks/uris";
 import { promptForSchema } from "../quickpicks/utils/schemas";
 import { getSubjectNameStrategy } from "../quickpicks/utils/schemaSubjects";
@@ -43,20 +40,17 @@ import { getSidecar } from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { getEditorOrFileContents, LoadedDocumentContent } from "../utils/file";
-import {
-  executeInWorkerPool,
-  ExecutionResult,
-  isErrorResult,
-  isSuccessResult,
-} from "../utils/workerPool";
+import type { LoadedDocumentContent } from "../utils/file";
+import { getEditorOrFileContents } from "../utils/file";
+import type { ExecutionResult } from "../utils/workerPool";
+import { executeInWorkerPool, isErrorResult, isSuccessResult } from "../utils/workerPool";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
 import { handleWebviewMessage } from "../webview/comms/comms";
-import { post } from "../webview/topic-config-form";
+import type { post } from "../webview/topic-config-form";
 import topicFormTemplate from "../webview/topic-config-form.html";
 import { createProduceRequestData } from "./utils/produceMessage";
-import { ProduceMessageSchemaOptions } from "./utils/types";
+import type { ProduceMessageSchemaOptions } from "./utils/types";
 
 const logger = new Logger("topics");
 

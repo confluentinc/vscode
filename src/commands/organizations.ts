@@ -3,7 +3,7 @@ import { registerCommandWithLogging } from ".";
 import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_CONNECTION_SPEC } from "../constants";
 import { ccloudOrganizationChanged } from "../emitters";
 import { getCurrentOrganization } from "../graphql/organizations";
-import { CCloudOrganization } from "../models/organization";
+import type { CCloudOrganization } from "../models/organization";
 import { organizationQuickPick } from "../quickpicks/organizations";
 import { tryToUpdateConnection } from "../sidecar/connections";
 import { clearCurrentCCloudResources, hasCCloudAuthSession } from "../sidecar/connections/ccloud";

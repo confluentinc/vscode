@@ -1,8 +1,9 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
-import { CustomMarkdownString, IdItem } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
+import type { IdItem } from "./main";
+import { CustomMarkdownString } from "./main";
+import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
 export class FlinkUdfParameter {
   name: string;
