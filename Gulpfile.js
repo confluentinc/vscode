@@ -891,8 +891,10 @@ export function e2eRun(done) {
   //   no URI handling has to happen
   process.env.CONFLUENT_VSCODE_E2E_TESTING = "true";
 
-  // Get <test-name> argument after 'npx gulp e2e -t <test-name>'
+  // Get <test-pattern> argument after 'npx gulp e2e -t <test-pattern>' to run specific test(s)
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
+  // Get <test-pattern> argument after 'npx gulp e2e -x <test-pattern>' to exclude specific test(s)
+  const testExcludeFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-x");
 
   const command = [
     "playwright",
@@ -901,6 +903,7 @@ export function e2eRun(done) {
     "tests/e2e/playwright.config.ts",
     "tests/e2e",
     ...(testFilter ? ["-g", testFilter] : []),
+    ...(testExcludeFilter ? ["-gv", testExcludeFilter] : []),
   ];
   console.log("Running command: npx", command.join(" "));
 
