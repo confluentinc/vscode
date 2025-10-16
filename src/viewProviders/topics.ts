@@ -24,7 +24,7 @@ import {
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { ResourceLoader } from "../loaders";
-import { TopicFetchError } from "../loaders/loaderUtils";
+import { TopicFetchError } from "../loaders/utils/loaderUtils";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";

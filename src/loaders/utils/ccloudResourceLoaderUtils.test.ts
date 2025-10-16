@@ -1,7 +1,10 @@
 import * as assert from "assert";
 
-import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../tests/unit/testResources";
-import { makeUdfFunctionRow, makeUdfParameterRow } from "../../tests/unit/testResources/makeUdfRow";
+import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
+import {
+  makeUdfFunctionRow,
+  makeUdfParameterRow,
+} from "../../../tests/unit/testResources/makeUdfRow";
 import {
   getUdfSystemCatalogQuery,
   RawUdfSystemCatalogRow,
@@ -9,7 +12,7 @@ import {
   transformUdfSystemCatalogRows,
 } from "./ccloudResourceLoaderUtils";
 
-describe("loaders/ccloudResourceLoaderUtils.ts", () => {
+describe("ccloudResourceLoaderUtils.ts", () => {
   describe("getUdfSystemCatalogQuery()", () => {
     // This function is trivial, just returns a constant string with the cluster ID filled in twice.
     // Ensure is mentioned twice. Only E2E / clicktesting can prove that the query is otherwise sound.
