@@ -54,7 +54,10 @@ import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { registerLocalResourceWorkflows } from "./docker/workflows/workflowInitialization";
 import { DocumentMetadataManager } from "./documentMetadataManager";
-import { FlinkStatementDocumentProvider } from "./documentProviders/flinkStatement";
+import {
+  FLINKSTATEMENT_URI_SCHEME,
+  FlinkStatementDocumentProvider,
+} from "./documentProviders/flinkStatement";
 import { MESSAGE_URI_SCHEME, MessageDocumentProvider } from "./documentProviders/message";
 import { SCHEMA_URI_SCHEME, SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
@@ -326,6 +329,21 @@ async function _activateExtension(
   // with a dot to the right of the item label+description area
   context.subscriptions.push(
     vscode.window.registerFileDecorationProvider(SEARCH_DECORATION_PROVIDER),
+    vscode.window.registerFileDecorationProvider({
+      provideFileDecoration: (uri: vscode.Uri): vscode.FileDecoration | undefined => {
+        if (
+          [SCHEMA_URI_SCHEME, MESSAGE_URI_SCHEME, FLINKSTATEMENT_URI_SCHEME].includes(uri.scheme)
+        ) {
+          // enabled with the `codiconDecoration` proposed API
+          const decoration: vscode.FileDecoration2 = {
+            propagate: false,
+            tooltip: "Read-only",
+            badge: new vscode.ThemeIcon("lock"),
+          };
+          return decoration as vscode.FileDecoration;
+        }
+      },
+    }),
   );
 
   // register the Copilot chat participant
