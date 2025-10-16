@@ -9,6 +9,7 @@ import {
   Range,
   TextDocument,
 } from "vscode";
+import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
@@ -129,6 +130,17 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
       arguments: [document.uri],
     };
     const resetLens = new CodeLens(range, resetCommand);
+
+    if (document.uri.scheme === FLINKSTATEMENT_URI_SCHEME) {
+      const copyEditCommand: Command = {
+        title: "Copy & Edit",
+        command: "confluent.statements.copyAndEdit",
+        tooltip: "Copy the current statement to a new document and edit it",
+        arguments: [document.uri],
+      };
+      const copyEditLens = new CodeLens(range, copyEditCommand);
+      codeLenses.push(copyEditLens);
+    }
 
     if (computePool && database) {
       const submitCommand: Command = {
