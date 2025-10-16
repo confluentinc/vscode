@@ -33,6 +33,9 @@ All notable changes to this extension will be documented in this file.
 ### Fixed
 
 - Issue with sometimes reporting the wrong number of "matching elements" when searching some views.
+- Issue with not offering 'Query with Flink SQL' on topics whose possible Flink compute cluster is
+  in a separate environment (they should be matched by cloud/region and not also CCloud
+  environment).
 
 ## 1.7.0
 
