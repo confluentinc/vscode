@@ -1,12 +1,12 @@
 import { QuickPickItemKind, window } from "vscode";
-import { FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
+import type { FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
 import { FLINK_CONFIG_COMPUTE_POOL } from "../extensionSettings/constants";
 import { CCloudResourceLoader, loadProviderRegions } from "../loaders/ccloudResourceLoader";
-import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
-import { IProviderRegion } from "../models/resource";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import type { IProviderRegion } from "../models/resource";
 import { ObjectSet } from "../utils/objectset";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
-import { QuickPickItemWithValue } from "./types";
+import type { QuickPickItemWithValue } from "./types";
 
 export type regionFilter = (region: FcpmV2RegionListDataInner) => boolean;
 

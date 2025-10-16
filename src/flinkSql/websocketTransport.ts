@@ -1,5 +1,6 @@
-import { Disposable, Event, EventEmitter } from "vscode";
-import {
+import type { Disposable, Event } from "vscode";
+import { EventEmitter } from "vscode";
+import type {
   DataCallback,
   Message,
   MessageReader,

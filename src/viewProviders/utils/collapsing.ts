@@ -1,5 +1,6 @@
-import { TreeItem, TreeItemCollapsibleState } from "vscode";
-import { ISearchable } from "../../models/resource";
+import type { TreeItem } from "vscode";
+import { TreeItemCollapsibleState } from "vscode";
+import type { ISearchable } from "../../models/resource";
 import { matchesOrHasMatchingChild } from "./search";
 
 /**

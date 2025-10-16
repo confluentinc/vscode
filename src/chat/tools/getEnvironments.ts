@@ -1,21 +1,19 @@
-import {
+import type {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
-  LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolConfirmationMessages,
   LanguageModelToolInvocationOptions,
   LanguageModelToolInvocationPrepareOptions,
-  LanguageModelToolResult,
-  MarkdownString,
   PreparedToolInvocation,
   ProviderResult,
 } from "vscode";
+import { LanguageModelTextPart, LanguageModelToolResult, MarkdownString } from "vscode";
 import { ResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
-import { Environment } from "../../models/environment";
-import { ConnectionId } from "../../models/resource";
+import type { Environment } from "../../models/environment";
+import type { ConnectionId } from "../../models/resource";
 import { summarizeEnvironment } from "../summarizers/environments";
 import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 

@@ -1,6 +1,6 @@
 import { join } from "path";
 import * as vscode from "vscode";
-import { TextDocument } from "vscode";
+import type { TextDocument } from "vscode";
 import { deleteFile, readFileString, statFile, tmpdir, writeFile } from "./fsWrappers";
 
 /** Check if a file URI exists in the filesystem. */

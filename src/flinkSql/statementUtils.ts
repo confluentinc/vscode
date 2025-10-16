@@ -1,21 +1,19 @@
 import * as vscode from "vscode";
-import {
+import type {
   CreateSqlv1StatementOperationRequest,
   CreateSqlv1StatementRequest,
+  SqlV1StatementResultResults,
+} from "../clients/flinkSql";
+import {
   CreateSqlv1StatementRequestApiVersionEnum,
   CreateSqlv1StatementRequestKindEnum,
-  SqlV1StatementResultResults,
 } from "../clients/flinkSql";
 import { isResponseErrorWithStatus } from "../errors";
 import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
 import { Logger } from "../logging";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import {
-  FlinkSpecProperties,
-  FlinkStatement,
-  restFlinkStatementToModel,
-  TERMINAL_PHASES,
-} from "../models/flinkStatement";
+import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import type { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
+import { restFlinkStatementToModel, TERMINAL_PHASES } from "../models/flinkStatement";
 import { getSidecar } from "../sidecar";
 import { raceWithTimeout } from "../utils/timing";
 import { WebviewPanelCache } from "../webview-cache";

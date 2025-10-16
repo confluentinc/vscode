@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { AuthConfig } from "../clients/docker";
+import type { AuthConfig } from "../clients/docker";
 import * as fsWrappers from "../utils/fsWrappers";
 import {
   getDockerCredsStore,

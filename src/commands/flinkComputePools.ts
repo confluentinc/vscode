@@ -1,10 +1,11 @@
-import { commands, Disposable, window } from "vscode";
+import type { Disposable } from "vscode";
+import { commands, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { currentFlinkStatementsResourceChanged } from "../emitters";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { KafkaCluster } from "../models/kafkaCluster";
+import type { KafkaCluster } from "../models/kafkaCluster";
 import {
   flinkComputePoolQuickPick,
   flinkComputePoolQuickPickWithViewProgress,

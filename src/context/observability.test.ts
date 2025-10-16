@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import { version as sidecarVersion } from "ide-sidecar";
-import { Extension, ExtensionContext, extensions } from "vscode";
+import type { Extension, ExtensionContext } from "vscode";
+import { extensions } from "vscode";
 import { EXTENSION_ID } from "../constants";
 import { observabilityContext } from "./observability";
 

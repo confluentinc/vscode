@@ -2,7 +2,7 @@ import { Logger } from "../logging";
 import { updateCCloudStatus } from "../statusBar/ccloudItem";
 import { IntervalPoller } from "../utils/timing";
 import { fetchCCloudStatus } from "./api";
-import { CCloudStatusSummary } from "./types";
+import type { CCloudStatusSummary } from "./types";
 
 const logger = new Logger("ccloudStatus.polling");
 

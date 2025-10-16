@@ -1,7 +1,7 @@
 import { deepEqual, equal, notDeepEqual } from "node:assert/strict";
 import { CircularBuffer, SkipList, Stream, ascending, descending } from "./stream";
 
-import { PartitionConsumeRecord } from "../clients/sidecar";
+import type { PartitionConsumeRecord } from "../clients/sidecar";
 import batches from "./messages.json";
 import messages from "./orders-topic.json";
 

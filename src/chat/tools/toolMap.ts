@@ -1,4 +1,4 @@
-import { BaseLanguageModelTool } from "./base";
+import type { BaseLanguageModelTool } from "./base";
 
 const TOOL_MAP = new Map<string, BaseLanguageModelTool<any>>();
 

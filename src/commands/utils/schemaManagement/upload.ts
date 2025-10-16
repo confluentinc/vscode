@@ -10,7 +10,8 @@ import {
 import { schemaSubjectChanged, schemaVersionsChanged } from "../../../emitters";
 import { ResourceLoader } from "../../../loaders";
 import { Logger } from "../../../logging";
-import { Schema, SchemaType, Subject } from "../../../models/schema";
+import type { Subject } from "../../../models/schema";
+import { Schema, SchemaType } from "../../../models/schema";
 import { type SchemaRegistry } from "../../../models/schemaRegistry";
 import { type KafkaTopic } from "../../../models/topic";
 import { showErrorNotificationWithButtons } from "../../../notifications";

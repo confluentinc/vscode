@@ -4,7 +4,8 @@ import {
   checkForExtensionDisabledReason,
   showExtensionDisabledNotification,
 } from "../featureFlags/evaluation";
-import { IResourceBase, isResource } from "../models/resource";
+import type { IResourceBase } from "../models/resource";
+import { isResource } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { titleCase } from "../utils";

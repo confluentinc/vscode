@@ -1,13 +1,12 @@
-import {
+import type {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
-  LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
-  LanguageModelToolResult,
 } from "vscode";
-import { ScaffoldV1Template } from "../../clients/scaffoldingService";
+import { LanguageModelTextPart, LanguageModelToolResult } from "vscode";
+import type { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
 import { getTemplatesList } from "../../projectGeneration/templates";
 import { summarizeTemplateOptions } from "../summarizers/projectTemplate";

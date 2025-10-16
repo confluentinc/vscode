@@ -1,10 +1,10 @@
 import { ConnectionType } from "../clients/sidecar";
 import { getDirectResources } from "../graphql/direct";
 import { Logger } from "../logging";
-import { DirectEnvironment } from "../models/environment";
-import { DirectKafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId } from "../models/resource";
-import { DirectSchemaRegistry } from "../models/schemaRegistry";
+import type { DirectEnvironment } from "../models/environment";
+import type { DirectKafkaCluster } from "../models/kafkaCluster";
+import type { ConnectionId } from "../models/resource";
+import type { DirectSchemaRegistry } from "../models/schemaRegistry";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 
 /**

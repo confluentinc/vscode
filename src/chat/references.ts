@@ -1,12 +1,5 @@
-import {
-  ChatPromptReference,
-  LanguageModelChatMessage,
-  Location,
-  Range,
-  TextDocument,
-  Uri,
-  workspace,
-} from "vscode";
+import type { ChatPromptReference, Range, TextDocument } from "vscode";
+import { LanguageModelChatMessage, Location, Uri, workspace } from "vscode";
 import { Logger } from "../logging";
 
 const logger = new Logger("chat.references");

@@ -5,14 +5,15 @@ import {
   TEST_DIRECT_CONNECTION,
   TEST_DIRECT_CONNECTION_FORM_SPEC,
 } from "../tests/unit/testResources/connection";
-import { ConnectedState } from "./clients/sidecar";
+import type { ConnectedState } from "./clients/sidecar";
 import {
   deepMerge,
   getConnectionSpecFromFormData,
   handleConnectionChange,
   parseTestResult,
 } from "./directConnect";
-import { CustomConnectionSpec, ResourceManager } from "./storage/resourceManager";
+import type { CustomConnectionSpec } from "./storage/resourceManager";
+import { ResourceManager } from "./storage/resourceManager";
 
 describe("directConnect.ts", () => {
   describe("getConnectionSpecFromFormData", () => {

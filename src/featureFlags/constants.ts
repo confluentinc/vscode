@@ -1,4 +1,4 @@
-import { LDFlagSet, LDUser } from "launchdarkly-electron-client-sdk";
+import type { LDFlagSet, LDUser } from "launchdarkly-electron-client-sdk";
 import { env } from "vscode";
 
 /** Client ID to use with the LaunchDarkly SDK. Set during production builds, but can also be

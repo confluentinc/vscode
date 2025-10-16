@@ -7,24 +7,16 @@ import {
   TEST_DIRECT_CONNECTION_FORM_SPEC,
 } from "../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../tests/unit/testUtils";
-import {
-  ConnectionSpec,
-  ConnectionSpecFromJSON,
-  ConnectionsList,
-  ConnectionsResourceApi,
-  ResponseError,
-} from "./clients/sidecar";
+import type { ConnectionSpec, ConnectionsList } from "./clients/sidecar";
+import { ConnectionSpecFromJSON, ConnectionsResourceApi, ResponseError } from "./clients/sidecar";
 import { DirectConnectionManager } from "./directConnectManager";
 import { ResourceLoader } from "./loaders";
-import { ConnectionId } from "./models/resource";
-import { SidecarHandle } from "./sidecar";
+import type { ConnectionId } from "./models/resource";
+import type { SidecarHandle } from "./sidecar";
 import * as connections from "./sidecar/connections";
 import * as watcher from "./sidecar/connections/watcher";
-import {
-  CustomConnectionSpec,
-  DirectConnectionsById,
-  getResourceManager,
-} from "./storage/resourceManager";
+import type { CustomConnectionSpec, DirectConnectionsById } from "./storage/resourceManager";
+import { getResourceManager } from "./storage/resourceManager";
 
 const fakeConnectionsList: ConnectionsList = {
   api_version: "v1",

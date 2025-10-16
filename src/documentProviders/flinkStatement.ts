@@ -1,6 +1,6 @@
-import * as vscode from "vscode";
+import type * as vscode from "vscode";
 import { ResourceDocumentProvider } from ".";
-import { FlinkStatement } from "../models/flinkStatement";
+import type { FlinkStatement } from "../models/flinkStatement";
 
 /** The URI scheme for read-only flink statements, used by FlinkStatementDocumentProvider. */
 export const FLINKSTATEMENT_URI_SCHEME = "confluent.flinkstatement";
