@@ -338,14 +338,21 @@ async function globalAfterEach(
   const formatQuickPick = new Quickpick(page);
   await expect(formatQuickPick.locator).toBeVisible({ timeout: 5000 });
   await formatQuickPick.selectItemByText("Human-readable format");
-  // wait for info notification indicating sidecar log file was saved
-  const sidecarLogSuccess = notificationArea.infoNotifications.filter({
-    hasText: "Confluent extension sidecar log file saved successfully.",
-  });
-  await expect(sidecarLogSuccess).toHaveCount(1, { timeout: 5000 });
-  // attach the sidecar log to the test results
-  await testInfo.attach("vscode-confluent-sidecar.log", {
-    path: sidecarLogPath,
-    contentType: "text/plain",
-  });
+  // NOTE: this occasionally times out on macOS or Windows for unknown reasons even after clearing
+  // any existing sidecar log file, but we don't want this to count as a test failure and these logs
+  // are more nice-to-have
+  try {
+    // wait for info notification indicating sidecar log file was saved
+    const sidecarLogSuccess = notificationArea.infoNotifications.filter({
+      hasText: "Confluent extension sidecar log file saved successfully.",
+    });
+    await expect(sidecarLogSuccess).toHaveCount(1, { timeout: 5000 });
+    // attach the sidecar log to the test results
+    await testInfo.attach("vscode-confluent-sidecar.log", {
+      path: sidecarLogPath,
+      contentType: "text/plain",
+    });
+  } catch (error) {
+    console.warn("Error saving sidecar logs:", error);
+  }
 }
