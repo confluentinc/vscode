@@ -54,7 +54,6 @@ export function relationColumnFactory(props: FlinkRelationColumnProps): FlinkRel
 
     const finalComment = props.comment || topArrayComment || parsed.comment;
 
-    // Primitive (possibly array-wrapped)
     if (parsed.kind === ParsedKind.Primitive) {
       return new FlinkRelationColumn({
         ...props,
@@ -100,6 +99,44 @@ export function relationColumnFactory(props: FlinkRelationColumnProps): FlinkRel
         arrayDimensions,
         columns,
       });
+    } else if (parsed.kind === ParsedKind.MultiSet) {
+      // Must be a multiset.
+      const keyCol = relationColumnFactory({
+        relationName: `${props.relationName}.${props.name}`,
+        name: "key",
+        fullDataType: parsed.key.text,
+        isNullable: parsed.key.nullable,
+        distributionKeyNumber: null,
+        isGenerated: props.isGenerated,
+        isPersisted: props.isPersisted,
+        isHidden: props.isHidden,
+        metadataKey: null,
+        isArray: parsed.key.kind === ParsedKind.Array,
+        isArrayMemberNullable:
+          parsed.key.kind === ParsedKind.Array
+            ? (parsed.key as ParsedArray).element.nullable
+            : false,
+        arrayDimensions:
+          parsed.key.kind === ParsedKind.Array
+            ? countArrayDimensions(parsed.key as ParsedArray)
+            : 0,
+        comment: null,
+      });
+
+      throw new Error("MultiSet columns not yet supported");
+      // TODO make a new toplevel class.
+
+      // return new MapFlinkRelationColumn({
+      //   ...props,
+      //   keyColumn: keyCol,
+      //   valueColumn: undefined as any, // MultiSet has no value
+      //   isNullable: finalNullable,
+      //   fullDataType: parsed.text,
+      //   comment: finalComment,
+      //   isArray: isArray,
+      //   isArrayMemberNullable: arrayMemberNullable,
+      //   arrayDimensions,
+      // });
     } else {
       // Must be a map.
       const keyCol = relationColumnFactory({
@@ -181,6 +218,7 @@ enum ParsedKind {
   Row = "row",
   Map = "map",
   Array = "array",
+  MultiSet = "multiset",
 }
 
 interface ParsedTypeBase {
@@ -205,6 +243,11 @@ interface ParsedMap extends ParsedTypeBase {
   value: ParsedType;
 }
 
+interface ParsedMultiSet extends ParsedTypeBase {
+  kind: ParsedKind.MultiSet;
+  key: ParsedType;
+}
+
 interface ParsedRowField {
   name: string;
   type: ParsedType;
@@ -218,7 +261,7 @@ interface ParsedRow extends ParsedTypeBase {
   fields: ParsedRowField[];
 }
 
-type ParsedType = ParsedPrimitive | ParsedArray | ParsedMap | ParsedRow;
+type ParsedType = ParsedPrimitive | ParsedArray | ParsedMap | ParsedMultiSet | ParsedRow;
 
 /**
  * Recursive descent parser for Flink style complex types.
@@ -242,6 +285,9 @@ class TypeParser {
     }
     if (look === "MAP" && this.peekChar(3) === "<") {
       return this.parseMap(start);
+    }
+    if (look === "MULTISET" && this.peekChar(8) === "<") {
+      return this.parseMultiSet(start);
     }
     if (look === "ARRAY" && this.peekChar(5) === "<") {
       return this.parseArray(start);
@@ -358,6 +404,35 @@ class TypeParser {
       typeText,
       comment,
       nullable,
+    };
+  }
+
+  private parseMultiSet(typeStart: number): ParsedMultiSet {
+    this.expectWord("MULTISET");
+    this.expectChar("<");
+    this.skipWs();
+    const key = this.parseType();
+    this.skipWs();
+    this.expectChar(">");
+    const text = this.input.substring(typeStart, this.pos);
+
+    // Handle optional NULL / NOT NULL for the multiset type itself
+    const nullable = this.parseNullability();
+
+    // Optional comment after MULTISET<...>
+    this.skipWs();
+    let comment: string | null = null;
+    if (this.current() === "'") {
+      comment = this.parseQuotedComment();
+      this.skipWs();
+    }
+
+    return {
+      kind: ParsedKind.MultiSet,
+      key,
+      comment,
+      nullable,
+      text,
     };
   }
 
