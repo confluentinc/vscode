@@ -63,7 +63,7 @@ import {
   loadArtifactsForProviderRegion,
   loadProviderRegions,
 } from "./ccloudResourceLoader";
-import { RawUdfSystemCatalogRow } from "./ccloudResourceLoaderUtils";
+import { RawUdfSystemCatalogRow } from "./utils/ccloudResourceLoaderUtils";
 
 describe("CCloudResourceLoader", () => {
   let sandbox: sinon.SinonSandbox;
