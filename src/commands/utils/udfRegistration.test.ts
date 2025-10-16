@@ -26,29 +26,6 @@ describe("commands/utils/udfRegistration", () => {
     sandbox.restore();
   });
 
-  describe("selectClassesForUdfRegistration", () => {
-    it("returns selected class infos when user picks multiple items", async () => {
-      const classInfos: jarInspector.JarClassInfo[] = [
-        { className: "com.acme.Alpha", simpleName: "Alpha" },
-        { className: "com.acme.Beta", simpleName: "Beta" },
-      ];
-
-      const showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick").resolves([
-        { label: "Alpha", description: "com.acme.Alpha", classInfo: classInfos[0] },
-        { label: "Beta", description: "com.acme.Beta", classInfo: classInfos[1] },
-      ] as any);
-
-      const result = await selectClassesForUdfRegistration(classInfos);
-
-      sinon.assert.calledOnce(showQuickPickStub);
-      assert.deepStrictEqual(
-        result,
-        classInfos,
-        "Should map back to underlying JarClassInfo objects",
-      );
-    });
-  });
-
   describe("detectClassesAndRegisterUDFs", () => {
     it("inspects jar, shows quick pick, and handles user cancellation (no selection)", async () => {
       const testUri = vscode.Uri.file("/tmp/example.jar");
@@ -100,6 +77,29 @@ describe("commands/utils/udfRegistration", () => {
       sinon.assert.calledOnce(inspectStub);
       sinon.assert.calledOnce(quickPickStub);
       assert.strictEqual(result, undefined);
+    });
+  });
+
+  describe("selectClassesForUdfRegistration", () => {
+    it("returns selected class infos when user picks multiple items", async () => {
+      const classInfos: jarInspector.JarClassInfo[] = [
+        { className: "com.acme.Alpha", simpleName: "Alpha" },
+        { className: "com.acme.Beta", simpleName: "Beta" },
+      ];
+
+      const showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick").resolves([
+        { label: "Alpha", description: "com.acme.Alpha", classInfo: classInfos[0] },
+        { label: "Beta", description: "com.acme.Beta", classInfo: classInfos[1] },
+      ] as any);
+
+      const result = await selectClassesForUdfRegistration(classInfos);
+
+      sinon.assert.calledOnce(showQuickPickStub);
+      assert.deepStrictEqual(
+        result,
+        classInfos,
+        "Should map back to underlying JarClassInfo objects",
+      );
     });
   });
 
