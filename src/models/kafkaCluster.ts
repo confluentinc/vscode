@@ -103,7 +103,7 @@ export class CCloudKafkaCluster extends KafkaCluster {
    *  as a Flink Database)?
    *
    * Currently, this is determined by whether or not there were any preexisting Flink Compute Pools
-   * available in the env/cloud provider/region of this cluster.
+   * available in the cloud provider/region of this cluster.
    **/
   isFlinkable(): this is CCloudFlinkDbKafkaCluster {
     return (this.flinkPools?.length ?? 0) > 0;
