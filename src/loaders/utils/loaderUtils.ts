@@ -17,13 +17,10 @@ import {
 } from "../../utils/privateNetworking";
 import { executeInWorkerPool, extract } from "../../utils/workerPool";
 
-const logger = new Logger("resourceLoader");
+const logger = new Logger("loaderUtils");
 
 /**
  * Internal functions used by ResourceLoaders.
- *
- * Factored out from resourceLoader.ts to allow for
- * test suite mocking / stubbing.
  */
 
 export class TopicFetchError extends Error {
