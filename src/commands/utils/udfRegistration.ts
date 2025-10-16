@@ -39,6 +39,11 @@ export interface RegistrationResults {
  * @param artifactId The artifact ID where the UDFs originate
  */
 export async function detectClassesAndRegisterUDFs(artifactFile: Uri, artifactId?: string) {
+  logUsage(UserEvent.FlinkUDFAction, {
+    action: "created",
+    status: "started",
+    kind: "quick-register",
+  });
   try {
     if (!artifactId) {
       logger.error("Could not auto-register UDFs, no artifact ID provided in upload response.");
@@ -54,12 +59,24 @@ export async function detectClassesAndRegisterUDFs(artifactFile: Uri, artifactId
 
     const selectedClasses = await selectClassesForUdfRegistration(classNames);
     if (!selectedClasses || selectedClasses.length === 0) {
+      logUsage(UserEvent.FlinkUDFAction, {
+        action: "created",
+        status: "exited",
+        kind: "quick-register",
+        step: "select classes",
+      });
       return; // No error - user cancelled quickpick or selected 0 classes
     }
     logger.trace(`User selected ${selectedClasses.length} classes for UDF registration.`);
 
     const registrations = await promptForFunctionNames(selectedClasses);
     if (!registrations || registrations.length === 0) {
+      logUsage(UserEvent.FlinkUDFAction, {
+        action: "created",
+        status: "exited",
+        kind: "quick-register",
+        step: "provide function names",
+      });
       return; // No error - user cancelled or provided no function names
     }
     logger.trace(`Prepared ${registrations.length} UDF registration(s).`);
@@ -72,6 +89,12 @@ export async function detectClassesAndRegisterUDFs(artifactFile: Uri, artifactId
       extra: {
         artifactId,
       },
+    });
+    logUsage(UserEvent.FlinkUDFAction, {
+      action: "created",
+      status: "failed",
+      kind: "quick-register",
+      step: "exception thrown",
     });
     void showErrorNotificationWithButtons(
       `Failed to register UDF(s): ${message}. Try again by right-clicking the artifact from the list in the Flink Database Explorer view.`,
@@ -215,6 +238,7 @@ export async function executeUdfRegistrations(
       logUsage(UserEvent.FlinkUDFAction, {
         action: "created",
         status: "succeeded",
+        kind: "quick-register",
         cloud: selectedFlinkDatabase.provider,
         region: selectedFlinkDatabase.region,
       });
@@ -235,6 +259,7 @@ export async function executeUdfRegistrations(
       logUsage(UserEvent.FlinkUDFAction, {
         action: "created",
         status: "failed",
+        kind: "quick-register",
         cloud: selectedFlinkDatabase.provider,
         region: selectedFlinkDatabase.region,
       });
