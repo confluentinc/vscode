@@ -1,6 +1,7 @@
 import { ObservableScope } from "inertial";
 import * as vscode from "vscode";
 import { STATEMENT_RESULTS_LOCATION } from "../../extensionSettings/constants";
+import { DEFAULT_RESULT_LIMIT } from "../../flinkSql/constants";
 import { FlinkStatementResultsManager } from "../../flinkSql/flinkStatementResultsManager";
 import { FlinkStatementWebviewPanelCache } from "../../flinkSql/statementUtils";
 import { Logger } from "../../logging";
@@ -9,8 +10,6 @@ import { FlinkStatementResultsPanelProvider } from "../../panelProviders/flinkSt
 import { getSidecar } from "../../sidecar";
 import { handleWebviewMessage } from "../../webview/comms/comms";
 
-/** Max number of statement results rows to display. */
-export const DEFAULT_RESULT_LIMIT = 100_000;
 /** Cache of statement result webviews by env/statement name. */
 export const statementResultsViewCache = new FlinkStatementWebviewPanelCache();
 

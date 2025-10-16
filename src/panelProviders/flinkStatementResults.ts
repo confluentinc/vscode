@@ -10,10 +10,10 @@ import {
   type WebviewViewProvider,
   window,
 } from "vscode";
-import { DEFAULT_RESULT_LIMIT } from "../commands/utils/statements";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import { ExtensionContextNotSetError } from "../errors";
+import { DEFAULT_RESULT_LIMIT } from "../flinkSql/constants";
 import { FlinkStatementResultsManager } from "../flinkSql/flinkStatementResultsManager";
 import { Logger } from "../logging";
 import { type FlinkStatement } from "../models/flinkStatement";
