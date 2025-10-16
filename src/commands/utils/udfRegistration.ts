@@ -41,9 +41,8 @@ export interface RegistrationResults {
 export async function detectClassesAndRegisterUDFs(artifactFile: Uri, artifactId?: string) {
   try {
     if (!artifactId) {
-      logger.debug("No artifact ID provided from upload response.");
-      // TODO NC review - WHY is it possible to have an undefined ID in response? Should we notify user in this case?
-      throw new Error("Artifact ID is required to register UDFs.");
+      logger.error("Could not auto-register UDFs, no artifact ID provided in upload response.");
+      throw new Error("Unable to find artifact ID");
     }
 
     const classNames = await inspectJarClasses(artifactFile);
