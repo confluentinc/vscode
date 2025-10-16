@@ -65,13 +65,21 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   }
   const rm = ResourceManager.getInstance();
 
-  // create a new untitled doc, set its language and content, then update its metadata before
-  // showing it to the user
-  const doc = await vscode.workspace.openTextDocument({
-    language: FLINK_SQL_LANGUAGE_ID,
-    content: statement.sqlStatement,
-  });
-  await rm.setUriMetadata(doc.uri, updatedMetadata);
+  // check if any existing document is already open with this statement's SQL content
+  // (exact match for now, but if we wanted to add header comments to new untitled documents and/or
+  // check for "document contains statement SQL" we'll need to update this logic)
+  let doc: vscode.TextDocument | undefined = vscode.workspace.textDocuments.find(
+    (doc) => doc.languageId === FLINK_SQL_LANGUAGE_ID && doc.getText() === statement.sqlStatement,
+  );
+  if (!doc) {
+    // create a new untitled doc, set its language and content, then update its metadata before
+    // showing it to the user
+    doc = await vscode.workspace.openTextDocument({
+      language: FLINK_SQL_LANGUAGE_ID,
+      content: statement.sqlStatement,
+    });
+    await rm.setUriMetadata(doc.uri, updatedMetadata);
+  }
   await vscode.window.showTextDocument(doc, { preview: false });
 }
 /**
