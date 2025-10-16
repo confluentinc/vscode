@@ -10,9 +10,9 @@ import {
   RawUdfSystemCatalogRow,
   sortUdfSystemCatalogRows,
   transformUdfSystemCatalogRows,
-} from "./ccloudResourceLoaderUtils";
+} from "./udfSystemCatalogQuery";
 
-describe("ccloudResourceLoaderUtils.ts", () => {
+describe("udfSystemCatalogQuery.ts", () => {
   describe("getUdfSystemCatalogQuery()", () => {
     // This function is trivial, just returns a constant string with the cluster ID filled in twice.
     // Ensure is mentioned twice. Only E2E / clicktesting can prove that the query is otherwise sound.
