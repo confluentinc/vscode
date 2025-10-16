@@ -30,6 +30,15 @@ describe("commands/utils/udfRegistration", () => {
   });
 
   describe("detectClassesAndRegisterUDFs", () => {
+    it("exits and shows error when artifact ID not provided", async () => {
+      const testUri = vscode.Uri.file("/tmp/example.jar");
+      const artifactId = undefined; // Missing artifact ID
+      const errorStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
+      const result = await detectClassesAndRegisterUDFs(testUri, artifactId);
+      sinon.assert.calledOnce(errorStub);
+      assert.strictEqual(result, undefined);
+    });
+
     it("inspects jar, shows quick pick, and handles user cancellation (no selection)", async () => {
       const testUri = vscode.Uri.file("/tmp/example.jar");
       const jarClasses: jarInspector.JarClassInfo[] = [
@@ -341,7 +350,7 @@ describe("commands/utils/udfRegistration", () => {
       assert.strictEqual(result.failures[0].error, "Specific failure reason here");
     });
 
-    it("reports progress messages (smoke test - no throw)", async () => {
+    it("reports progress messages", async () => {
       const regs = [makeReg("one")];
       const reports: string[] = [];
       const progress: ProgressReporter = {
