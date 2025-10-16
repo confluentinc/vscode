@@ -51,7 +51,7 @@ import * as graphqlOrgs from "../graphql/organizations";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
-import { FlinkUdf } from "../models/flinkUDF";
+import { FlinkUdf } from "../models/flinkSystemCatalog";
 import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
@@ -63,7 +63,7 @@ import {
   loadArtifactsForProviderRegion,
   loadProviderRegions,
 } from "./ccloudResourceLoader";
-import { RawUdfSystemCatalogRow } from "./utils/ccloudResourceLoaderUtils";
+import { RawUdfSystemCatalogRow } from "./utils/udfSystemCatalogQuery";
 
 describe("CCloudResourceLoader", () => {
   let sandbox: sinon.SinonSandbox;

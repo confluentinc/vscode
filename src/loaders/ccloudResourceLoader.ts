@@ -21,7 +21,7 @@ import { CCloudEnvironment } from "../models/environment";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
-import { FlinkUdf } from "../models/flinkUDF";
+import { FlinkUdf } from "../models/flinkSystemCatalog";
 import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import { CCloudOrganization } from "../models/organization";
 import { EnvironmentId, IFlinkQueryable, IProviderRegion } from "../models/resource";
@@ -31,12 +31,12 @@ import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
 import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
+import { generateFlinkStatementKey } from "./utils/loaderUtils";
 import {
   getUdfSystemCatalogQuery,
   RawUdfSystemCatalogRow,
   transformUdfSystemCatalogRows,
-} from "./utils/ccloudResourceLoaderUtils";
-import { generateFlinkStatementKey } from "./utils/loaderUtils";
+} from "./utils/udfSystemCatalogQuery";
 
 const logger = new Logger("storage.ccloudResourceLoader");
 
