@@ -1,5 +1,6 @@
 import { ProgressLocation, Uri, window } from "vscode";
 import { udfsChanged } from "../../emitters";
+import { logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
@@ -38,35 +39,44 @@ export interface RegistrationResults {
  * @param artifactId The artifact ID where the UDFs originate
  */
 export async function detectClassesAndRegisterUDFs(artifactFile: Uri, artifactId?: string) {
-  if (!artifactId) {
-    throw new Error("Artifact ID is required to register UDFs.");
-  }
+  try {
+    if (!artifactId) {
+      logger.debug("No artifact ID provided from upload response.");
+      // TODO NC review - WHY is it possible to have an undefined ID in response? Should we notify user in this case?
+      throw new Error("Artifact ID is required to register UDFs.");
+    }
 
-  const classNames = await inspectJarClasses(artifactFile);
-  if (classNames && classNames.length > 0) {
+    const classNames = await inspectJarClasses(artifactFile);
+    if (!classNames || classNames.length === 0) {
+      logger.debug("No Java classes found in JAR file.");
+      throw new Error("No Java classes found in the selected JAR file.");
+    }
     logger.trace(`Found ${classNames.length} classes in the JAR file.`);
 
     const selectedClasses = await selectClassesForUdfRegistration(classNames);
     if (!selectedClasses || selectedClasses.length === 0) {
-      return; // User cancelled or selected no classes
+      return; // No error - user cancelled quickpick or selected 0 classes
     }
     logger.trace(`User selected ${selectedClasses.length} classes for UDF registration.`);
+
     const registrations = await promptForFunctionNames(selectedClasses);
     if (!registrations || registrations.length === 0) {
-      return; // User cancelled or provided no function names
+      return; // No error - user cancelled or provided no function names
     }
+    logger.trace(`Prepared ${registrations.length} UDF registration(s).`);
 
-    try {
-      const results = await registerMultipleUdfs(registrations, artifactId);
-      reportRegistrationResults(registrations.length, results);
-    } catch (error) {
-      logger.error("Error during UDF registration:", error);
-      void showErrorNotificationWithButtons(
-        `Error during UDF registration: ${error instanceof Error ? error.message : error}`,
-      );
-    }
-  } else {
-    logger.debug("No Java classes found in JAR file.");
+    const results = await registerMultipleUdfs(registrations, artifactId);
+    reportRegistrationResults(registrations.length, results);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "An unknown error occurred";
+    logError(error, "UDF quick-register workflow failed", {
+      extra: {
+        artifactId,
+      },
+    });
+    void showErrorNotificationWithButtons(
+      `Failed to register UDF(s): ${message}. Try again by right-clicking the artifact from the list in the Flink Database Explorer view.`,
+    );
   }
 }
 /**
