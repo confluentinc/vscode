@@ -1,28 +1,28 @@
 import assert from "assert";
 import * as sinon from "sinon";
-import { getSidecarStub } from "../../tests/stubs/sidecar";
+import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA_REGISTRY,
-} from "../../tests/unit/testResources";
-import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { TEST_CCLOUD_ORGANIZATION_ID } from "../../tests/unit/testResources/organization";
-import { createResponseError, createTestTopicData } from "../../tests/unit/testUtils";
-import { TopicV3Api } from "../clients/kafkaRest";
-import { TopicData } from "../clients/kafkaRest/models";
+} from "../../../tests/unit/testResources";
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
+import { TEST_CCLOUD_ORGANIZATION_ID } from "../../../tests/unit/testResources/organization";
+import { createResponseError, createTestTopicData } from "../../../tests/unit/testUtils";
+import { TopicV3Api } from "../../clients/kafkaRest";
+import { TopicData } from "../../clients/kafkaRest/models";
 import {
   GetSchemaByVersionRequest,
   Schema as ResponseSchema,
   SubjectsV1Api,
-} from "../clients/schemaRegistryRest";
-import { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
-import * as loaderUtils from "../loaders/loaderUtils";
-import { Schema, SchemaType, Subject } from "../models/schema";
-import * as sidecar from "../sidecar";
-import { SidecarHandle } from "../sidecar";
-import * as privateNetworking from "../utils/privateNetworking";
+} from "../../clients/schemaRegistryRest";
+import { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";
+import { Schema, SchemaType, Subject } from "../../models/schema";
+import * as sidecar from "../../sidecar";
+import { SidecarHandle } from "../../sidecar";
+import * as privateNetworking from "../../utils/privateNetworking";
+import * as loaderUtils from "./loaderUtils";
 
 // as from fetchTopics() result.
 export const topicsResponseData: TopicData[] = [
