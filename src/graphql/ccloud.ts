@@ -65,8 +65,8 @@ export async function getCCloudResources(): Promise<CCloudEnvironment[]> {
   }
 
   // First, extract out all Flink pools so we can associate them with Kafka clusters *across* environments
-  let flinkComputePoolsByEnv: Map<EnvironmentId, CCloudFlinkComputePool[]> = new Map();
-  let flinkComputePoolsByCloudRegion: Map<string, CCloudFlinkComputePool[]> = new Map();
+  const flinkComputePoolsByEnv: Map<EnvironmentId, CCloudFlinkComputePool[]> = new Map();
+  const flinkComputePoolsByCloudRegion: Map<string, CCloudFlinkComputePool[]> = new Map();
   environments.forEach((env) => {
     if (!env) {
       return;
@@ -107,7 +107,7 @@ export async function getCCloudResources(): Promise<CCloudEnvironment[]> {
         // Associate Flink compute pools with the same provider/region
         const matchingFlinkPools = flinkComputePoolsByCloudRegion
           .get(`${cluster.provider}/${cluster.region}`)
-          ?.slice(); // slice() to clone array
+          ?.slice(); // slice() to clone array so that each CCloudKafkaCluster has its own copy.
 
         return CCloudKafkaCluster.create({
           ...cluster,
