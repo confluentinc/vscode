@@ -35,8 +35,8 @@ import {
   getUdfSystemCatalogQuery,
   RawUdfSystemCatalogRow,
   transformUdfSystemCatalogRows,
-} from "./ccloudResourceLoaderUtils";
-import { generateFlinkStatementKey } from "./loaderUtils";
+} from "./utils/ccloudResourceLoaderUtils";
+import { generateFlinkStatementKey } from "./utils/loaderUtils";
 
 const logger = new Logger("storage.ccloudResourceLoader");
 
