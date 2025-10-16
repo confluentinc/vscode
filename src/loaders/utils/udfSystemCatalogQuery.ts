@@ -1,9 +1,8 @@
 /** CCLoudResourceLoader Flink statement utils */
-
-import { FlinkUdf, FlinkUdfParameter } from "../../models/flinkSystemCatalog";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 
 import { Logger } from "../../logging";
+import { FlinkUdf, FlinkUdfParameter } from "../../models/flinkSystemCatalog";
 
 const logger = new Logger("udfSystemCatalogQuery");
 

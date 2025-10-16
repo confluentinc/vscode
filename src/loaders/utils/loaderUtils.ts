@@ -17,13 +17,10 @@ import {
 } from "../../utils/privateNetworking";
 import { executeInWorkerPool, extract } from "../../utils/workerPool";
 
-const logger = new Logger("resourceLoader");
+const logger = new Logger("loaderUtils");
 
 /**
  * Internal functions used by ResourceLoaders.
- *
- * Factored out from resourceLoader.ts to allow for
- * test suite mocking / stubbing.
  */
 
 export class TopicFetchError extends Error {
@@ -95,11 +92,10 @@ export function correlateTopicsWithSchemaSubjects(
       subjectMatchesTopicName(subject.name, topic.topic_name),
     );
 
-    // Check if the cluster has any Flink pools (for CCloud clusters only)
+    // A topic can be queried by Flink if is a CCloud topic and its cluster is "Flinkable."
     let isFlinkable = false;
     if (isCCloud(cluster)) {
-      const ccloudCluster = cluster as CCloudKafkaCluster;
-      isFlinkable = Array.isArray(ccloudCluster.flinkPools) && ccloudCluster.flinkPools.length > 0;
+      isFlinkable = (cluster as CCloudKafkaCluster).isFlinkable();
     }
 
     return KafkaTopic.create({

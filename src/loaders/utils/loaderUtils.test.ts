@@ -68,6 +68,45 @@ describe("loaderUtils.ts", () => {
       assert.ok(results[1].hasSchema);
       assert.ok(results[2].hasSchema);
       assert.ok(!results[3].hasSchema);
+
+      // None should be flinkable, as this is not a CCloud cluster.
+      results.forEach((t) => assert.ok(!t.isFlinkable));
+    });
+
+    it("should assign isFlinkable based on whether or not the cluster is a Flinkable CCloud cluster", () => {
+      // no subjects, just looking to see if isFlinkable is set correctly.
+      const subjects: Subject[] = [];
+
+      const ccloudFlinkableResults = loaderUtils.correlateTopicsWithSchemaSubjects(
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        topicsResponseData,
+        subjects,
+      );
+      ccloudFlinkableResults.forEach((t) =>
+        assert.ok(t.isFlinkable, "CCloud Flinkable cluster should have flinkable topics"),
+      );
+
+      assert.ok(
+        TEST_CCLOUD_KAFKA_CLUSTER.isFlinkable() === false,
+        "Expected TEST_CCLOUD_KAFKA_CLUSTER to not be Flinkable",
+      );
+      const ccloudNonFlinkableResults = loaderUtils.correlateTopicsWithSchemaSubjects(
+        TEST_CCLOUD_KAFKA_CLUSTER, // Not Flinkable
+        topicsResponseData,
+        subjects,
+      );
+      ccloudNonFlinkableResults.forEach((t) =>
+        assert.ok(!t.isFlinkable, "CCloud non-Flinkable cluster should not have flinkable topics"),
+      );
+
+      const localResults = loaderUtils.correlateTopicsWithSchemaSubjects(
+        TEST_LOCAL_KAFKA_CLUSTER,
+        topicsResponseData,
+        subjects,
+      );
+      localResults.forEach((t) =>
+        assert.ok(!t.isFlinkable, "Local cluster should not have flinkable topics"),
+      );
     });
   });
 
