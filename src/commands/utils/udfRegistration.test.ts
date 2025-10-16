@@ -9,8 +9,11 @@ import * as jarInspector from "../../utils/jarInspector";
 import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import {
   detectClassesAndRegisterUDFs,
+  executeUdfRegistrations,
+  ProgressReporter,
   promptForFunctionNames,
   registerMultipleUdfs,
+  reportRegistrationResults,
   selectClassesForUdfRegistration,
   UdfRegistrationData,
 } from "./udfRegistration";
@@ -24,29 +27,6 @@ describe("commands/utils/udfRegistration", () => {
 
   afterEach(() => {
     sandbox.restore();
-  });
-
-  describe("selectClassesForUdfRegistration", () => {
-    it("returns selected class infos when user picks multiple items", async () => {
-      const classInfos: jarInspector.JarClassInfo[] = [
-        { className: "com.acme.Alpha", simpleName: "Alpha" },
-        { className: "com.acme.Beta", simpleName: "Beta" },
-      ];
-
-      const showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick").resolves([
-        { label: "Alpha", description: "com.acme.Alpha", classInfo: classInfos[0] },
-        { label: "Beta", description: "com.acme.Beta", classInfo: classInfos[1] },
-      ] as any);
-
-      const result = await selectClassesForUdfRegistration(classInfos);
-
-      sinon.assert.calledOnce(showQuickPickStub);
-      assert.deepStrictEqual(
-        result,
-        classInfos,
-        "Should map back to underlying JarClassInfo objects",
-      );
-    });
   });
 
   describe("detectClassesAndRegisterUDFs", () => {
@@ -100,6 +80,29 @@ describe("commands/utils/udfRegistration", () => {
       sinon.assert.calledOnce(inspectStub);
       sinon.assert.calledOnce(quickPickStub);
       assert.strictEqual(result, undefined);
+    });
+  });
+
+  describe("selectClassesForUdfRegistration", () => {
+    it("returns selected class infos when user picks multiple items", async () => {
+      const classInfos: jarInspector.JarClassInfo[] = [
+        { className: "com.acme.Alpha", simpleName: "Alpha" },
+        { className: "com.acme.Beta", simpleName: "Beta" },
+      ];
+
+      const showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick").resolves([
+        { label: "Alpha", description: "com.acme.Alpha", classInfo: classInfos[0] },
+        { label: "Beta", description: "com.acme.Beta", classInfo: classInfos[1] },
+      ] as any);
+
+      const result = await selectClassesForUdfRegistration(classInfos);
+
+      sinon.assert.calledOnce(showQuickPickStub);
+      assert.deepStrictEqual(
+        result,
+        classInfos,
+        "Should map back to underlying JarClassInfo objects",
+      );
     });
   });
 
@@ -261,6 +264,158 @@ describe("commands/utils/udfRegistration", () => {
         .resolves(exampleDatabase);
       await registerMultipleUdfs([makeRegistration("foo")], "artifact123");
       sinon.assert.calledOnce(qpStub);
+    });
+  });
+
+  describe("executeUdfRegistrations", () => {
+    let sandboxExec: sinon.SinonSandbox;
+    let loaderStub: sinon.SinonStub;
+    let fireStub: sinon.SinonStub;
+
+    const db = { provider: "aws", region: "us-west-2" } as any;
+
+    function makeReg(name: string): UdfRegistrationData {
+      return {
+        classInfo: { className: `com.acme.${name}Cls`, simpleName: `${name}Cls` },
+        functionName: name,
+      };
+    }
+
+    beforeEach(() => {
+      sandboxExec = sandbox;
+      loaderStub = sandboxExec.stub(CCloudResourceLoader, "getInstance").returns({
+        executeBackgroundFlinkStatement: sandboxExec.stub().resolves(undefined),
+      } as unknown as CCloudResourceLoader);
+      fireStub = sandboxExec.stub(emitters.udfsChanged, "fire");
+    });
+
+    it("executes statements and returns all successes", async () => {
+      const regs = [makeReg("alpha"), makeReg("beta")];
+      const progress: ProgressReporter = { report: () => {} };
+      const result = await executeUdfRegistrations(regs, "artifactABC", db, progress);
+      const execStub = loaderStub.returnValues[0]
+        .executeBackgroundFlinkStatement as sinon.SinonStub;
+      sinon.assert.callCount(execStub, 2);
+      assert.deepStrictEqual(result.successes, ["alpha", "beta"]);
+      assert.deepStrictEqual(result.failures, []);
+      sinon.assert.calledOnce(fireStub);
+    });
+
+    it("records failures while continuing processing", async () => {
+      const regs = [makeReg("okFn"), makeReg("badFn"), makeReg("alsoOk")];
+      const execStub = sandboxExec
+        .stub()
+        .onFirstCall()
+        .resolves(undefined)
+        .onSecondCall()
+        .rejects(new Error("boom"))
+        .onThirdCall()
+        .resolves(undefined);
+      loaderStub.returns({
+        executeBackgroundFlinkStatement: execStub,
+      } as unknown as CCloudResourceLoader);
+
+      const progress: ProgressReporter = { report: () => {} };
+      const result = await executeUdfRegistrations(regs, "artifactZ", db, progress);
+
+      assert.deepStrictEqual(result.successes, ["okFn", "alsoOk"]);
+      assert.strictEqual(result.failures.length, 1);
+      assert.strictEqual(result.failures[0].functionName, "badFn");
+      sinon.assert.calledOnce(fireStub);
+    });
+
+    it("extracts Flink detail from error message when present", async () => {
+      const regs = [makeReg("detailFn")];
+      const execStub = sandboxExec
+        .stub()
+        .rejects(new Error("Some wrapper msg Error detail: Specific failure reason here"));
+      loaderStub.returns({
+        executeBackgroundFlinkStatement: execStub,
+      } as unknown as CCloudResourceLoader);
+
+      const progress: ProgressReporter = { report: () => {} };
+      const result = await executeUdfRegistrations(regs, "artifactY", db, progress);
+
+      assert.strictEqual(result.successes.length, 0);
+      assert.strictEqual(result.failures.length, 1);
+      assert.strictEqual(result.failures[0].error, "Specific failure reason here");
+    });
+
+    it("reports progress messages (smoke test - no throw)", async () => {
+      const regs = [makeReg("one")];
+      const reports: string[] = [];
+      const progress: ProgressReporter = {
+        report: (v) => {
+          if (v.message) reports.push(v.message);
+        },
+      };
+      await executeUdfRegistrations(regs, "artifactP", db, progress);
+      assert.ok(
+        reports.some((m) => m.includes("Registering one")),
+        "Should log register message",
+      );
+      assert.ok(
+        reports.some((m) => m.includes("Updating UDF view")),
+        "Should log update message",
+      );
+    });
+  });
+
+  describe("reportRegistrationResults", () => {
+    let infoStub: sinon.SinonStub;
+    let errStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      infoStub = sandbox.stub(notifications, "showInfoNotificationWithButtons").resolves();
+      errStub = sandbox.stub(vscode.window, "showErrorMessage").resolves(undefined);
+    });
+
+    it("shows single success message", () => {
+      reportRegistrationResults(1, { successes: ["fooFn"], failures: [] });
+      sinon.assert.calledOnce(infoStub);
+      const msg = infoStub.firstCall.args[0] as string;
+      assert.ok(msg.includes("UDF registered successfully"), "Should indicate single success");
+      sinon.assert.notCalled(errStub);
+    });
+
+    it("shows all success message for multiple UDFs", () => {
+      reportRegistrationResults(2, { successes: ["a", "b"], failures: [] });
+      sinon.assert.calledOnce(infoStub);
+      const msg = infoStub.firstCall.args[0] as string;
+      assert.ok(
+        msg.includes("All 2 UDF(s) registered successfully"),
+        "Should indicate all success",
+      );
+      sinon.assert.notCalled(errStub);
+    });
+
+    it("shows partial success message and error details", () => {
+      reportRegistrationResults(3, {
+        successes: ["good1", "good2"],
+        failures: [{ functionName: "bad1", error: "some error" }],
+      });
+      sinon.assert.calledOnce(infoStub);
+      sinon.assert.calledOnce(errStub);
+      const infoMsg = infoStub.firstCall.args[0] as string;
+      const errMsg = errStub.firstCall.args[0] as string;
+      assert.ok(infoMsg.includes("2 of 3"), "Should indicate partial success");
+      assert.ok(errMsg.includes("bad1: some error"), "Should include failure detail");
+    });
+
+    it("shows only failure message when all fail", () => {
+      reportRegistrationResults(2, {
+        successes: [],
+        failures: [
+          { functionName: "x", error: "boom" },
+          { functionName: "y", error: "fail" },
+        ],
+      });
+      sinon.assert.notCalled(infoStub);
+      sinon.assert.calledOnce(errStub);
+      const errMsg = errStub.firstCall.args[0] as string;
+      assert.ok(errMsg.includes("Failed to register 2 UDF"), "Should report count");
+      assert.ok(errMsg.includes("x: boom"), "Should list first error");
+      assert.ok(errMsg.includes("y: fail"), "Should list second error");
     });
   });
 });

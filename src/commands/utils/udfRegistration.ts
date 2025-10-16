@@ -21,12 +21,12 @@ export interface UdfRegistrationData {
   functionName: string;
 }
 // internal for ease of passing it down a level
-interface ProgressReporter {
+export interface ProgressReporter {
   report(value: { message?: string; increment?: number }): void;
 }
 
 // internal for reuse in multiple functions along the way
-interface RegistrationResults {
+export interface RegistrationResults {
   successes: string[];
   failures: Array<{ functionName: string; error: string }>;
 }
@@ -172,7 +172,7 @@ export async function registerMultipleUdfs(
  * Reports progress to parent `window.withProgress`
  * @returns RegistrationResults containing successes and failures
  */
-async function executeUdfRegistrations(
+export async function executeUdfRegistrations(
   registrations: UdfRegistrationData[],
   artifactId: string,
   selectedFlinkDatabase: CCloudFlinkDbKafkaCluster,
@@ -242,7 +242,7 @@ async function executeUdfRegistrations(
  * @param successes Array of successfully registered function names
  * @param failures Array of failures with function names and error messages
  */
-function reportRegistrationResults(
+export function reportRegistrationResults(
   requestedCount: number,
   { successes, failures }: RegistrationResults,
 ) {
