@@ -219,7 +219,7 @@ describe("sidecarManager.ts", () => {
       it("Happy when process is running", async () => {
         isProcessRunningStub.returns(true);
         // does not throw.
-        await manager.confirmSidecarProcessIsRunning(1234, "", "");
+        await manager.confirmSidecarProcessIsRunning(1234, "");
       });
 
       it("Does proper things when process is not running", async () => {
@@ -242,7 +242,7 @@ describe("sidecarManager.ts", () => {
           .returns(SidecarStartupFailureReason.PORT_IN_USE);
 
         try {
-          await manager.confirmSidecarProcessIsRunning(2345, "prefix", "");
+          await manager.confirmSidecarProcessIsRunning(2345, "prefix");
         } catch (e) {
           if (e instanceof SidecarFatalError) {
             assert.strictEqual(

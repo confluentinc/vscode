@@ -1,8 +1,14 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { ScaffoldV1Template } from "../clients/scaffoldingService";
-import * as sidecarModule from "../sidecar";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
+import {
+  ScaffoldV1Template,
+  ScaffoldV1TemplateList,
+  ScaffoldV1TemplateListFromJSON,
+  TemplatesScaffoldV1Api,
+} from "../clients/scaffoldingService";
+import { SidecarHandle } from "../sidecar";
 import {
   filterSensitiveKeys,
   getTemplatesList,
@@ -94,12 +100,15 @@ describe("templates.ts", () => {
         { spec: { name: "java-client" } },
         { spec: { name: "python-client" } },
       ] as ScaffoldV1Template[];
-      const fakeApi = {
-        listScaffoldV1Templates: sandbox.stub().resolves({ data: fakeTemplates }),
-      };
 
-      const fakeSidecarHandle = { getTemplatesApi: () => fakeApi };
-      sandbox.stub(sidecarModule, "getSidecar").resolves(fakeSidecarHandle as any);
+      const stubbedTemplatesApi = sandbox.createStubInstance(TemplatesScaffoldV1Api);
+      stubbedTemplatesApi.listScaffoldV1Templates.resolves(
+        ScaffoldV1TemplateListFromJSON({
+          data: fakeTemplates,
+        }) satisfies ScaffoldV1TemplateList,
+      );
+      const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
+      stubbedSidecar.getTemplatesApi.returns(stubbedTemplatesApi);
 
       const result = await getTemplatesList("my-collection");
       assert.strictEqual(result.length, 2);
@@ -129,6 +138,40 @@ describe("templates.ts", () => {
       sandbox.stub(vscode.window, "showQuickPick").resolves(undefined);
       const result = await pickTemplate([template]);
       assert.strictEqual(result, undefined);
+    });
+
+    it("should present templates to the user sorted by display_name", async () => {
+      const unsortedTemplates = [
+        { spec: { display_name: "Flink Table API In Java For Confluent Cloud", name: "flink" } },
+        { spec: { display_name: "AWS Lambda Consumer Application In Python", name: "python" } },
+        { spec: { display_name: "AWS Lambda Consumer Application In JavaScript", name: "js" } },
+      ];
+
+      let quickPickLabels: string[] = [];
+      sandbox
+        .stub(vscode.window, "showQuickPick")
+        .callsFake(
+          (items: readonly vscode.QuickPickItem[] | Thenable<readonly vscode.QuickPickItem[]>) => {
+            // Handle both direct array and promise
+            if (Array.isArray(items)) {
+              quickPickLabels = items.map((i) => i.label);
+              return Promise.resolve(items[0]);
+            }
+            return Promise.resolve(undefined);
+          },
+        );
+
+      await pickTemplate(unsortedTemplates as any);
+
+      assert.deepStrictEqual(
+        quickPickLabels,
+        [
+          "AWS Lambda Consumer Application In JavaScript",
+          "AWS Lambda Consumer Application In Python",
+          "Flink Table API In Java For Confluent Cloud",
+        ],
+        "Templates should be presented sorted by display_name",
+      );
     });
   });
 });

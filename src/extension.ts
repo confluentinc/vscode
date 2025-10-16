@@ -13,7 +13,7 @@ if (process.env.SENTRY_DSN) {
 }
 
 import { handleNewOrUpdatedExtensionInstallation } from "./activation/compareVersions";
-import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
+import { ConfluentCloudAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
 import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
 import { PARTICIPANT_ID } from "./chat/constants";
@@ -38,17 +38,20 @@ import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerMedusaCodeLensCommands } from "./commands/medusaCodeLens";
 import { registerOrganizationCommands } from "./commands/organizations";
 import { registerNewResourceViewCommands } from "./commands/resources";
+import { registerProjectGenerationCommands } from "./commands/scaffold";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSearchCommands } from "./commands/search";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
 import { registerUriCommands } from "./commands/uris";
+import { setProjectScaffoldListener } from "./commands/utils/scaffoldUtils";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, IconNames } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
 import { ContextValues, setContextValue } from "./context/values";
+import { JSON_DIAGNOSTIC_COLLECTION } from "./diagnostics/constants";
 import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { registerLocalResourceWorkflows } from "./docker/workflows/workflowInitialization";
@@ -60,7 +63,6 @@ import { logError } from "./errors";
 import {
   ENABLE_CHAT_PARTICIPANT,
   ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
-  USE_NEW_RESOURCES_VIEW_PROVIDER,
 } from "./extensionSettings/constants";
 import { createConfigChangeListener } from "./extensionSettings/listener";
 import { updatePreferences } from "./extensionSettings/sidecarSync";
@@ -78,8 +80,7 @@ import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
 import { getLanguageTypes, SchemaType } from "./models/schema";
-import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
-import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
+import { FlinkStatementResultsPanelProvider } from "./panelProviders/flinkStatementResults";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { createLocalConnection, getLocalConnection } from "./sidecar/connections/local";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
@@ -91,13 +92,13 @@ import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { logUsage, UserEvent } from "./telemetry/events";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
-import { getUriHandler } from "./uriHandler";
+import { UriEventHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
+import { inspectJarClasses } from "./utils/jarInspector";
 import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
 import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
-import { NewResourceViewProvider } from "./viewProviders/newResources";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
@@ -207,43 +208,40 @@ async function _activateExtension(
   context.subscriptions.push(settingsListener);
 
   // set up the different view providers
-
-  // There can be only one resources view provider ...
-  let resourceViewProviderInstance: ResourceViewProvider | NewResourceViewProvider;
-  if (USE_NEW_RESOURCES_VIEW_PROVIDER.value) {
-    logger.info("Using new resources view provider");
-    resourceViewProviderInstance = NewResourceViewProvider.getInstance();
-  } else {
-    logger.info("Using legacy resources view provider");
-    resourceViewProviderInstance = ResourceViewProvider.getInstance();
-  }
-
+  const resourceViewProvider = ResourceViewProvider.getInstance();
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
   const artifactsViewProvider = FlinkDatabaseViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
+
+  // ...and any panel view providers
+  const flinkStatementResultsPanelProvider = FlinkStatementResultsPanelProvider.getInstance();
+
   const viewProviderDisposables: vscode.Disposable[] = [
-    resourceViewProviderInstance,
+    resourceViewProvider,
     topicViewProvider,
     schemasViewProvider,
     supportViewProvider,
     statementsViewProvider,
     artifactsViewProvider,
+    flinkStatementResultsPanelProvider,
   ];
   logger.info("View providers initialized");
   // explicitly "reset" the Topics & Schemas views so no resources linger during reactivation/update
-  topicViewProvider.reset();
-  schemasViewProvider.reset();
+  await Promise.all([topicViewProvider.reset(), schemasViewProvider.reset()]);
 
   // Register refresh commands for our refreshable resource view providers.
   const refreshCommands: vscode.Disposable[] = [];
-  for (const instance of getRefreshableViewProviders(resourceViewProviderInstance)) {
+  for (const instance of getRefreshableViewProviders()) {
     refreshCommands.push(
-      registerCommandWithLogging(`confluent.${instance.kind}.refresh`, (): boolean => {
-        instance.refresh(true);
-        return true;
-      }),
+      registerCommandWithLogging(
+        `confluent.${instance.kind}.refresh`,
+        async (): Promise<boolean> => {
+          await instance.refresh(true);
+          return true;
+        },
+      ),
     );
   }
 
@@ -274,6 +272,7 @@ async function _activateExtension(
     ...registerFlinkArtifactCommands(),
     ...registerNewResourceViewCommands(),
     ...registerUriCommands(),
+    registerCommandWithLogging("confluent.testInspectJar", inspectJarClasses), // TEMP DO NOT MERGE
   ];
   logger.info("Commands registered");
 
@@ -290,7 +289,9 @@ async function _activateExtension(
     context.subscriptions.push(flinkLanguageClientManager);
   }
 
-  const uriHandler: vscode.Disposable = vscode.window.registerUriHandler(getUriHandler());
+  const uriHandler: vscode.Disposable = vscode.window.registerUriHandler(
+    UriEventHandler.getInstance(),
+  );
 
   // If the user is already authenticated to ccloud (this being not the first
   // workspace activated), this will eventually cause ccloudConnected to be fired.
@@ -398,6 +399,7 @@ async function setupContextValues() {
     "ccloud-schema-registry",
     "ccloud-flink-compute-pool",
     "ccloud-flink-statement",
+    "ccloud-flink-statement-not-viewable",
   ]);
   // allow for easier matching using "in" clauses for our Resources/Topics/Schemas views
   const viewsWithResources = setContextValue(ContextValues.VIEWS_WITH_RESOURCES, [
@@ -430,12 +432,17 @@ async function setupContextValues() {
     "ccloud-kafka-cluster",
     "ccloud-flinkable-kafka-cluster",
     "ccloud-flink-compute-pool",
-    "ccloud-flink-statement",
     "ccloud-flink-artifact",
+    "ccloud-flink-udf",
     "local-kafka-cluster",
     "direct-kafka-cluster",
-    // topics also have names, but their context values vary wildly and must be regex-matched
+    // topics and Flink statements also have names, but their context values vary wildly and must be regex-matched
   ]);
+
+  /**
+   * CCloud and Local Kafka Clusters and all Schema Registries have REST URI / URLs
+   * (Direct Kafka clusters might be running the REST gateway, but we can't guarantee it)
+   */
   const resourcesWithURIs = setContextValue(ContextValues.RESOURCES_WITH_URIS, [
     "ccloud-kafka-cluster",
     "ccloud-flinkable-kafka-cluster",
@@ -453,6 +460,10 @@ async function setupContextValues() {
     ContextValues.flinkDatabaseViewMode,
     FlinkDatabaseViewProviderMode.Artifacts,
   );
+
+  // Default to Docker daemon not being available until proven otherwise
+  const dockerAvailable = setContextValue(ContextValues.dockerServiceAvailable, false);
+
   await Promise.all([
     e2eTestEnvironment,
     chatParticipantEnabled,
@@ -465,6 +476,7 @@ async function setupContextValues() {
     resourcesWithURIs,
     diffableResources,
     flinkViewMode,
+    dockerAvailable,
   ]);
 }
 
@@ -508,19 +520,16 @@ async function setupFeatureFlags(): Promise<void> {
 
   const disabledMessage: string | undefined = await checkForExtensionDisabledReason();
   if (disabledMessage) {
-    showExtensionDisabledNotification(disabledMessage);
+    void showExtensionDisabledNotification(disabledMessage);
     throw new Error(disabledMessage);
   }
 }
 
 /** Return view provider + name fragment pairs for auto-registering refresh() commands. */
-export function getRefreshableViewProviders(
-  resourcesViewProviderInstance: ResourceViewProvider | NewResourceViewProvider,
-): RefreshableTreeViewProvider[] {
+export function getRefreshableViewProviders(): RefreshableTreeViewProvider[] {
   // When adding a new refreshable view, also update the test block
   // "Refreshable views tests" in extension.test.ts.
   const refreshables = [
-    resourcesViewProviderInstance,
     TopicViewProvider.getInstance(),
     SchemasViewProvider.getInstance(),
     FlinkStatementsViewProvider.getInstance(),
@@ -546,7 +555,7 @@ async function setupStorage(): Promise<void> {
  * @returns A {@link vscode.Disposable} for the auth provider
  */
 async function setupAuthProvider(): Promise<vscode.Disposable[]> {
-  const provider: ConfluentCloudAuthProvider = getAuthProvider();
+  const provider = ConfluentCloudAuthProvider.getInstance();
   const providerDisposable = vscode.authentication.registerAuthenticationProvider(
     AUTH_PROVIDER_ID,
     AUTH_PROVIDER_LABEL,
@@ -578,7 +587,10 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
       userInfo: undefined,
       session: cloudSession,
     });
-    (await getLaunchDarklyClient())?.identify({ key: cloudSession.account.id });
+    const launchDarklyClient = await getLaunchDarklyClient();
+    if (launchDarklyClient) {
+      await launchDarklyClient.identify({ key: cloudSession.account.id });
+    }
   }
 
   logger.info("Confluent Cloud auth provider registered");
@@ -612,7 +624,7 @@ export function deactivate() {
     const msg = "Error disposing telemetry logger during extension deactivation";
     logError(new Error(msg, { cause: e }), msg, { extra: {} });
   }
-  closeSentryClient();
+  void closeSentryClient();
 
   disposeLaunchDarklyClient();
   disableCCloudStatusPolling();

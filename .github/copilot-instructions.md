@@ -1,98 +1,177 @@
-# Confluent VS Code Extension Development
+# Confluent VS Code Extension
 
-This VS Code extension makes it easy for developers to build stream processing applications using
-Confluent technology. It provides integration with Confluent Cloud products and Apache Kafka®
-compatible clusters within Visual Studio Code.
+This VS Code extension helps developers build stream processing applications using Confluent
+technology. The extension integrates with Confluent Cloud products and Apache Kafka® compatible
+clusters within VS Code.
 
-## Technology Stack
+## Architecture Overview
 
-- TypeScript VS Code extension with strict type checking
-- Single sidecar process manages multiple workspaces concurrently
-- Integration with Confluent Cloud APIs, Apache Kafka® clusters, Schema Registry, and Flink compute
-  pools
-- Build system uses Gulp with TypeScript compilation
-- Auto-generated OpenAPI clients from specs in `src/clients/sidecar-openapi-specs/` using
-  `openapi-generator`'s `typescript-fetch` generator
-- Extension provides Kafka topic management, schema evolution, and stream processing application
-  development
+### Sidecar Process Pattern
 
-## Code Organization and Architecture
+- **Core concept**: Extension communicates with a separate `ide-sidecar` process that handles heavy
+  operations
+- **Location**: Sidecar binaries in `bin/`, managed by `src/sidecar/sidecarManager.ts`
+- **Communication**: WebSocket + REST API via `SidecarHandle` - always use short-lived handles
+- **Key classes**: `SidecarManager` (singleton), `SidecarHandle` (per-request), `WebsocketManager`
+- **Pattern**: `await getSidecar()` → use handle → discard (enables automatic reconnection)
 
-- Use consistent directory structure for related functionality (e.g., `src/featureFlags/`,
-  `src/models/`)
-- File names should be descriptive and match their primary purpose
-- Place test files adjacent to source files with `.test.ts` suffix
-- Use ResourceLoader instances for different connection types (CCloud, Direct, Local) to load and
-  cache resources
-- Store state through ResourceManager with locking mechanisms to prevent race conditions
-- Context values control UI state and command availability through VS Code's context system
-- Auto-generated code in `src/clients/` should never be modified directly - update OpenAPI specs
-  instead
+### View Provider Architecture
 
-## TypeScript and VS Code Extension Patterns
+- **Tree Views**: Resources, Topics, Schemas, Flink Statements, Flink Databases - all extend
+  `RefreshableTreeViewProvider`
+- **Webviews**: Message viewer, connection forms, project scaffolding via HTML templates +
+  TypeScript
+- **Pattern**: ViewProvider manages tree state, delegates to ResourceLoader subclasses for data
+  fetching and caching
 
-- Use explicit types and interfaces, never use `any` type
-- Prefer `async/await` over Promise chains for better readability
-- Use `Promise.all` for concurrent operations when possible
-- Follow functional programming patterns where appropriate
-- Use classes for encapsulating related functionality and state for better organization and
-  testability
-- Variable and function names should be self-documenting to reduce the need for inline comments
-- Keep functions small and follow the single-responsibility principle
-- Follow VS Code extension API patterns for commands, tree providers, quickpicks, and webviews
-- Keep track of and handle `vscode.Disposable` resources properly to avoid memory leaks
-- Use existing ResourceLoader and ResourceManager patterns rather than creating new data fetching
-  approaches
-- Use VS Code's configuration API for user settings
+### Client Code Generation
 
-## Error Handling and User Experience
+- **Never edit** `src/clients/` - all auto-generated from OpenAPI specs in
+  `src/clients/sidecar-openapi-specs/`
+- **To modify**: Update OpenAPI spec → run `npx gulp apigen` → commit both spec, generated code, and
+  a patch to `src/clients/sidecar-openapi-specs/patches/` so subsequent generations apply cleanly
+- **GraphQL**: Use `gql.tada` for type-safe queries, schema in `src/graphql/sidecar.graphql`
 
-- Use `logError()` utility for consistent error logging with stack traces and response details
-- Use `showErrorNotificationWithButtons()` for user-facing errors with "Open Logs" and "File Issue"
-  buttons
-- Error messages should be actionable with clear next steps for users
-- Wrap async operations in try/catch blocks and handle specific error types
-- Include telemetry considerations when adding new error scenarios
-- Provide graceful degradation when external services are unavailable
-- Use VS Code's progress API for long-running operations
+## Development Workflows
 
-## Webview Development
+### Build System (Gulp-based)
 
-- Webviews use vanilla TypeScript with custom HTML templates
-- Use template literal functions for HTML generation with variable substitution
-- Follow message passing patterns between extension and webview contexts
-- Custom elements and reactive patterns using ObservableScope
-- Implement proper CSP (Content Security Policy) headers
+```bash
+# Core commands - use these, not npm scripts
+npx gulp build          # Build for development
+npx gulp build -w       # Watch mode
+npx gulp test          # Unit tests (Mocha/Sinon)
+npx gulp test -t "test name here" # Run specific test(s) by name
+npx gulp e2e           # End-to-end tests (Playwright)
+npx gulp check         # TypeScript type checking
+npx gulp lint          # ESLint with auto-fix: gulp lint -f
+```
 
+### Testing Strategy
 
-# Event Handling
+- **Unit**: Co-located `.test.ts` files, Mocha + Sinon + assert, focus on isolated behavior
+- **Functional**: Webview tests in `src/webview/*.spec.ts` using Playwright for UI validation
+- **E2E**: Full workflows in `tests/e2e/` with Page Object Model pattern
+- **Coverage**: Run tests with `--coverage` flag for Istanbul reports
 
-- We use the `vscode.EventEmitter` class for event handling in the extension, with toplevel event
-  emitters and associated event types defined in `src/emitters.ts`.
-- Classes with event handlers must declare distinct methods for each event type they handle, and register the `.bind(this)` of each handler method to the corresponding event emitter within a `setEventListeners()` method, which returns the array of disposables for the event handlers.
-- Classes with event handlers must implement the `vscode.Disposable` interface, and should directly or indirectly have a `dispose()` method to unregister all event handlers when the object is no longer needed. When possible, use base class `DisposableCollection` to manage the collection of disposables and to implement the `dispose()` method.
+### Extension Settings Pattern
 
-# Testing
+- **Constants**: Define in `src/extensionSettings/constants.ts` as `ExtensionSetting<T>` instances
+  to match `package.json`'s `contributes.configuration` sections
+- **Usage**: Access via `.value` property, automatically syncs with VS Code configuration
+- **Listener**: Setting changes handled by `src/extensionSettings/listener.ts`
 
-This VS Code extension uses the Mocha BDD interface with "sinon" and "assert" packages for unit
-testing, and Playwright for functional/e2e testing.
+## Key Patterns & Conventions
 
-- Use descriptive test names that explain the expected behavior with the "should" prefix
-- Group related tests using `describe` blocks for better organization
-   - Toplevel `describe` blocks should represent the feature or module being tested, and declare the sinon `sandbox` variable to use for the entire file's tests, and include the beforeEach and afterEach hooks to set up and tear down the sandbox.
-   - Make individual interior `describe` blocks for each method tested, containing one or more `it` blocks for each test case for the method.
-- Use `beforeEach` and `afterEach` hooks to set up and tear down test sandbox, event handlers, and
-  other necessary state.
-- Always use a `SinonSandbox` instance when setting up stubs, spies, or fakes to ensure proper
-  cleanup
-- Use sinon Assert API for assertions involving stubs, spies, or fakes (e.g.,
-  `sinon.assert.called(stub)` instead of `assert.equal(stub.called, true)`)
-- Use `sandbox.createStubInstance(ClassNameHere)` to create `SinonStubbedInstance` for class mocking
-- Leverage fixtures in the `test/unit/testResources/` directory for consistent test data
-  representing models from `src/models/`
-  - Create new fixture instances only when slight variations are necessary or when fixtures are
-    missing
-- Test files should be placed adjacent to source files with `.test.ts` suffix
-- Mock/stub external dependencies and API calls in unit tests to isolate the unit of work
-- Tests over event handling must avoid calling the event's `fire` method directly to avoid unstubbed side-effects from unrelated registered handlers.  Instead, test individual event handler methods directly, and use the emitter stubbing fixture `test/stubs/emitters.ts::eventEmitterStubs()` to stub all event emitters to then prove that the proper event handlers are registered for the proper events
-- `afterEach` for tests over objects which register event handlers must call the `dispose` method on the object in `afterEach` to ensure that all event handlers are unregistered
+### Error Handling
+
+- **Logging**: Always use `logError()` utility for consistent error capture
+- **User-facing**: Use `showErrorNotificationWithButtons()` with "Open Logs" and "File Issue"
+  actions
+- **Messages**: Write actionable messages explaining what happened, why, and how to resolve
+
+### Chat Participant (Copilot)
+
+- **Registration**: Tools in `src/chat/tools/`, extend `BaseLanguageModelTool<T>`
+- **Handler**: `chatHandler()` in `src/chat/participant.ts` processes requests and streams responses
+- **Tools**: Auto-registered via `registerChatTools()`, support tool chaining and conversation
+  context
+
+### Resource Management
+
+- **Loaders**: `ResourceLoader` pattern for async data fetching with caching
+- **Connections**: CCloud (OAuth), Direct (custom), Local (Docker)
+- **State**: Tree view state via context values like `confluent.ccloudConnectionAvailable`
+
+### Webview Development
+
+- **Templates**: HTML templates in `src/webview/*.html` with template variables `${var}`
+- **TypeScript**: Corresponding `.ts` files handle logic, use custom elements pattern
+- **Bindings**: Data binding system in `src/webview/bindings/` using Observable patterns
+- **Communication**: `sendWebviewMessage()` and message handlers for extension ↔ webview
+  communication
+
+## CRITICAL REQUIREMENTS (Non-negotiable)
+
+### 1. Disposable Resource Management - MANDATORY
+
+- **ALL** classes that register event listeners MUST implement `vscode.Disposable`
+- **ALWAYS** call `.dispose()` on resources when done - especially `.event()` listeners
+- **Use** `DisposableCollection` base class to manage multiple disposables automatically
+- **Pattern**: Store disposables from constructors, dispose in class `.dispose()` method
+- **Example**: `this.disposables.push(vscode.workspace.onDidChangeConfiguration(...))`
+
+### 2. Type Safety - NO EXCEPTIONS
+
+- **NEVER** use `any` type - always provide explicit types or interfaces
+- **PREFER** `enum` over string union types for constants
+- **REQUIRE** JSDoc comments on all exported functions and public class methods
+- **TypeScript strict mode** is enforced - code must compile without type errors
+
+### 3. Single Responsibility Principle - ENFORCE STRICTLY
+
+- **One class, one purpose** - if class does multiple things, split it
+- **One function, one task** - keep functions small and focused
+- **One file, one concept** - related functionality goes together, unrelated gets separated
+- **Example**: ResourceLoader handles loading, ResourceManager handles state, TreeProvider handles
+  UI
+
+## Important Guidelines
+
+- Never modify auto-generated code in `src/clients/` - update OpenAPI specs instead
+- Use sidecar pattern correctly: short-lived handles, automatic reconnection support
+- Follow established testing patterns: unit tests for logic, E2E for workflows
+- Prioritize proper disposal patterns for VS Code resources to prevent memory leaks (especially for
+  `.event()` listeners)
+- Enforce single responsibility principle in classes and modules for maintainability
+
+## Code Review Guidelines (GitHub PR Reviews)
+
+When reviewing pull requests for this VS Code extension:
+
+### Focus Areas for PR Reviews
+
+- **Disposable Management**: Verify all event listeners are properly disposed via
+  `DisposableCollection`
+- **Type Safety**: Ensure no `any` types are introduced and all interfaces are properly typed
+- **Single Responsibility**: Check that classes and functions maintain focused, single purposes
+- **Sidecar Pattern**: Confirm proper use of short-lived `SidecarHandle` instances
+- **Testing Coverage**: Validate that new functionality includes appropriate unit/E2E tests
+- **Error Handling**: Ensure `logError()` and `showErrorNotificationWithButtons()` are used
+  consistently
+
+### Comment Preservation
+
+- **Never delete existing comments** unless they contain significant errors or gaps
+- Comments provide valuable context about business logic, architectural decisions, and edge cases
+- If code appears self-explanatory, comments may explain _why_ rather than _what_
+- When suggesting improvements, enhance comments rather than removing them
+
+### Review Checklist
+
+- Verify the PR description is clear and applicable checklist items are completed
+- Check that any OpenAPI spec changes include corresponding patches in
+  `src/clients/sidecar-openapi-specs/patches/`
+- Ensure extension settings follow the `ExtensionSetting<T>` pattern
+- Validate webview implementations use the established template binding patterns
+
+## Local Development with Copilot Chat
+
+When working with Copilot chat during development:
+
+### Code Generation Requests
+
+- Reference existing patterns from the codebase (ResourceLoader, ViewProvider, etc.)
+- Use the #vscodeAPI tool as appropriate for VS Code API or UX guidelines
+- Specify which connection type (CCloud, Direct, Local) when working with Kafka resources
+- Request examples that follow the established testing patterns (Mocha/Sinon for units, Playwright
+  for E2E)
+- Ask for proper disposable management in any new classes or event listeners
+
+### Refactoring Assistance
+
+- Preserve all existing comments when refactoring code
+- Maintain the established architectural patterns (sidecar communication, view providers)
+- Ensure refactored code follows the three critical requirements (disposables, type safety, single
+  responsibility)
+- Request TypeScript interfaces for complex data structures rather than inline types

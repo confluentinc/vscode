@@ -120,6 +120,10 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
     return this.spec.statement;
   }
 
+  get cloudRegion(): string {
+    return `${this.provider}-${this.region}`;
+  }
+
   /**
    * Return globally unique id for this statement.
    * This is a combination of the statement name and the environmentId.
@@ -256,9 +260,9 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
     return FAILED_PHASES.includes(this.phase);
   }
 
-  /** Returns true if the statement can be stopped (not in a terminal phase). */
+  /** Returns true if the statement can be stopped. Note that PENDING isn't stoppable (yet).*/
   get stoppable(): boolean {
-    return !TERMINAL_PHASES.includes(this.phase);
+    return this.phase === Phase.RUNNING || this.phase === Phase.DEGRADED;
   }
 
   get detail(): string | undefined {
@@ -291,9 +295,23 @@ export class FlinkStatementTreeItem extends TreeItem {
     // internal properties
     this.resource = resource;
 
-    // encode viewability into context value for command binding
-    const viewabilityModifier = resource.possiblyViewable ? "" : "-not-viewable";
-    this.contextValue = `${resource.connectionType.toLowerCase()}-flink-statement${viewabilityModifier}`;
+    const contextParts: string[] = [resource.connectionType.toLowerCase()];
+
+    if (resource.possiblyViewable) {
+      contextParts.push("viewable");
+    }
+
+    // Running statements can be stopped
+    if (resource.stoppable) {
+      contextParts.push("stoppable");
+    } else if (resource.isTerminal) {
+      // terminal statements can be deleted. We don't like to offer deletion of non-terminal statements.
+      contextParts.push("deletable");
+    }
+
+    contextParts.push("flink-statement");
+
+    this.contextValue = contextParts.join("-");
 
     // user-facing properties
 
@@ -391,8 +409,14 @@ export function createFlinkStatementTooltip(resource: FlinkStatement) {
     .addHeader("Flink Statement", getFlinkStatementThemeIcon(resource.phase).id as IconNames)
     .addField("Kind", resource.sqlKindDisplay)
     .addField("Status", resource.phase)
-    .addField("Created At", resource.createdAt?.toLocaleString())
-    .addField("Updated At", resource.updatedAt?.toLocaleString())
+    .addField(
+      "Created At",
+      resource.createdAt?.toLocaleString(undefined, { timeZoneName: "short" }),
+    )
+    .addField(
+      "Updated At",
+      resource.updatedAt?.toLocaleString(undefined, { timeZoneName: "short" }),
+    )
     .addField("Environment", resource.environmentId)
     .addField("Compute Pool", resource.computePoolId)
     .addField("Detail", resource.status.detail)

@@ -10,9 +10,6 @@ import {
 import { ExtensionContextNotSetError } from "./errors";
 import { getRefreshableViewProviders } from "./extension";
 import { ResourceManager } from "./storage/resourceManager";
-import { NewResourceViewProvider } from "./viewProviders/newResources";
-import { ResourceViewProvider } from "./viewProviders/resources";
-import { SchemasViewProvider } from "./viewProviders/schemas";
 import { TopicViewProvider } from "./viewProviders/topics";
 
 describe("Base Extension Test", () => {
@@ -40,19 +37,9 @@ describe("ExtensionContext", () => {
   it("should not allow ExtensionContext-dependent singletons to be created before extension activation", async () => {
     const extensionContextSingletons = [
       {
-        callable: () => ResourceViewProvider.getInstance(),
-        source: "ResourceViewProvider",
-        clear: () => (ResourceViewProvider["instance"] = null),
-      },
-      {
         callable: () => TopicViewProvider.getInstance(),
         source: "TopicViewProvider",
         clear: () => (TopicViewProvider["instance"] = null),
-      },
-      {
-        callable: () => SchemasViewProvider.getInstance(),
-        source: "SchemasViewProvider",
-        clear: () => (SchemasViewProvider["instance"] = null),
       },
       {
         callable: () => ConfluentCloudAuthProvider.getInstance(),
@@ -101,7 +88,7 @@ describe("Refreshable views tests", () => {
    *
    * When a new one is added, its `kind` attribute value should be added to this list.
    */
-  const expectedKinds = ["resources", "topics", "schemas", "statements", "flinkdatabase"];
+  const expectedKinds = ["topics", "schemas", "statements", "flinkdatabase"];
 
   before(async () => {
     await getTestExtensionContext();
@@ -111,9 +98,7 @@ describe("Refreshable views tests", () => {
     const seenKinds = new Set<string>();
     const seenViewProviderConstructorNames = new Set<string>();
 
-    const refreshableViewProviders = getRefreshableViewProviders(
-      NewResourceViewProvider.getInstance(),
-    );
+    const refreshableViewProviders = getRefreshableViewProviders();
 
     assert.strictEqual(
       refreshableViewProviders.length,

@@ -96,7 +96,7 @@ export class FlinkStatementsViewProvider
    * @returns A promise that resolves when the refresh is complete.
    */
   async refresh(): Promise<void> {
-    // Out with any existing subjects.
+    // Out with any existing statements.
     this.resourcesInTreeView.clear();
     this.statementManager.clearClient(this.managerClientId);
 
@@ -158,10 +158,10 @@ export class FlinkStatementsViewProvider
       try {
         logger.debug(`Focusing statement ${existingStatement.id} in the view`);
         await this.treeView.reveal(existingStatement, { focus: true, select: true });
-        return;
       } catch (e) {
+        // May fail if the item is not actually visible (e.g. filtered out by search).
+        // Just log the error and move on.
         this.logger.error("Error focusing statement in view", e);
-        throw e;
       }
     } else {
       logger.error("Could not find statement in the view", statementId);

@@ -7,7 +7,7 @@ import {
 } from "../../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import { ContextValues, setContextValue } from "../../context/values";
-import { currentSchemaRegistryChanged, topicsViewResourceChanged } from "../../emitters";
+import { schemasViewResourceChanged, topicsViewResourceChanged } from "../../emitters";
 import { SchemasViewProvider } from "../../viewProviders/schemas";
 import { TopicViewProvider } from "../../viewProviders/topics";
 import { clearCurrentCCloudResources, hasCCloudAuthSession } from "./ccloud";
@@ -30,7 +30,7 @@ describe("sidecar/connections/ccloud.ts", () => {
     const mockedCCLoudLoader = getStubbedCCloudResourceLoader(sandbox);
 
     const currentKafkaClusterChangedFireStub = sandbox.stub(topicsViewResourceChanged, "fire");
-    const currentSchemaRegistryChangedFireStub = sandbox.stub(currentSchemaRegistryChanged, "fire");
+    const schemasViewResourceChangedFireStub = sandbox.stub(schemasViewResourceChanged, "fire");
 
     // Set the view controllers to be focused on CCloud resources
     const topicViewProvider = TopicViewProvider.getInstance();
@@ -40,14 +40,14 @@ describe("sidecar/connections/ccloud.ts", () => {
 
     await clearCurrentCCloudResources();
 
-    assert.ok(mockedCCLoudLoader.reset.calledOnce);
-    assert.ok(currentKafkaClusterChangedFireStub.calledOnceWith(null));
-    assert.ok(currentSchemaRegistryChangedFireStub.calledOnceWith(null));
+    sinon.assert.calledOnce(mockedCCLoudLoader.reset);
+    sinon.assert.calledOnceWithExactly(currentKafkaClusterChangedFireStub, null);
+    sinon.assert.calledOnceWithExactly(schemasViewResourceChangedFireStub, null);
 
     // Reset the stubs
     mockedCCLoudLoader.reset.resetHistory();
     currentKafkaClusterChangedFireStub.resetHistory();
-    currentSchemaRegistryChangedFireStub.resetHistory();
+    schemasViewResourceChangedFireStub.resetHistory();
 
     // Now set the view controllers to be focused on non-CCloud resources.
     // This should not fire any events, but still clear the resources.
@@ -56,20 +56,20 @@ describe("sidecar/connections/ccloud.ts", () => {
 
     await clearCurrentCCloudResources();
 
-    assert.ok(mockedCCLoudLoader.reset.calledOnce);
-    assert.ok(currentKafkaClusterChangedFireStub.notCalled);
-    assert.ok(currentSchemaRegistryChangedFireStub.notCalled);
+    sinon.assert.calledOnce(mockedCCLoudLoader.reset);
+    sinon.assert.notCalled(currentKafkaClusterChangedFireStub);
+    sinon.assert.notCalled(schemasViewResourceChangedFireStub);
   });
 
-  it("hasCCloudAuthSession() should return false when the context value is false or undefined", () => {
-    for (const value of [false, undefined]) {
-      setContextValue(ContextValues.ccloudConnectionAvailable, value);
+  for (const value of [false, undefined]) {
+    it(`hasCCloudAuthSession() should return false when the context value is ${value}`, async () => {
+      await setContextValue(ContextValues.ccloudConnectionAvailable, value);
       assert.strictEqual(hasCCloudAuthSession(), false, `Expected ${value} to return false`);
-    }
-  });
+    });
+  }
 
-  it("hasCCloudAuthSession() should return true when the context value is true", () => {
-    setContextValue(ContextValues.ccloudConnectionAvailable, true);
+  it("hasCCloudAuthSession() should return true when the context value is true", async () => {
+    await setContextValue(ContextValues.ccloudConnectionAvailable, true);
     assert.strictEqual(hasCCloudAuthSession(), true);
   });
 });

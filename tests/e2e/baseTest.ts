@@ -4,8 +4,9 @@ import {
   expect,
   Page,
   test as testBase,
+  TestInfo,
 } from "@playwright/test";
-import { stubAllDialogs } from "electron-playwright-helpers";
+import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
 import { existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
@@ -18,9 +19,11 @@ import {
 } from "./connectionTypes";
 import { Notification } from "./objects/notifications/Notification";
 import { NotificationArea } from "./objects/notifications/NotificationArea";
+import { Quickpick } from "./objects/quickInputs/Quickpick";
 import { CCloudConnectionItem } from "./objects/views/viewItems/CCloudConnectionItem";
 import { DirectConnectionItem } from "./objects/views/viewItems/DirectConnectionItem";
 import { LocalConnectionItem } from "./objects/views/viewItems/LocalConnectionItem";
+import { executeVSCodeCommand } from "./utils/commands";
 import {
   setupCCloudConnection,
   setupDirectConnection,
@@ -53,6 +56,9 @@ function getTestSetupCache(): TestSetupCache {
 }
 
 interface VSCodeFixtures {
+  /** Temporary directory for the test to use. */
+  testTempDir: string;
+
   /** The launched Electron application (VS Code). */
   electronApp: ElectronApplication;
   /** The first window of the launched Electron application (VS Code). */
@@ -83,11 +89,14 @@ interface VSCodeFixtures {
 }
 
 export const test = testBase.extend<VSCodeFixtures>({
-  electronApp: async ({ trace }, use, testInfo) => {
-    const testConfigs = getTestSetupCache();
-
-    // create a temporary directory for this test run
+  testTempDir: async ({}, use) => {
     const tempDir = mkdtempSync(path.join(tmpdir(), "vscode-test-"));
+
+    await use(tempDir);
+  },
+
+  electronApp: async ({ trace, testTempDir }, use, testInfo) => {
+    const testConfigs = getTestSetupCache();
 
     // launch VS Code with Electron using args pattern from vscode-test
     const electronApp = await electron.launch({
@@ -102,7 +111,7 @@ export const test = testBase.extend<VSCodeFixtures>({
         "--disable-workspace-trust",
         "--disable-extensions",
         // required to prevent test resources being saved to user's real profile
-        `--user-data-dir=${tempDir}`,
+        `--user-data-dir=${testTempDir}`,
         // additional args needed for the Electron launch:
         `--extensionDevelopmentPath=${testConfigs.outPath}`,
       ],
@@ -132,7 +141,7 @@ export const test = testBase.extend<VSCodeFixtures>({
         screenshots: true,
         snapshots: true,
         sources: true,
-        title: testInfo.title,
+        title: `${process.platform} ${process.arch}: ${testInfo.title} (${testInfo.tags.join(", ")})`,
       });
     }
 
@@ -157,7 +166,7 @@ export const test = testBase.extend<VSCodeFixtures>({
     }
   },
 
-  page: async ({ electronApp }, use) => {
+  page: async ({ electronApp, testTempDir }, use, testInfo) => {
     if (!electronApp) {
       throw new Error("electronApp is null - failed to launch VS Code");
     }
@@ -171,6 +180,8 @@ export const test = testBase.extend<VSCodeFixtures>({
     await globalBeforeEach(page, electronApp);
 
     await use(page);
+
+    await globalAfterEach(testTempDir, electronApp, page, testInfo);
   },
 
   openExtensionSidebar: [
@@ -290,4 +301,58 @@ async function globalBeforeEach(page: Page, electronApp: ElectronApplication): P
   await expect(infoNotifications).not.toHaveCount(0);
   const notification = new Notification(page, infoNotifications.first());
   await notification.dismiss();
+}
+
+async function globalAfterEach(
+  testTempDir: string,
+  electronApp: ElectronApplication,
+  page: Page,
+  testInfo: TestInfo,
+): Promise<void> {
+  const notificationArea = new NotificationArea(page);
+
+  // store the extension logs
+  const extensionLogPath = path.join(testTempDir, "vscode-confluent.log");
+  await stubDialog(electronApp, "showSaveDialog", {
+    filePath: extensionLogPath,
+  });
+  await executeVSCodeCommand(page, "confluent.support.saveLogs");
+  // wait for info notification indicating extension log file was saved
+  const extLogSuccess = notificationArea.infoNotifications.filter({
+    hasText: "Confluent extension log file saved successfully.",
+  });
+  await expect(extLogSuccess).toHaveCount(1, { timeout: 5000 });
+  // attach the extension log to the test results
+  await testInfo.attach("vscode-confluent.log", {
+    path: extensionLogPath,
+    contentType: "text/plain",
+  });
+
+  // store the (formatted) sidecar logs
+  const sidecarLogPath = path.join(testTempDir, "vscode-confluent-sidecar.log");
+  await stubDialog(electronApp, "showSaveDialog", {
+    filePath: sidecarLogPath,
+  });
+  await executeVSCodeCommand(page, "confluent.support.saveSidecarLogs");
+  // select the formatted log option in the quick pick
+  const formatQuickPick = new Quickpick(page);
+  await expect(formatQuickPick.locator).toBeVisible({ timeout: 5000 });
+  await formatQuickPick.selectItemByText("Human-readable format");
+  // NOTE: this occasionally times out on macOS or Windows for unknown reasons even after clearing
+  // any existing sidecar log file, but we don't want this to count as a test failure and these logs
+  // are more nice-to-have
+  try {
+    // wait for info notification indicating sidecar log file was saved
+    const sidecarLogSuccess = notificationArea.infoNotifications.filter({
+      hasText: "Confluent extension sidecar log file saved successfully.",
+    });
+    await expect(sidecarLogSuccess).toHaveCount(1, { timeout: 5000 });
+    // attach the sidecar log to the test results
+    await testInfo.attach("vscode-confluent-sidecar.log", {
+      path: sidecarLogPath,
+      contentType: "text/plain",
+    });
+  } catch (error) {
+    console.warn("Error saving sidecar logs:", error);
+  }
 }

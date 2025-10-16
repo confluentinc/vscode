@@ -30,11 +30,6 @@ export const SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS = new ExtensionSetting<boo
   SettingsSection.GENERAL,
 );
 
-export const USE_NEW_RESOURCES_VIEW_PROVIDER = new ExtensionSetting<boolean>(
-  "confluent.preview.useNewResourcesViewProvider",
-  SettingsSection.GENERAL,
-);
-
 // ===== CCLOUD CONFIGS =====
 
 /**
@@ -135,6 +130,11 @@ export const FLINK_CONFIG_DATABASE = new ExtensionSetting<string>(
   "confluent.flink.database",
   SettingsSection.FLINK,
 );
+/** Default prefix to use for Flink SQL statements submitted from VS Code. */
+export const FLINK_CONFIG_STATEMENT_PREFIX = new ExtensionSetting<string>(
+  "confluent.flink.statementPrefix",
+  SettingsSection.FLINK,
+);
 /**
  * Whether or not to update {@link FLINK_CONFIG_COMPUTE_POOL} when interacting with the
  * "Set Compute Pool" codelens. Possible values are `never`, `ask`, or `always`.
@@ -168,6 +168,11 @@ export const STATEMENT_POLLING_LIMIT = new ExtensionSetting<number>(
 /** Setting to control the concurrency level when polling requests for Flink statements. */
 export const STATEMENT_POLLING_CONCURRENCY = new ExtensionSetting<number>(
   "confluent.flink.statementPollingConcurrency",
+  SettingsSection.FLINK,
+);
+/** Default location for displaying Flink statement results (editor area or bottom panel). */
+export const STATEMENT_RESULTS_LOCATION = new ExtensionSetting<"editor" | "panel">(
+  "confluent.flink.statementResults.defaultLocation",
   SettingsSection.FLINK,
 );
 

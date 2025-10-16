@@ -1,4 +1,8 @@
+[![Try Confluent Cloud - The Data Streaming Platform](./resources/confluent-banner-v2.png)](https://confluent.cloud/signup?utm_source=github&utm_medium=banner&utm_campaign=tm.plg.cflt-oss-repos&utm_term=vscode)
+
 # Confluent for VS Code
+
+Questions? [Hop on a call](http://bit.ly/4pXvya7) with the developer team that built this extension.
 
 The Confluent extension makes it easy for developers to build stream processing applications using
 Confluent technology. This extension provides a robust, delightful experience for

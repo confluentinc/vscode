@@ -19,33 +19,28 @@ import {
 } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
 import { readFileString, writeFile } from "../utils/fsWrappers";
-import { DirectConnectionRow } from "../viewProviders/newResources";
-import { ResourceViewProvider } from "../viewProviders/resources";
+import { DirectConnectionRow, ResourceViewProvider } from "../viewProviders/resources";
 
 const logger = new Logger("commands.connections");
 
 /** Allow CCloud sign-in via the auth provider outside of the Accounts section of the VS Code UI. */
 export async function ccloudSignInCommand() {
   try {
-    await getCCloudAuthSession(true);
+    await getCCloudAuthSession({ createIfNone: true });
   } catch (error) {
-    if (error instanceof Error) {
-      // we don't need to do anything if:
-      // - the user clicks "Cancel" on the modal before the sign-in process, or on the progress
-      //  notification after the sign-in process has started
-      // - the auth provider handles a callback failure (which shows its own error notification)
-      if (
-        error.message === "User did not consent to login." ||
-        error.message === "User cancelled the authentication flow." ||
-        error.message === "Confluent Cloud authentication failed. See browser for details." ||
-        error.message === "User reset their password."
-      ) {
-        return;
-      }
-      // any other errors will be caught by the error handler in src/commands/index.ts as part of the
-      // registerCommandWithLogging wrapper
-      throw error;
+    // we don't need to do anything if:
+    // - the user clicks "Cancel" on the modal before the sign-in process, or on the progress
+    //  notification after the sign-in process has started
+    // - the auth provider handles a sign-in failure (which shows its own error notification)
+    if (
+      error instanceof Error &&
+      (error.message === "User did not consent to login." || error.name === "CCloudSignInError")
+    ) {
+      return;
     }
+    // any other errors will be caught by the error handler in src/commands/index.ts as part of the
+    // registerCommandWithLogging wrapper
+    throw error;
   }
 }
 
@@ -159,7 +154,7 @@ export async function createNewDirectConnectionCommand() {
         // use it to open the Direct Connection form (form will populate the fields with spec values)
         openDirectConnectionForm(newSpec);
       } catch (error) {
-        showErrorNotificationWithButtons("Error parsing spec file. See logs for details.");
+        void showErrorNotificationWithButtons("Error parsing spec file. See logs for details.");
         logger.error(`Error parsing spec file: ${error}`);
         return;
       }
@@ -214,7 +209,7 @@ export async function editDirectConnectionCommand(item: ConnectionId | DirectEnv
     logger.error("Direct connection not found, can't edit");
     // possibly stale Resources view? this shouldn't happen
     window.showErrorMessage("Connection not found.");
-    ResourceViewProvider.getInstance().refresh();
+    await ResourceViewProvider.getInstance().refresh();
     return;
   }
 
@@ -235,7 +230,7 @@ export async function exportDirectConnectionCommand(item: DirectEnvironment | Di
   if (!spec) {
     logger.error("Direct connection not found, can't share");
     window.showErrorMessage("Connection not found.");
-    ResourceViewProvider.getInstance().refresh();
+    await ResourceViewProvider.getInstance().refresh();
     return;
   }
 
@@ -285,7 +280,7 @@ export async function exportDirectConnectionCommand(item: DirectEnvironment | Di
           });
       } catch (err) {
         logger.error(`Failed to save file: ${err}`);
-        showErrorNotificationWithButtons("Unable to save connection spec file.");
+        void showErrorNotificationWithButtons("Unable to save connection spec file.");
       }
     }
   }

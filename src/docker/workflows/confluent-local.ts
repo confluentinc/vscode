@@ -127,7 +127,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
         containerEnvs,
       );
       if (!container) {
-        showErrorNotificationWithButtons(
+        void showErrorNotificationWithButtons(
           `Failed to create ${this.resourceKind} container "${brokerConfig.containerName}".`,
         );
         success = false;

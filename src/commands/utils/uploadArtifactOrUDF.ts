@@ -7,11 +7,15 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
 import { artifactsChanged } from "../../emitters";
-import { logError } from "../../errors";
+import { extractResponseBody, isResponseError, logError } from "../../errors";
+import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { FlinkArtifact } from "../../models/flinkArtifact";
+import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
+import { showInfoNotificationWithButtons } from "../../notifications";
 import { getSidecar } from "../../sidecar";
+import { logUsage, UserEvent } from "../../telemetry/events";
 import { readFileBuffer } from "../../utils/fsWrappers";
 import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
 export { uploadFileToAzure };
@@ -89,82 +93,78 @@ export async function handleUploadToCloudProvider(
   params: ArtifactUploadParams,
   presignedURL: PresignedUploadUrlArtifactV1PresignedUrl200Response,
 ): Promise<void> {
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Uploading ${params.artifactName}`,
-      cancellable: false,
-    },
-    async (progress) => {
-      progress.report({ message: "Preparing file..." });
-      const { blob, contentType } = await prepareUploadFileFromUri(params.selectedFile);
+  const { blob, contentType } = await prepareUploadFileFromUri(params.selectedFile);
 
-      logger.info(`Starting file upload for cloud provider: ${params.cloud}`, {
+  logger.info(`Starting file upload for cloud provider: ${params.cloud}`, {
+    artifactName: params.artifactName,
+    environment: params.environment,
+    cloud: params.cloud,
+    region: params.region,
+    contentType,
+  });
+
+  switch (params.cloud) {
+    case CloudProvider.Azure: {
+      logger.debug("Uploading to Azure storage");
+      const response = await uploadFileToAzure({
+        file: blob,
+        presignedUrl: presignedURL.upload_url!,
+        contentType,
+      });
+
+      logger.info(`Azure upload completed for artifact "${params.artifactName}"`, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
         artifactName: params.artifactName,
         environment: params.environment,
         cloud: params.cloud,
         region: params.region,
+      });
+      break;
+    }
+    case CloudProvider.AWS: {
+      logger.debug("Uploading to AWS storage");
+
+      const uploadFormData = presignedURL.upload_form_data as Record<string, string>;
+
+      if (!uploadFormData) {
+        throw new Error("AWS upload form data is missing from presigned URL response");
+      }
+
+      const response = await uploadFileToS3({
+        file: blob,
+        presignedUrl: presignedURL.upload_url!,
         contentType,
+        uploadFormData,
       });
 
-      switch (params.cloud) {
-        case CloudProvider.Azure: {
-          progress.report({ message: "Uploading to Azure storage..." });
-          logger.debug("Uploading to Azure storage");
-          const response = await uploadFileToAzure({
-            file: blob,
-            presignedUrl: presignedURL.upload_url!,
-            contentType,
-          });
+      logUsage(UserEvent.FlinkArtifactAction, {
+        action: "upload",
+        status: "succeeded",
+        kind: "CloudProviderUpload",
+        cloud: params.cloud,
+        region: params.region,
+      });
 
-          logger.info(`Azure upload completed for artifact "${params.artifactName}"`, {
-            status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries()),
-            artifactName: params.artifactName,
-            environment: params.environment,
-            cloud: params.cloud,
-            region: params.region,
-          });
-          break;
-        }
-        case CloudProvider.AWS: {
-          progress.report({ message: "Uploading to AWS storage..." });
-          logger.debug("Uploading to AWS storage");
-
-          const uploadFormData = presignedURL.upload_form_data as Record<string, string>;
-
-          if (!uploadFormData) {
-            throw new Error("AWS upload form data is missing from presigned URL response");
-          }
-
-          const response = await uploadFileToS3({
-            file: blob,
-            presignedUrl: presignedURL.upload_url!,
-            contentType,
-            uploadFormData,
-          });
-
-          logger.info(`AWS upload completed for artifact "${params.artifactName}"`, {
-            status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries()),
-            artifactName: params.artifactName,
-            environment: params.environment,
-            cloud: params.cloud,
-            region: params.region,
-          });
-          break;
-        }
-      }
-    },
-  );
+      logger.info(`AWS upload completed for artifact "${params.artifactName}"`, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        artifactName: params.artifactName,
+        environment: params.environment,
+        cloud: params.cloud,
+        region: params.region,
+      });
+      break;
+    }
+  }
 }
 
 export async function uploadArtifactToCCloud(
   params: ArtifactUploadParams,
   uploadId: string,
-): Promise<CreateArtifactV1FlinkArtifact201Response | undefined> {
+): Promise<CreateArtifactV1FlinkArtifact201Response> {
   try {
     const createRequest = buildCreateArtifactRequest(params, uploadId);
 
@@ -196,12 +196,27 @@ export async function uploadArtifactToCCloud(
       artifactName: params.artifactName,
     });
 
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "upload",
+      status: "succeeded",
+      kind: "CCloudUpload",
+      cloud: params.cloud,
+      region: params.region,
+    });
+
     // Inform all interested parties that we just mutated the artifacts list
     // in this env/region.
     artifactsChanged.fire(providerRegion);
 
     return response;
   } catch (error) {
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "upload",
+      status: "failed",
+      kind: "CCloudUpload",
+      cloud: params.cloud,
+      region: params.region,
+    });
     let extra: Record<string, unknown> = {
       cloud: params.cloud,
       region: params.region,
@@ -247,6 +262,27 @@ export function validateUdfInput(
     };
   }
 }
+/**
+ * Builds a user-presentable error message for an upload failure.
+ */
+export async function buildUploadErrorMessage(err: unknown, base: string): Promise<string> {
+  let errorMessage = base;
+  if (isResponseError(err)) {
+    if (err.response.status === 500) {
+      errorMessage = `${errorMessage} Please make sure that you provided a valid JAR file`;
+    } else {
+      const resp = await extractResponseBody(err);
+      try {
+        errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
+      } catch {
+        errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
+      }
+    }
+  } else if (err instanceof Error) {
+    errorMessage = `${errorMessage} ${err.message}`;
+  }
+  return errorMessage;
+}
 
 /**
  * This function prompts the user for a function name and class name for a new UDF.
@@ -261,7 +297,7 @@ export async function promptForFunctionAndClassName(
   const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
   const classNameRegex = /^[a-zA-Z_][a-zA-Z0-9_.]*$/;
   const functionName = await vscode.window.showInputBox({
-    prompt: "Enter a name for the new UDF function",
+    prompt: "Enter a name for the new UDF",
     placeHolder: defaultFunctionName,
     validateInput: (value) => validateUdfInput(value, functionNameRegex),
     ignoreFocusOut: true,
@@ -272,8 +308,8 @@ export async function promptForFunctionAndClassName(
   }
 
   const className = await vscode.window.showInputBox({
-    prompt: "Enter the class name for the new UDF",
-    placeHolder: `your.class.NameHere`,
+    prompt: 'Enter the fully qualified class name, e.g. "com.example.MyUDF"',
+    placeHolder: `your.package.ClassName`,
     validateInput: (value) => validateUdfInput(value, classNameRegex),
     ignoreFocusOut: true,
   });
@@ -281,4 +317,28 @@ export async function promptForFunctionAndClassName(
     return undefined;
   }
   return { functionName, className };
+}
+
+/**
+ * Submit a `CREATE FUNCTION` statement to register a UDF for the provided artifact, function and
+ * class names defined by the user, and Flink database.
+ */
+export async function executeCreateFunction(
+  artifact: FlinkArtifact,
+  userInput: {
+    functionName: string;
+    className: string;
+  },
+  database: CCloudFlinkDbKafkaCluster,
+) {
+  const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+  await ccloudResourceLoader.executeBackgroundFlinkStatement<{ created_at?: string }>(
+    `CREATE FUNCTION \`${userInput.functionName}\` AS '${userInput.className}' USING JAR 'confluent-artifact://${artifact.id}';`,
+    database,
+    {
+      timeout: 60000, // custom timeout of 60 seconds
+    },
+  );
+  const createdMsg = `${userInput.functionName} function created successfully.`;
+  void showInfoNotificationWithButtons(createdMsg);
 }

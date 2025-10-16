@@ -72,10 +72,10 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
 
     await runWorkflowWithProgress();
 
-    assert.ok(localResourcesQuickPickStub.notCalled);
-    assert.ok(getKafkaWorkflowStub.notCalled);
-    assert.ok(getSchemaRegistryWorkflowStub.notCalled);
-    assert.ok(getMedusaWorkflowStub.notCalled);
+    sinon.assert.notCalled(localResourcesQuickPickStub);
+    sinon.assert.notCalled(getKafkaWorkflowStub);
+    sinon.assert.notCalled(getSchemaRegistryWorkflowStub);
+    sinon.assert.notCalled(getMedusaWorkflowStub);
   });
 
   it("should skip running a workflow for unsupported Kafka images", async () => {
@@ -84,8 +84,8 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
     await runWorkflowWithProgress();
 
     // `docker/workflows/index.test.ts` tests the error notification for this case
-    assert.ok(stubKafkaWorkflow.start.notCalled);
-    assert.ok(stubKafkaWorkflow.stop.notCalled);
+    sinon.assert.notCalled(stubKafkaWorkflow.start);
+    sinon.assert.notCalled(stubKafkaWorkflow.stop);
   });
 
   it("should skip running a workflow for unsupported Schema Registry images", async () => {
@@ -94,8 +94,8 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
     await runWorkflowWithProgress();
 
     // `docker/workflows/index.test.ts` tests the error notification for this case
-    assert.ok(stubSchemaRegistryWorkflow.start.notCalled);
-    assert.ok(stubSchemaRegistryWorkflow.stop.notCalled);
+    sinon.assert.notCalled(stubSchemaRegistryWorkflow.start);
+    sinon.assert.notCalled(stubSchemaRegistryWorkflow.stop);
   });
 
   it("should skip running a workflow for unsupported Medusa images", async () => {
@@ -114,9 +114,9 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
 
     await runWorkflowWithProgress();
 
-    assert.ok(stubKafkaWorkflow.start.calledOnce);
-    assert.ok(stubKafkaWorkflow.stop.notCalled);
-    assert.ok(showErrorNotificationStub.calledOnce);
+    sinon.assert.calledOnce(stubKafkaWorkflow.start);
+    sinon.assert.notCalled(stubKafkaWorkflow.stop);
+    sinon.assert.calledOnce(showErrorNotificationStub);
   });
 
   it("should show an workflow's error notification for uncaught errors in the workflow .stop()", async () => {
@@ -124,24 +124,24 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
 
     await runWorkflowWithProgress(false);
 
-    assert.ok(stubKafkaWorkflow.start.notCalled);
-    assert.ok(stubKafkaWorkflow.stop.calledOnce);
-    assert.ok(showErrorNotificationStub.calledOnce);
+    sinon.assert.notCalled(stubKafkaWorkflow.start);
+    sinon.assert.calledOnce(stubKafkaWorkflow.stop);
+    sinon.assert.calledOnce(showErrorNotificationStub);
   });
 
   // once multi-select quickpick is added, update these in follow-on branch.
   it("should call the Kafka workflow's .start() method when start=true", async () => {
     await runWorkflowWithProgress();
 
-    assert.ok(stubKafkaWorkflow.start.calledOnce);
-    assert.ok(stubKafkaWorkflow.stop.notCalled);
+    sinon.assert.calledOnce(stubKafkaWorkflow.start);
+    sinon.assert.notCalled(stubKafkaWorkflow.stop);
   });
 
   it("should call the Kafka workflow's .stop() method when start=false", async () => {
     await runWorkflowWithProgress(false);
 
-    assert.ok(stubKafkaWorkflow.start.notCalled);
-    assert.ok(stubKafkaWorkflow.stop.calledOnce);
+    sinon.assert.notCalled(stubKafkaWorkflow.start);
+    sinon.assert.calledOnce(stubKafkaWorkflow.stop);
   });
 
   it("should call multiple workflows' .start() methods when multiple resources are selected", async () => {
@@ -167,9 +167,9 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
 
     await runWorkflowWithProgress(false);
 
-    assert.ok(stubKafkaWorkflow.stop.calledOnce);
-    assert.ok(stubSchemaRegistryWorkflow.stop.calledOnce);
-    assert.ok(stubMedusaWorkflow.stop.calledOnce);
+    sinon.assert.calledOnce(stubKafkaWorkflow.stop);
+    sinon.assert.calledOnce(stubSchemaRegistryWorkflow.stop);
+    sinon.assert.calledOnce(stubMedusaWorkflow.stop);
   });
 });
 

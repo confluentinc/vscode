@@ -1,4 +1,3 @@
-import * as assert from "assert";
 import sinon from "sinon";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectedState, RequestContext } from "../clients/sidecar";
@@ -60,8 +59,8 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
 
     await middleware.pre(requestContext);
 
-    assert.ok(handleCCloudAuthStatusSpy.calledOnce);
-    assert.ok(handleProblematicStatusStub.notCalled);
+    sinon.assert.calledOnce(handleCCloudAuthStatusSpy);
+    sinon.assert.notCalled(handleProblematicStatusStub);
   });
 
   it("should not call handleCCloudAuthStatus() when the CCloud connection header is missing", async () => {
@@ -73,8 +72,8 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
     await middleware.pre(requestContext2);
     await middleware.pre(requestContext3);
 
-    assert.ok(handleCCloudAuthStatusSpy.notCalled);
-    assert.ok(handleProblematicStatusStub.notCalled);
+    sinon.assert.notCalled(handleCCloudAuthStatusSpy);
+    sinon.assert.notCalled(handleProblematicStatusStub);
   });
 
   it(`should call handleProblematicStatus() from the ${ConnectedState.Expired} state`, async () => {
@@ -86,8 +85,8 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
 
     await middleware.pre(requestContext);
 
-    assert.ok(handleCCloudAuthStatusSpy.calledOnce);
-    assert.ok(handleProblematicStatusStub.calledOnce);
+    sinon.assert.calledOnce(handleCCloudAuthStatusSpy);
+    sinon.assert.calledOnce(handleProblematicStatusStub);
   });
 
   it(`should fire ccloudAuthSessionInvalidated from a ${ConnectedState.None} or ${ConnectedState.Failed} state`, async () => {
@@ -99,7 +98,7 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
 
     await middleware.pre(requestContext);
 
-    assert.ok(ccloudAuthSessionInvalidatedStub.calledOnce);
+    sinon.assert.calledOnce(ccloudAuthSessionInvalidatedStub);
 
     // isn't easy to get into this state since we should delete the CCloud connection and reset the
     // associated resources for the (previous) connection, but just in case:
@@ -107,7 +106,7 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
 
     await middleware.pre(requestContext);
 
-    assert.ok(ccloudAuthSessionInvalidatedStub.calledTwice);
+    sinon.assert.calledTwice(ccloudAuthSessionInvalidatedStub);
   });
 
   it(`should not block requests from the ${ConnectedState.Success} state`, async () => {
@@ -119,8 +118,8 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
 
     await middleware.pre(requestContext);
 
-    assert.ok(handleCCloudAuthStatusSpy.calledOnce);
-    assert.ok(handleProblematicStatusStub.notCalled);
-    assert.ok(ccloudAuthSessionInvalidatedStub.notCalled);
+    sinon.assert.calledOnce(handleCCloudAuthStatusSpy);
+    sinon.assert.notCalled(handleProblematicStatusStub);
+    sinon.assert.notCalled(ccloudAuthSessionInvalidatedStub);
   });
 });

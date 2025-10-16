@@ -66,7 +66,7 @@ export async function flinkComputePoolQuickPick(
     if (!getContextValue(ContextValues.ccloudConnectionAvailable)) {
       login = CCLOUD_SIGN_IN_BUTTON_LABEL;
     }
-    showInfoNotificationWithButtons("No Flink compute pools available.", {
+    void showInfoNotificationWithButtons("No Flink compute pools available.", {
       [login]: () => commands.executeCommand("confluent.connections.ccloud.signIn"),
     });
     return;

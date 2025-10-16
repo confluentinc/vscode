@@ -3,24 +3,40 @@ import sinon from "sinon";
 import * as vscode from "vscode";
 
 import { TextDocument } from "vscode-json-languageservice";
+import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
-import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
+import {
+  TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+  TEST_CCLOUD_KAFKA_CLUSTER,
+} from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import * as flinkCodeLens from "../codelens/flinkSqlProvider";
 import { FlinkStatementDocumentProvider } from "../documentProviders/flinkStatement";
+import * as statementUtils from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
-import { FlinkStatement } from "../models/flinkStatement";
+import { FlinkStatement, Phase } from "../models/flinkStatement";
+import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import * as notifications from "../notifications";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-import { viewStatementSqlCommand } from "./flinkStatements";
+import {
+  deleteFlinkStatementCommand,
+  handleStatementSubmission,
+  stopFlinkStatementCommand,
+  viewStatementSqlCommand,
+} from "./flinkStatements";
+import * as statementsUtils from "./utils/statements";
 
 describe("commands/flinkStatements.ts", () => {
   let sandbox: sinon.SinonSandbox;
+  let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
   });
 
   afterEach(() => {
@@ -28,13 +44,11 @@ describe("commands/flinkStatements.ts", () => {
   });
 
   describe("viewStatementSqlCommand", () => {
-    let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
     let getCatalogDatabaseFromMetadataStub: sinon.SinonStub;
     let showTextDocumentStub: sinon.SinonStub;
     let setUriMetadataStub: sinon.SinonStub;
 
     beforeEach(() => {
-      stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
       getCatalogDatabaseFromMetadataStub = sandbox.stub(
         flinkCodeLens,
         "getCatalogDatabaseFromMetadata",
@@ -124,6 +138,263 @@ describe("commands/flinkStatements.ts", () => {
         [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_KAFKA_CLUSTER.id,
         [UriMetadataKeys.FLINK_DATABASE_NAME]: statement.database,
       });
+    });
+  });
+
+  describe("deleteFlinkStatementCommand and stopFlinkStatementCommand", () => {
+    let showInformationMessageStub: sinon.SinonStub;
+    let showErrorNotificationWithButtonsStub: sinon.SinonStub;
+    let confirmActionOnStatementStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
+      showErrorNotificationWithButtonsStub = sandbox.stub(
+        notifications,
+        "showErrorNotificationWithButtons",
+      );
+      confirmActionOnStatementStub = sandbox.stub(statementsUtils, "confirmActionOnStatement");
+    });
+
+    describe("deleteFlinkStatementCommand", () => {
+      it("should hate undefined statement", async () => {
+        await deleteFlinkStatementCommand(undefined as unknown as FlinkStatement);
+        sinon.assert.notCalled(stubbedLoader.deleteFlinkStatement);
+        sinon.assert.notCalled(showInformationMessageStub);
+        sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+      });
+
+      it("should hate non-FlinkStatement statement", async () => {
+        await deleteFlinkStatementCommand({} as FlinkStatement);
+        sinon.assert.notCalled(stubbedLoader.deleteFlinkStatement);
+        sinon.assert.notCalled(showInformationMessageStub);
+        sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+      });
+
+      it("should show error if statement is stoppable (should not have offered the delete action in first place)", async () => {
+        const statement = createFlinkStatement({ phase: Phase.RUNNING });
+        await deleteFlinkStatementCommand(statement);
+
+        sinon.assert.notCalled(confirmActionOnStatementStub);
+        sinon.assert.notCalled(stubbedLoader.deleteFlinkStatement);
+        sinon.assert.notCalled(showInformationMessageStub);
+
+        sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+        sinon.assert.calledWithExactly(
+          showErrorNotificationWithButtonsStub,
+          `Statement ${statement.name} is not in a deletable state (${statement.status.phase})`,
+        );
+      });
+
+      it("should delete a valid FlinkStatement", async () => {
+        confirmActionOnStatementStub.resolves(true);
+        const statement = createFlinkStatement({ phase: Phase.COMPLETED });
+
+        await deleteFlinkStatementCommand(statement);
+
+        sinon.assert.calledOnce(confirmActionOnStatementStub);
+        sinon.assert.calledWithExactly(confirmActionOnStatementStub, "delete", statement);
+        sinon.assert.calledOnce(stubbedLoader.deleteFlinkStatement);
+        sinon.assert.calledWithExactly(stubbedLoader.deleteFlinkStatement, statement);
+
+        sinon.assert.calledOnce(showInformationMessageStub);
+        sinon.assert.calledWithExactly(
+          showInformationMessageStub,
+          `Deleted statement ${statement.name}`,
+        );
+
+        sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+      });
+
+      it("should not delete a FlinkStatement if user cancels confirmation", async () => {
+        confirmActionOnStatementStub.resolves(false);
+        const statement = createFlinkStatement({ phase: Phase.COMPLETED });
+
+        await deleteFlinkStatementCommand(statement);
+
+        sinon.assert.calledOnce(confirmActionOnStatementStub);
+        sinon.assert.calledWithExactly(confirmActionOnStatementStub, "delete", statement);
+        sinon.assert.notCalled(stubbedLoader.deleteFlinkStatement);
+        sinon.assert.notCalled(showInformationMessageStub);
+        sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+      });
+
+      it("should handle errors when deleting a FlinkStatement", async () => {
+        const statement = createFlinkStatement({ phase: Phase.COMPLETED });
+        const testError = new Error("Test error deleting statement");
+        confirmActionOnStatementStub.resolves(true);
+        stubbedLoader.deleteFlinkStatement.rejects(testError);
+
+        await deleteFlinkStatementCommand(statement);
+
+        sinon.assert.calledOnce(stubbedLoader.deleteFlinkStatement);
+        sinon.assert.notCalled(showInformationMessageStub);
+
+        sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+        sinon.assert.calledWithExactly(
+          showErrorNotificationWithButtonsStub,
+          `Error deleting statement: ${testError}`,
+        );
+      });
+    });
+
+    describe("stopFlinkStatementCommand", () => {
+      it("should hate undefined statement", async () => {
+        await stopFlinkStatementCommand(undefined as unknown as FlinkStatement);
+        sinon.assert.notCalled(stubbedLoader.stopFlinkStatement);
+        sinon.assert.notCalled(showInformationMessageStub);
+        sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+      });
+
+      it("should hate non-FlinkStatement statement", async () => {
+        await stopFlinkStatementCommand({} as FlinkStatement);
+        sinon.assert.notCalled(stubbedLoader.stopFlinkStatement);
+        sinon.assert.notCalled(showInformationMessageStub);
+        sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+      });
+
+      it("should show error if statement not stoppable", async () => {
+        const statement = createFlinkStatement({ phase: Phase.COMPLETED });
+        await stopFlinkStatementCommand(statement);
+
+        sinon.assert.notCalled(confirmActionOnStatementStub);
+        sinon.assert.notCalled(stubbedLoader.stopFlinkStatement);
+        sinon.assert.notCalled(showInformationMessageStub);
+
+        sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+        sinon.assert.calledWithExactly(
+          showErrorNotificationWithButtonsStub,
+          `Statement ${statement.name} is not in a stoppable state (${statement.status.phase})`,
+        );
+      });
+
+      it("should stop a valid FlinkStatement", async () => {
+        confirmActionOnStatementStub.resolves(true);
+        const statement = createFlinkStatement({ phase: Phase.RUNNING });
+
+        await stopFlinkStatementCommand(statement);
+
+        sinon.assert.calledOnce(confirmActionOnStatementStub);
+        sinon.assert.calledWithExactly(confirmActionOnStatementStub, "stop", statement);
+        sinon.assert.calledOnce(stubbedLoader.stopFlinkStatement);
+        sinon.assert.calledWithExactly(stubbedLoader.stopFlinkStatement, statement);
+
+        sinon.assert.calledOnce(showInformationMessageStub);
+        sinon.assert.calledWithExactly(
+          showInformationMessageStub,
+          `Stopped statement ${statement.name}`,
+        );
+
+        sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+      });
+
+      it("should not stop if user cancels confirmation", async () => {
+        confirmActionOnStatementStub.resolves(false);
+        const statement = createFlinkStatement({ phase: Phase.RUNNING });
+
+        await stopFlinkStatementCommand(statement);
+
+        sinon.assert.calledOnce(confirmActionOnStatementStub);
+        sinon.assert.calledWithExactly(confirmActionOnStatementStub, "stop", statement);
+        sinon.assert.notCalled(stubbedLoader.stopFlinkStatement);
+        sinon.assert.notCalled(showInformationMessageStub);
+        sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+      });
+
+      it("should handle errors when stopping a FlinkStatement", async () => {
+        const statement = createFlinkStatement({ phase: Phase.RUNNING });
+        const testError = new Error("Test error stopping statement");
+        confirmActionOnStatementStub.resolves(true);
+        stubbedLoader.stopFlinkStatement.rejects(testError);
+
+        await stopFlinkStatementCommand(statement);
+
+        sinon.assert.calledOnce(stubbedLoader.stopFlinkStatement);
+        sinon.assert.notCalled(showInformationMessageStub);
+
+        sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+        sinon.assert.calledWithExactly(
+          showErrorNotificationWithButtonsStub,
+          `Error stopping statement: ${testError}`,
+        );
+      });
+    });
+  });
+
+  describe("handleStatementSubmission()", () => {
+    const database: CCloudFlinkDbKafkaCluster = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+    let waitForStatementCompletionStub: sinon.SinonStub;
+    let waitForResultsFetchableStub: sinon.SinonStub;
+    let openFlinkStatementResultsViewStub: sinon.SinonStub;
+    const createFuncStatement = createFlinkStatement({
+      sqlStatement:
+        "CREATE FUNCTION `testFunction` AS 'com.test.TestClass' USING JAR 'confluent-artifact://artifact-id';",
+    });
+    let stubbedUDFsChangedEmitter: sinon.SinonStubbedInstance<
+      vscode.EventEmitter<CCloudFlinkDbKafkaCluster>
+    >;
+
+    beforeEach(() => {
+      waitForStatementCompletionStub = sandbox.stub(statementUtils, "waitForStatementCompletion");
+      waitForResultsFetchableStub = sandbox.stub(statementUtils, "waitForResultsFetchable");
+      openFlinkStatementResultsViewStub = sandbox.stub(
+        statementsUtils,
+        "openFlinkStatementResultsView",
+      );
+      stubbedUDFsChangedEmitter = eventEmitterStubs(sandbox).udfsChanged!;
+    });
+
+    it("should fire udfsChanged emitter when having run a statement registering a new UDF", async () => {
+      createFuncStatement.status = {
+        ...createFuncStatement.status,
+        phase: Phase.COMPLETED,
+        traits: {
+          sql_kind: "CREATE_FUNCTION",
+        },
+      };
+      waitForStatementCompletionStub.resolves(createFuncStatement);
+
+      await handleStatementSubmission(createFuncStatement, database);
+
+      sinon.assert.calledWithExactly(stubbedUDFsChangedEmitter.fire, database);
+    });
+
+    it("should not fire udfsChanged for non-UDF-registering statements", async () => {
+      createFuncStatement.status = {
+        ...createFuncStatement.status,
+        phase: Phase.COMPLETED,
+        traits: {
+          sql_kind: "NOT A CREATE FUNCTION",
+        },
+      };
+      waitForStatementCompletionStub.resolves(createFuncStatement);
+
+      await handleStatementSubmission(createFuncStatement, database);
+
+      sinon.assert.calledOnce(waitForResultsFetchableStub);
+      sinon.assert.calledOnce(openFlinkStatementResultsViewStub);
+      sinon.assert.notCalled(waitForStatementCompletionStub);
+      sinon.assert.notCalled(stubbedUDFsChangedEmitter.fire);
+    });
+
+    it("should not fire udfsChanged on a statement with a non-COMPLETED phase", async () => {
+      const statement = createFlinkStatement({
+        sqlStatement: "SELECT * FROM my_test_flink_statement_table",
+      });
+      statement.status = {
+        ...statement.status,
+        phase: Phase.RUNNING,
+        traits: {
+          sql_kind: "CREATE_FUNCTION",
+        },
+      };
+      waitForStatementCompletionStub.resolves(statement);
+
+      await handleStatementSubmission(statement, database);
+
+      sinon.assert.calledOnce(waitForResultsFetchableStub);
+      sinon.assert.calledOnce(openFlinkStatementResultsViewStub);
+      sinon.assert.calledOnce(waitForStatementCompletionStub);
+      sinon.assert.notCalled(stubbedUDFsChangedEmitter.fire);
     });
   });
 });

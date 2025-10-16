@@ -2,6 +2,7 @@ import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
@@ -16,6 +17,13 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/f
 import { ProduceRecordRequest, RecordsV3Api, ResponseError } from "../clients/kafkaRest";
 import { ConfluentCloudProduceRecordsResourceApi } from "../clients/sidecar";
 import { MessageViewerConfig } from "../consume";
+import { JSON_DIAGNOSTIC_COLLECTION } from "../diagnostics/constants";
+import {
+  PRODUCE_MESSAGE_SCHEMA,
+  ProduceMessage,
+  SubjectNameStrategy,
+} from "../diagnostics/produceMessage";
+import * as jsonParsing from "../documentParsing/json";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
@@ -24,14 +32,7 @@ import * as schemaQuickPicks from "../quickpicks/schemas";
 import * as uriQuickpicks from "../quickpicks/uris";
 import * as schemaSubjectUtils from "../quickpicks/utils/schemaSubjects";
 import * as schemaUtils from "../quickpicks/utils/schemas";
-import { JSON_DIAGNOSTIC_COLLECTION } from "../schemas/diagnosticCollection";
-import * as parsing from "../schemas/parsing";
-import {
-  PRODUCE_MESSAGE_SCHEMA,
-  ProduceMessage,
-  SubjectNameStrategy,
-} from "../schemas/produceMessageSchema";
-import * as sidecar from "../sidecar";
+import { SidecarHandle } from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import * as fileUtils from "../utils/file";
@@ -88,12 +89,9 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
     sandbox.stub(schemaQuickPicks, "schemaKindMultiSelect").resolves(schemaLess);
 
     // create the stubs for the sidecar + service client
-    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     clientStub = sandbox.createStubInstance(RecordsV3Api);
-    mockSidecarHandle.getRecordsV3Api.returns(clientStub);
-    // stub the getSidecar function to return the mock sidecar handle
-    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+    stubbedSidecar.getRecordsV3Api.returns(clientStub);
   });
 
   afterEach(function () {
@@ -104,7 +102,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
     // shouldn't be possible based on the package.json configs, but just in case
     await produceMessagesFromDocument(null as any);
 
-    assert.ok(showErrorMessageStub.calledOnceWith("No topic selected."));
+    sinon.assert.calledOnceWithExactly(showErrorMessageStub, "No topic selected.");
   });
 
   it("should exit early if no file/editor is selected from the URI quickpick", async function () {
@@ -114,7 +112,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
     // see tests in suite below
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
-    assert.ok(showErrorMessageStub.notCalled);
+    sinon.assert.notCalled(showErrorMessageStub);
   });
 
   it("should show an error notification for an invalid JSON message", async function () {
@@ -122,7 +120,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
 
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
-    assert.ok(showErrorMessageStub.calledOnce);
+    sinon.assert.calledOnce(showErrorMessageStub);
     const callArgs = showErrorMessageStub.getCall(0).args;
     assert.strictEqual(callArgs[0], "Unable to produce message(s): JSON schema validation failed.");
   });
@@ -136,11 +134,11 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
 
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
-    assert.ok(clientStub.produceRecord.calledOnce);
-    assert.ok(showInfoMessageStub.calledOnce);
+    sinon.assert.calledOnce(clientStub.produceRecord);
+    sinon.assert.calledOnce(showInfoMessageStub);
     const successMsg = showInfoMessageStub.firstCall.args[0];
     assert.ok(successMsg.startsWith("Successfully produced 1 message to topic"), successMsg);
-    assert.ok(showErrorMessageStub.notCalled);
+    sinon.assert.notCalled(showErrorMessageStub);
   });
 
   it("should show an error notification for any ResponseErrors", async function () {
@@ -155,7 +153,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
 
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
-    assert.ok(showErrorMessageStub.calledOnce);
+    sinon.assert.calledOnce(showErrorMessageStub);
     const errorMsg = showErrorMessageStub.firstCall.args[0];
     assert.ok(errorMsg.startsWith("Failed to produce 1 message to topic"), errorMsg);
   });
@@ -174,7 +172,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
 
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
-    assert.ok(clientStub.produceRecord.calledOnce);
+    sinon.assert.calledOnce(clientStub.produceRecord);
     const requestArg: ProduceRecordRequest = clientStub.produceRecord.firstCall.args[0];
     assert.strictEqual(requestArg.ProduceRequest!.partition_id, partition_id);
     // timestamp should also be converted to a Date object
@@ -188,7 +186,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
 
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
-    assert.ok(clientStub.produceRecord.calledOnce);
+    sinon.assert.calledOnce(clientStub.produceRecord);
     const requestArg: ProduceRecordRequest = clientStub.produceRecord.firstCall.args[0];
     assert.strictEqual(requestArg.ProduceRequest!.partition_id, partition_id);
     assert.strictEqual(requestArg.ProduceRequest!.timestamp, undefined);
@@ -224,7 +222,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
       assert.ok(mvConfig instanceof MessageViewerConfig);
       assert.strictEqual(mvConfig.textFilter, undefined);
 
-      assert.ok(showErrorMessageStub.notCalled);
+      sinon.assert.notCalled(showErrorMessageStub);
     });
   }
 
@@ -257,7 +255,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
       assert.ok(mvConfig instanceof MessageViewerConfig);
       assert.strictEqual(mvConfig.textFilter, String(key));
 
-      assert.ok(showErrorMessageStub.notCalled);
+      sinon.assert.notCalled(showErrorMessageStub);
     });
   }
 });
@@ -290,16 +288,13 @@ describe("commands/topics.ts produceMessageFromDocument() with schema(s)", funct
     promptForSchemaStub = sandbox.stub(schemaUtils, "promptForSchema");
 
     // create the stubs for the sidecar + service clients
-    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     // non-CCloud:
     recordsV3ApiStub = sandbox.createStubInstance(RecordsV3Api);
-    mockSidecarHandle.getRecordsV3Api.returns(recordsV3ApiStub);
+    stubbedSidecar.getRecordsV3Api.returns(recordsV3ApiStub);
     // CCloud:
     ccloudProduceApiStub = sandbox.createStubInstance(ConfluentCloudProduceRecordsResourceApi);
-    mockSidecarHandle.getConfluentCloudProduceRecordsResourceApi.returns(ccloudProduceApiStub);
-
-    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+    stubbedSidecar.getConfluentCloudProduceRecordsResourceApi.returns(ccloudProduceApiStub);
   });
 
   afterEach(function () {
@@ -365,15 +360,14 @@ describe("commands/topics.ts produceMessageFromDocument() with schema(s)", funct
 
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
-    assert.ok(getSubjectNameStrategyStub.calledOnceWith(TEST_LOCAL_KAFKA_TOPIC, "value"));
-    assert.ok(
-      promptForSchemaStub.calledOnceWith(
-        TEST_LOCAL_KAFKA_TOPIC,
-        "value",
-        SubjectNameStrategy.TOPIC_NAME,
-      ),
+    sinon.assert.calledOnceWithExactly(getSubjectNameStrategyStub, TEST_LOCAL_KAFKA_TOPIC, "value");
+    sinon.assert.calledOnceWithExactly(
+      promptForSchemaStub,
+      TEST_LOCAL_KAFKA_TOPIC,
+      "value",
+      SubjectNameStrategy.TOPIC_NAME,
     );
-    assert.ok(recordsV3ApiStub.produceRecord.calledOnce);
+    sinon.assert.calledOnce(recordsV3ApiStub.produceRecord);
   });
 
   it("should handle both key and value schema selection", async function () {
@@ -407,19 +401,21 @@ describe("commands/topics.ts produceMessageFromDocument() with schema(s)", funct
 
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
-    assert.ok(getSubjectNameStrategyStub.calledWith(TEST_LOCAL_KAFKA_TOPIC, "key"));
-    assert.ok(getSubjectNameStrategyStub.calledWith(TEST_LOCAL_KAFKA_TOPIC, "value"));
-    assert.ok(
-      promptForSchemaStub.calledWith(TEST_LOCAL_KAFKA_TOPIC, "key", SubjectNameStrategy.TOPIC_NAME),
+    sinon.assert.calledWith(getSubjectNameStrategyStub, TEST_LOCAL_KAFKA_TOPIC, "key");
+    sinon.assert.calledWith(getSubjectNameStrategyStub, TEST_LOCAL_KAFKA_TOPIC, "value");
+    sinon.assert.calledWith(
+      promptForSchemaStub,
+      TEST_LOCAL_KAFKA_TOPIC,
+      "key",
+      SubjectNameStrategy.TOPIC_NAME,
     );
-    assert.ok(
-      promptForSchemaStub.calledWith(
-        TEST_LOCAL_KAFKA_TOPIC,
-        "value",
-        SubjectNameStrategy.RECORD_NAME,
-      ),
+    sinon.assert.calledWith(
+      promptForSchemaStub,
+      TEST_LOCAL_KAFKA_TOPIC,
+      "value",
+      SubjectNameStrategy.RECORD_NAME,
     );
-    assert.ok(recordsV3ApiStub.produceRecord.calledOnce);
+    sinon.assert.calledOnce(recordsV3ApiStub.produceRecord);
   });
 
   it("should handle the deferToDocument option", async function () {
@@ -453,9 +449,9 @@ describe("commands/topics.ts produceMessageFromDocument() with schema(s)", funct
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
     // should not show schema quickpicks to user
-    assert.ok(getSubjectNameStrategyStub.notCalled);
-    assert.ok(promptForSchemaStub.notCalled);
-    assert.ok(recordsV3ApiStub.produceRecord.calledOnce);
+    sinon.assert.notCalled(getSubjectNameStrategyStub);
+    sinon.assert.notCalled(promptForSchemaStub);
+    sinon.assert.calledOnce(recordsV3ApiStub.produceRecord);
   });
 
   it("should handle errors in promptForSchema", async function () {
@@ -570,7 +566,7 @@ describe("commands/topics.ts handleSchemaValidationErrors()", function () {
 
     // stub getRangeForDocument to return a predictable range
     getRangeForDocumentStub = sandbox
-      .stub(parsing, "getRangeForDocument")
+      .stub(jsonParsing, "getRangeForDocument")
       .resolves(new vscode.Range(0, 0, 1, 10));
 
     // stub the diagnostic collection's set method
@@ -741,16 +737,13 @@ describe("commands/topics.ts produceMessage()", function () {
     sandbox = sinon.createSandbox();
 
     // create the stubs for the sidecar + service clients
-    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     // non-CCloud:
     recordsV3ApiStub = sandbox.createStubInstance(RecordsV3Api);
-    mockSidecarHandle.getRecordsV3Api.returns(recordsV3ApiStub);
+    stubbedSidecar.getRecordsV3Api.returns(recordsV3ApiStub);
     // CCloud:
     ccloudProduceApiStub = sandbox.createStubInstance(ConfluentCloudProduceRecordsResourceApi);
-    mockSidecarHandle.getConfluentCloudProduceRecordsResourceApi.returns(ccloudProduceApiStub);
-
-    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+    stubbedSidecar.getConfluentCloudProduceRecordsResourceApi.returns(ccloudProduceApiStub);
   });
 
   afterEach(function () {
@@ -964,7 +957,7 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
 
     await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
 
-    assert.ok(openTextDocumentStub.calledOnce);
+    sinon.assert.calledOnce(openTextDocumentStub);
     const expectedQuery = `-- Query topic "${TEST_CCLOUD_KAFKA_TOPIC.name}" with Flink SQL
 -- Replace this with your actual Flink SQL query
 
@@ -976,7 +969,7 @@ LIMIT 10;`;
       content: expectedQuery,
     });
 
-    assert.ok(showTextDocumentStub.calledOnce);
+    sinon.assert.calledOnce(showTextDocumentStub);
     sinon.assert.calledWithExactly(showTextDocumentStub, mockDocument, { preview: false });
   });
 
@@ -1030,8 +1023,8 @@ LIMIT 10;`;
   it("should return early if topic is null or not a KafkaTopic instance", async function () {
     await queryTopicWithFlink(null as any);
 
-    assert.ok(openTextDocumentStub.notCalled);
-    assert.ok(showTextDocumentStub.notCalled);
+    sinon.assert.notCalled(openTextDocumentStub);
+    sinon.assert.notCalled(showTextDocumentStub);
     sinon.assert.notCalled(ccloudLoader.getEnvironment);
     sinon.assert.notCalled(ccloudLoader.getKafkaClustersForEnvironmentId);
   });
@@ -1041,8 +1034,8 @@ LIMIT 10;`;
 
     await queryTopicWithFlink(notATopic as any);
 
-    assert.ok(openTextDocumentStub.notCalled);
-    assert.ok(showTextDocumentStub.notCalled);
+    sinon.assert.notCalled(openTextDocumentStub);
+    sinon.assert.notCalled(showTextDocumentStub);
     sinon.assert.notCalled(ccloudLoader.getEnvironment);
     sinon.assert.notCalled(ccloudLoader.getKafkaClustersForEnvironmentId);
   });
@@ -1054,8 +1047,8 @@ LIMIT 10;`;
     await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
 
     sinon.assert.calledOnce(ccloudLoader.getEnvironment);
-    assert.ok(openTextDocumentStub.notCalled);
-    assert.ok(showTextDocumentStub.notCalled);
+    sinon.assert.notCalled(openTextDocumentStub);
+    sinon.assert.notCalled(showTextDocumentStub);
   });
 
   it("should return early if cluster is missing", async function () {
@@ -1066,15 +1059,15 @@ LIMIT 10;`;
 
     sinon.assert.calledOnce(ccloudLoader.getEnvironment);
     sinon.assert.calledOnce(ccloudLoader.getKafkaClustersForEnvironmentId);
-    assert.ok(openTextDocumentStub.notCalled);
-    assert.ok(showTextDocumentStub.notCalled);
+    sinon.assert.notCalled(openTextDocumentStub);
+    sinon.assert.notCalled(showTextDocumentStub);
   });
 
   it("should return early if topic is a local", async function () {
     await queryTopicWithFlink(TEST_LOCAL_KAFKA_TOPIC);
 
-    assert.ok(openTextDocumentStub.notCalled);
-    assert.ok(showTextDocumentStub.notCalled);
+    sinon.assert.notCalled(openTextDocumentStub);
+    sinon.assert.notCalled(showTextDocumentStub);
     sinon.assert.notCalled(ccloudLoader.getEnvironment);
     sinon.assert.notCalled(ccloudLoader.getKafkaClustersForEnvironmentId);
   });
@@ -1082,8 +1075,8 @@ LIMIT 10;`;
   it("should return early if topic is a direct connection topic", async function () {
     await queryTopicWithFlink(TEST_DIRECT_KAFKA_TOPIC);
 
-    assert.ok(openTextDocumentStub.notCalled);
-    assert.ok(showTextDocumentStub.notCalled);
+    sinon.assert.notCalled(openTextDocumentStub);
+    sinon.assert.notCalled(showTextDocumentStub);
     sinon.assert.notCalled(ccloudLoader.getEnvironment);
     sinon.assert.notCalled(ccloudLoader.getKafkaClustersForEnvironmentId);
   });
@@ -1099,7 +1092,7 @@ LIMIT 10;`;
     await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
 
     // Should still create the document
-    assert.ok(openTextDocumentStub.calledOnce);
+    sinon.assert.calledOnce(openTextDocumentStub);
     // But should not set the metadata since there's no compute pool
     sinon.assert.notCalled(setUriMetadataStub);
   });

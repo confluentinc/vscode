@@ -155,7 +155,7 @@ export abstract class LocalResourceWorkflow {
           errorMsg = error.response.statusText;
         }
       }
-      showErrorNotificationWithButtons(
+      void showErrorNotificationWithButtons(
         `Failed to start ${this.resourceKind} container "${container.name}": ${errorMsg}`,
       );
       return;

@@ -8,8 +8,9 @@ import {
   SystemApi,
   SystemEventsRequest,
 } from "../clients/docker";
-import { ContextValues, setContextValue } from "../context/values";
+import { ContextValues, getContextValue, setContextValue } from "../context/values";
 import {
+  dockerServiceAvailable,
   localKafkaConnected,
   localMedusaConnected,
   localSchemaRegistryConnected,
@@ -71,6 +72,7 @@ export class EventListener {
       true, // run immediately on start()
     );
   }
+
   static getInstance(): EventListener {
     if (!EventListener.instance) {
       EventListener.instance = new EventListener();
@@ -91,11 +93,12 @@ export class EventListener {
   stop(): void {
     this.poller.stop();
     this.stopped = true;
+    this.handlingEventStream = false;
   }
 
   /**
    * Main workflow method for the {@link EventListener} class, handling the following:
-   * - checking if Docker is available and adjusting the poller frequency accordingly
+   * - checking if Docker is available and adjusting both the poller frequency and context value accordingly
    * - starting the event stream and reading events from it
    * - handling container start and die events for the `confluentinc/confluent-local` image, to
    *   include checking for a specific log line to appear in the container logs and informing the UI
@@ -114,11 +117,28 @@ export class EventListener {
     // check if Docker is available before trying to listen for events, taking into account the user
     // may have started the extension before Docker is running
     this.dockerAvailable = await isDockerAvailable();
-    logger.debug("dockerAvailable:", this.dockerAvailable);
+    logger.trace("dockerAvailable:", this.dockerAvailable);
+
+    const currentDockerContextValue = getContextValue<boolean>(
+      ContextValues.dockerServiceAvailable,
+    );
+
     if (!this.dockerAvailable) {
       // use the slower polling frequency (15sec) if Docker isn't available
       this.poller.useSlowFrequency();
+
+      if (currentDockerContextValue) {
+        // Just edged from available to unavailable. Inform the UI.
+        await setContextValue(ContextValues.dockerServiceAvailable, false);
+        dockerServiceAvailable.fire(false);
+      }
       return;
+    } else {
+      if (!currentDockerContextValue) {
+        // Just edged from unavailable to available. Inform the UI.
+        await setContextValue(ContextValues.dockerServiceAvailable, true);
+        dockerServiceAvailable.fire(true);
+      }
     }
 
     // Docker is available, so we can use the more frequent (at most every 1sec) polling for events
@@ -136,8 +156,9 @@ export class EventListener {
       await this.handleEventStreamWorkflow();
     } catch (error) {
       logger.error("error handling event stream:", error);
+    } finally {
+      this.handlingEventStream = false;
     }
-    this.handlingEventStream = false;
   }
 
   private async handleEventStreamWorkflow(): Promise<void> {
@@ -192,9 +213,18 @@ export class EventListener {
         if (error.cause && (error.cause as Error).message === "other side closed") {
           // Docker shut down and we can't listen for events anymore
           logger.error("lost connection to Docker socket");
-          // also inform the UI that the local resources are no longer available
-          await setContextValue(ContextValues.localKafkaClusterAvailable, false);
+
+          // Inform the UI that the local resources are no longer available
+          await Promise.all([
+            setContextValue(ContextValues.localKafkaClusterAvailable, false),
+            setContextValue(ContextValues.localSchemaRegistryAvailable, false),
+            setContextValue(ContextValues.dockerServiceAvailable, false),
+          ]);
+
+          dockerServiceAvailable.fire(false);
+          localSchemaRegistryConnected.fire(false);
           localKafkaConnected.fire(false);
+
           // don't stop the poller; let it go through another time and revert to the slower polling
         }
       } else {

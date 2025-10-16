@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { CodeLens, Position, Range, TextDocument, Uri } from "vscode";
 import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
+import { getStubbedResourceManager } from "../../tests/stubs/extensionStorage";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
@@ -73,8 +74,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
     beforeEach(async () => {
       // reset any stored metadata
       await getResourceManager().deleteAllUriMetadata();
-      resourceManagerStub = sandbox.createStubInstance(ResourceManager);
-      sandbox.stub(ResourceManager, "getInstance").returns(resourceManagerStub);
+      resourceManagerStub = getStubbedResourceManager(sandbox);
 
       provider = FlinkSqlCodelensProvider.getInstance();
     });
@@ -520,8 +520,8 @@ describe("codelens/flinkSqlProvider.ts", () => {
       const catalogName = "env_0";
       const databaseName = "cluster_0";
 
-      // two Kafka clusters/databases, both of which share a common name/ID but are in different
-      // catalogs/environments and have different provider/region values
+      // two Kafka clusters/databases, both of which share a common name but are in different
+      // catalogs/environments and have different IDs and provider/region values
       const correctDatabase: CCloudKafkaCluster = CCloudKafkaCluster.create({
         ...TEST_CCLOUD_KAFKA_CLUSTER,
         name: databaseName,
@@ -529,6 +529,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
       const incorrectDatabase: CCloudKafkaCluster = CCloudKafkaCluster.create({
         ...TEST_CCLOUD_KAFKA_CLUSTER,
         name: databaseName,
+        id: "other-cluster-id",
         provider: "other-provider",
         region: "other-region",
       });
@@ -831,6 +832,61 @@ describe("codelens/flinkSqlProvider.ts", () => {
       assert.deepStrictEqual(catalogDb.catalog, correctCatalog);
       assert.deepStrictEqual(catalogDb.database, correctDatabase);
     });
+
+    it("should look up catalog/database names if only IDs are provided", async () => {
+      const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+      const correctDatabase: CCloudKafkaCluster = CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_KAFKA_CLUSTER,
+        provider: pool.provider,
+        region: pool.region,
+      });
+      const correctCatalog: CCloudEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        kafkaClusters: [correctDatabase],
+      });
+      ccloudLoaderStub.getEnvironments.resolves([correctCatalog]);
+
+      const metadata = {
+        [UriMetadataKeys.FLINK_CATALOG_ID]: correctCatalog.id,
+        // no FLINK_CATALOG_NAME
+        [UriMetadataKeys.FLINK_DATABASE_ID]: correctDatabase.id,
+        // no FLINK_DATABASE_NAME
+      };
+      const catalogDb: CatalogDatabase = await getCatalogDatabaseFromMetadata(metadata, pool);
+
+      // should correctly look up resources based on IDs alone
+      assert.deepStrictEqual(catalogDb.catalog, correctCatalog);
+      assert.deepStrictEqual(catalogDb.database, correctDatabase);
+    });
+
+    for (const badCatalogId of [undefined, "old-or-invalid-catalog-id"]) {
+      it(`should use the database's environment/catalog ID if database ID metadata is available (catalogId=${badCatalogId})`, async () => {
+        const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+        const correctDatabase: CCloudKafkaCluster = CCloudKafkaCluster.create({
+          ...TEST_CCLOUD_KAFKA_CLUSTER,
+          provider: pool.provider,
+          region: pool.region,
+        });
+        const correctCatalog: CCloudEnvironment = new CCloudEnvironment({
+          ...TEST_CCLOUD_ENVIRONMENT,
+          kafkaClusters: [correctDatabase],
+        });
+        ccloudLoaderStub.getEnvironments.resolves([correctCatalog]);
+
+        const metadata = {
+          [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
+          [UriMetadataKeys.FLINK_CATALOG_ID]: badCatalogId,
+          // no FLINK_CATALOG_NAME
+          [UriMetadataKeys.FLINK_DATABASE_ID]: correctDatabase.id,
+          // no FLINK_DATABASE_NAME
+        };
+        const catalogDb: CatalogDatabase = await getCatalogDatabaseFromMetadata(metadata, pool);
+
+        // should use the database's environment/catalog ID to find the catalog
+        assert.deepStrictEqual(catalogDb.catalog, correctCatalog);
+        assert.deepStrictEqual(catalogDb.database, correctDatabase);
+      });
+    }
   });
 
   describe("getDefaultCatalogDatabase()", () => {

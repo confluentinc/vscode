@@ -48,7 +48,7 @@ describe("docker/images.ts ImageApi wrappers", () => {
     const result = await imageExists(fakeImageRepo, fakeImageTag);
 
     assert.strictEqual(result, true);
-    assert.ok(imageListStub.calledOnce);
+    sinon.assert.calledOnce(imageListStub);
   });
 
   it("imageExists() should return false if the image repo+tag does not exist in the image listing", async () => {
@@ -59,7 +59,7 @@ describe("docker/images.ts ImageApi wrappers", () => {
     const result = await imageExists(fakeImageRepo, fakeImageTag);
 
     assert.strictEqual(result, false);
-    assert.ok(imageListStub.calledOnce);
+    sinon.assert.calledOnce(imageListStub);
   });
 
   it("imageExists() should return false if there is a non-ResponseError error", async () => {
@@ -69,7 +69,7 @@ describe("docker/images.ts ImageApi wrappers", () => {
     const result = await imageExists(fakeImageRepo, fakeImageTag);
 
     assert.strictEqual(result, false);
-    assert.ok(imageListStub.calledOnce);
+    sinon.assert.calledOnce(imageListStub);
   });
 
   it("pullImage() should return nothing after successfully pulling an image", async () => {
@@ -84,8 +84,8 @@ describe("docker/images.ts ImageApi wrappers", () => {
     const result = await pullImage(fakeImageRepo, fakeImageTag);
 
     assert.strictEqual(result, undefined);
-    assert.ok(imageCreateRawStub.calledOnce);
-    assert.ok(imageCreateRawStub.calledWithMatch({ fromImage: fakeImageRepoTag }));
+    sinon.assert.calledOnce(imageCreateRawStub);
+    sinon.assert.calledOnceWithMatch(imageCreateRawStub, { fromImage: fakeImageRepoTag });
   });
 
   it("pullImage() should re-throw any error from .imageCreate", async () => {
@@ -93,6 +93,6 @@ describe("docker/images.ts ImageApi wrappers", () => {
     imageCreateRawStub.rejects(fakeError);
 
     await assert.rejects(pullImage(fakeImageRepo, fakeImageTag), fakeError);
-    assert.ok(imageCreateRawStub.calledOnce);
+    sinon.assert.calledOnce(imageCreateRawStub);
   });
 });

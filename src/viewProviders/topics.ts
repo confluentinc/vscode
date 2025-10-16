@@ -24,7 +24,7 @@ import {
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { ResourceLoader } from "../loaders";
-import { TopicFetchError } from "../loaders/loaderUtils";
+import { TopicFetchError } from "../loaders/utils/loaderUtils";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";
@@ -60,20 +60,22 @@ export class TopicViewProvider
   /** Repaint the topics view. When invoked from the 'refresh' button, will force deep reading from sidecar. */
   refresh(
     forceDeepRefresh: boolean = false,
-    onlyIfMatching: KafkaCluster | KafkaTopic | null = null,
+    resourceToCheck: KafkaCluster | KafkaTopic | null = null,
   ): void {
-    let matching: boolean;
-    if (onlyIfMatching instanceof KafkaTopic) {
-      matching = this.kafkaCluster ? this.kafkaCluster.contains(onlyIfMatching) : false;
-    } else if (onlyIfMatching instanceof KafkaCluster) {
-      matching = this.kafkaCluster ? this.kafkaCluster.equals(onlyIfMatching) : false;
-    } else {
-      matching = true; // null means always refresh
-    }
+    const shouldRefresh =
+      // nothing passed = refresh
+      resourceToCheck === null ||
+      // a cluster was passed and matches the focused cluster = refresh
+      (resourceToCheck instanceof KafkaCluster &&
+        this.kafkaCluster !== null &&
+        this.kafkaCluster.equals(resourceToCheck)) ||
+      // a topic was passed and is contained in the focused cluster = refresh
+      (resourceToCheck instanceof KafkaTopic &&
+        this.kafkaCluster !== null &&
+        this.kafkaCluster.contains(resourceToCheck));
 
-    // If not focused on any cluster, or if the view is currently focused on a
-    // different cluster than matches onlyIfMatching, no need to refresh
-    if (!this.kafkaCluster || !matching) {
+    if (!shouldRefresh) {
+      // focused on something else; exit early
       return;
     }
 
@@ -365,8 +367,8 @@ export class TopicViewProvider
         },
       );
 
-      // Toplevel repaint.
-      this.refresh();
+      // Toplevel (deep) repaint to reevaluate which topics have subjects.
+      this.refresh(true);
     }
   }
 

@@ -74,8 +74,8 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
 
     await workflow["checkForImage"]("repo", "tag");
 
-    assert.ok(imageExistsStub.calledOnceWith("repo", "tag"));
-    assert.ok(pullImageStub.calledOnceWith("repo", "tag"));
+    sinon.assert.calledOnceWithExactly(imageExistsStub, "repo", "tag");
+    sinon.assert.calledOnceWithExactly(pullImageStub, "repo", "tag");
   });
 
   it("checkForImage() should not pull image if it already exists", async () => {
@@ -83,8 +83,8 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
 
     await workflow["checkForImage"]("repo", "tag");
 
-    assert.ok(imageExistsStub.calledOnceWith("repo", "tag"));
-    assert.ok(pullImageStub.notCalled);
+    sinon.assert.calledOnceWithExactly(imageExistsStub, "repo", "tag");
+    sinon.assert.notCalled(pullImageStub);
   });
 
   it("handleExistingContainers() should handle an existing container and automatically start it if it isn't running", async () => {
@@ -95,12 +95,10 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
 
     await workflow.handleExistingContainers(fakeContainers);
 
-    assert.ok(
-      workflowStartContainerStub.calledOnceWith({
-        id: fakeContainers[0].Id!,
-        name: fakeContainers[0].Names![0],
-      }),
-    );
+    sinon.assert.calledOnceWithExactly(workflowStartContainerStub, {
+      id: fakeContainers[0].Id!,
+      name: fakeContainers[0].Names![0],
+    });
   });
 
   it("handleExistingContainers() should handle multiple existing containers and automatically start them all", async () => {
@@ -112,22 +110,15 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
 
     await workflow.handleExistingContainers(fakeContainers);
 
-    assert.ok(
-      workflowStartContainerStub.calledTwice,
-      `workflow startContainer() called ${workflowStartContainerStub.callCount} time(s) with args: ${JSON.stringify(workflowStartContainerStub.args, null, 2)}`,
-    );
-    assert.ok(
-      workflowStartContainerStub.calledWith({
-        id: fakeContainers[0].Id!,
-        name: fakeContainers[0].Names![0],
-      }),
-    );
-    assert.ok(
-      workflowStartContainerStub.calledWith({
-        id: fakeContainers[1].Id!,
-        name: fakeContainers[1].Names![0],
-      }),
-    );
+    sinon.assert.calledTwice(workflowStartContainerStub);
+    sinon.assert.calledWith(workflowStartContainerStub, {
+      id: fakeContainers[0].Id!,
+      name: fakeContainers[0].Names![0],
+    });
+    sinon.assert.calledWith(workflowStartContainerStub, {
+      id: fakeContainers[1].Id!,
+      name: fakeContainers[1].Names![0],
+    });
   });
 
   it("handleExistingContainers() should handle 'running' containers auto-restart them", async () => {
@@ -137,7 +128,7 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
 
     await workflow.handleExistingContainers(fakeContainers);
 
-    assert.ok(restartContainerStub.calledOnceWith(fakeContainers[0].Id!));
+    sinon.assert.calledOnceWithExactly(restartContainerStub, fakeContainers[0].Id!);
   });
 
   it("startContainer() should start a container and return its inspect response", async () => {
@@ -149,9 +140,9 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
     const result = await workflow.startContainer(fakeContainer);
 
     assert.strictEqual(result, fakeResponse);
-    assert.ok(startContainerStub.calledOnceWith(fakeContainer.id));
-    assert.ok(getContainerStub.calledOnceWith(fakeContainer.id));
-    assert.ok(showErrorMessageStub.notCalled);
+    sinon.assert.calledOnceWithExactly(startContainerStub, fakeContainer.id);
+    sinon.assert.calledOnceWithExactly(getContainerStub, fakeContainer.id);
+    sinon.assert.notCalled(showErrorMessageStub);
   });
 
   it("startContainer() should return nothing and show an error notification for port-in-use ResponseErrors", async () => {
@@ -170,13 +161,13 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
     const result = await workflow.startContainer(fakeContainer);
 
     assert.strictEqual(result, undefined);
-    assert.ok(startContainerStub.calledOnceWith(fakeContainer.id));
-    assert.ok(getContainerStub.notCalled);
-    assert.ok(
-      showErrorMessageStub.calledOnceWith(
-        'Failed to start test container "test-container": Port 8082 is already in use.',
-      ),
-      `showErrorMessageStub.args: ${showErrorMessageStub.args}`,
+    sinon.assert.calledOnceWithExactly(startContainerStub, fakeContainer.id);
+    sinon.assert.notCalled(getContainerStub);
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      'Failed to start test container "test-container": Port 8082 is already in use.',
+      "Open Logs",
+      "File Issue",
     );
   });
 
@@ -188,10 +179,13 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
     const result = await workflow.startContainer(fakeContainer);
 
     assert.strictEqual(result, undefined);
-    assert.ok(startContainerStub.calledOnceWith(fakeContainer.id));
-    assert.ok(getContainerStub.notCalled);
-    assert.ok(
-      showErrorMessageStub.calledOnceWith('Failed to start test container "test-container": uh oh'),
+    sinon.assert.calledOnceWithExactly(startContainerStub, fakeContainer.id);
+    sinon.assert.notCalled(getContainerStub);
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      'Failed to start test container "test-container": uh oh',
+      "Open Logs",
+      "File Issue",
     );
   });
 });
@@ -226,7 +220,7 @@ describe("docker/workflows/index.ts LocalResourceWorkflow registry", () => {
       LocalResourceWorkflow.getKafkaWorkflow,
       new Error(`Unsupported Kafka image repo: ${unsupportedImageRepo}`),
     );
-    assert.ok(showErrorMessageStub.calledOnce);
+    sinon.assert.calledOnce(showErrorMessageStub);
   });
 
   it(`getKafkaWorkflow() should return a ConfluentLocalWorkflow instance for the correct "${LOCAL_KAFKA_IMAGE.id}" setting`, async () => {
@@ -245,7 +239,7 @@ describe("docker/workflows/index.ts LocalResourceWorkflow registry", () => {
       LocalResourceWorkflow.getSchemaRegistryWorkflow,
       new Error(`Unsupported Schema Registry image repo: ${unsupportedImageRepo}`),
     );
-    assert.ok(showErrorMessageStub.calledOnce);
+    sinon.assert.calledOnce(showErrorMessageStub);
   });
 
   it(`getSchemaRegistryWorkflow() should return a ConfluentLocalWorkflow instance for the correct "${LOCAL_SCHEMA_REGISTRY_IMAGE.id}" setting`, async () => {

@@ -41,7 +41,7 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
     response = await sidecar.query(query, LOCAL_CONNECTION_ID, false);
   } catch (error) {
     logError(error, "local resources", { extra: { connectionId: LOCAL_CONNECTION_ID } });
-    showErrorNotificationWithButtons(`Failed to fetch local resources: ${error}`);
+    void showErrorNotificationWithButtons(`Failed to fetch local resources: ${error}`);
     return envs;
   }
 

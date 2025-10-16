@@ -1,4 +1,3 @@
-import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
@@ -42,8 +41,8 @@ describe("flinkComputePools.ts", () => {
 
       await commandsModule.configureFlinkDefaults();
 
-      assert.ok(stubbedConfigs.update.notCalled);
-      assert.ok(flinkDatabaseQuickpickStub.notCalled);
+      sinon.assert.notCalled(stubbedConfigs.update);
+      sinon.assert.notCalled(flinkDatabaseQuickpickStub);
     });
 
     it("should return early if no database is selected", async () => {
@@ -96,11 +95,10 @@ describe("flinkComputePools.ts", () => {
 
       await commandsModule.configureFlinkDefaults();
 
-      assert.ok(
-        executeCommandStub.calledWith(
-          "workbench.action.openSettings",
-          "@ext:confluentinc.vscode-confluent flink",
-        ),
+      sinon.assert.calledWith(
+        executeCommandStub,
+        "workbench.action.openSettings",
+        "@ext:confluentinc.vscode-confluent flink",
       );
     });
   });

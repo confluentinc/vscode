@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { getCCloudAuthSession } from "../authn/utils";
 import {
   CreateSqlv1StatementOperationRequest,
   CreateSqlv1StatementRequest,
@@ -8,6 +7,7 @@ import {
   SqlV1StatementResultResults,
 } from "../clients/flinkSql";
 import { isResponseErrorWithStatus } from "../errors";
+import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import {
@@ -114,7 +114,7 @@ export async function waitForResultsFetchable(statement: FlinkStatement): Promis
 }
 
 /**
- * Wait for a vscode-generated and just now-submitted 'hidden' Flink statement to complete.
+ * Wait for a submitted Flink statement to change to a terminal phase (completed, stopped, or failed).
  * @returns Promise that resolves to the statement when it has entered a terminal phase.
  */
 export async function waitForStatementCompletion(
@@ -178,26 +178,19 @@ async function waitForStatementState(
  * @param statement
  * @returns string akin to "username-vscode-2023-10-01t12-00-00"
  */
-export async function determineFlinkStatementName(): Promise<string> {
+export async function determineFlinkStatementName(spice?: string): Promise<string> {
   const parts: string[] = [];
 
-  // If we're creating flink statements, then we're ccloud authed. Use their
-  // ccloud account name as primary part of the statement name.
-  const ccloudAccountName = (await getCCloudAuthSession())?.account.label;
-  if (ccloudAccountName) {
-    let userNamePart = ccloudAccountName.split("@")[0];
-    // strip anything to the right of any '+' character if present, don't want their
-    // email buckets involved.
-    userNamePart = userNamePart.split("+")[0];
-
-    parts.push(userNamePart);
-  } else {
-    // Wacky. Not ccloud authed?
-    parts.push("unknownuser");
+  // Fetch the user-configured prefix for statements, if any.
+  const statementPrefix = FLINK_CONFIG_STATEMENT_PREFIX.value;
+  if (statementPrefix) {
+    parts.push(statementPrefix);
   }
 
   parts.push("vscode");
-
+  if (spice) {
+    parts.push(spice);
+  }
   const dateString = new Date().toISOString().replace(/:/g, "-").replace(/\..*$/, "");
   parts.push(dateString);
 

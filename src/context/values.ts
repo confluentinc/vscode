@@ -37,7 +37,7 @@ export enum ContextValues {
   RESOURCES_WITH_ID = "confluent.resourcesWithIDs",
   /** Array of resources that have a `name` property for enabling the `Copy Name` action. */
   RESOURCES_WITH_NAMES = "confluent.resourcesWithNames",
-  /** Array of resources that have a `uri` property for enabling the `Copy URI` action. */
+  /** Array of resources that have a `uri` property for enabling the `Copy URL` action. */
   RESOURCES_WITH_URIS = "confluent.resourcesWithURIs",
   /** Array of resources that can be selected for comparison and presented in a diff view. */
   DIFFABLE_RESOURCES = "confluent.diffableResources",
@@ -59,6 +59,9 @@ export enum ContextValues {
   /** A direct connection has been made and a Schema Registry is available for selecting in the Schemas view. */
   directSchemaRegistryAvailable = "confluent.directSchemaRegistryAvailable",
 
+  /** Is Docker daemon/service (or authentic workalike) available / running? */
+  dockerServiceAvailable = "confluent.dockerServiceAvailable",
+
   /** A resource has been selected for comparison. */
   resourceSelectedForCompare = "confluent.resourceSelectedForCompare",
 
@@ -79,11 +82,14 @@ export enum ContextValues {
   schemaSearchApplied = "confluent.schemaSearchApplied",
   /** The user applied a search string to the Flink Statements view. */
   flinkStatementsSearchApplied = "confluent.flinkStatementsSearchApplied",
-  /** The user applied a search string to the Flink Artifacts view. */
-  flinkArtifactsSearchApplied = "confluent.flinkArtifactsSearchApplied",
 
   /** The user changed the mode of the Flink Database view. */
   flinkDatabaseViewMode = "confluent.flinkDatabaseViewMode",
+  /** The user applied a search string to the Flink Database view. */
+  flinkDatabaseSearchApplied = "confluent.flinkDatabaseSearchApplied",
+
+  /** The Flink Statement Results panel is visible in the bottom panel area. */
+  flinkStatementResultsPanelActive = "confluent.flinkStatementResults.panelActive",
 
   /**
    * EXPERIMENTAL: Is the chat participant enabled?

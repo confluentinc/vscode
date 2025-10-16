@@ -129,6 +129,29 @@ describe("quickpicks/kafkaClusters", () => {
       assert.strictEqual(itemsCalledWith[1].description, clusters[0].id);
     });
 
+    it("should return undefined and show an info notification when filter predicate results in zero clusters", async () => {
+      const clusters: KafkaCluster[] = [TEST_LOCAL_KAFKA_CLUSTER];
+      localLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+      localLoader.getKafkaClustersForEnvironmentId.resolves(clusters);
+      const showInformationMessageStub = sandbox
+        .stub(window, "showInformationMessage")
+        .resolves(undefined);
+
+      const result = await kafkaClusterQuickPick({
+        filter: (cluster: KafkaCluster) => cluster.id === "non-existent-cluster-id",
+      });
+
+      assert.strictEqual(result, undefined);
+      sinon.assert.notCalled(showQuickPickStub);
+      sinon.assert.calledOnce(showInformationMessageStub);
+      sinon.assert.calledOnceWithMatch(
+        showInformationMessageStub,
+        "No Kafka clusters available.",
+        sinon.match.string,
+        sinon.match.string,
+      );
+    });
+
     it("Uses the provided placeHolder in the quick pick", async () => {
       const clusters: KafkaCluster[] = [
         TEST_LOCAL_KAFKA_CLUSTER,

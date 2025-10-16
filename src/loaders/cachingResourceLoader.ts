@@ -7,8 +7,8 @@ import { Subject } from "../models/schema";
 import { SchemaRegistry, SchemaRegistryType } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getResourceManager } from "../storage/resourceManager";
-import { correlateTopicsWithSchemaSubjects, fetchTopics } from "./loaderUtils";
 import { ResourceLoader } from "./resourceLoader";
+import { correlateTopicsWithSchemaSubjects, fetchTopics } from "./utils/loaderUtils";
 
 const logger = new Logger("cachingResourceLoader");
 
@@ -150,6 +150,18 @@ export abstract class CachingResourceLoader<
   public async getEnvironments(forceDeepRefresh: boolean = false): Promise<ET[]> {
     await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
     return await getResourceManager().getEnvironments<ET>(this.connectionId);
+  }
+
+  /**
+   * Get all of the known Kafka clusters in the accessible environments.
+   *
+   * Ensures that the coarse resources are loaded before returning the Kafka clusters from
+   * the resource manager cache.
+   **/
+  public async getKafkaClusters(filterPredicate?: (cluster: KCT) => boolean): Promise<KCT[]> {
+    await this.ensureCoarseResourcesLoaded(false);
+    const clusters = await getResourceManager().getKafkaClusters<KCT>(this.connectionId);
+    return filterPredicate ? clusters.filter(filterPredicate) : clusters;
   }
 
   /**

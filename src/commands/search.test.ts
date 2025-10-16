@@ -1,195 +1,172 @@
+import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import * as context from "../context/values";
-import {
-  flinkStatementSearchSet,
-  resourceSearchSet,
-  schemaSearchSet,
-  topicSearchSet,
-} from "../emitters";
-import {
-  searchResources,
-  clearResourceSearch,
-  searchTopics,
-  clearTopicSearch,
-  searchSchemas,
-  clearSchemaSearch,
-  searchFlinkStatements,
-  clearFlinkStatementsSearch,
-} from "./search";
+import * as commands from ".";
+import * as contextValues from "../context/values";
 
-describe("commands/search.ts", () => {
+import { ViewSearchCommands, getAllSearchCommandsInstances } from "./search";
+
+describe("commands/search", () => {
   let sandbox: sinon.SinonSandbox;
-  let showInputBoxStub: sinon.SinonStub;
-  let setContextValueStub: sinon.SinonStub;
-  let resourceSearchSetFireStub: sinon.SinonStub;
-  let topicSearchSetFireStub: sinon.SinonStub;
-  let schemaSearchSetFireStub: sinon.SinonStub;
-  let flinkStatementSearchSetFireStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-
-    showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
-
-    setContextValueStub = sandbox.stub(context, "setContextValue");
-
-    resourceSearchSetFireStub = sandbox.stub(resourceSearchSet, "fire");
-    topicSearchSetFireStub = sandbox.stub(topicSearchSet, "fire");
-    schemaSearchSetFireStub = sandbox.stub(schemaSearchSet, "fire");
-    flinkStatementSearchSetFireStub = sandbox.stub(flinkStatementSearchSet, "fire");
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  it("searchResources() should exit early when no search string is provided", async () => {
-    // simulate the user cancelling the input box
-    showInputBoxStub.resolves(undefined);
+  describe("ViewSearchCommands", () => {
+    const testLabelNoun = "Test Items";
+    const testViewName = "testItems";
+    const testSearchContextValue = contextValues.ContextValues.resourceSearchApplied; // Using an existing context value for testing
+    let testEmitter: vscode.EventEmitter<string | null>;
+    let viewSearchCommands: ViewSearchCommands;
+    let emitterFireStub: sinon.SinonStub;
+    let setContextValueStub: sinon.SinonStub;
 
-    await searchResources();
+    beforeEach(() => {
+      testEmitter = new vscode.EventEmitter<string | null>();
+      emitterFireStub = sandbox.stub(testEmitter, "fire");
+      setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+      viewSearchCommands = new ViewSearchCommands(
+        testLabelNoun,
+        testViewName,
+        testSearchContextValue,
+        testEmitter,
+      );
+    });
+    afterEach(() => {
+      testEmitter.dispose();
+    });
 
-    sinon.assert.calledOnce(showInputBoxStub);
-    sinon.assert.notCalled(setContextValueStub);
-    sinon.assert.notCalled(resourceSearchSetFireStub);
+    describe("searchCommand", () => {
+      let showInputBoxStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      });
+
+      it("should exit early when no search string is provided", async () => {
+        showInputBoxStub.resolves(undefined); // Simulate user cancelling input box
+
+        await viewSearchCommands.searchCommand();
+
+        sinon.assert.calledOnce(showInputBoxStub);
+        sinon.assert.notCalled(setContextValueStub);
+        sinon.assert.notCalled(emitterFireStub);
+      });
+
+      it("should set context value and fire emitter with the provided search string", async () => {
+        const searchString = "test-search";
+        showInputBoxStub.resolves(searchString);
+
+        await viewSearchCommands.searchCommand();
+
+        sinon.assert.calledOnce(showInputBoxStub);
+        sinon.assert.calledOnceWithExactly(setContextValueStub, testSearchContextValue, true);
+        sinon.assert.calledOnceWithExactly(emitterFireStub, searchString);
+      });
+    });
+
+    describe("clearCommand", () => {
+      it("should set context value to false and fire emitter with null", async () => {
+        await viewSearchCommands.clearCommand();
+
+        sinon.assert.calledOnceWithExactly(setContextValueStub, testSearchContextValue, false);
+        sinon.assert.calledOnceWithExactly(emitterFireStub, null);
+      });
+    });
+
+    describe("registerCommands", () => {
+      let registerCommandWithLoggingStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        registerCommandWithLoggingStub = sandbox.stub(commands, "registerCommandWithLogging");
+      });
+
+      it("should register search and clear commands with correct names", () => {
+        viewSearchCommands.registerCommands();
+
+        sinon.assert.calledTwice(registerCommandWithLoggingStub);
+        sinon.assert.calledWithExactly(
+          registerCommandWithLoggingStub.firstCall,
+          `confluent.${testViewName}.search`,
+          sinon.match.func,
+        );
+        sinon.assert.calledWithExactly(
+          registerCommandWithLoggingStub.secondCall,
+          `confluent.${testViewName}.search.clear`,
+          sinon.match.func,
+        );
+      });
+    });
   });
 
-  it(`searchResources() should set ${context.ContextValues.resourceSearchApplied}=true and fire resourceSearchSet with the provided search string`, async () => {
-    const searchString = "test-search";
-    showInputBoxStub.resolves(searchString);
+  describe("getAllSearchCommandsInstances()", () => {
+    const searchableViews = [
+      { labelNoun: "Resources", viewName: "resources" },
+      { labelNoun: "Topics", viewName: "topics" },
+      { labelNoun: "Schemas", viewName: "schemas" },
+      { labelNoun: "Flink Statements", viewName: "flink.statements" },
+      { labelNoun: "Flink Database", viewName: "flink.database" },
+    ];
 
-    await searchResources();
+    let allSearchCommandsInstances: ViewSearchCommands[];
+    before(() => {
+      allSearchCommandsInstances = getAllSearchCommandsInstances();
+    });
 
-    sinon.assert.calledOnce(showInputBoxStub);
-    sinon.assert.calledWith(
-      showInputBoxStub.firstCall,
-      sinon.match({
-        title: "Search items in the Resources view",
-        ignoreFocusOut: true,
-      }),
-    );
-    sinon.assert.calledWith(setContextValueStub, context.ContextValues.resourceSearchApplied, true);
-    sinon.assert.calledWith(resourceSearchSetFireStub, searchString);
-  });
+    it("should have an instance for each searchable view", () => {
+      assert.strictEqual(
+        allSearchCommandsInstances.length,
+        searchableViews.length,
+        "Mismatch in number of searchable views and ViewSearchCommands instances",
+      );
 
-  it(`clearResourceSearch() should set ${context.ContextValues.resourceSearchApplied}=false and fire resourceSearchSet with null`, async () => {
-    await clearResourceSearch();
+      searchableViews.forEach((view) => {
+        const instance = allSearchCommandsInstances.find(
+          (inst) => inst.labelNoun === view.labelNoun && inst.viewName === view.viewName,
+        );
+        assert.ok(
+          instance !== undefined,
+          `No ViewSearchCommands instance found for view: ${view.labelNoun}`,
+        );
+      });
 
-    sinon.assert.calledWith(
-      setContextValueStub,
-      context.ContextValues.resourceSearchApplied,
-      false,
-    );
-    sinon.assert.calledWith(resourceSearchSetFireStub, null);
-  });
+      it("All context values should be unique", () => {
+        const contextValuesSet = new Set<string>();
+        allSearchCommandsInstances.forEach((instance) => {
+          assert.ok(
+            !contextValuesSet.has(instance.searchContextValue),
+            `Duplicate context value found: ${instance.searchContextValue}`,
+          );
+          contextValuesSet.add(instance.searchContextValue);
+        });
+      });
 
-  it("searchTopics() should exit early when no search string is provided", async () => {
-    // simulate the user cancelling the input box
-    showInputBoxStub.resolves(undefined);
+      it("All view names should be unique", () => {
+        const viewNamesSet = new Set<string>();
+        allSearchCommandsInstances.forEach((instance) => {
+          assert.ok(
+            !viewNamesSet.has(instance.viewName),
+            `Duplicate view name found: ${instance.viewName}`,
+          );
+          viewNamesSet.add(instance.viewName);
+        });
+      });
 
-    await searchTopics();
-
-    sinon.assert.calledOnce(showInputBoxStub);
-    sinon.assert.notCalled(setContextValueStub);
-    sinon.assert.notCalled(topicSearchSetFireStub);
-  });
-
-  it(`searchTopics() should set ${context.ContextValues.topicSearchApplied}=true and fire topicSearchSet with the provided search string`, async () => {
-    const searchString = "test-search";
-    showInputBoxStub.resolves(searchString);
-
-    await searchTopics();
-
-    sinon.assert.calledOnce(showInputBoxStub);
-    sinon.assert.calledWith(
-      showInputBoxStub.firstCall,
-      sinon.match({
-        title: "Search items in the Topics view",
-        ignoreFocusOut: true,
-      }),
-    );
-    sinon.assert.calledWith(setContextValueStub, context.ContextValues.topicSearchApplied, true);
-    sinon.assert.calledWith(topicSearchSetFireStub, searchString);
-  });
-
-  it(`clearTopicSearch() should set ${context.ContextValues.topicSearchApplied}=false and fire topicSearchSet with null`, async () => {
-    await clearTopicSearch();
-
-    sinon.assert.calledWith(setContextValueStub, context.ContextValues.topicSearchApplied, false);
-    sinon.assert.calledWith(topicSearchSetFireStub, null);
-  });
-
-  it("searchSchemas() should exit early when no search string is provided", async () => {
-    // simulate the user cancelling the input box
-    showInputBoxStub.resolves(undefined);
-
-    await searchSchemas();
-
-    sinon.assert.calledOnce(showInputBoxStub);
-    sinon.assert.notCalled(setContextValueStub);
-    sinon.assert.notCalled(schemaSearchSetFireStub);
-  });
-
-  it(`searchSchemas() should set ${context.ContextValues.schemaSearchApplied}=true and fire schemaSearchSet with the provided search string`, async () => {
-    const searchString = "test-search";
-    showInputBoxStub.resolves(searchString);
-
-    await searchSchemas();
-
-    sinon.assert.calledOnce(showInputBoxStub);
-    sinon.assert.calledWith(
-      showInputBoxStub.firstCall,
-      sinon.match({
-        title: "Search items in the Schemas view",
-        ignoreFocusOut: true,
-      }),
-    );
-    sinon.assert.calledWith(setContextValueStub, context.ContextValues.schemaSearchApplied, true);
-    sinon.assert.calledWith(schemaSearchSetFireStub, searchString);
-  });
-
-  it(`clearSchemaSearch() should set ${context.ContextValues.schemaSearchApplied}=false and fire schemaSearchSet with null`, async () => {
-    await clearSchemaSearch();
-
-    sinon.assert.calledWith(setContextValueStub, context.ContextValues.schemaSearchApplied, false);
-    sinon.assert.calledWith(schemaSearchSetFireStub, null);
-  });
-
-  it("searchFlinkStatements() should exit early when no search string is provided", async () => {
-    // simulate the user cancelling the input box
-    showInputBoxStub.resolves(undefined);
-
-    await searchFlinkStatements();
-
-    sinon.assert.calledOnce(showInputBoxStub);
-    sinon.assert.notCalled(flinkStatementSearchSetFireStub);
-  });
-
-  it("searchFlinkStatements() should fire flinkStatementSearchSet with the provided search string", async () => {
-    const searchString = "test-search";
-    showInputBoxStub.resolves(searchString);
-
-    await searchFlinkStatements();
-
-    sinon.assert.calledOnce(showInputBoxStub);
-    sinon.assert.calledWith(
-      showInputBoxStub.firstCall,
-      sinon.match({
-        title: "Search items in the Flink Statements view",
-        ignoreFocusOut: true,
-      }),
-    );
-    // context should not be set directly as we migrate to BaseViewProvider handling it
-    sinon.assert.notCalled(setContextValueStub);
-    sinon.assert.calledWith(flinkStatementSearchSetFireStub, searchString);
-  });
-
-  it("clearFlinkStatementsSearch() should fire flinkStatementSearchSet with null", async () => {
-    await clearFlinkStatementsSearch();
-
-    // context should not be set directly as we migrate to BaseViewProvider handling it
-    sinon.assert.notCalled(setContextValueStub);
-    sinon.assert.calledWith(flinkStatementSearchSetFireStub, null);
+      it("All event emitters should be unique", () => {
+        const emittersSet = new Set<vscode.EventEmitter<string | null>>();
+        allSearchCommandsInstances.forEach((instance) => {
+          assert.ok(
+            !emittersSet.has(instance.emitter),
+            `Duplicate event emitter found for view: ${instance.viewName}`,
+          );
+          emittersSet.add(instance.emitter);
+        });
+      });
+    });
   });
 });

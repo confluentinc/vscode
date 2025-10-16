@@ -23,6 +23,7 @@ import * as contextValues from "../context/values";
 import { CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader } from "../loaders";
 import { ConnectionLabel } from "../models/resource";
 import { SchemaRegistry } from "../models/schemaRegistry";
+import { BaseViewProvider } from "../viewProviders/baseModels/base";
 import { SchemasViewProvider } from "../viewProviders/schemas";
 import { schemaRegistryQuickPick } from "./schemaRegistries";
 import { QuickPickItemWithValue } from "./types";
@@ -69,7 +70,7 @@ describe("quickpicks/schemaRegistries.ts schemaRegistryQuickPick()", function ()
 
   afterEach(function () {
     schemasViewProvider.dispose();
-    SchemasViewProvider["instance"] = null;
+    BaseViewProvider["instanceMap"].delete("SchemasViewProvider");
     sandbox.restore();
   });
 

@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
@@ -14,7 +15,7 @@ import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
-import * as sidecar from "../sidecar";
+import { SidecarHandle } from "../sidecar";
 import * as schemaRegistry from "./schemaRegistry";
 
 describe("authz.schemaRegistry", function () {
@@ -29,12 +30,9 @@ describe("authz.schemaRegistry", function () {
 
     sandbox = sinon.createSandbox();
     // create the stubs for the sidecar + service client
-    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     mockClient = sandbox.createStubInstance(SubjectsV1Api);
-    mockSidecarHandle.getSubjectsV1Api.returns(mockClient);
-    // stub the getSidecar function to return the mock sidecar handle
-    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+    stubbedSidecar.getSubjectsV1Api.returns(mockClient);
 
     stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
 
@@ -53,7 +51,7 @@ describe("authz.schemaRegistry", function () {
   // it("canAccessSchemaForTopic() should return true if both key and value access are true", async function () {
   //   const stub = sandbox.stub(schemaRegistry, "canAccessSchemaTypeForTopic").resolves(true);
   //   const result = await schemaRegistry.canAccessSchemaForTopic(TEST_CCLOUD_KAFKA_TOPIC);
-  //   assert.ok(stub.calledTwice);
+  //   sinon.assert.calledTwice(stub);
   //   assert.strictEqual(result, true);
   // });
 
@@ -67,14 +65,14 @@ describe("authz.schemaRegistry", function () {
   //     .withArgs(topic, "value")
   //     .resolves(false);
   //   const result = await schemaRegistry.canAccessSchemaForTopic(topic);
-  //   assert.ok(stub.calledTwice);
+  //   sinon.assert.calledTwice(stub);
   //   assert.strictEqual(result, true);
   // });
 
   // it("canAccessSchemaForTopic() should return false if both key and value access are false", async function () {
   //   const stub = sandbox.stub(schemaRegistry, "canAccessSchemaTypeForTopic").resolves(false);
   //   const result = await schemaRegistry.canAccessSchemaForTopic(TEST_CCLOUD_KAFKA_TOPIC);
-  //   assert.ok(stub.calledTwice);
+  //   sinon.assert.calledTwice(stub);
   //   assert.strictEqual(result, false);
   // });
 
@@ -144,7 +142,7 @@ describe("authz.schemaRegistry", function () {
 
     const showWarningMessageStub = sandbox.stub(window, "showWarningMessage").resolves(undefined);
     schemaRegistry.showNoSchemaAccessWarningNotification();
-    assert.ok(showWarningMessageStub.calledOnce);
+    sinon.assert.calledOnce(showWarningMessageStub);
   });
 
   it("showNoSchemaAccessWarningNotification() should not show warning if warnings are disabled", function () {
@@ -152,7 +150,7 @@ describe("authz.schemaRegistry", function () {
 
     const showWarningMessageStub = sandbox.stub(window, "showWarningMessage").resolves(undefined);
     schemaRegistry.showNoSchemaAccessWarningNotification();
-    assert.ok(showWarningMessageStub.notCalled);
+    sinon.assert.notCalled(showWarningMessageStub);
   });
 });
 

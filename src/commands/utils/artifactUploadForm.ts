@@ -5,9 +5,9 @@ import { Logger } from "../../logging";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import { CloudProvider } from "../../models/resource";
-import { showErrorNotificationWithButtons } from "../../notifications";
-import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
+import { flinkDatabaseRegionsQuickPick } from "../../quickpicks/cloudProviderRegions";
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
+import { logUsage, UserEvent } from "../../telemetry/events";
 import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import { ArtifactUploadParams } from "./uploadArtifactOrUDF";
 
@@ -32,10 +32,19 @@ export async function artifactUploadQuickPickForm(
 ): Promise<ArtifactUploadParams | undefined> {
   const state: FormState = {};
   const loader = CCloudResourceLoader.getInstance();
+
   const assignStateFromKnownResource = async (
     resource: CCloudKafkaCluster | CCloudFlinkComputePool,
   ) => {
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "upload",
+      status: "form state from resource",
+      environment: resource.environmentId,
+      cloud: resource.provider,
+      region: resource.region,
+    });
     state.cloudRegion = { provider: resource.provider, region: resource.region };
+
     // Only call getEnvironment if we do not already have this environment in state
     // Starting upload from right-clicking on Flink database cluster will override the selectedFlinkDatabase env
     if (!state.environment || state.environment.id !== resource.environmentId) {
@@ -68,6 +77,10 @@ export async function artifactUploadQuickPickForm(
       });
       await assignStateFromKnownResource(item);
     } else if (item instanceof vscode.Uri) {
+      logUsage(UserEvent.FlinkArtifactAction, {
+        action: "upload",
+        status: "form state from file",
+      });
       state.selectedFile = item;
       state.artifactName = path.basename(item.fsPath, path.extname(item.fsPath));
     }
@@ -139,6 +152,10 @@ export async function artifactUploadQuickPickForm(
       ignoreFocusOut: true,
     });
     if (!selection) {
+      logUsage(UserEvent.FlinkArtifactAction, {
+        action: "upload",
+        status: "exited early from quickpick form",
+      });
       return;
     }
 
@@ -147,14 +164,25 @@ export async function artifactUploadQuickPickForm(
       case "environment": {
         const environment = await flinkCcloudEnvironmentQuickPick();
         if (environment) {
+          logUsage(UserEvent.FlinkArtifactAction, {
+            action: "upload",
+            status: "selected environment",
+            environment: environment.id,
+          });
           state.environment = { id: environment.id, name: environment.name };
         }
         break;
       }
 
       case "cloudRegion": {
-        const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
+        const cloudRegion = await flinkDatabaseRegionsQuickPick();
         if (cloudRegion) {
+          logUsage(UserEvent.FlinkArtifactAction, {
+            action: "upload",
+            status: "selected cloud region",
+            cloud: cloudRegion.provider,
+            region: cloudRegion.region,
+          });
           state.cloudRegion = {
             provider: cloudRegion.provider,
             region: cloudRegion.region,
@@ -174,6 +202,10 @@ export async function artifactUploadQuickPickForm(
           },
         });
         if (selectedFiles && selectedFiles.length > 0) {
+          logUsage(UserEvent.FlinkArtifactAction, {
+            action: "upload",
+            status: "selected a file",
+          });
           state.selectedFile = selectedFiles[0];
           // populate artifact name from filename if not already set
           if (!state.artifactName) {
@@ -200,6 +232,10 @@ export async function artifactUploadQuickPickForm(
             value && value.trim() ? undefined : "Artifact name is required",
         });
         if (artifactName !== undefined) {
+          logUsage(UserEvent.FlinkArtifactAction, {
+            action: "upload",
+            status: "input name",
+          });
           state.artifactName = artifactName;
         }
         break;
@@ -213,6 +249,10 @@ export async function artifactUploadQuickPickForm(
           ignoreFocusOut: true,
         });
         if (description !== undefined) {
+          logUsage(UserEvent.FlinkArtifactAction, {
+            action: "upload",
+            status: "input description",
+          });
           state.description = description;
         }
         break;
@@ -237,6 +277,10 @@ export async function artifactUploadQuickPickForm(
           },
         });
         if (documentationUrl !== undefined) {
+          logUsage(UserEvent.FlinkArtifactAction, {
+            action: "upload",
+            status: "input documentation url",
+          });
           state.documentationUrl = documentationUrl;
         }
         break;
@@ -255,16 +299,17 @@ export async function artifactUploadQuickPickForm(
         } else if (state.cloudRegion!.provider === "AWS") {
           cloud = CloudProvider.AWS;
         } else {
-          // We are filitering GCP out of the pick list, so this should never happen, but it's here as a safeguard
-          void showErrorNotificationWithButtons(
-            `Upload Artifact cancelled: Unsupported cloud provider: ${state.cloudRegion!.provider}`,
-          );
-          continue;
+          cloud = CloudProvider.GCP;
         }
 
         // Our file picker and context menu filter on `.jar`, so this should be safe
         // When we add Python support we may want to make it more robust
         const fileFormat = state.selectedFile!.fsPath.split(".").pop() ?? "";
+
+        logUsage(UserEvent.FlinkArtifactAction, {
+          action: "upload",
+          status: "completed form",
+        });
 
         return {
           environment: state.environment!.id,

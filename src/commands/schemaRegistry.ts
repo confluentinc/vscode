@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { currentSchemaRegistryChanged } from "../emitters";
+import { schemasViewResourceChanged } from "../emitters";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaRegistryQuickPickWithViewProgress } from "../quickpicks/schemaRegistries";
 
@@ -13,7 +13,7 @@ export async function selectSchemaRegistryCommand(item?: SchemaRegistry) {
   }
   // only called when clicking a Schema Registry in the Resources view; not a dedicated view
   // action or command palette option
-  currentSchemaRegistryChanged.fire(schemaRegistry);
+  schemasViewResourceChanged.fire(schemaRegistry);
   vscode.commands.executeCommand("confluent-schemas.focus");
 }
 

@@ -6,10 +6,10 @@ import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceCon
 import { TEST_LOCAL_SUBJECT } from "../../../tests/unit/testResources/schema";
 import { TEST_LOCAL_SCHEMA_REGISTRY } from "../../../tests/unit/testResources/schemaRegistry";
 import { TEST_LOCAL_KAFKA_TOPIC } from "../../../tests/unit/testResources/topic";
+import { SubjectNameStrategy } from "../../diagnostics/produceMessage";
 import { USE_TOPIC_NAME_STRATEGY } from "../../extensionSettings/constants";
 import { LocalResourceLoader } from "../../loaders";
 import { Subject } from "../../models/schema";
-import { SubjectNameStrategy } from "../../schemas/produceMessageSchema";
 import * as schemaQuickPicks from "../schemas";
 import { getSubjectNameForStrategy, getSubjectNameStrategy } from "./schemaSubjects";
 

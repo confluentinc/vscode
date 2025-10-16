@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-72",
+  "version": "1.8.0-43",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -275,7 +275,7 @@
     "commands": [
       {
         "command": "confluent.artifacts.createUdfRegistrationDocument",
-        "title": "Register Flink Artifact with Flink SQL",
+        "title": "Register With Flink SQL",
         "category": "Confluent: Flink Artifacts"
       },
       {
@@ -286,7 +286,7 @@
       },
       {
         "command": "confluent.artifacts.startGuidedUdfCreation",
-        "title": "Register UDF",
+        "title": "Register As UDF",
         "category": "Confluent: Flink Artifacts"
       },
       {
@@ -353,13 +353,18 @@
       },
       {
         "command": "confluent.copyResourceUri",
-        "title": "Copy URI",
+        "title": "Copy URL",
         "category": "Confluent: Resources"
       },
       {
         "command": "confluent.deleteArtifact",
         "title": "Delete Artifact",
         "category": "Confluent: Flink Artifacts"
+      },
+      {
+        "command": "confluent.deleteFlinkUDF",
+        "title": "Delete UDF",
+        "category": "Confluent: Flink UDFs"
       },
       {
         "command": "confluent.diff.compareWithSelected",
@@ -417,6 +422,17 @@
         "category": "Confluent: Flink Defaults"
       },
       {
+        "command": "confluent.flink.database.search",
+        "icon": "$(search)",
+        "title": "Search",
+        "category": "Confluent: Flink Database View"
+      },
+      {
+        "command": "confluent.flink.database.search.clear",
+        "title": "Clear Search",
+        "category": "Confluent: Flink Database View"
+      },
+      {
         "command": "confluent.flink.statements.search",
         "icon": "$(search)",
         "title": "Search",
@@ -443,13 +459,15 @@
         "command": "confluent.flinkdatabase.setArtifactsViewMode",
         "title": "Switch to Flink Artifacts",
         "icon": "$(confluent-code)",
-        "category": "Confluent: Flink Database View"
+        "category": "Confluent: Flink Database View",
+        "enablement": "confluent.flinkDatabaseViewMode != 'artifacts'"
       },
       {
         "command": "confluent.flinkdatabase.setUDFsViewMode",
         "title": "Switch to Flink UDFs",
         "icon": "$(confluent-function)",
-        "category": "Confluent: Flink Database View"
+        "category": "Confluent: Flink Database View",
+        "enablement": "confluent.flinkDatabaseViewMode != 'UDFs'"
       },
       {
         "command": "confluent.flinkStatementResults",
@@ -510,12 +528,6 @@
         "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
         "title": "Copy Bootstrap Server(s)",
         "category": "Confluent: Kafka Clusters"
-      },
-      {
-        "command": "confluent.resources.refresh",
-        "icon": "$(sync)",
-        "title": "Refresh",
-        "category": "Confluent: Resources"
       },
       {
         "command": "confluent.resources.refreshConnection",
@@ -654,6 +666,11 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.statements.delete",
+        "title": "Delete Statement",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.statements.flink-compute-pool.select",
         "icon": "$(confluent-flink-compute-pool)",
         "title": "Select Flink Compute Pool",
@@ -663,6 +680,11 @@
         "command": "confluent.statements.refresh",
         "icon": "$(sync)",
         "title": "Refresh",
+        "category": "Confluent: Flink Statements"
+      },
+      {
+        "command": "confluent.statements.stop",
+        "title": "Stop Statement Execution",
         "category": "Confluent: Flink Statements"
       },
       {
@@ -704,6 +726,12 @@
         "command": "confluent.support.saveSupportZip",
         "title": "Save Support File (.zip)",
         "category": "Confluent: Support"
+      },
+      {
+        "command": "confluent.testInspectJar",
+        "icon": "$(file-binary)",
+        "title": "Inspect JAR File",
+        "category": "Confluent: Flink Artifacts"
       },
       {
         "command": "confluent.topic.consume",
@@ -832,14 +860,6 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Show notifications when the extension is first installed or updated to a new version. Disabling this will prevent welcome messages and update notifications from appearing during extension activation.\n\n_NOTE: This does not affect error notifications or other extension functionality._"
-          },
-          "confluent.preview.useNewResourcesViewProvider": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "Use the new Resources view provider for displaying resources in the Confluent extension.\n\n---\n\n⚠️ **WARNING**: This setting is currently in preview and may not be fully functional or stable. Must restart extensions for change to take effect.",
-            "tags": [
-              "preview"
-            ]
           }
         }
       },
@@ -903,7 +923,10 @@
           "confluent.localDocker.kafkaImageTag": {
             "type": "string",
             "default": "7.9.0",
-            "description": "Docker image tag to use when starting a local Kafka container"
+            "description": "Docker image tag to use when starting a local Kafka container",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$",
+            "patternErrorMessage": "Image tag must start with an alphanumeric character or underscore, and can only contain alphanumeric characters, underscores, periods, or hyphens."
           },
           "confluent.localDocker.schemaRegistryImageRepo": {
             "type": "string",
@@ -916,7 +939,10 @@
           "confluent.localDocker.schemaRegistryImageTag": {
             "type": "string",
             "default": "7.9.0",
-            "markdownDescription": "Docker image tag to use when starting a local Schema Registry container"
+            "markdownDescription": "Docker image tag to use when starting a local Schema Registry container",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$",
+            "patternErrorMessage": "Image tag must start with an alphanumeric character or underscore, and can only contain alphanumeric characters, underscores, periods, or hyphens."
           },
           "confluent.localDocker.medusaEnable": {
             "type": "boolean",
@@ -1003,6 +1029,12 @@
             "minimum": 0,
             "maximum": 600
           },
+          "confluent.flink.statementPrefix": {
+            "type": "string",
+            "default": "flink",
+            "description": "Prefix to use for your personal Flink SQL statements submitted from VS Code.",
+            "maxLength": 100
+          },
           "confluent.flink.statementPollingLimit": {
             "type": "number",
             "default": 20,
@@ -1016,6 +1048,19 @@
             "description": "Maximum number of concurrent polling requests for non-terminal Flink statements.",
             "minimum": 1,
             "maximum": 10
+          },
+          "confluent.flink.statementResults.defaultLocation": {
+            "type": "string",
+            "default": "editor",
+            "enum": [
+              "editor",
+              "panel"
+            ],
+            "markdownEnumDescriptions": [
+              "Open Flink statement results in the **editor area** as a new document tab (allows multiple results open simultaneously).",
+              "Open Flink statement results in the **bottom panel area** (show results for one executing statement at a time)."
+            ],
+            "description": "Default location for displaying Flink statement results."
           }
         }
       },
@@ -1092,12 +1137,25 @@
         "key": "ctrl+f",
         "mac": "cmd+f",
         "when": "focusedView == confluent-flink-statements"
+      },
+      {
+        "command": "confluent.flink.database.search",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "focusedView == confluent-flink-database"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
           "id": "confluent",
+          "title": "Confluent",
+          "icon": "resources/confluent-logo.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "confluent-panel",
           "title": "Confluent",
           "icon": "resources/confluent-logo.svg"
         }
@@ -1133,7 +1191,7 @@
           "name": "Flink Artifacts (Preview)",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)",
-          "when": "config.confluent.flink.enableFlinkArtifacts",
+          "when": "config.confluent.flink.artifacts",
           "tags": [
             "preview"
           ]
@@ -1142,6 +1200,15 @@
           "id": "confluent-support",
           "name": "Support",
           "icon": "$(confluent-logo)"
+        }
+      ],
+      "confluent-panel": [
+        {
+          "id": "confluent-flink-statement-results-panel",
+          "name": "Flink Statement Results",
+          "when": "confluent.flinkStatementResults.panelActive",
+          "icon": "$(confluent-logo)",
+          "type": "webview"
         }
       ]
     },
@@ -1219,22 +1286,27 @@
       {
         "view": "confluent-flink-database",
         "contents": "No Flink databases (CCloud Kafka clusters) available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)",
-        "when": "config.confluent.flink.enableFlinkArtifacts && !confluent.ccloudConnectionAvailable"
+        "when": "config.confluent.flink.artifacts && !confluent.ccloudConnectionAvailable"
       },
       {
         "view": "confluent-flink-database",
         "contents": "No Flink database (CCloud Kafka cluster) selected. Click below to get started.\n[Select Flink Database/Kafka Cluster](command:confluent.flinkdatabase.kafka-cluster.select)",
-        "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && !confluent.flinkDatabaseSelected"
+        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && !confluent.flinkDatabaseSelected"
       },
       {
         "view": "confluent-flink-database",
         "contents": "No Flink artifacts found.\n[Generate a new Flink Artifact from template](command:confluent.artifacts.scaffold)",
-        "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'artifacts'"
+        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'artifacts' && !confluent.flinkDatabaseSearchApplied"
       },
       {
         "view": "confluent-flink-database",
         "contents": "No UDFs found.\n[Generate a new Flink UDF from template](command:confluent.artifacts.scaffold)",
-        "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'UDFs'"
+        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'UDFs' && !confluent.flinkDatabaseSearchApplied"
+      },
+      {
+        "view": "confluent-flink-database",
+        "contents": "No Flink database contents matches search string. [Clear search](command:confluent.flink.database.search.clear) or [try a new search](command:confluent.flink.database.search).",
+        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied"
       }
     ],
     "menus": {
@@ -1304,6 +1376,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.deleteFlinkUDF",
+          "when": "false"
+        },
+        {
           "command": "confluent.diff.compareWithSelected",
           "when": "false"
         },
@@ -1340,6 +1416,14 @@
           "when": "true"
         },
         {
+          "command": "confluent.flink.database.search",
+          "when": "config.confluent.flink.artifacts"
+        },
+        {
+          "command": "confluent.flink.database.search.clear",
+          "when": "confluent.flinkDatabaseSearchApplied"
+        },
+        {
           "command": "confluent.flink.statements.search",
           "when": "true"
         },
@@ -1357,11 +1441,11 @@
         },
         {
           "command": "confluent.flinkdatabase.setArtifactsViewMode",
-          "when": "confluent.flinkDatabaseViewMode == 'UDFs'"
+          "when": "false"
         },
         {
           "command": "confluent.flinkdatabase.setUDFsViewMode",
-          "when": "confluent.flinkDatabaseViewMode == 'artifacts'"
+          "when": "false"
         },
         {
           "command": "confluent.flinkStatementResults",
@@ -1402,10 +1486,6 @@
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
           "when": "false"
-        },
-        {
-          "command": "confluent.resources.refresh",
-          "when": "true"
         },
         {
           "command": "confluent.resources.refreshConnection",
@@ -1504,11 +1584,19 @@
           "when": "false"
         },
         {
+          "command": "confluent.statements.delete",
+          "when": "false"
+        },
+        {
           "command": "confluent.statements.flink-compute-pool.select",
           "when": "confluent.ccloudConnectionAvailable"
         },
         {
           "command": "confluent.statements.refresh",
+          "when": "false"
+        },
+        {
+          "command": "confluent.statements.stop",
           "when": "false"
         },
         {
@@ -1542,6 +1630,10 @@
         {
           "command": "confluent.support.saveSupportZip",
           "when": "true"
+        },
+        {
+          "command": "confluent.testInspectJar",
+          "when": "false"
         },
         {
           "command": "confluent.topic.consume",
@@ -1613,7 +1705,7 @@
         },
         {
           "command": "confluent.uploadArtifact",
-          "when": "confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts"
+          "when": "confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts"
         }
       ],
       "editor/title": [
@@ -1672,11 +1764,6 @@
           "command": "confluent.connections.direct",
           "when": "view == confluent-resources",
           "group": "navigation@2"
-        },
-        {
-          "command": "confluent.resources.refresh",
-          "when": "!config.confluent.preview.useNewResourcesViewProvider && view == confluent-resources",
-          "group": "navigation@3"
         },
         {
           "command": "confluent.schemas.search",
@@ -1764,6 +1851,16 @@
           "group": "navigation@1"
         },
         {
+          "command": "confluent.flink.database.search",
+          "when": "view == confluent-flink-database && confluent.flinkDatabaseSelected && !confluent.flinkDatabaseSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.flink.database.search.clear",
+          "when": "view == confluent-flink-database && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.statements.create",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected",
           "group": "navigation@2"
@@ -1785,32 +1882,27 @@
         },
         {
           "command": "confluent.artifacts.scaffold",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkDatabaseSelected",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts && confluent.flinkDatabaseSelected",
           "group": "navigation@1"
         },
         {
           "command": "confluent.uploadArtifact",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && config.confluent.flink.enableFlinkArtifacts",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && config.confluent.flink.artifacts",
           "group": "navigation@2"
         },
         {
           "command": "confluent.flinkdatabase.kafka-cluster.select",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts",
           "group": "navigation@3"
         },
         {
           "command": "confluent.flinkdatabase.refresh",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && config.confluent.flink.enableFlinkArtifacts",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && config.confluent.flink.artifacts",
           "group": "navigation@998"
         },
         {
-          "command": "confluent.flinkdatabase.setArtifactsViewMode",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'UDFs'",
-          "group": "navigation@999"
-        },
-        {
-          "command": "confluent.flinkdatabase.setUDFsViewMode",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'artifacts'",
+          "submenu": "confluent.flinkdatabase.viewMode",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts && confluent.flinkDatabaseSelected",
           "group": "navigation@999"
         }
       ],
@@ -1822,7 +1914,7 @@
         },
         {
           "command": "confluent.copyResourceName",
-          "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithNames || viewItem =~ /.*-topic-.*/)",
+          "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithNames || viewItem =~ /.*-topic-.*/ || viewItem =~ /.*flink-statement$/)",
           "group": "2_copy@2"
         },
         {
@@ -1832,12 +1924,16 @@
         },
         {
           "command": "confluent.resources.refreshConnection",
-          "when": "config.confluent.preview.useNewResourcesViewProvider && view == confluent-resources && viewItem =~ /.*-container.*/",
+          "when": "view == confluent-resources && viewItem =~ /.*-container.*/",
           "group": "inline"
         },
         {
           "command": "confluent.docker.startLocalResources",
+<<<<<<< HEAD
           "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable && confluent.localMedusaAvailable)",
+=======
+          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && confluent.dockerServiceAvailable && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable)",
+>>>>>>> origin/main
           "group": "inline"
         },
         {
@@ -1897,12 +1993,12 @@
         },
         {
           "command": "confluent.flinkdatabase.kafka-cluster.select",
-          "when": "view == confluent-resources && viewItem =~ /.*-flinkable.*-kafka-cluster/",
+          "when": "view == confluent-resources && viewItem =~ /.*-flinkable.*-kafka-cluster/ && config.confluent.flink.artifacts",
           "group": "4_flink@1"
         },
         {
           "command": "confluent.uploadArtifact",
-          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/)",
+          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/) && config.confluent.flink.artifacts",
           "group": "4_flink@1"
         },
         {
@@ -1953,6 +2049,11 @@
           "command": "confluent.deleteArtifact",
           "when": "view == confluent-flink-database && viewItem =~ /.*-flink-artifact$/",
           "group": "artifacts"
+        },
+        {
+          "command": "confluent.deleteFlinkUDF",
+          "when": "view == confluent-flink-database && viewItem =~ /.*-flink-udf$/",
+          "group": "udfs"
         },
         {
           "command": "confluent.schemas.upload",
@@ -2046,18 +2147,51 @@
         },
         {
           "command": "confluent.flinkStatementResults",
-          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*viewable.*flink-statement$/",
           "group": "inline@1"
+        },
+        {
+          "command": "confluent.statements.stop",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*stoppable.*flink-statement$/",
+          "comment": "A flink statement will either be stoppable or deletable, never both, so can use the same group position",
+          "group": "3_statements_crudl@1"
+        },
+        {
+          "command": "confluent.statements.delete",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*deletable.*flink-statement$/",
+          "group": "3_statements_crudl@1"
         }
       ],
       "explorer/context": [
         {
           "command": "confluent.uploadArtifact",
           "group": "confluent@1",
-          "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && resourceExtname == .jar"
+          "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && resourceExtname == .jar"
+        },
+        {
+          "command": "confluent.testInspectJar",
+          "group": "confluent@2",
+          "when": "isDevelopment && resourceExtname == .jar"
+        }
+      ],
+      "confluent.flinkdatabase.viewMode": [
+        {
+          "command": "confluent.flinkdatabase.setArtifactsViewMode",
+          "group": "viewMode@1"
+        },
+        {
+          "command": "confluent.flinkdatabase.setUDFsViewMode",
+          "group": "viewMode@2"
         }
       ]
     },
+    "submenus": [
+      {
+        "id": "confluent.flinkdatabase.viewMode",
+        "label": "Switch View Mode",
+        "icon": "$(list-tree)"
+      }
+    ],
     "colors": [],
     "icons": {
       "apache-kafka": {
@@ -2328,6 +2462,20 @@
             ]
           },
           {
+            "id": "cc-flink-artifact-udf",
+            "title": "Develop and Deploy Flink UDFs",
+            "description": "Create User-Defined Functions from templates, develop and test locally, upload artifacts to Confluent Cloud, and register UDFs for use in Flink SQL statements.\n[Generate Flink Artifact](command:confluent.artifacts.scaffold)\n[Upload Flink Artifact](command:confluent.uploadArtifact)",
+            "media": {
+              "markdown": "resources/walkthrough/flink/udf.md"
+            },
+            "completionEvents": [
+              "onCommand:confluent.artifacts.scaffold",
+              "onCommand:confluent.uploadArtifact",
+              "onCommand:confluent.artifacts.createUdfRegistrationDocument",
+              "onCommand:confluent.artifacts.startGuidedUdfCreation"
+            ]
+          },
+          {
             "id": "copilot",
             "title": "Copiloting Your Data Streaming",
             "description": "The extension provides a Copilot-powered chat assistant for Confluent and Apache Kafka® developers, offering guidance on configuration, development best practices, and troubleshooting for Kafka clusters, Schema Registry, Flink, and streaming applications. \n[Enable Copilot Chat Participant](command:workbench.action.openSettings?%5B%22%40ext%3Aconfluentinc.vscode-confluent%20copilot%22%5D)",
@@ -2388,11 +2536,13 @@
     "@types/eslint__js": "^8.42.3",
     "@types/gulp": "^4.0.17",
     "@types/mocha": "^10.0.6",
-    "@types/node": "^18.19.67",
+    "@types/node": "^22.17.0",
     "@types/sanitize-html": "^2.13.0",
     "@types/sinon": "^17.0.3",
     "@types/tail": "^2.2.3",
     "@types/vscode": "^1.96.0",
+    "@types/yauzl": "^2.10.3",
+    "@types/yazl": "^3.3.0",
     "@types/ws": "^8.5.13",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",
@@ -2418,7 +2568,8 @@
     "sanitize-html": "^2.14.0",
     "sinon": "^18.0.1",
     "typescript": "^5.4.2",
-    "typescript-eslint": "^8.25.0"
+    "typescript-eslint": "^8.25.0",
+    "yazl": "^2.5.1"
   },
   "dependencies": {
     "@segment/analytics-node": "^2.1.2",
@@ -2445,6 +2596,7 @@
     "vscode-json-languageservice": "^5.4.2",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
+    "yauzl": "^2.10.0",
     "ws": "^8.18.0"
   }
 }

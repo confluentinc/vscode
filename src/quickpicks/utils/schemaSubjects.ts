@@ -1,4 +1,5 @@
 import { commands } from "vscode";
+import { SubjectNameStrategy } from "../../diagnostics/produceMessage";
 import { USE_TOPIC_NAME_STRATEGY } from "../../extensionSettings/constants";
 import { ResourceLoader } from "../../loaders";
 import { Subject } from "../../models/schema";
@@ -8,7 +9,6 @@ import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   showErrorNotificationWithButtons,
 } from "../../notifications";
-import { SubjectNameStrategy } from "../../schemas/produceMessageSchema";
 import { schemaSubjectQuickPick, subjectNameStrategyQuickPick } from "../schemas";
 
 /**
@@ -57,7 +57,7 @@ export async function getSubjectNameForStrategy(
         const subjectExists = schemaSubjects.some((s) => s.name === schemaSubjectName);
         if (!subjectExists) {
           const noSubjectMsg = `No "${kind}" schema subject found for topic "${topic.name}" using the ${strategy} strategy.`;
-          showErrorNotificationWithButtons(noSubjectMsg, {
+          void showErrorNotificationWithButtons(noSubjectMsg, {
             "Open Settings": () => {
               commands.executeCommand(
                 "workbench.action.openSettings",

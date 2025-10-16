@@ -4,15 +4,71 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
-- Two Flink enablement settings
-  [`confluent.flink.languageServer`](vscode://settings/confluent.flink.languageServer) and
-  [`confluent.flink.artifacts`](vscode://settings/confluent.flink.artifacts) have updated names for
-  clarity. Users may need to verify or update their settings for Flink Language Server and Flink
-  Artifacts. ([#2684](https://github.com/confluentinc/vscode/pull/2684))
+### Added
+
+- New "Delete Flink Statement" context menu command in the Flink Statements view, only offerred for
+  statements not currently executing.
+- New "Stop Statement Execution" context menu command in the Flink Statements view, only offerred
+  for currently executing statements.
+- New setting
+  [`confluent.flink.statementResults.defaultLocation`](vscode://settings/confluent.flink.statementResults.defaultLocation)
+  to control where Flink statement results are shown after being submitted:
+  - "editor" (default): opens results in new editor tabs, allowing multiple result sets to be open
+    simultaneously
+  - "panel": opens results in the panel area, allowing only one result set to be visible at a time,
+    but less intrusive than opening a new editor tab
+
+### Changed
+
+- The Flink Artifacts / Flink UDFs view is now searchable.
+- Creating templated projects from resources which have related schema registries (Kafka topics or
+  Kafka clusters) will now have the related schema registry URL automatically provided.
+- The Local row in the Resources view now better describes the user's Docker Engine availability in
+  its description and tooltip, and the "Start Local Resources" action will not be offered if the
+  extension cannot ping the local Docker Engine.
+- Submitted Flink statements now allow you to choose your own statement name prefix (or to leave
+  generic). Set your prefix using preference:
+  [`confluent.flink.statementPrefix`](vscode://settings/confluent.flink.statementPrefix).
+
+### Fixed
+
+- Issue with sometimes reporting the wrong number of "matching elements" when searching some views.
+- Issue with not offering 'Query with Flink SQL' on topics whose possible Flink compute pool is in a
+  separate environment (they should be matched by cloud/region and not also CCloud environment).
+
+## 1.7.0
 
 ### Added
 
-- Date/time picker for message viewer when consuming from a specific point in time.
+- New preview setting [`confluent.flink.artifacts`](vscode://settings/confluent.flink.artifacts) to
+  opt-in to Confluent Cloud Flink
+  [artifacts](https://docs.confluent.io/cloud/current/flink/concepts/user-defined-functions.html#artifacts)
+  and
+  [user-defined functions](https://docs.confluent.io/cloud/current/flink/concepts/user-defined-functions.html)
+  (UDFs) functionality.
+  - New view for browsing uploaded Flink artifacts and registered UDFs in Confluent Cloud Kafka
+    clusters. Future updates will add support for viewing Flink tables, views, columns, and models.
+  - Convenient user flows for uploading Java jar files into a Confluent Cloud environment/region for
+    use as Flink artifacts, then also registering UDFs from those artifacts. More work in this area
+    will be coming!
+- Date/time picker for message viewer when consuming from a specific point in time
+  ([#212](https://github.com/confluentinc/vscode/issues/212))
+
+### Changed
+
+- Removed the configuration option controlling which resources view provider implementation to use.
+  The new, individual-connection-refreshable implementation is the only one.
+- Flink language server setting
+  [`confluent.flink.languageServer`](vscode://settings/confluent.flink.languageServer) has been
+  renamed for clarity. Users may need to verify or update their Flink Language Server setting.
+
+### Fixed
+
+- Fixed automatically refreshing the Topics view when creating or deleting subjects in the
+  corresponding schema registry (re-correlating the new set of schemas to topics).
+  ([#2556](https://github.com/confluentinc/vscode/issues/2556))
+- Fixed encoding of Avro union values in message viewer
+  ([ide-sidecar#417](https://github.com/confluentinc/ide-sidecar/issues/417))
 
 ## 1.6.2
 

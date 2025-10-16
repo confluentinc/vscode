@@ -48,7 +48,7 @@ enum ConfigType {
   KafkaAndSchemaRegistry = "Kafka+Schema Registry",
 }
 
-test.describe("Direct Connection CRUD Lifecycle", () => {
+test.describe("Direct Connection CRUD Lifecycle", { tag: [Tag.DirectConnectionCRUD] }, () => {
   test.beforeEach(async ({ electronApp }) => {
     // stub the disconnect confirmation dialog
     const confirmButtonIndex = process.platform === "linux" ? 1 : 0;
@@ -282,7 +282,7 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
               page,
               localSchemaRegistry.first(),
             );
-            await localSchemaRegistryItem.copyUri();
+            await localSchemaRegistryItem.copyUrl();
             const uri = await page.evaluate(async () => await navigator.clipboard.readText());
             schemaRegistryConfig = {
               uri,

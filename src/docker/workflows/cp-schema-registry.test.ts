@@ -140,20 +140,20 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
     // happy path: no existing containers, Kafka container(s) exist to work off of
-    assert.ok(checkForImageStub.calledOnce);
+    sinon.assert.calledOnce(checkForImageStub);
 
-    assert.ok(getContainersForImageStub.calledOnce); // twice if fetchAndFilterKafkaContainersStub is not stubbed
-    assert.ok(handleExistingContainersStub.notCalled);
+    sinon.assert.calledOnce(getContainersForImageStub); // twice if fetchAndFilterKafkaContainersStub is not stubbed
+    sinon.assert.notCalled(handleExistingContainersStub);
 
-    assert.ok(fetchAndFilterKafkaContainersStub.calledOnce);
+    sinon.assert.calledOnce(fetchAndFilterKafkaContainersStub);
 
-    assert.ok(createContainerStub.calledOnce);
-    assert.ok(startContainerStub.calledOnce);
-    assert.ok(showErrorNotificationStub.notCalled);
+    sinon.assert.calledOnce(createContainerStub);
+    sinon.assert.calledOnce(startContainerStub);
+    sinon.assert.notCalled(showErrorNotificationStub);
 
-    assert.ok(updateLocalConnectionStub.calledOnce);
+    sinon.assert.calledOnce(updateLocalConnectionStub);
 
-    assert.ok(waitForLocalResourceEventChangeStub.calledOnce);
+    sinon.assert.calledOnce(waitForLocalResourceEventChangeStub);
   });
 
   it("start() should handle existing containers and not create new ones", async () => {
@@ -162,18 +162,18 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(checkForImageStub.calledOnce);
+    sinon.assert.calledOnce(checkForImageStub);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(handleExistingContainersStub.calledOnceWith(fakeContainers));
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.calledOnceWithExactly(handleExistingContainersStub, fakeContainers);
     // bailing here
 
-    assert.ok(fetchAndFilterKafkaContainersStub.notCalled);
+    sinon.assert.notCalled(fetchAndFilterKafkaContainersStub);
 
-    assert.ok(createContainerStub.notCalled);
-    assert.ok(startContainerStub.notCalled);
+    sinon.assert.notCalled(createContainerStub);
+    sinon.assert.notCalled(startContainerStub);
 
-    assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+    sinon.assert.notCalled(waitForLocalResourceEventChangeStub);
   });
 
   it("start() should exit early when no Kafka containers are found", async () => {
@@ -181,19 +181,19 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(checkForImageStub.calledOnce);
+    sinon.assert.calledOnce(checkForImageStub);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(handleExistingContainersStub.notCalled);
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.notCalled(handleExistingContainersStub);
 
-    assert.ok(fetchAndFilterKafkaContainersStub.calledOnce);
-    assert.ok(showErrorMessageStub.calledOnce);
+    sinon.assert.calledOnce(fetchAndFilterKafkaContainersStub);
+    sinon.assert.calledOnce(showErrorMessageStub);
     // bailing here
 
-    assert.ok(createContainerStub.notCalled);
-    assert.ok(startContainerStub.notCalled);
+    sinon.assert.notCalled(createContainerStub);
+    sinon.assert.notCalled(startContainerStub);
 
-    assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+    sinon.assert.notCalled(waitForLocalResourceEventChangeStub);
   });
 
   it("start() should allow users to start Kafka resources via the notification buttons if no Kafka containers are available", async () => {
@@ -203,30 +203,27 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(checkForImageStub.calledOnce);
+    sinon.assert.calledOnce(checkForImageStub);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(handleExistingContainersStub.notCalled);
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.notCalled(handleExistingContainersStub);
 
-    assert.ok(fetchAndFilterKafkaContainersStub.calledOnce);
-    assert.ok(
-      showErrorMessageStub.calledOnceWith(
-        `No running Kafka containers found for image "${LOCAL_KAFKA_IMAGE.defaultValue}:${LOCAL_KAFKA_IMAGE_TAG.defaultValue}". Please start Kafka and try again.`,
-        START_KAFKA_BUTTON,
-        IMAGE_SETTINGS_BUTTON,
-      ),
+    sinon.assert.calledOnce(fetchAndFilterKafkaContainersStub);
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      `No running Kafka containers found for image "${LOCAL_KAFKA_IMAGE.defaultValue}:${LOCAL_KAFKA_IMAGE_TAG.defaultValue}". Please start Kafka and try again.`,
+      START_KAFKA_BUTTON,
+      IMAGE_SETTINGS_BUTTON,
     );
-    assert.ok(
-      executeCommandStub.calledOnceWith("confluent.docker.startLocalResources", [
-        LocalResourceKind.Kafka,
-      ]),
-    );
+    sinon.assert.calledOnceWithExactly(executeCommandStub, "confluent.docker.startLocalResources", [
+      LocalResourceKind.Kafka,
+    ]);
     // bailing here
 
-    assert.ok(createContainerStub.notCalled);
-    assert.ok(startContainerStub.notCalled);
+    sinon.assert.notCalled(createContainerStub);
+    sinon.assert.notCalled(startContainerStub);
 
-    assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+    sinon.assert.notCalled(waitForLocalResourceEventChangeStub);
   });
 
   it("start() should allow users to access Docker image settings via the notification buttons if no Kafka containers are available", async () => {
@@ -236,31 +233,29 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(checkForImageStub.calledOnce);
+    sinon.assert.calledOnce(checkForImageStub);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(handleExistingContainersStub.notCalled);
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.notCalled(handleExistingContainersStub);
 
-    assert.ok(fetchAndFilterKafkaContainersStub.calledOnce);
-    assert.ok(
-      showErrorMessageStub.calledOnceWith(
-        `No running Kafka containers found for image "${LOCAL_KAFKA_IMAGE.defaultValue}:${LOCAL_KAFKA_IMAGE_TAG.defaultValue}". Please start Kafka and try again.`,
-        START_KAFKA_BUTTON,
-        IMAGE_SETTINGS_BUTTON,
-      ),
+    sinon.assert.calledOnce(fetchAndFilterKafkaContainersStub);
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      `No running Kafka containers found for image "${LOCAL_KAFKA_IMAGE.defaultValue}:${LOCAL_KAFKA_IMAGE_TAG.defaultValue}". Please start Kafka and try again.`,
+      START_KAFKA_BUTTON,
+      IMAGE_SETTINGS_BUTTON,
     );
-    assert.ok(
-      executeCommandStub.calledOnceWith(
-        "workbench.action.openSettings",
-        `@id:${LOCAL_KAFKA_IMAGE.id} @id:${LOCAL_KAFKA_IMAGE_TAG.id}`,
-      ),
+    sinon.assert.calledOnceWithExactly(
+      executeCommandStub,
+      "workbench.action.openSettings",
+      `@id:${LOCAL_KAFKA_IMAGE.id} @id:${LOCAL_KAFKA_IMAGE_TAG.id}`,
     );
     // bailing here
 
-    assert.ok(createContainerStub.notCalled);
-    assert.ok(startContainerStub.notCalled);
+    sinon.assert.notCalled(createContainerStub);
+    sinon.assert.notCalled(startContainerStub);
 
-    assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+    sinon.assert.notCalled(waitForLocalResourceEventChangeStub);
   });
 
   it("start() should exit early and show an error notification if a container fails to be created", async () => {
@@ -268,20 +263,20 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(checkForImageStub.calledOnce);
+    sinon.assert.calledOnce(checkForImageStub);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(handleExistingContainersStub.notCalled);
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.notCalled(handleExistingContainersStub);
 
-    assert.ok(fetchAndFilterKafkaContainersStub.calledOnce);
-    assert.ok(showErrorMessageStub.notCalled);
+    sinon.assert.calledOnce(fetchAndFilterKafkaContainersStub);
+    sinon.assert.notCalled(showErrorMessageStub);
 
-    assert.ok(createContainerStub.calledOnce);
-    assert.ok(showErrorNotificationStub.calledOnce);
+    sinon.assert.calledOnce(createContainerStub);
+    sinon.assert.calledOnce(showErrorNotificationStub);
     // bailing here
-    assert.ok(startContainerStub.notCalled);
+    sinon.assert.notCalled(startContainerStub);
 
-    assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+    sinon.assert.notCalled(waitForLocalResourceEventChangeStub);
   });
 
   it("start() should exit early and if a container fails to start", async () => {
@@ -289,18 +284,18 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(checkForImageStub.calledOnce);
+    sinon.assert.calledOnce(checkForImageStub);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(handleExistingContainersStub.notCalled);
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.notCalled(handleExistingContainersStub);
 
-    assert.ok(fetchAndFilterKafkaContainersStub.calledOnce);
+    sinon.assert.calledOnce(fetchAndFilterKafkaContainersStub);
 
-    assert.ok(createContainerStub.calledOnce);
-    assert.ok(startContainerStub.calledOnce);
+    sinon.assert.calledOnce(createContainerStub);
+    sinon.assert.calledOnce(startContainerStub);
     // notification tested in base.test.ts as part of .startContainer() tests
 
-    assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+    sinon.assert.notCalled(waitForLocalResourceEventChangeStub);
   });
 
   it("stop() should get the imageTag from workspace configuration", async () => {
@@ -319,9 +314,9 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     await workflow.stop(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(stopContainerStub.calledOnce);
-    assert.ok(waitForLocalResourceEventChangeStub.calledOnce);
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.calledOnce(stopContainerStub);
+    sinon.assert.calledOnce(waitForLocalResourceEventChangeStub);
   });
 
   it("stop() should exit early if there are no running Schema Registry containers", async () => {
@@ -329,9 +324,9 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     await workflow.stop(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(stopContainerStub.notCalled);
-    assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.notCalled(stopContainerStub);
+    sinon.assert.notCalled(waitForLocalResourceEventChangeStub);
   });
 
   it("fetchAndFilterKafkaContainers() should return Kafka containers", async () => {
@@ -370,7 +365,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
       kafkaNetworks,
     );
 
-    assert.ok(createContainerStub.calledOnce);
+    sinon.assert.calledOnce(createContainerStub);
     assert.ok(container);
 
     const createBody: ContainerCreateOperationRequest = {
@@ -394,9 +389,11 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
       },
       name: CONTAINER_NAME,
     };
-    assert.ok(
-      createContainerStub.calledWith(workflow.imageRepo, workflow.imageTag, createBody),
-      `createContainerStub called with: ${JSON.stringify(createContainerStub.args, null, 2)}\n\nand not ${JSON.stringify([workflow.imageRepo, workflow.imageTag, createBody], null, 2)}`,
+    sinon.assert.calledOnceWithExactly(
+      createContainerStub,
+      workflow.imageRepo,
+      workflow.imageTag,
+      createBody,
     );
   });
 

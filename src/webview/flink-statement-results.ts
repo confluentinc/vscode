@@ -400,13 +400,13 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       this.snapshot({ results: [] });
       // when user hits Enter, search query submitted immediately
       const value = target.value.trim();
-      this.submitSearch(value);
+      await this.submitSearch(value);
     } else {
       // otherwise, we keep debouncing search submittion until the user stops typing
       if (this.searchTimer != null) clearTimeout(this.searchTimer);
       this.searchTimer = setTimeout(async () => {
         const value = target.value.trim();
-        this.submitSearch(value);
+        await this.submitSearch(value);
       }, this.searchDebounceTime);
     }
   }

@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
+import { getSidecarStub } from "../tests/stubs/sidecar";
 import { TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY } from "../tests/unit/testResources";
 import {
   TEST_DIRECT_CONNECTION,
@@ -16,7 +17,7 @@ import {
 import { DirectConnectionManager } from "./directConnectManager";
 import { ResourceLoader } from "./loaders";
 import { ConnectionId } from "./models/resource";
-import * as sidecar from "./sidecar";
+import { SidecarHandle } from "./sidecar";
 import * as connections from "./sidecar/connections";
 import * as watcher from "./sidecar/connections/watcher";
 import {
@@ -63,11 +64,9 @@ describe("DirectConnectionManager behavior", () => {
     sandbox = sinon.createSandbox();
 
     // stub the sidecar Connections API
-    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     stubbedConnectionsResourceApi = sandbox.createStubInstance(ConnectionsResourceApi);
-    mockSidecarHandle.getConnectionsResourceApi.returns(stubbedConnectionsResourceApi);
-    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+    stubbedSidecar.getConnectionsResourceApi.returns(stubbedConnectionsResourceApi);
 
     // don't return a Connection type since the IDs are randomly generated - handle in specific tests
     tryToCreateConnectionStub = sandbox
@@ -110,7 +109,7 @@ describe("DirectConnectionManager behavior", () => {
     });
 
     assert.ok(result.connection, JSON.stringify(result));
-    assert.ok(tryToCreateConnectionStub.calledOnce);
+    sinon.assert.calledOnce(tryToCreateConnectionStub);
     const specArg: ConnectionSpec = tryToCreateConnectionStub.firstCall.args[0];
     assert.strictEqual(specArg.kafka_cluster, undefined);
     assert.deepStrictEqual(specArg.schema_registry, testSpec.schema_registry);
@@ -131,7 +130,7 @@ describe("DirectConnectionManager behavior", () => {
     });
     assert.ok(result.connection);
     // don't use .calledOnceWith(testSpec) because the `id` will change
-    assert.ok(tryToCreateConnectionStub.calledOnce);
+    sinon.assert.calledOnce(tryToCreateConnectionStub);
     const specArg: ConnectionSpec = tryToCreateConnectionStub.firstCall.args[0];
     assert.strictEqual(specArg.schema_registry, undefined);
     assert.deepStrictEqual(specArg.kafka_cluster, testSpec.kafka_cluster);
@@ -155,7 +154,7 @@ describe("DirectConnectionManager behavior", () => {
 
     assert.ok(result.connection);
     // don't use .calledOnceWith(testSpec) because the `id` will change
-    assert.ok(tryToCreateConnectionStub.calledOnce);
+    sinon.assert.calledOnce(tryToCreateConnectionStub);
     const storedConnections: DirectConnectionsById =
       await getResourceManager().getDirectConnections();
     assert.equal(storedConnections.size, 1);
@@ -216,7 +215,7 @@ describe("DirectConnectionManager behavior", () => {
 
     await manager.updateConnection(updatedSpec);
 
-    assert.ok(tryToUpdateConnectionStub.calledOnce);
+    sinon.assert.calledOnce(tryToUpdateConnectionStub);
     const storedConnections: DirectConnectionsById =
       await getResourceManager().getDirectConnections();
     assert.equal(storedConnections.size, 1);
@@ -258,7 +257,7 @@ describe("DirectConnectionManager behavior", () => {
 
     await manager.rehydrateConnections();
 
-    assert.ok(tryToCreateConnectionStub.calledOnce);
+    sinon.assert.calledOnce(tryToCreateConnectionStub);
     const args = tryToCreateConnectionStub.getCall(0).args;
     assert.deepStrictEqual(
       ConnectionSpecFromJSON(args[0]),
@@ -284,7 +283,7 @@ describe("DirectConnectionManager behavior", () => {
 
     await manager.rehydrateConnections();
 
-    assert.ok(tryToCreateConnectionStub.notCalled);
+    sinon.assert.notCalled(tryToCreateConnectionStub);
   });
 
   describe("deleteConnection()", () => {

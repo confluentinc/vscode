@@ -11,6 +11,8 @@ import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegate
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
 // we .fire() events and where we react to them via .event()
 
+/** Fires when we get a `vscode://confluentinc.vscode-confluent/authCallback` URI to handle. */
+export const ccloudAuthCallback = new vscode.EventEmitter<vscode.Uri>();
 /**
  * Indicate whether or not we have a CCloud connection (controlled by our auth provider).
  *
@@ -34,6 +36,11 @@ export const directConnectionsChanged = new vscode.EventEmitter<void>();
 /** Fired when websocket event for a CREATED direct connection environment is received. */
 export const directConnectionCreated = new vscode.EventEmitter<ConnectionId>();
 
+/**
+ * Did we just notice the Docker Engine subsystem just edge on or off? Should
+ * correspond to ContextValues.dockerServiceAvailable.
+ */
+export const dockerServiceAvailable = new vscode.EventEmitter<boolean>();
 export const localKafkaConnected = new vscode.EventEmitter<boolean>();
 export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
 export const localMedusaConnected = new vscode.EventEmitter<boolean>();
@@ -100,7 +107,7 @@ export const topicsViewResourceChanged = new vscode.EventEmitter<KafkaCluster | 
  * "Select Schema Registry" action from the Schemas view, or cleared out from a connection
  * (or CCloud organization) change.
  */
-export const currentSchemaRegistryChanged = new vscode.EventEmitter<SchemaRegistry | null>();
+export const schemasViewResourceChanged = new vscode.EventEmitter<SchemaRegistry | null>();
 /**
  * Fired whenever a Flink compute pool is selected from the Resources view or the Flink Statements
  * view, chosen from the "Select Flink Compute Pool" action from the Flink Statements view or
@@ -134,6 +141,7 @@ export const schemaSearchSet = new vscode.EventEmitter<string | null>();
 /** The user set/unset a filter for the Flink Statements view. */
 export const flinkStatementSearchSet = new vscode.EventEmitter<string | null>();
 
+/** Fired with a URI when a vscode URL is opened asking for a scaffolding template to be materialized (linked from CCloud UI) */
 export const projectScaffoldUri = new vscode.EventEmitter<vscode.Uri>();
 
 /** Metadata for a given {@link vscode.Uri} has been updated. */
@@ -147,3 +155,6 @@ export const udfsChanged = new vscode.EventEmitter<CCloudFlinkDbKafkaCluster>();
 
 /** Event emitter for switching Flink Database view modes. */
 export const flinkDatabaseViewMode = new vscode.EventEmitter<FlinkDatabaseViewProviderMode>();
+
+/** Event emitter for searching the Flink Database view */
+export const flinkDatabaseViewSearchSet = new vscode.EventEmitter<string | null>();

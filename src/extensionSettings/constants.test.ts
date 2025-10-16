@@ -12,6 +12,7 @@ import {
   ENABLE_MEDUSA_CONTAINER,
   FLINK_CONFIG_COMPUTE_POOL,
   FLINK_CONFIG_DATABASE,
+  FLINK_CONFIG_STATEMENT_PREFIX,
   KRB5_CONFIG_PATH,
   LOCAL_DOCKER_SOCKET_PATH,
   LOCAL_KAFKA_IMAGE,
@@ -267,6 +268,19 @@ describe("extensionSettings/constants.ts", function () {
       assert.ok(FLINK_CONFIG_DATABASE.defaultValue !== undefined);
       assert.strictEqual(FLINK_CONFIG_DATABASE.defaultValue, expectedDefault);
       assert.ok(FLINK_CONFIG_DATABASE.value !== undefined);
+    });
+
+    it("should set the correct section and default value for FLINK_CONFIG_STATEMENT_PREFIX", () => {
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
+        FLINK_CONFIG_STATEMENT_PREFIX.id,
+      );
+      assert.ok(section);
+      assert.strictEqual(FLINK_CONFIG_STATEMENT_PREFIX.sectionTitle, section.title);
+
+      const expectedDefault = section.properties[FLINK_CONFIG_STATEMENT_PREFIX.id].default;
+      assert.ok(FLINK_CONFIG_STATEMENT_PREFIX.defaultValue !== undefined);
+      assert.strictEqual(FLINK_CONFIG_STATEMENT_PREFIX.defaultValue, expectedDefault);
+      assert.ok(FLINK_CONFIG_STATEMENT_PREFIX.value !== undefined);
     });
 
     it("should set the correct section and default value for UPDATE_DEFAULT_POOL_ID_FROM_LENS", () => {

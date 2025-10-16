@@ -55,7 +55,7 @@ export async function getCCloudResources(): Promise<CCloudEnvironment[]> {
     response = await sidecar.query(query, CCLOUD_CONNECTION_ID, true, { id: CCLOUD_CONNECTION_ID });
   } catch (error) {
     logError(error, "CCloud environments", { extra: { connectionId: CCLOUD_CONNECTION_ID } });
-    showErrorNotificationWithButtons(`Failed to fetch CCloud resources: ${error}`);
+    void showErrorNotificationWithButtons(`Failed to fetch CCloud resources: ${error}`);
     return envs;
   }
 
@@ -64,13 +64,13 @@ export async function getCCloudResources(): Promise<CCloudEnvironment[]> {
     return envs;
   }
 
+  // First, extract out all Flink pools so we can associate them with Kafka clusters *across* environments
+  const flinkComputePoolsByEnv: Map<EnvironmentId, CCloudFlinkComputePool[]> = new Map();
+  const flinkComputePoolsByCloudRegion: Map<string, CCloudFlinkComputePool[]> = new Map();
   environments.forEach((env) => {
     if (!env) {
       return;
     }
-
-    // parse Flink Compute Pools first for later association with Kafka clusters
-    let flinkComputePools: CCloudFlinkComputePool[] = [];
     if (env.flinkComputePools && env.flinkComputePools.length > 0) {
       const envFlinkComputePools = env.flinkComputePools.map(
         (pool: any): CCloudFlinkComputePool =>
@@ -81,21 +81,37 @@ export async function getCCloudResources(): Promise<CCloudEnvironment[]> {
             maxCfu: pool.max_cfu,
           }),
       );
-      flinkComputePools.push(...envFlinkComputePools);
+      flinkComputePoolsByEnv.set(env.id as EnvironmentId, envFlinkComputePools);
+
+      // Also index by "provider/region" for cross-env lookup
+      envFlinkComputePools.forEach((pool) => {
+        const key = `${pool.provider}/${pool.region}`;
+        const existing = flinkComputePoolsByCloudRegion.get(key) || [];
+        existing.push(pool);
+        flinkComputePoolsByCloudRegion.set(key, existing);
+      });
     }
+  });
+
+  environments.forEach((env) => {
+    if (!env) {
+      return;
+    }
+
+    const envId = env.id as EnvironmentId;
 
     // parse Kafka clusters and sort by name
     let kafkaClusters: CCloudKafkaCluster[] = [];
     if (env.kafkaClusters && env.kafkaClusters.length > 0) {
       const envKafkaClusters = env.kafkaClusters.map((cluster: any): CCloudKafkaCluster => {
         // Associate Flink compute pools with the same provider/region
-        const matchingFlinkPools = flinkComputePools.filter(
-          (pool) => pool.provider === cluster.provider && pool.region === cluster.region,
-        );
+        const matchingFlinkPools = flinkComputePoolsByCloudRegion
+          .get(`${cluster.provider}/${cluster.region}`)
+          ?.slice(); // slice() to clone array so that each CCloudKafkaCluster has its own copy.
 
         return CCloudKafkaCluster.create({
           ...cluster,
-          environmentId: env.id,
+          environmentId: envId,
           flinkPools: matchingFlinkPools,
         });
       });
@@ -108,18 +124,18 @@ export async function getCCloudResources(): Promise<CCloudEnvironment[]> {
     if (env.schemaRegistry) {
       schemaRegistry = CCloudSchemaRegistry.create({
         ...env.schemaRegistry,
-        environmentId: env.id as EnvironmentId,
+        environmentId: envId,
       });
     }
 
     envs.push(
       new CCloudEnvironment({
-        id: env.id as EnvironmentId,
+        id: envId,
         name: env.name,
         streamGovernancePackage: env.governancePackage,
         kafkaClusters,
         schemaRegistry,
-        flinkComputePools,
+        flinkComputePools: flinkComputePoolsByEnv.get(envId) || [],
       }),
     );
   });

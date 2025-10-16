@@ -1,4 +1,3 @@
-import { ObservableScope } from "inertial";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
@@ -6,15 +5,15 @@ import {
   FLINKSTATEMENT_URI_SCHEME,
   FlinkStatementDocumentProvider,
 } from "../documentProviders/flinkStatement";
+import { udfsChanged } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
-import { FlinkStatementResultsManager } from "../flinkSql/flinkStatementResultsManager";
 import {
-  FlinkStatementWebviewPanelCache,
   IFlinkStatementSubmitParameters,
   determineFlinkStatementName,
   submitFlinkStatement,
   waitForResultsFetchable,
+  waitForStatementCompletion,
 } from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
@@ -25,14 +24,13 @@ import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { uriQuickpick } from "../quickpicks/uris";
-import { getSidecar } from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UriMetadata } from "../storage/types";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
-import { handleWebviewMessage } from "../webview/comms/comms";
+import { confirmActionOnStatement, openFlinkStatementResultsView } from "./utils/statements";
 
 const logger = new Logger("commands.flinkStatements");
 
@@ -86,7 +84,6 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   vscode.languages.setTextDocumentLanguage(doc, "flinksql");
   await vscode.window.showTextDocument(doc, { preview: false });
 }
-
 /**
  * Submit a Flink statement to a Flink cluster.
  *
@@ -224,8 +221,7 @@ export async function submitFlinkStatementCommand(
     // Wait for the statement to start running, then open the results view.
     // Show a progress indicator over the Flink Statements view while we wait.
     await statementsView.withProgress(`Submitting statement ${newStatement.name}`, async () => {
-      await waitForResultsFetchable(newStatement);
-      await openFlinkStatementResultsView(newStatement);
+      await handleStatementSubmission(newStatement, currentDatabaseKafkaCluster);
     });
 
     // Refresh the statements view again to show the new state of the statement.
@@ -276,74 +272,108 @@ export async function submitFlinkStatementCommand(
   }
 }
 
-/** Max number of statement results rows to display. */
-const DEFAULT_RESULT_LIMIT = 100_000;
-/** Cache of statement result webviews by env/statement name. */
-const statementResultsViewCache = new FlinkStatementWebviewPanelCache();
-
 /**
- * Handles the display of Flink statement results in a webview panel.
- * Creates or finds an existing panel, sets up the results manager and message handler.
+ * After a statement is submitted, wait for it to be running and then show results.
  *
- * @param statement - The Flink statement to display results for
+ * If the statement is not in a state where results can be shown, this is a no-op.
+ *
+ * If the statement is a CREATE FUNCTION statement, fire the `udfsChanged` emitter
+ * when the statement completes successfully.
+ *
+ * @param statement - The Flink statement that was just submitted.
+ * @param database - The database (Kafka cluster) the statement was submitted against.
  */
-async function openFlinkStatementResultsView(statement: FlinkStatement | undefined) {
-  if (!statement) return;
+export async function handleStatementSubmission(
+  statement: FlinkStatement,
+  database: CCloudFlinkDbKafkaCluster,
+): Promise<void> {
+  // always try to show results
+  await waitForResultsFetchable(statement);
+  await openFlinkStatementResultsView(statement);
 
-  if (!(statement instanceof FlinkStatement)) {
-    logger.error("handleFlinkStatementResults", "statement is not an instance of FlinkStatement");
+  // if we're registering a UDF, inform any listeners (e.g. Flink Databases view)
+  if (statement?.status.traits?.sql_kind === "CREATE_FUNCTION") {
+    const completedStatement = await waitForStatementCompletion(statement);
+    if (completedStatement.status.phase === Phase.COMPLETED) {
+      udfsChanged.fire(database);
+    }
+  }
+}
+
+export async function deleteFlinkStatementCommand(statement: FlinkStatement): Promise<void> {
+  if (!statement || !(statement instanceof FlinkStatement)) {
+    logger.error("deleteFlinkStatementCommand", "statement is invalid");
     return;
   }
 
-  const [panel, cached] = statementResultsViewCache.getPanelForStatement(statement);
-  if (cached) {
-    // Existing panel for this statement found, just reveal it.
-    panel.reveal();
+  // Stoppable statements should not have been offered the delete option.
+  // But be defensive.
+  if (statement.stoppable) {
+    logger.error(
+      "deleteFlinkStatementCommand",
+      `statement ${statement.id} is not in a deletable state (${statement.status.phase})`,
+    );
+    await showErrorNotificationWithButtons(
+      `Statement ${statement.name} is not in a deletable state (${statement.status.phase})`,
+    );
     return;
   }
 
-  const os = ObservableScope();
+  if (!(await confirmActionOnStatement("delete", statement))) {
+    logger.debug("User canceled deleting statement");
+    return;
+  }
 
-  /** Wrapper for `panel.visible` that gracefully switches to `false` when panel is disposed. */
-  const panelActive = os.produce(true, (value, signal) => {
-    const disposed = panel.onDidDispose(() => value(false));
-    const changedState = panel.onDidChangeViewState(() => value(panel.visible));
-    signal.onabort = () => {
-      disposed.dispose();
-      changedState.dispose();
-    };
-  });
+  const ccloudLoader = CCloudResourceLoader.getInstance();
 
-  /** Notify an active webview only after flushing the rest of updates. */
-  const notifyUI = () => {
-    queueMicrotask(() => {
-      if (panelActive()) panel.webview.postMessage(["Timestamp", "Success", Date.now()]);
-    });
-  };
+  try {
+    await ccloudLoader.deleteFlinkStatement(statement);
+  } catch (err) {
+    logger.error("deleteFlinkStatementCommand", `Error deleting statement: ${err}`);
+    await showErrorNotificationWithButtons(`Error deleting statement: ${err}`);
+    return;
+  }
 
-  const sidecar = await getSidecar();
-  const resultsManager = new FlinkStatementResultsManager(
-    os,
-    statement,
-    sidecar,
-    notifyUI,
-    DEFAULT_RESULT_LIMIT,
-  );
+  // Show a notification that the statement was deleted.
+  void vscode.window.showInformationMessage(`Deleted statement ${statement.name}`);
+}
 
-  // Handle messages from the webview and delegate to the results manager
-  const handler = handleWebviewMessage(panel.webview, (...args) => {
-    let result;
-    // handleMessage() may end up reassigning many signals, so do
-    // so in a batch.
-    os.batch(() => (result = resultsManager.handleMessage(...args)));
-    return result;
-  });
+export async function stopFlinkStatementCommand(statement: FlinkStatement): Promise<void> {
+  // Should not happen, just be defensive.
+  if (!statement || !(statement instanceof FlinkStatement)) {
+    logger.error("stopFlinkStatementCommand", "statement is invalid");
+    return;
+  }
 
-  panel.onDidDispose(() => {
-    resultsManager.dispose();
-    handler.dispose();
-    os.dispose();
-  });
+  // Should not happen either if context menu is properly gated.
+  if (!statement.stoppable) {
+    logger.error(
+      "stopFlinkStatementCommand",
+      `statement ${statement.id} is not in a stoppable state (${statement.status.phase})`,
+    );
+    await showErrorNotificationWithButtons(
+      `Statement ${statement.name} is not in a stoppable state (${statement.status.phase})`,
+    );
+    return;
+  }
+
+  if (!(await confirmActionOnStatement("stop", statement))) {
+    logger.debug("User canceled stopping statement");
+    return;
+  }
+
+  const ccloudLoader = CCloudResourceLoader.getInstance();
+
+  try {
+    await ccloudLoader.stopFlinkStatement(statement);
+  } catch (err) {
+    logger.error("stopFlinkStatementCommand", `Error stopping statement: ${err}`);
+    await showErrorNotificationWithButtons(`Error stopping statement: ${err}`);
+    return;
+  }
+
+  // Show a notification that the statement was stopped.
+  void vscode.window.showInformationMessage(`Stopped statement ${statement.name}`);
 }
 
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
@@ -352,5 +382,7 @@ export function registerFlinkStatementCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.statements.create", submitFlinkStatementCommand),
     // Different naming scheme due to legacy telemetry reasons.
     registerCommandWithLogging("confluent.flinkStatementResults", openFlinkStatementResultsView),
+    registerCommandWithLogging("confluent.statements.delete", deleteFlinkStatementCommand),
+    registerCommandWithLogging("confluent.statements.stop", stopFlinkStatementCommand),
   ];
 }
