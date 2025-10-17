@@ -26,6 +26,7 @@ import { detectClassesAndRegisterUDFs } from "./utils/udfRegistration";
 import {
   type ArtifactUploadParams,
   buildUploadErrorMessage,
+  getArtifactPatchParams,
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
   uploadArtifactToCCloud,
@@ -197,17 +198,10 @@ export async function updateArtifactCommand(
     return;
   }
 
-  const updatedArtifact: ArtifactUploadParams | undefined =
-    await artifactUploadQuickPickForm(selectedArtifact);
-  if (!updatedArtifact) {
+  const patchPayload = await getArtifactPatchParams(selectedArtifact);
+  if (!patchPayload) {
     return;
   }
-  // Build a minimal PATCH payload w/only mutable fields
-  const patchPayload = {
-    description: updatedArtifact.description,
-    documentation_link: updatedArtifact.documentationUrl,
-  };
-
   const request: UpdateArtifactV1FlinkArtifactRequest = {
     cloud: selectedArtifact.provider,
     region: selectedArtifact.region,
@@ -215,7 +209,6 @@ export async function updateArtifactCommand(
     id: selectedArtifact.id,
     ArtifactV1FlinkArtifact: patchPayload,
   };
-
   logUsage(UserEvent.FlinkArtifactAction, {
     action: "update",
     status: "started",
