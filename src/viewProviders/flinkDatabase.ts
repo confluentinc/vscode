@@ -62,8 +62,8 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   constructor() {
     super();
 
-    // Start in artifacts mode by default.
-    this.defaultDelegate = this.artifactsDelegate;
+    // Start in UDFs mode by default.
+    this.defaultDelegate = this.udfsDelegate;
     this.currentDelegate = this.defaultDelegate;
   }
 
