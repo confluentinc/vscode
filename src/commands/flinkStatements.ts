@@ -1,10 +1,6 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
-import {
-  FLINKSTATEMENT_URI_SCHEME,
-  FlinkStatementDocumentProvider,
-} from "../documentProviders/flinkStatement";
 import { udfsChanged } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
@@ -36,25 +32,15 @@ const logger = new Logger("commands.flinkStatements");
 
 /** View the SQL statement portion of a FlinkStatement in a read-only document. */
 export async function viewStatementSqlCommand(statement: FlinkStatement): Promise<void> {
-  if (!statement) {
-    logger.error("viewStatementSqlCommand", "statement is undefined");
-    return;
-  }
-
   if (!(statement instanceof FlinkStatement)) {
-    logger.error("viewStatementSqlCommand", "statement is not an instance of FlinkStatement");
+    logger.error("statement is not an instance of FlinkStatement");
     return;
   }
-
-  if (!statement.computePoolId) {
-    logger.error("viewStatementSqlCommand", "statement has no computePoolId");
-    return;
-  }
-
-  const uri = FlinkStatementDocumentProvider.getStatementDocumentUri(statement);
 
   const loader = CCloudResourceLoader.getInstance();
-  const pool = await loader.getFlinkComputePool(statement.computePoolId);
+  // if we're opening a statement from the Flink Statements view, it was submitted to a pool and
+  // we'll have the computePoolId
+  const pool = await loader.getFlinkComputePool(statement.computePoolId!);
   if (!pool) {
     logger.error(
       "viewStatementSqlCommand",
@@ -78,10 +64,22 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
     updatedMetadata[UriMetadataKeys.FLINK_DATABASE_ID] = database.id;
   }
   const rm = ResourceManager.getInstance();
-  await rm.setUriMetadata(uri, updatedMetadata);
 
-  const doc = await vscode.workspace.openTextDocument(uri);
-  vscode.languages.setTextDocumentLanguage(doc, "flinksql");
+  // check if any existing document is already open with this statement's SQL content
+  // (exact match for now, but if we wanted to add header comments to new untitled documents and/or
+  // check for "document contains statement SQL" we'll need to update this logic)
+  let doc: vscode.TextDocument | undefined = vscode.workspace.textDocuments.find(
+    (doc) => doc.languageId === FLINK_SQL_LANGUAGE_ID && doc.getText() === statement.sqlStatement,
+  );
+  if (!doc) {
+    // create a new untitled doc, set its language and content, then update its metadata before
+    // showing it to the user
+    doc = await vscode.workspace.openTextDocument({
+      language: FLINK_SQL_LANGUAGE_ID,
+      content: statement.sqlStatement,
+    });
+    await rm.setUriMetadata(doc.uri, updatedMetadata);
+  }
   await vscode.window.showTextDocument(doc, { preview: false });
 }
 /**
@@ -107,7 +105,7 @@ export async function submitFlinkStatementCommand(
   const funcLogger = logger.withCallpoint("submitFlinkStatementCommand");
 
   // 1. Choose the document with the SQL to submit
-  const uriSchemes = ["file", "untitled", FLINKSTATEMENT_URI_SCHEME];
+  const uriSchemes = ["file", "untitled"];
   const languageIds = ["plaintext", FLINK_SQL_LANGUAGE_ID, "sql"];
   const fileFilters = {
     "FlinkSQL files": [...FLINK_SQL_FILE_EXTENSIONS, ".sql"],
