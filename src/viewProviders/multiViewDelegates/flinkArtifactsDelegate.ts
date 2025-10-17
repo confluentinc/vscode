@@ -1,5 +1,5 @@
 import { TreeItem } from "vscode";
-import { extractResponseBody, isResponseError } from "../../errors";
+import { extractResponseBody, isResponseError, logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../../models/flinkArtifact";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
@@ -28,6 +28,10 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
   getTreeItem(element: FlinkArtifact): TreeItem {
     return new FlinkArtifactTreeItem(element);
   }
+}
+
+export async function revealArtifact(artifact: FlinkArtifact): Promise<void> {
+// 
 }
 
 export async function getFlinkArtifactsErrorMessage(error: unknown): Promise<string> {

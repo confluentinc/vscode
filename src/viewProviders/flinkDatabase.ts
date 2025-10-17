@@ -110,7 +110,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
       }
     }
   }
-
+  // this is example of handing work to delegate
   async refresh(forceDeepRefresh: boolean = false): Promise<void> {
     this.children = [];
 
@@ -127,6 +127,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
         this.currentDelegate.loadingMessage,
         async () => {
           try {
+            // this is the delegate work
             this.children = await this.currentDelegate.fetchChildren(db, forceDeepRefresh);
           } catch (error) {
             let msg = `Failed to load Flink ${this.currentDelegate.mode}`;
@@ -168,4 +169,8 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
       this.treeView.description = db.name;
     }
   }
+
+  // getParent method here always returns undefined because it is not going ot reveal interior, nothing under expandedItem
+  // reveal cascades call down to current delegate, FIRST CHECK IF WE CAN OPEN EXTENSION SIDEBAR IN VSCODE API, makes sure the artifact looks at right db, looks at right mode (udf or artifact)
+  // can do confluent.flinkdatabase.focus in order to make sure the view is open
 }
