@@ -180,7 +180,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
     // Open the Extensions sidebar and show the Confluent extension
     //To add: open on the right Flink db
     //To add: open on the right mode (artifacts/udfs)
-    await vscode.commands.executeCommand("workbench.extensions.action.showExtensionsWithIds", [
+    await vscode.commands.executeCommand("workbench.view.extension.confluent", [
       "confluentinc.vscode-confluent",
     ]);
   }

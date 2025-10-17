@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import * as vscode from "vscode";
 import { CancellationToken, Progress, window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
@@ -299,6 +300,22 @@ describe("viewProviders/flinkDatabase.ts", () => {
         await viewProvider.updateTreeViewDescription();
 
         assert.strictEqual(getDescription(), TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name);
+      });
+    });
+    describe("reveal()", () => {
+      let executeCommandStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
+      });
+
+      it("should execute the command to open the Extensions sidebar and show the Confluent extension", async () => {
+        await viewProvider.reveal();
+
+        sinon.assert.calledOnce(executeCommandStub);
+        sinon.assert.calledWithExactly(executeCommandStub, "workbench.view.extension.confluent", [
+          "confluentinc.vscode-confluent",
+        ]);
       });
     });
   });
