@@ -1,4 +1,5 @@
 import { expect, Locator, Page } from "@playwright/test";
+import { clusterLabel } from "../../../../src/models/kafkaCluster";
 import { ConnectionType } from "../../connectionTypes";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { DirectConnectionForm } from "../webviews/DirectConnectionFormWebview";
@@ -9,6 +10,7 @@ import { View } from "./View";
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  */
+
 export class ResourcesView extends View {
   constructor(page: Page) {
     // we don't need a regex pattern here because we don't update the tree view title/description
@@ -74,14 +76,32 @@ export class ResourcesView extends View {
   }
 
   /**
+  /**
+   * Helper method to create CCloud Kafka cluster locators with specific accessibility labels.
+   * @param labelPart The part of the label for the aria-label attribute
+   * @returns A Locator for CCloud Kafka cluster tree items
+   */
+  private getCCloudKafkaClustersByLabel(labelPart: string): Locator {
+    // third nested element: Confluent Cloud item -> environment item -> Kafka cluster item
+    return this.kafkaClusters.and(
+      this.page.locator(`[aria-level='3'][aria-label^='CCLOUD connection: ${labelPart}']`),
+    );
+  }
+
+  /**
    * Locator for CCloud Kafka cluster tree items.
    * Only visible when a {@link ccloudEnvironments CCloud environment item} is expanded.
    */
   get ccloudKafkaClusters(): Locator {
-    // third nested element: Confluent Cloud item -> environment item -> Kafka cluster item
-    return this.kafkaClusters.and(
-      this.page.locator("[aria-level='3'][aria-label^='CCLOUD connection: Kafka Cluster']"),
-    );
+    return this.getCCloudKafkaClustersByLabel(clusterLabel.KafkaCluster);
+  }
+
+  /**
+   * Locator for Flinkable CCloud Kafka cluster tree items.
+   * Only visible when a {@link ccloudEnvironments CCloud environment item} is expanded.
+   */
+  get ccloudFlinkableKafkaClusters(): Locator {
+    return this.getCCloudKafkaClustersByLabel(clusterLabel.FlinkableKafkaCluster);
   }
 
   /**
