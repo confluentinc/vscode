@@ -44,55 +44,50 @@ export const scaffoldProjectRequest = async (
   telemetrySource?: string,
 ): Promise<PostResponse> => {
   let pickedTemplate: ScaffoldV1Template | undefined = undefined;
-  const templateType = templateRequestOptions?.templateType;
+  let { templateType, templateName, templateCollection } = templateRequestOptions || {};
+
   try {
-    // should only be using a templateCollection if this came from a URI; by default all other uses
-    // will default to the "vscode" collection
+    // undefined templateCollection will default to the "vscode" collection
     // Potential failure point 1: listing templates from the sidecar - caught, logged, user notified, no action available
-    let templateList: ScaffoldV1Template[] = await getTemplatesList(
-      templateRequestOptions?.templateCollection,
-    );
-    if (templateRequestOptions && !templateRequestOptions.templateName) {
-      // When we're triggering the scaffolding from the cluster or topic context menu, we want to show only
-      // templates that are tagged as producer or consumer but with a quickpick
+    let templateList: ScaffoldV1Template[] = await getTemplatesList(templateCollection);
+
+    if (templateName) {
+      // ...from a URI where there is a template name passed and showing quickpick is not needed
+      pickedTemplate = templateList.find((template) => template.spec!.name === templateName);
+      if (!pickedTemplate) {
+        // Send the error to Sentry, but don't notify the user.
+        // Instead they'll be offered the quickpick to select a different template
+        logError(
+          new Error("The template name provided in the request was not found."),
+          "scaffold project from URI",
+          {
+            extra: {
+              templateName: templateName,
+              templateCollection: templateCollection,
+            },
+          },
+        );
+      }
+    }
+
+    if (templateType) {
       templateList = templateList.filter((template) => {
         const tags = template.spec?.tags || [];
-
         if (templateType === "flink") {
           return tags.includes("apache flink") || tags.includes("table api");
+          // "kafka" type comes from Cluster/Topic context menu
         } else if (templateType === "kafka") {
           return tags.includes("producer") || tags.includes("consumer");
         } else if (templateType === "artifact") {
           return tags.includes("udfs");
         }
-
-        // If no specific type, show all templates with producer or consumer tags
+        // If no specific type passed, show all templates with producer or consumer tags
+        // FIXME NC : does this mean we should always filter by producer/consumer if type passed?
         return tags.includes("producer") || tags.includes("consumer");
       });
-
-      pickedTemplate = await pickTemplate(templateList);
-    } else if (templateRequestOptions && templateRequestOptions.templateName) {
-      // Handling from a URI (or Copilot tool invocation) where there is a template name matched and
-      // showing a quickpick is not needed
-      pickedTemplate = templateList.find(
-        (template) => template.spec!.name === templateRequestOptions.templateName,
-      );
-      if (!pickedTemplate) {
-        const errMsg =
-          "Project template not found. Check the template name and collection and try again.";
-        logError(new Error(errMsg), "template not found", {
-          extra: {
-            templateName: templateRequestOptions.templateName,
-            templateCollection: templateRequestOptions.templateCollection,
-          },
-        });
-        void showErrorNotificationWithButtons(errMsg);
-        return { success: false, message: errMsg };
-      }
-    } else {
-      // If no arguments are passed, show all templates
-      pickedTemplate = await pickTemplate(templateList);
     }
+
+    pickedTemplate = await pickTemplate(templateList);
   } catch (err) {
     logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
     vscode.window.showErrorMessage("Failed to retrieve template list");
@@ -209,7 +204,7 @@ export async function applyTemplate(
     Object.entries(manifestOptionValues).map(([k, v]) => [k, String(v)]),
   );
   const request: ApplyScaffoldV1TemplateOperationRequest = {
-    template_collection_name: pickedTemplate.spec!.template_collection!.id!,
+    template_collection_name: pickedTemplate.spec!.template_collection!.id,
     name: pickedTemplate.spec!.name!,
     ApplyScaffoldV1TemplateRequest: {
       options: stringifiedOptions,
