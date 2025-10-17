@@ -1,4 +1,4 @@
-import { Disposable } from "vscode";
+import type { Disposable } from "vscode";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { ResourceLoader } from "../loaders/resourceLoader";
 import { CCloudResourceLoader } from "./ccloudResourceLoader";

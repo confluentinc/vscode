@@ -1,9 +1,6 @@
 import * as assert from "assert";
-import {
-  LanguageModelChatMessage,
-  LanguageModelChatMessageRole,
-  LanguageModelTextPart,
-} from "vscode";
+import type { LanguageModelChatMessage, LanguageModelTextPart } from "vscode";
+import { LanguageModelChatMessageRole } from "vscode";
 import { PARTICIPANT_ID } from "./constants";
 import { participantMessage, systemMessage, userMessage } from "./messageTypes";
 

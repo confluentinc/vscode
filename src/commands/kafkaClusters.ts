@@ -1,14 +1,12 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { fetchTopicAuthorizedOperations } from "../authz/topics";
-import { ResponseError, TopicV3Api } from "../clients/kafkaRest";
+import type { TopicV3Api } from "../clients/kafkaRest";
+import { ResponseError } from "../clients/kafkaRest";
 import { flinkDatabaseViewResourceChanged, topicsViewResourceChanged } from "../emitters";
 import { Logger } from "../logging";
-import {
-  CCloudFlinkDbKafkaCluster,
-  CCloudKafkaCluster,
-  KafkaCluster,
-} from "../models/kafkaCluster";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, isLocal } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import {

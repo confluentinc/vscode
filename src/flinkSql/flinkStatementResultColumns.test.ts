@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { SqlV1ResultSchema } from "../clients/flinkSql";
+import type { SqlV1ResultSchema } from "../clients/flinkSql";
 import { createColumnDefinitions, getColumnOrder } from "./flinkStatementResultColumns";
 
 describe("flinkStatementResultColumns", () => {

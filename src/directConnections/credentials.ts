@@ -5,7 +5,7 @@ import {
   instanceOfOAuthCredentials,
   instanceOfScramCredentials,
 } from "../clients/sidecar";
-import { SupportedAuthTypes } from "./types";
+import type { SupportedAuthTypes } from "./types";
 
 export function getCredentialsType(creds: any): SupportedAuthTypes {
   if (!creds || typeof creds !== "object") return "None";

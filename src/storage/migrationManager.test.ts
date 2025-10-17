@@ -1,11 +1,13 @@
 import * as sinon from "sinon";
+import type {
+  StubbedGlobalState,
+  StubbedSecretStorage,
+  StubbedWorkspaceState,
+} from "../../tests/stubs/extensionStorage";
 import {
   getStubbedGlobalState,
   getStubbedSecretStorage,
   getStubbedWorkspaceState,
-  StubbedGlobalState,
-  StubbedSecretStorage,
-  StubbedWorkspaceState,
 } from "../../tests/stubs/extensionStorage";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { DURABLE_STORAGE_VERSION_KEY, MigrationStorageType } from "./constants";

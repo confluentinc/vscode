@@ -1,5 +1,6 @@
-import { expect, Locator, Page } from "@playwright/test";
-import { ConnectionType } from "../../connectionTypes";
+import type { Locator, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
+import type { ConnectionType } from "../../connectionTypes";
 import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";

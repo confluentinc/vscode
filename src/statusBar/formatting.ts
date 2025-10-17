@@ -1,5 +1,5 @@
-import { MarkdownString } from "vscode";
-import {
+import type { MarkdownString } from "vscode";
+import type {
   CCloudStatusSummary,
   ImpactIndicator,
   Incident,

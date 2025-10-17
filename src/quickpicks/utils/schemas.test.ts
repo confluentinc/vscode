@@ -10,7 +10,7 @@ import { TEST_LOCAL_SCHEMA_REGISTRY } from "../../../tests/unit/testResources/sc
 import { TEST_LOCAL_KAFKA_TOPIC } from "../../../tests/unit/testResources/topic";
 import { SubjectNameStrategy } from "../../diagnostics/produceMessage";
 import { ALLOW_OLDER_SCHEMA_VERSIONS } from "../../extensionSettings/constants";
-import { LocalResourceLoader } from "../../loaders";
+import type { LocalResourceLoader } from "../../loaders";
 import * as notifications from "../../notifications";
 import * as schemaQuickPicks from "../schemas";
 import * as schemaSubjects from "./schemaSubjects";

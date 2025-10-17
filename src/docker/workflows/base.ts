@@ -1,11 +1,13 @@
-import { CancellationToken, Progress, ProgressLocation, window } from "vscode";
-import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
+import type { CancellationToken, Progress } from "vscode";
+import { ProgressLocation, window } from "vscode";
+import type { ContainerInspectResponse, ContainerSummary } from "../../clients/docker";
+import { ResponseError } from "../../clients/docker";
 import {
   LOCAL_KAFKA_IMAGE,
   LOCAL_MEDUSA_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE,
 } from "../../extensionSettings/constants";
-import { Logger } from "../../logging";
+import type { Logger } from "../../logging";
 import { ConnectionLabel } from "../../models/resource";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { logUsage, UserEvent } from "../../telemetry/events";

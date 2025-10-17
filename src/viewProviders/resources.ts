@@ -1,14 +1,13 @@
+import type { Disposable, TreeDataProvider } from "vscode";
 import {
-  Disposable,
   MarkdownString,
   ThemeColor,
   ThemeIcon,
-  TreeDataProvider,
   TreeItem,
   TreeItemCollapsibleState,
   Uri,
 } from "vscode";
-import { ConnectionStatus, ConnectionType } from "../clients/sidecar";
+import type { ConnectionStatus, ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { ContextValues, getContextValue, setContextValue } from "../context/values";
 import {
@@ -23,46 +22,39 @@ import {
   resourceSearchSet,
 } from "../emitters";
 import { logError } from "../errors";
-import {
-  CCloudResourceLoader,
-  DirectResourceLoader,
-  LocalResourceLoader,
-  ResourceLoader,
-} from "../loaders";
+import type { DirectResourceLoader } from "../loaders";
+import { CCloudResourceLoader, LocalResourceLoader, ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
+import type { DirectEnvironment, LocalEnvironment } from "../models/environment";
 import {
   CCloudEnvironment,
   createEnvironmentTooltip,
-  DirectEnvironment,
   Environment,
   EnvironmentTreeItem,
-  LocalEnvironment,
 } from "../models/environment";
 import { CCloudFlinkComputePool, FlinkComputePoolTreeItem } from "../models/flinkComputePool";
-import {
+import type {
   CCloudKafkaCluster,
   DirectKafkaCluster,
-  KafkaCluster,
-  KafkaClusterTreeItem,
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
-import { IdItem } from "../models/main";
+import { KafkaCluster, KafkaClusterTreeItem } from "../models/kafkaCluster";
+import type { IdItem } from "../models/main";
 import { LocalMedusa, MedusaTreeItem } from "../models/medusa";
-import { CCloudOrganization } from "../models/organization";
-import {
+import type { CCloudOrganization } from "../models/organization";
+import type {
   ConnectionId,
-  connectionIdToType,
   IResourceBase,
   ISearchable,
   IUpdatableResource,
 } from "../models/resource";
-import {
+import { connectionIdToType } from "../models/resource";
+import type {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
   LocalSchemaRegistry,
-  SchemaRegistry,
-  SchemaRegistryTreeItem,
 } from "../models/schemaRegistry";
+import { SchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";

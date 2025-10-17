@@ -1,4 +1,4 @@
-import { SidecarStartupFailureReason } from "./types";
+import type { SidecarStartupFailureReason } from "./types";
 
 /** Sidecar is not currently running (better start a new one!) */
 export class NoSidecarRunningError extends Error {

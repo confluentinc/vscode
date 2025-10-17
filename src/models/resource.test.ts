@@ -6,8 +6,8 @@ import {
 } from "../../tests/unit/testResources";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
+import type { ConnectionId } from "./resource";
 import {
-  ConnectionId,
   connectionIdToType,
   getConnectionLabel,
   isCCloud,
@@ -16,7 +16,7 @@ import {
   isResource,
   isSearchable,
 } from "./resource";
-import { KafkaTopic } from "./topic";
+import type { KafkaTopic } from "./topic";
 
 type ConnectionTypeMatches = [KafkaTopic, boolean, boolean, boolean];
 

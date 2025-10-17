@@ -15,7 +15,7 @@ import {
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { IconNames } from "../constants";
 import { FLINK_CONFIG_COMPUTE_POOL } from "../extensionSettings/constants";
-import { CCloudResourceLoader } from "../loaders";
+import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import * as notifications from "../notifications";

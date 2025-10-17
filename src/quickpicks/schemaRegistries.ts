@@ -4,11 +4,11 @@ import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { Environment } from "../models/environment";
+import type { Environment } from "../models/environment";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
-import { SchemaRegistry } from "../models/schemaRegistry";
+import type { SchemaRegistry } from "../models/schemaRegistry";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
-import { QuickPickItemWithValue } from "./types";
+import type { QuickPickItemWithValue } from "./types";
 
 const logger = new Logger("quickpicks.schemaRegistry");
 

@@ -1,4 +1,4 @@
-import {
+import type {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
@@ -8,10 +8,10 @@ import {
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
   LanguageModelToolResult,
-  LanguageModelToolResultPart,
 } from "vscode";
+import { LanguageModelToolResultPart } from "vscode";
 import { getExtensionContext } from "../../context/extension";
-import { LanguageModelToolContribution } from "./types";
+import type { LanguageModelToolContribution } from "./types";
 
 /**
  * Base class for a {@link LanguageModelTool} that adds a {@linkcode toChatTool} method for

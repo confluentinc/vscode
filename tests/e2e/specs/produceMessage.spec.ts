@@ -2,7 +2,7 @@ import { expect } from "@playwright/test";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
-import { TextDocument } from "../objects/editor/TextDocument";
+import type { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { SchemasView, SchemaType, SelectSchemaRegistry } from "../objects/views/SchemasView";

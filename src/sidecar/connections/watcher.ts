@@ -1,30 +1,27 @@
 import { commands, EventEmitter } from "vscode";
-import {
+import type {
   CCloudStatus,
-  ConnectedState,
   Connection,
   ConnectionSpec,
-  ConnectionType,
   KafkaClusterConfig,
   KafkaClusterStatus,
   SchemaRegistryConfig,
   SchemaRegistryStatus,
 } from "../../clients/sidecar";
+import { ConnectedState, ConnectionType } from "../../clients/sidecar";
 import { getCredentialsType } from "../../directConnections/credentials";
-import { FormConnectionType, SupportedAuthTypes } from "../../directConnections/types";
+import type { FormConnectionType, SupportedAuthTypes } from "../../directConnections/types";
 import { hasCCloudDomain } from "../../directConnections/utils";
 import { connectionStable, environmentChanged } from "../../emitters";
 import { Logger } from "../../logging";
-import { ConnectionId, connectionIdToType, EnvironmentId } from "../../models/resource";
+import type { ConnectionId, EnvironmentId } from "../../models/resource";
+import { connectionIdToType } from "../../models/resource";
 import { showErrorNotificationWithButtons } from "../../notifications";
-import { CustomConnectionSpec, getResourceManager } from "../../storage/resourceManager";
+import type { CustomConnectionSpec } from "../../storage/resourceManager";
+import { getResourceManager } from "../../storage/resourceManager";
 import { logUsage, UserEvent } from "../../telemetry/events";
-import {
-  ConnectionEventAction,
-  ConnectionEventBody,
-  Message,
-  MessageType,
-} from "../../ws/messageTypes";
+import type { ConnectionEventBody, Message } from "../../ws/messageTypes";
+import { ConnectionEventAction, MessageType } from "../../ws/messageTypes";
 import { WebsocketManager } from "../websocketManager";
 import { connectionEventHandler, isConnectionStable } from "./watcherUtils";
 

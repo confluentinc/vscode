@@ -1,7 +1,8 @@
-import { ElectronApplication, expect, Locator, Page } from "@playwright/test";
+import type { ElectronApplication, Locator, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { loadFixtureFromFile } from "../../../fixtures/utils";
-import { ConnectionType } from "../../connectionTypes";
+import type { ConnectionType } from "../../connectionTypes";
 import { TextDocument } from "../editor/TextDocument";
 import { NotificationArea } from "../notifications/NotificationArea";
 import { InputBox } from "../quickInputs/InputBox";

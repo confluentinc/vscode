@@ -1,12 +1,13 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { ConfigurationChangeEvent, workspace } from "vscode";
+import type { ConfigurationChangeEvent } from "vscode";
+import { workspace } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
 import { FlinkLanguageClientManager } from "../flinkSql/flinkLanguageClientManager";
 import * as telemetryEvents from "../telemetry/events";
-import { ExtensionSetting } from "./base";
+import type { ExtensionSetting } from "./base";
 import {
   CCLOUD_PRIVATE_NETWORK_ENDPOINTS,
   ENABLE_CHAT_PARTICIPANT,

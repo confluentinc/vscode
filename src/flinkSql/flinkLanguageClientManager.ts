@@ -1,15 +1,9 @@
 import { Mutex } from "async-mutex";
-import {
-  Disposable,
-  TextDocument,
-  TextDocumentChangeEvent,
-  TextEditor,
-  Uri,
-  window,
-  workspace,
-} from "vscode";
-import { LanguageClient } from "vscode-languageclient/node";
-import { CloseEvent, ErrorEvent, MessageEvent, WebSocket } from "ws";
+import type { Disposable, TextDocument, TextDocumentChangeEvent, TextEditor, Uri } from "vscode";
+import { window, workspace } from "vscode";
+import type { LanguageClient } from "vscode-languageclient/node";
+import type { CloseEvent, ErrorEvent, MessageEvent } from "ws";
+import { WebSocket } from "ws";
 import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
@@ -18,13 +12,13 @@ import { logError } from "../errors";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger, RotatingLogOutputChannel } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import type { CCloudEnvironment } from "../models/environment";
+import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
 import { SecretStorageKeys, UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-import { UriMetadata } from "../storage/types";
+import type { UriMetadata } from "../storage/types";
 import { getSecretStorage } from "../storage/utils";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { DisposableCollection } from "../utils/disposables";

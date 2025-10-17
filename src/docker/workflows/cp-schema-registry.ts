@@ -1,13 +1,14 @@
-import { CancellationToken, commands, Progress, window } from "vscode";
-import {
+import type { CancellationToken, Progress } from "vscode";
+import { commands, window } from "vscode";
+import type {
   ContainerCreateRequest,
   ContainerCreateResponse,
   ContainerInspectResponse,
   ContainerListRequest,
-  ContainerStateStatusEnum,
   ContainerSummary,
   HostConfig,
 } from "../../clients/docker";
+import { ContainerStateStatusEnum } from "../../clients/docker";
 import { localSchemaRegistryConnected } from "../../emitters";
 import {
   LOCAL_KAFKA_IMAGE,
@@ -29,7 +30,8 @@ import {
   waitForServiceHealthCheck,
 } from "../containers";
 import { findFreePort } from "../ports";
-import { LocalResourceContainer, LocalResourceWorkflow } from "./base";
+import type { LocalResourceContainer } from "./base";
+import { LocalResourceWorkflow } from "./base";
 
 export const CONTAINER_NAME = "vscode-confluent-schema-registry";
 const HEALTHCHECK_ENDPOINT = "/config";

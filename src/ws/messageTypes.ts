@@ -1,7 +1,8 @@
 /** Module describing workspace<-->sidecar websocket messages. */
 
 import { randomUUID } from "crypto";
-import { Connection, ConnectionFromJSON, instanceOfConnection } from "../clients/sidecar";
+import type { Connection } from "../clients/sidecar";
+import { ConnectionFromJSON, instanceOfConnection } from "../clients/sidecar";
 
 /**
  * All websocket message types, message.header_type values.

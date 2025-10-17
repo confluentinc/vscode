@@ -1,8 +1,10 @@
 import { accessSync, writeFileSync } from "fs";
 import { join } from "path";
-import { createStream, RotatingFileStream } from "rotating-file-stream";
+import type { RotatingFileStream } from "rotating-file-stream";
+import { createStream } from "rotating-file-stream";
 import { Tail } from "tail";
-import { commands, LogOutputChannel, Uri, window } from "vscode";
+import type { LogOutputChannel } from "vscode";
+import { commands, Uri, window } from "vscode";
 import { SHOW_SIDECAR_EXCEPTIONS } from "../extensionSettings/constants";
 import {
   EXTENSION_OUTPUT_CHANNEL,
@@ -15,7 +17,8 @@ import { showErrorNotificationWithButtons } from "../notifications";
 import { WriteableTmpDir } from "../utils/file";
 import { readFileString } from "../utils/fsWrappers";
 import { SIDECAR_FORMATTED_LOGFILE_NAME, SIDECAR_LOGFILE_NAME } from "./constants";
-import { SidecarLogFormat, SidecarOutputs, SidecarStartupFailureReason } from "./types";
+import type { SidecarLogFormat, SidecarOutputs } from "./types";
+import { SidecarStartupFailureReason } from "./types";
 
 const logger = new Logger("sidecar/logging.ts");
 
