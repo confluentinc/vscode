@@ -35,7 +35,7 @@ export function disableCCloudStatusPolling() {
  * {@link CCloudNotice} for displaying in the CCloud status bar item.
  */
 export async function refreshCCloudStatus() {
-  logger.debug("checking CCloud status...");
+  logger.trace("checking CCloud status...");
   const status: CCloudStatusSummary | undefined = await fetchCCloudStatus();
   if (!status) {
     logger.debug("failed to fetch status summary; not refreshing status bar item");
@@ -44,5 +44,5 @@ export async function refreshCCloudStatus() {
 
   // update the status bar item with the latest incidents/maintenance notices
   updateCCloudStatus(status);
-  logger.debug("CCloud status bar item updated");
+  logger.trace("CCloud status bar item updated");
 }
