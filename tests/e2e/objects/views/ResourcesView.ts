@@ -84,10 +84,10 @@ export class ResourcesView extends View {
    * @param labelPrefix The prefix for the aria-label attribute
    * @returns A Locator for CCloud Kafka cluster tree items
    */
-  private getCCloudKafkaClustersByLabel(labelPrefix: string): Locator {
+  private getCCloudKafkaClustersByLabel(labelPart: string): Locator {
     // third nested element: Confluent Cloud item -> environment item -> Kafka cluster item
     return this.kafkaClusters.and(
-      this.page.locator(`[aria-level='3'][aria-label^='CCLOUD connection: ${labelPrefix}']`),
+      this.page.locator(`[aria-level='3'][aria-label^='CCLOUD connection: ${labelPart}']`),
     );
   }
 
