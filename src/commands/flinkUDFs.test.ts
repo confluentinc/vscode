@@ -12,14 +12,14 @@ import {
 } from "../../tests/unit/testResources";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { createResponseError, ResponseErrorSource } from "../../tests/unit/testUtils";
-import { ResponseError as FlinkArtifactsResponseError } from "../clients/flinkArtifacts";
+import type { ResponseError as FlinkArtifactsResponseError } from "../clients/flinkArtifacts";
 import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
-import { CCloudEnvironment } from "../models/environment";
-import { FlinkArtifact } from "../models/flinkArtifact";
-import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import type { CCloudEnvironment } from "../models/environment";
+import type { FlinkArtifact } from "../models/flinkArtifact";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import * as notifications from "../notifications";
 import { UriMetadataKeys } from "../storage/constants";
-import { ResourceManager } from "../storage/resourceManager";
+import type { ResourceManager } from "../storage/resourceManager";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import {
   createUdfRegistrationDocumentCommand,

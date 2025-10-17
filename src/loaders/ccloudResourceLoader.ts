@@ -1,14 +1,17 @@
-import { Disposable } from "vscode";
+import type { Disposable } from "vscode";
 
-import { ArtifactV1FlinkArtifactListDataInner } from "../clients/flinkArtifacts";
-import { FcpmV2RegionListDataInner, ListFcpmV2RegionsRequest } from "../clients/flinkComputePool";
-import { ListSqlv1StatementsRequest } from "../clients/flinkSql";
+import type { ArtifactV1FlinkArtifactListDataInner } from "../clients/flinkArtifacts";
+import type {
+  FcpmV2RegionListDataInner,
+  ListFcpmV2RegionsRequest,
+} from "../clients/flinkComputePool";
+import type { ListSqlv1StatementsRequest } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected, flinkStatementDeleted } from "../emitters";
+import type { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
 import {
   determineFlinkStatementName,
-  IFlinkStatementSubmitParameters,
   parseAllFlinkStatementResults,
   refreshFlinkStatement,
   submitFlinkStatement,
@@ -17,19 +20,23 @@ import {
 import { getCCloudResources } from "../graphql/ccloud";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
+import type { CCloudEnvironment } from "../models/environment";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
-import { FlinkUdf } from "../models/flinkUDF";
-import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
-import { CCloudOrganization } from "../models/organization";
-import { EnvironmentId, IFlinkQueryable, IProviderRegion } from "../models/resource";
-import { CCloudSchemaRegistry } from "../models/schemaRegistry";
-import { getSidecar, SidecarHandle } from "../sidecar";
+import type { FlinkStatement } from "../models/flinkStatement";
+import { Phase, restFlinkStatementToModel } from "../models/flinkStatement";
+import type { FlinkUdf } from "../models/flinkUDF";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import type { CCloudOrganization } from "../models/organization";
+import type { EnvironmentId, IFlinkQueryable, IProviderRegion } from "../models/resource";
+import type { CCloudSchemaRegistry } from "../models/schemaRegistry";
+import type { SidecarHandle } from "../sidecar";
+import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
-import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
+import type { ExecutionResult } from "../utils/workerPool";
+import { executeInWorkerPool, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 import { generateFlinkStatementKey } from "./utils/loaderUtils";
 import {

@@ -1,7 +1,9 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { ConfigurationChangeEvent, TreeItem, TreeItemCollapsibleState } from "vscode";
-import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
+import type { ConfigurationChangeEvent } from "vscode";
+import { TreeItem, TreeItemCollapsibleState } from "vscode";
+import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
+import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
@@ -38,14 +40,14 @@ import { FlinkComputePoolTreeItem } from "../models/flinkComputePool";
 import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster";
 import { CustomMarkdownString } from "../models/main";
 import { LocalMedusa, MedusaTreeItem } from "../models/medusa";
-import { ConnectionId } from "../models/resource";
+import type { ConnectionId } from "../models/resource";
 import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
 import * as notifications from "../notifications";
 import * as ccloudConnections from "../sidecar/connections/ccloud";
 import * as sidecarLocalConnections from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
+import type { AnyConnectionRow } from "./resources";
 import {
-  AnyConnectionRow,
   CCloudConnectionRow,
   DirectConnectionRow,
   LocalConnectionRow,

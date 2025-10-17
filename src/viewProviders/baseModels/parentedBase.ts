@@ -1,10 +1,13 @@
-import { Disposable, EventEmitter, TreeDataProvider } from "vscode";
-import { ContextValues, setContextValue } from "../../context/values";
+import type { Disposable, EventEmitter, TreeDataProvider } from "vscode";
+import type { ContextValues } from "../../context/values";
+import { setContextValue } from "../../context/values";
 import { ccloudConnected } from "../../emitters";
 import { ResourceLoader } from "../../loaders";
-import { Environment } from "../../models/environment";
-import { EnvironmentId, isCCloud } from "../../models/resource";
-import { BaseViewProvider, BaseViewProviderData, RefreshableTreeViewProvider } from "./base";
+import type { Environment } from "../../models/environment";
+import type { EnvironmentId } from "../../models/resource";
+import { isCCloud } from "../../models/resource";
+import type { BaseViewProviderData, RefreshableTreeViewProvider } from "./base";
+import { BaseViewProvider } from "./base";
 
 /**
  * Type describing 'focused parent' types for ParentedBaseViewProvider,

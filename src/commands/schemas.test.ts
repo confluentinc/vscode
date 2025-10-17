@@ -13,7 +13,7 @@ import {
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResponseError } from "../clients/sidecar";
 import * as schemaDocumentProvider from "../documentProviders/schema";
-import { CCloudResourceLoader } from "../loaders";
+import type { CCloudResourceLoader } from "../loaders";
 import { SchemaType, Subject } from "../models/schema";
 import * as notifications from "../notifications";
 import * as quickpicks from "../quickpicks/schemas";

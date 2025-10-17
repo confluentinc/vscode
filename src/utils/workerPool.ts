@@ -1,4 +1,4 @@
-import { CancellationToken, Progress } from "vscode";
+import type { CancellationToken, Progress } from "vscode";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 

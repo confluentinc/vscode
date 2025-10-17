@@ -3,7 +3,7 @@ import {
   DirectEnvironment,
   LocalEnvironment,
 } from "../../../src/models/environment";
-import { EnvironmentId } from "../../../src/models/resource";
+import type { EnvironmentId } from "../../../src/models/resource";
 import { TEST_DIRECT_CONNECTION_ID, TEST_LOCAL_CONNECTION } from "./connection";
 
 export const TEST_CCLOUD_ENVIRONMENT_ID = "env-abc123" as EnvironmentId;

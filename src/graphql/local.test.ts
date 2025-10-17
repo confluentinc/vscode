@@ -11,7 +11,7 @@ import {
 } from "../../tests/unit/testResources";
 import { LOCAL_CONNECTION_ID } from "../constants";
 import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
-import { SidecarHandle } from "../sidecar";
+import type { SidecarHandle } from "../sidecar";
 import * as sidecarLocalConnections from "../sidecar/connections/local";
 import { getLocalResources } from "./local";
 

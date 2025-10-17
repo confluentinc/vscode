@@ -1,6 +1,6 @@
 // toplevel exports for the sidecarManager module
 
-import { SidecarHandle } from "./sidecarHandle";
+import type { SidecarHandle } from "./sidecarHandle";
 import { SidecarManager } from "./sidecarManager";
 
 export { SidecarHandle } from "./sidecarHandle";

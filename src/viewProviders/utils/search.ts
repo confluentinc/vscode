@@ -1,5 +1,7 @@
-import { FileDecoration, FileDecorationProvider, ThemeColor, Uri } from "vscode";
-import { ISearchable, isSearchable } from "../../models/resource";
+import type { FileDecorationProvider, Uri } from "vscode";
+import { FileDecoration, ThemeColor } from "vscode";
+import type { ISearchable } from "../../models/resource";
+import { isSearchable } from "../../models/resource";
 
 /** Check if an item matches the provided search string. */
 export function itemMatchesSearch(item: ISearchable, searchStr: string): boolean {

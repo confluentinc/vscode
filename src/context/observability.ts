@@ -1,6 +1,6 @@
 import { version } from "ide-sidecar";
 import { env, version as ideVersion } from "vscode";
-import { ConnectedState } from "../clients/sidecar";
+import type { ConnectedState } from "../clients/sidecar";
 /**
  * Per-extension-instance singleton object for storing basic data to help debug issues, errors, etc.
  * This is created fresh each time the extension is activated, and will grow throughout the course

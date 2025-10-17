@@ -1,6 +1,7 @@
 import { env, extensions } from "vscode";
-import { ConnectionSpec, ConnectionType } from "./clients/sidecar";
-import { ConnectionId } from "./models/resource";
+import type { ConnectionSpec } from "./clients/sidecar";
+import { ConnectionType } from "./clients/sidecar";
+import type { ConnectionId } from "./models/resource";
 
 export const EXTENSION_ID = "confluentinc.vscode-confluent";
 /** The version of the extension, as defined in package.json. */

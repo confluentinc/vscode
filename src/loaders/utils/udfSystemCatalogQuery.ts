@@ -1,7 +1,8 @@
 /** CCLoudResourceLoader Flink statement utils */
 
-import { FlinkUdf, FlinkUdfParameter } from "../../models/flinkUDF";
-import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
+import type { FlinkUdfParameter } from "../../models/flinkUDF";
+import { FlinkUdf } from "../../models/flinkUDF";
+import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 
 import { Logger } from "../../logging";
 

@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { Uri, window } from "vscode";
+import type { Uri } from "vscode";
+import { window } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import * as dockerConfigs from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";

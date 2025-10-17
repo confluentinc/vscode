@@ -1,19 +1,13 @@
-import {
-  CancellationToken,
-  commands,
-  InputBoxValidationMessage,
-  InputBoxValidationSeverity,
-  Progress,
-  window,
-} from "vscode";
-import {
+import type { CancellationToken, InputBoxValidationMessage, Progress } from "vscode";
+import { commands, InputBoxValidationSeverity, window } from "vscode";
+import type {
   ContainerCreateRequest,
   ContainerCreateResponse,
   ContainerInspectResponse,
-  ContainerStateStatusEnum,
   ContainerSummary,
   HostConfig,
 } from "../../clients/docker";
+import { ContainerStateStatusEnum } from "../../clients/docker";
 import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../extensionSettings/constants";
@@ -24,7 +18,8 @@ import { UserEvent } from "../../telemetry/events";
 import { createContainer } from "../containers";
 import { createNetwork } from "../networks";
 import { findFreePort } from "../ports";
-import { LocalResourceContainer, LocalResourceWorkflow } from "./base";
+import type { LocalResourceContainer } from "./base";
+import { LocalResourceWorkflow } from "./base";
 
 export const CONTAINER_NAME_PREFIX = "vscode-confluent-local-broker";
 

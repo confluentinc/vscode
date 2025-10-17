@@ -1,15 +1,16 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { ExtensionContext } from "vscode";
+import type { ExtensionContext } from "vscode";
 import {
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../../tests/unit/testResources";
 import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
-import { FormConnectionType } from "../../directConnections/types";
-import { ConnectionId } from "../../models/resource";
-import { CustomConnectionSpec, DirectConnectionsById, mapToString } from "../resourceManager";
+import type { FormConnectionType } from "../../directConnections/types";
+import type { ConnectionId } from "../../models/resource";
+import type { CustomConnectionSpec, DirectConnectionsById } from "../resourceManager";
+import { mapToString } from "../resourceManager";
 import { MigrationV2 } from "./v2";
 
 describe("storage/migrations/v2", () => {

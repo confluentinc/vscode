@@ -1,25 +1,16 @@
-import {
-  CodeLens,
-  CodeLensProvider,
-  Command,
-  Disposable,
-  Event,
-  EventEmitter,
-  Position,
-  Range,
-  TextDocument,
-} from "vscode";
+import type { CodeLensProvider, Command, Disposable, Event, TextDocument } from "vscode";
+import { CodeLens, EventEmitter, Position, Range } from "vscode";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import type { CCloudEnvironment } from "../models/environment";
+import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import type { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-import { UriMetadata } from "../storage/types";
+import type { UriMetadata } from "../storage/types";
 import { DisposableCollection } from "../utils/disposables";
 
 const logger = new Logger("codelens.flinkSqlProvider");

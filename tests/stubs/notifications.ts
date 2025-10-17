@@ -1,4 +1,4 @@
-import { SinonSandbox } from "sinon";
+import type { SinonSandbox } from "sinon";
 import * as notifications from "../../src/notifications";
 
 /**

@@ -1,16 +1,16 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
-import {
+import type { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
+import type {
   CreateArtifactV1FlinkArtifact201Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../clients/flinkArtifacts/models";
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactsChanged, flinkDatabaseViewMode } from "../emitters";
 import { logError } from "../errors";
-import { FlinkArtifact } from "../models/flinkArtifact";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import type { FlinkArtifact } from "../models/flinkArtifact";
+import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import type { CCloudKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
   showInfoNotificationWithButtons,
@@ -21,6 +21,7 @@ import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegat
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import { detectClassesAndRegisterUDFs } from "./utils/udfRegistration";
 import {
+  ArtifactUploadParams,
   buildUploadErrorMessage,
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
@@ -68,7 +69,7 @@ export async function uploadArtifactCommand(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
             {
               "Register UDFs": async () => {
-                await detectClassesAndRegisterUDFs({ selectedFile: params.selectedFile });
+                await detectClassesAndRegisterUDFs(params.selectedFile, response.id);
               },
             },
           );
@@ -94,7 +95,7 @@ export async function uploadArtifactCommand(
  * Throws on failure so the caller (upload command) can handle error telemetry + notification.
  */
 async function executeArtifactUpload(
-  params: Awaited<ReturnType<typeof artifactUploadQuickPickForm>>,
+  params: ArtifactUploadParams,
   progress: vscode.Progress<{ message?: string; increment?: number }>,
 ): Promise<CreateArtifactV1FlinkArtifact201Response | undefined> {
   if (!params) return;

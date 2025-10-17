@@ -14,8 +14,8 @@ import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
-import { CCloudResourceLoader } from "../loaders";
-import { SidecarHandle } from "../sidecar";
+import type { CCloudResourceLoader } from "../loaders";
+import type { SidecarHandle } from "../sidecar";
 import * as schemaRegistry from "./schemaRegistry";
 
 describe("authz.schemaRegistry", function () {

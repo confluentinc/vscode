@@ -1,5 +1,5 @@
 import { Data, type Require as Enforced } from "dataclass";
-import { OrganizationId } from "./resource";
+import type { OrganizationId } from "./resource";
 
 export class CCloudOrganization extends Data {
   id!: Enforced<OrganizationId>;

@@ -1,8 +1,9 @@
-import { TextDocument, Uri, workspace } from "vscode";
+import type { TextDocument } from "vscode";
+import { Uri, workspace } from "vscode";
 import { FLINKSTATEMENT_URI_SCHEME } from "./documentProviders/flinkStatement";
 import { Logger } from "./logging";
 import { getResourceManager } from "./storage/resourceManager";
-import { UriMetadataMap } from "./storage/types";
+import type { UriMetadataMap } from "./storage/types";
 import { DisposableCollection } from "./utils/disposables";
 
 const logger = new Logger("documentMetadataManager");

@@ -7,7 +7,7 @@ import {
   TopicsView,
 } from "../objects/views/TopicsView";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
-import { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
+import type { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { Tag } from "../tags";
 
 /**

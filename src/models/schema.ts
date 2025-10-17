@@ -1,17 +1,16 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
-import { ConnectionType } from "../clients/sidecar";
+import type { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH, IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { CustomMarkdownString } from "./main";
-import {
+import type {
   ConnectionId,
-  connectionIdToType,
   EnvironmentId,
   IResourceBase,
-  isCCloud,
   ISchemaRegistryResource,
   ISearchable,
 } from "./resource";
+import { connectionIdToType, isCCloud } from "./resource";
 
 export enum SchemaType {
   Avro = "AVRO",

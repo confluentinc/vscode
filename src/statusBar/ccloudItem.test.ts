@@ -1,12 +1,13 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { MarkdownString, StatusBarItem, window } from "vscode";
+import type { MarkdownString, StatusBarItem } from "vscode";
+import { window } from "vscode";
 import {
   TEST_CCLOUD_INCIDENT,
   TEST_CCLOUD_SCHEDULED_MAINTENANCE,
   TEST_CCLOUD_STATUS_SUMMARY,
 } from "../../tests/unit/testResources/ccloudStatus";
-import { CCloudStatusSummary, Incident } from "../ccloudStatus/types";
+import type { CCloudStatusSummary, Incident } from "../ccloudStatus/types";
 import { IconNames } from "../constants";
 import {
   disposeCCloudStatusBarItem,

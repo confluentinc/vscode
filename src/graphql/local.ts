@@ -5,7 +5,7 @@ import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
 import { LocalMedusa } from "../models/medusa";
-import { EnvironmentId } from "../models/resource";
+import type { EnvironmentId } from "../models/resource";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";

@@ -1,14 +1,11 @@
 import * as vscode from "vscode";
-import {
-  CloseAction,
-  ErrorAction,
+import type {
   ErrorHandlerResult,
-  LanguageClient,
   LanguageClientOptions,
   Message,
-  Trace,
 } from "vscode-languageclient/node";
-import { WebSocket } from "ws";
+import { CloseAction, ErrorAction, LanguageClient, Trace } from "vscode-languageclient/node";
+import type { WebSocket } from "ws";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { WebsocketTransport } from "./websocketTransport";

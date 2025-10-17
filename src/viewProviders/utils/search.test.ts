@@ -9,7 +9,7 @@ import { TEST_CCLOUD_SCHEMA_REGISTRY } from "../../../tests/unit/testResources/s
 import { CCloudEnvironment } from "../../models/environment";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import { ContainerTreeItem } from "../../models/main";
-import { ISearchable } from "../../models/resource";
+import type { ISearchable } from "../../models/resource";
 import {
   countMatchingElements,
   filterItems,

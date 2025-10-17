@@ -9,9 +9,10 @@ import { MicroProfileHealthApi, ResponseError } from "../clients/sidecar";
 import * as constants from "../constants";
 import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
-import { Message, MessageType, newMessageHeaders } from "../ws/messageTypes";
+import type { Message } from "../ws/messageTypes";
+import { MessageType, newMessageHeaders } from "../ws/messageTypes";
 import { SIDECAR_PROCESS_ID_HEADER } from "./constants";
-import { GraphQLResponse } from "./sidecarHandle";
+import type { GraphQLResponse } from "./sidecarHandle";
 import { WebsocketManager } from "./websocketManager";
 
 describe("getSidecarPid() tests", () => {

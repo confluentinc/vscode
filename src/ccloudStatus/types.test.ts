@@ -10,22 +10,24 @@ import {
   TEST_CCLOUD_STATUS_SUMMARY,
   TEST_CCLOUD_SUMMARY_STATUS,
 } from "../../tests/unit/testResources/ccloudStatus";
-import {
+import type {
   AffectedComponent,
-  AffectedComponentFromJSON,
   CCloudStatusSummary,
-  CCloudStatusSummaryFromJSON,
   Incident,
-  IncidentFromJSON,
   ScheduledMaintenance,
-  ScheduledMaintenanceFromJSON,
   StatusComponent,
-  StatusComponentFromJSON,
   StatusPage,
-  StatusPageFromJSON,
   StatusUpdate,
-  StatusUpdateFromJSON,
   SummaryStatus,
+} from "./types";
+import {
+  AffectedComponentFromJSON,
+  CCloudStatusSummaryFromJSON,
+  IncidentFromJSON,
+  ScheduledMaintenanceFromJSON,
+  StatusComponentFromJSON,
+  StatusPageFromJSON,
+  StatusUpdateFromJSON,
   SummaryStatusFromJSON,
 } from "./types";
 

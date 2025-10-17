@@ -13,12 +13,8 @@ import {
   parseSidecarLogLine,
   SIDECAR_OUTPUT_CHANNEL,
 } from "./logging";
-import {
-  SidecarLogExceptionFormat,
-  SidecarLogFormat,
-  SidecarOutputs,
-  SidecarStartupFailureReason,
-} from "./types";
+import type { SidecarLogExceptionFormat, SidecarLogFormat, SidecarOutputs } from "./types";
+import { SidecarStartupFailureReason } from "./types";
 
 const fakeLogObj = {
   timestamp: "2025-01-01T10:30:00.000Z",

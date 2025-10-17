@@ -8,33 +8,23 @@ import {
   LOCAL_ENVIRONMENT_NAME,
   UTM_SOURCE_VSCODE,
 } from "../constants";
-import { FormConnectionType } from "../directConnections/types";
-import { CCloudFlinkComputePool, FlinkComputePool } from "./flinkComputePool";
-import {
-  CCloudFlinkDbKafkaCluster,
-  CCloudKafkaCluster,
-  DirectKafkaCluster,
-  KafkaCluster,
-  LocalKafkaCluster,
-} from "./kafkaCluster";
+import type { FormConnectionType } from "../directConnections/types";
+import type { FlinkComputePool } from "./flinkComputePool";
+import { CCloudFlinkComputePool } from "./flinkComputePool";
+import type { CCloudFlinkDbKafkaCluster, KafkaCluster } from "./kafkaCluster";
+import { CCloudKafkaCluster, DirectKafkaCluster, LocalKafkaCluster } from "./kafkaCluster";
 import { CustomMarkdownString } from "./main";
 import { LocalMedusa } from "./medusa";
-import {
+import type {
   ConnectionId,
-  connectionIdToType,
   EnvironmentId,
   IResourceBase,
-  isCCloud,
-  isDirect,
   ISearchable,
   IUpdatableResource,
 } from "./resource";
-import {
-  CCloudSchemaRegistry,
-  DirectSchemaRegistry,
-  LocalSchemaRegistry,
-  SchemaRegistry,
-} from "./schemaRegistry";
+import { connectionIdToType, isCCloud, isDirect } from "./resource";
+import type { SchemaRegistry } from "./schemaRegistry";
+import { CCloudSchemaRegistry, DirectSchemaRegistry, LocalSchemaRegistry } from "./schemaRegistry";
 
 /**
  * Base class for an environment, which is a distinct group of resources under a single connection:

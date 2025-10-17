@@ -4,7 +4,7 @@ import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoa
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
 import { createFlinkArtifact } from "../../../tests/unit/testResources/flinkArtifact";
 import { ResponseError } from "../../clients/flinkArtifacts";
-import { CCloudResourceLoader } from "../../loaders";
+import type { CCloudResourceLoader } from "../../loaders";
 import { FlinkArtifactsDelegate, getFlinkArtifactsErrorMessage } from "./flinkArtifactsDelegate";
 
 describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {

@@ -1,11 +1,12 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { TextDocument, Uri, workspace } from "vscode";
+import type { TextDocument } from "vscode";
+import { Uri, workspace } from "vscode";
 import { DocumentMetadataManager } from "./documentMetadataManager";
 import { FLINKSTATEMENT_URI_SCHEME } from "./documentProviders/flinkStatement";
 import { UriMetadataKeys } from "./storage/constants";
 import { ResourceManager } from "./storage/resourceManager";
-import { UriMetadataMap } from "./storage/types";
+import type { UriMetadataMap } from "./storage/types";
 
 describe("documentMetadataManager.ts", () => {
   let sandbox: sinon.SinonSandbox;

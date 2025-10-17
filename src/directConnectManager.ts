@@ -1,13 +1,13 @@
 import { randomUUID } from "crypto";
-import { Disposable, ProgressLocation, SecretStorageChangeEvent, window } from "vscode";
-import {
+import type { Disposable, SecretStorageChangeEvent } from "vscode";
+import { ProgressLocation, window } from "vscode";
+import type {
   Connection,
   ConnectionsList,
   ConnectionSpec,
   ConnectionsResourceApi,
-  ConnectionType,
-  ResponseError,
 } from "./clients/sidecar";
+import { ConnectionType, ResponseError } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
 import { getCredentialsType } from "./directConnections/credentials";
 import { hasCCloudDomain } from "./directConnections/utils";
@@ -15,7 +15,7 @@ import { directConnectionsChanged, environmentChanged } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { DirectResourceLoader, ResourceLoader } from "./loaders";
 import { Logger } from "./logging";
-import { ConnectionId, EnvironmentId } from "./models/resource";
+import type { ConnectionId, EnvironmentId } from "./models/resource";
 import { getSidecar } from "./sidecar";
 import {
   tryToCreateConnection,
@@ -24,11 +24,8 @@ import {
 } from "./sidecar/connections";
 import { ConnectionStateWatcher, waitForConnectionToBeStable } from "./sidecar/connections/watcher";
 import { SecretStorageKeys } from "./storage/constants";
-import {
-  CustomConnectionSpec,
-  DirectConnectionsById,
-  getResourceManager,
-} from "./storage/resourceManager";
+import type { CustomConnectionSpec, DirectConnectionsById } from "./storage/resourceManager";
+import { getResourceManager } from "./storage/resourceManager";
 import { getSecretStorage } from "./storage/utils";
 import { logUsage, UserEvent } from "./telemetry/events";
 import { DisposableCollection } from "./utils/disposables";

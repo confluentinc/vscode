@@ -1,28 +1,17 @@
-import {
-  _electron as electron,
-  ElectronApplication,
-  expect,
-  Page,
-  test as testBase,
-  TestInfo,
-} from "@playwright/test";
+import type { ElectronApplication, Page, TestInfo } from "@playwright/test";
+import { _electron as electron, expect, test as testBase } from "@playwright/test";
 import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
 import { existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
-import {
-  ConnectionType,
-  DirectConnectionOptions,
-  FormConnectionType,
-  LocalConnectionOptions,
-  SupportedAuthType,
-} from "./connectionTypes";
+import type { DirectConnectionOptions, LocalConnectionOptions } from "./connectionTypes";
+import { ConnectionType, FormConnectionType, SupportedAuthType } from "./connectionTypes";
 import { Notification } from "./objects/notifications/Notification";
 import { NotificationArea } from "./objects/notifications/NotificationArea";
 import { Quickpick } from "./objects/quickInputs/Quickpick";
-import { CCloudConnectionItem } from "./objects/views/viewItems/CCloudConnectionItem";
-import { DirectConnectionItem } from "./objects/views/viewItems/DirectConnectionItem";
-import { LocalConnectionItem } from "./objects/views/viewItems/LocalConnectionItem";
+import type { CCloudConnectionItem } from "./objects/views/viewItems/CCloudConnectionItem";
+import type { DirectConnectionItem } from "./objects/views/viewItems/DirectConnectionItem";
+import type { LocalConnectionItem } from "./objects/views/viewItems/LocalConnectionItem";
 import { executeVSCodeCommand } from "./utils/commands";
 import {
   setupCCloudConnection,

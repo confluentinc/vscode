@@ -5,7 +5,7 @@ import { Logger } from "../logging";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { getLaunchDarklyClient } from "./client";
 import { FeatureFlag, FeatureFlags, GLOBAL_DISABLED_MESSAGE } from "./constants";
-import { DisabledVersion } from "./types";
+import type { DisabledVersion } from "./types";
 
 const logger = new Logger("featureFlags.evaluation");
 
