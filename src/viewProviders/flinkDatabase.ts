@@ -1,5 +1,5 @@
 import type { Disposable } from "vscode";
-import { TreeItem, TreeItemCollapsibleState, ThemeIcon } from "vscode";
+import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ContextValues } from "../context/values";
 import {
   artifactsChanged,
@@ -80,7 +80,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   override getChildren(element?: ArtifactOrUdf): any[] {
     const children = super.getChildren(element);
 
-    // retrive if there are artifacts but no UDFs to show the info message in UDFs mode.
+    // retrieve if there are artifacts but no UDFs to show the info message in UDFs mode.
     if (
       !element &&
       this.currentDelegate.mode === FlinkDatabaseViewProviderMode.UDFs &&
@@ -103,7 +103,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
       item.description = "Switch to Flink Artifacts to register UDFs";
       item.command = { command: "confluent.flinkdatabase.setArtifactsViewMode", title: "" };
       item.iconPath = new ThemeIcon("info");
-      item.tooltip = "";
+      item.tooltip = "Click to switch to Flink Artifacts view";
       return item;
     }
 
