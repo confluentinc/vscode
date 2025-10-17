@@ -647,6 +647,12 @@
         "category": "Confluent"
       },
       {
+        "command": "confluent.statements.copyAndEdit",
+        "title": "Copy & Edit",
+        "icon": "$(copy)",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.statements.create",
         "icon": "$(cloud-upload)",
         "title": "Submit Flink Statement",
@@ -1533,6 +1539,10 @@
         {
           "command": "confluent.showSidecarOutputChannel",
           "when": "true"
+        },
+        {
+          "command": "confluent.statements.copyAndEdit",
+          "when": "false"
         },
         {
           "command": "confluent.statements.create",

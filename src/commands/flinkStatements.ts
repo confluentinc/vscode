@@ -376,6 +376,32 @@ export async function stopFlinkStatementCommand(statement: FlinkStatement): Prom
   void vscode.window.showInformationMessage(`Stopped statement ${statement.name}`);
 }
 
+export async function copyAndEditFlinkStatementCommand(uri: vscode.Uri): Promise<void> {
+  if (!(uri instanceof vscode.Uri) || uri.scheme !== FLINKSTATEMENT_URI_SCHEME) {
+    return;
+  }
+
+  const rm = ResourceManager.getInstance();
+  const uriMetadata: UriMetadata | undefined = await rm.getUriMetadata(uri);
+  if (!uriMetadata) {
+    // should never happen since this command is only available from existing statements,
+    // which always have resource-related metadata
+    return;
+  }
+
+  // grab the content of the read-only flinksql document
+  const document: vscode.TextDocument = await vscode.workspace.openTextDocument(uri);
+  const sqlStatement: string = document.getText();
+
+  // open a new editable document with the same content and relevant metadata
+  const editableDoc = await vscode.workspace.openTextDocument({
+    language: FLINK_SQL_LANGUAGE_ID,
+    content: sqlStatement,
+  });
+  await rm.setUriMetadata(editableDoc.uri, uriMetadata);
+  await vscode.window.showTextDocument(editableDoc, { preview: false });
+}
+
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
@@ -384,5 +410,9 @@ export function registerFlinkStatementCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.flinkStatementResults", openFlinkStatementResultsView),
     registerCommandWithLogging("confluent.statements.delete", deleteFlinkStatementCommand),
     registerCommandWithLogging("confluent.statements.stop", stopFlinkStatementCommand),
+    registerCommandWithLogging(
+      "confluent.statements.copyAndEdit",
+      copyAndEditFlinkStatementCommand,
+    ),
   ];
 }
