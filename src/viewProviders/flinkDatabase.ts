@@ -78,7 +78,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   override getChildren(element?: ArtifactOrUdf): any[] {
     const children = super.getChildren(element);
 
-    // In UDF mode with no UDFs but artifacts exist, show info message
+    // retrive if there are artifacts but no UDFs to show the info message in UDFs mode.
     if (
       !element &&
       this.currentDelegate.mode === FlinkDatabaseViewProviderMode.UDFs &&
@@ -92,15 +92,16 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   }
 
   override getTreeItem(element: any): TreeItem {
-    // Info message for when artifacts exist but no UDFs
+    // default info message when there are artifacts but no UDFs.
     if (element._isInfo) {
       const item = new TreeItem(
-        `You have ${element._count} uploaded artifact${element._count > 1 ? "s" : ""}`,
+        `Found ${element._count} uploaded artifact${element._count > 1 ? "s" : ""}`,
         TreeItemCollapsibleState.None,
       );
-      item.description = "Click to register UDFs";
+      item.description = "Switch to Flink Artifacts to register UDFs";
       item.command = { command: "confluent.flinkdatabase.setArtifactsViewMode", title: "" };
       item.iconPath = new ThemeIcon("info");
+      item.tooltip = "";
       return item;
     }
 
@@ -143,25 +144,27 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   }
 
   async refresh(forceDeepRefresh: boolean = false): Promise<void> {
+    this.children = [];
+
     if (this.database) {
       // Capture the database in a local variable so that will never change
       // while we're in the middle of this async operation.
       const db = this.database;
 
       this.logger.debug(`refreshing Flink Database view for ${db.name} (${db.id})`);
+      // clear out the current delegate's children
+      this._onDidChangeTreeData.fire();
 
       await this.withProgress(
         this.currentDelegate.loadingMessage,
         async () => {
           try {
-            // In UDF mode, fetch both in parallel (artifacts just for the info item)
             if (this.currentDelegate.mode === FlinkDatabaseViewProviderMode.UDFs) {
-              const [udfs] = await Promise.allSettled([
-                this.currentDelegate.fetchChildren(db, forceDeepRefresh),
-                this.artifactsDelegate.fetchChildren(db, forceDeepRefresh),
-              ]);
-              this.children = udfs.status === "fulfilled" ? udfs.value : [];
-              if (udfs.status === "rejected") throw udfs.reason;
+              this.children = await this.currentDelegate.fetchChildren(db, forceDeepRefresh);
+              // If no UDFs found, fetch artifacts to show info message to register UDFs.
+              if (this.children.length === 0) {
+                await this.artifactsDelegate.fetchChildren(db, forceDeepRefresh);
+              }
             } else {
               this.children = await this.currentDelegate.fetchChildren(db, forceDeepRefresh);
             }
@@ -176,12 +179,9 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
         },
         false,
       );
-    } else {
-      // No database selected, clear children
-      this.children = [];
     }
 
-    // Update the view with the new children
+    // either show the empty state or the current delegate's children
     this._onDidChangeTreeData.fire();
   }
 
