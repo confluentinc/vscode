@@ -1,5 +1,4 @@
 import { expect, Locator, Page } from "@playwright/test";
-import { clusterLabel } from "../../../../src/models/kafkaCluster";
 import { ConnectionType } from "../../connectionTypes";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { DirectConnectionForm } from "../webviews/DirectConnectionFormWebview";
@@ -10,6 +9,11 @@ import { View } from "./View";
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  */
+
+export enum clusterLabel {
+  KafkaCluster = "Kafka Cluster",
+  FlinkableKafkaCluster = "Flinkable Kafka Cluster",
+}
 
 export class ResourcesView extends View {
   constructor(page: Page) {
