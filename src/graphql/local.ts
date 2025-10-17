@@ -1,6 +1,7 @@
 import { graphql } from "gql.tada";
 import { LOCAL_CONNECTION_ID } from "../constants";
 import { logError } from "../errors";
+import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
 import { LocalMedusa } from "../models/medusa";
@@ -10,6 +11,12 @@ import { showErrorNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { discoverMedusa } from "../sidecar/connections/local";
 
+/**
+ * Discover local resources (Kafka clusters, Schema Registry, Medusa) via Sidecar
+ *
+ * Will only try to discover Medusa if Medusa integration is enabled in settings.
+ * @returns Zero or single element array of LocalEnvironment objects representing discovered local resources
+ */
 export async function getLocalResources(): Promise<LocalEnvironment[]> {
   let envs: LocalEnvironment[] = [];
 
@@ -47,8 +54,8 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
 
   const localConnections = response.localConnections;
 
-  // Check for Medusa independently of sidecar connections
-  const medusaUri = await discoverMedusa();
+  // If enabled, check for Medusa independently of sidecar connections
+  const medusaUri = ENABLE_MEDUSA_CONTAINER.value ? await discoverMedusa() : undefined;
 
   // Handle case where we have sidecar-managed resources (Kafka/Schema Registry)
   let hasLocalResources = false;

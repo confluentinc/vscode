@@ -1,4 +1,4 @@
-import type { Disposable, TreeDataProvider } from "vscode";
+import type { ConfigurationChangeEvent, Disposable, TreeDataProvider } from "vscode";
 import {
   MarkdownString,
   ThemeColor,
@@ -6,6 +6,7 @@ import {
   TreeItem,
   TreeItemCollapsibleState,
   Uri,
+  workspace,
 } from "vscode";
 import type { ConnectionStatus, ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
@@ -22,6 +23,7 @@ import {
   resourceSearchSet,
 } from "../emitters";
 import { logError } from "../errors";
+import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import type { DirectResourceLoader } from "../loaders";
 import { CCloudResourceLoader, LocalResourceLoader, ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
@@ -514,6 +516,7 @@ export class ResourceViewProvider
       localKafkaConnected.event(this.localConnectedEventHandler.bind(this)),
       localSchemaRegistryConnected.event(this.localConnectedEventHandler.bind(this)),
       localMedusaConnected.event(this.localConnectedEventHandler.bind(this)),
+      workspace.onDidChangeConfiguration(this.changedSettingsEventHandler.bind(this)),
       dockerServiceAvailable.event(this.localConnectedEventHandler.bind(this)),
       directConnectionsChanged.event(this.reconcileDirectConnections.bind(this)),
       connectionStable.event(this.refreshConnection.bind(this)),
@@ -539,6 +542,22 @@ export class ResourceViewProvider
     // or entire Docker subsystem connection state changes.
     // connection state changes.
     await this.refreshConnection(LOCAL_CONNECTION_ID, true);
+  }
+
+  /**
+   * Handle changed settings that may impact the resources view.
+   */
+  async changedSettingsEventHandler(event: ConfigurationChangeEvent): Promise<void> {
+    // If the user changed the Medusa integration setting, refresh local connection row.
+    if (event.affectsConfiguration(ENABLE_MEDUSA_CONTAINER.id)) {
+      this.logger.debug(
+        "Enable Medusa Container setting changed, refreshing local connection row.",
+      );
+
+      await this.refreshConnection(LOCAL_CONNECTION_ID, true);
+    }
+
+    // TODO handle LOCAL_DOCKER_SOCKET_PATH changes, etc.
   }
 
   /**
