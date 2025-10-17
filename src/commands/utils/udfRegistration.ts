@@ -265,6 +265,8 @@ export async function executeUdfRegistrations(
         kind: "quick-register",
         cloud: selectedFlinkDatabase.provider,
         region: selectedFlinkDatabase.region,
+        registrationNum: i + 1,
+        totalRegistrations: registrations.length,
       });
     }
   }
