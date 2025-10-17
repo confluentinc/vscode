@@ -1,9 +1,12 @@
-import { TreeItem, Uri } from "vscode";
-import { ContextValues, setContextValue } from "../../context/values";
+import type { TreeItem } from "vscode";
+import { Uri } from "vscode";
+import type { ContextValues } from "../../context/values";
+import { setContextValue } from "../../context/values";
 import { updateCollapsibleStateFromSearch } from "../utils/collapsing";
 import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "../utils/search";
-import { BaseViewProviderData } from "./base";
-import { EnvironmentedBaseViewProviderData, ParentedBaseViewProvider } from "./parentedBase";
+import type { BaseViewProviderData } from "./base";
+import type { EnvironmentedBaseViewProviderData } from "./parentedBase";
+import { ParentedBaseViewProvider } from "./parentedBase";
 
 export abstract class ViewProviderDelegate<
   M extends string,

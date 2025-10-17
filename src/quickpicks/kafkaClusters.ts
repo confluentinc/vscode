@@ -4,16 +4,16 @@ import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { Environment } from "../models/environment";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import {
+import type { Environment } from "../models/environment";
+import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import type {
   CCloudFlinkDbKafkaCluster,
   CCloudKafkaCluster,
   KafkaCluster,
 } from "../models/kafkaCluster";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
 import { getTopicViewProvider } from "../viewProviders/topics";
-import { QuickPickItemWithValue } from "./types";
+import type { QuickPickItemWithValue } from "./types";
 
 const logger = new Logger("quickpicks.kafkaClusters");
 

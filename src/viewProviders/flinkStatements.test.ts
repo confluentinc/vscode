@@ -1,7 +1,8 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { window } from "vscode";
-import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
+import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
+import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
@@ -14,8 +15,9 @@ import {
   STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
 } from "../extensionSettings/constants";
-import { CCloudResourceLoader } from "../loaders";
-import { FlinkStatement, FlinkStatementId, Phase } from "../models/flinkStatement";
+import type { CCloudResourceLoader } from "../loaders";
+import type { FlinkStatement, FlinkStatementId } from "../models/flinkStatement";
+import { Phase } from "../models/flinkStatement";
 import * as telemetryEvents from "../telemetry/events";
 import { FlinkStatementsViewProvider } from "./flinkStatements";
 import { SEARCH_DECORATION_URI_SCHEME } from "./utils/search";

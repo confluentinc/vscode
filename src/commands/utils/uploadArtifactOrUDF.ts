@@ -1,6 +1,6 @@
 import path from "path";
 import * as vscode from "vscode";
-import {
+import type {
   CreateArtifactV1FlinkArtifact201Response,
   CreateArtifactV1FlinkArtifactRequest,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
@@ -10,9 +10,10 @@ import { artifactsChanged } from "../../emitters";
 import { extractResponseBody, isResponseError, logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
-import { FlinkArtifact } from "../../models/flinkArtifact";
-import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
-import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
+import type { FlinkArtifact } from "../../models/flinkArtifact";
+import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
+import type { EnvironmentId, IEnvProviderRegion } from "../../models/resource";
+import { CloudProvider } from "../../models/resource";
 import { showInfoNotificationWithButtons } from "../../notifications";
 import { getSidecar } from "../../sidecar";
 import { logUsage, UserEvent } from "../../telemetry/events";

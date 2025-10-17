@@ -1,12 +1,13 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { KAFKA_TOPIC_OPERATIONS } from "../authz/constants";
-import { KafkaTopicOperation } from "../authz/types";
-import { ConnectionType } from "../clients/sidecar";
+import type { KafkaTopicOperation } from "../authz/types";
+import type { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH, IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
-import { Subject } from "./schema";
+import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
+import { isCCloud } from "./resource";
+import type { Subject } from "./schema";
 
 /** Main class representing Kafka topic */
 export class KafkaTopic extends Data implements IResourceBase, ISearchable {

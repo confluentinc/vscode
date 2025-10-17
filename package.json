@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.8.0-42",
+  "version": "1.8.0-48",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -720,12 +720,6 @@
         "command": "confluent.support.saveSupportZip",
         "title": "Save Support File (.zip)",
         "category": "Confluent: Support"
-      },
-      {
-        "command": "confluent.testInspectJar",
-        "icon": "$(file-binary)",
-        "title": "Inspect JAR File",
-        "category": "Confluent: Flink Artifacts"
       },
       {
         "command": "confluent.topic.consume",
@@ -1604,10 +1598,6 @@
           "when": "true"
         },
         {
-          "command": "confluent.testInspectJar",
-          "when": "false"
-        },
-        {
           "command": "confluent.topic.consume",
           "when": "true"
         },
@@ -2135,11 +2125,6 @@
           "command": "confluent.uploadArtifact",
           "group": "confluent@1",
           "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && resourceExtname == .jar"
-        },
-        {
-          "command": "confluent.testInspectJar",
-          "group": "confluent@2",
-          "when": "isDevelopment && resourceExtname == .jar"
         }
       ],
       "confluent.flinkdatabase.viewMode": [

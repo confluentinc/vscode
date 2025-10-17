@@ -1,21 +1,24 @@
-import { Disposable, TreeDataProvider, TreeItem, Uri } from "vscode";
+import type { Disposable, TreeDataProvider, TreeItem } from "vscode";
+import { Uri } from "vscode";
 import { ContextValues } from "../context/values";
+import type {
+  EnvironmentChangeEvent,
+  SchemaVersionChangeEvent,
+  SubjectChangeEvent,
+} from "../emitters";
 import {
   environmentChanged,
-  EnvironmentChangeEvent,
   localSchemaRegistryConnected,
   schemaSearchSet,
   schemaSubjectChanged,
   schemasViewResourceChanged,
-  SchemaVersionChangeEvent,
   schemaVersionsChanged,
-  SubjectChangeEvent,
 } from "../emitters";
 import { logError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
-import { SchemaRegistry } from "../models/schemaRegistry";
+import type { SchemaRegistry } from "../models/schemaRegistry";
 import { ParentedBaseViewProvider } from "./baseModels/parentedBase";
 import { updateCollapsibleStateFromSearch } from "./utils/collapsing";
 import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./utils/search";

@@ -3,13 +3,13 @@ import alias from "@rollup/plugin-alias";
 import virtual from "@rollup/plugin-virtual";
 import { createFilter } from "@rollup/pluginutils";
 import { readFileSync } from "node:fs";
-import { Plugin } from "rollup";
+import type { Plugin } from "rollup";
 import esbuild from "rollup-plugin-esbuild";
 import sanitize from "sanitize-html";
-import { SinonStub } from "sinon";
-import { ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
+import type { SinonStub } from "sinon";
+import type { ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
 import { test } from "./baseTest";
-import { ScaffoldV1TemplateSpecAlt } from "./scaffold-form";
+import type { ScaffoldV1TemplateSpecAlt } from "./scaffold-form";
 
 const template = readFileSync(new URL("scaffold-form.html", import.meta.url), "utf8");
 

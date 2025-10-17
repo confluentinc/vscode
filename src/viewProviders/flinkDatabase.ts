@@ -1,4 +1,4 @@
-import { Disposable } from "vscode";
+import type { Disposable } from "vscode";
 import { ContextValues } from "../context/values";
 import {
   artifactsChanged,
@@ -9,12 +9,13 @@ import {
 } from "../emitters";
 import { logError } from "../errors";
 import { ResourceLoader } from "../loaders";
-import { FlinkArtifact } from "../models/flinkArtifact";
-import { FlinkRelation, FlinkRelationColumn, FlinkUdf } from "../models/flinkSystemCatalog";
-import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
-import { IEnvProviderRegion } from "../models/resource";
+import type { FlinkArtifact } from "../models/flinkArtifact";
+import type { FlinkRelation, FlinkRelationColumn, FlinkUdf } from "../models/flinkSystemCatalog";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import type { IEnvProviderRegion } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
-import { MultiModeViewProvider, ViewProviderDelegate } from "./baseModels/multiViewBase";
+import type { ViewProviderDelegate } from "./baseModels/multiViewBase";
+import { MultiModeViewProvider } from "./baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 import {
   FlinkArtifactsDelegate,

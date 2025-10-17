@@ -1,25 +1,19 @@
-import {
+import type {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
   Command,
-  LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolConfirmationMessages,
   LanguageModelToolInvocationOptions,
   LanguageModelToolInvocationPrepareOptions,
-  LanguageModelToolResult,
-  MarkdownString,
   PreparedToolInvocation,
   ProviderResult,
 } from "vscode";
+import { LanguageModelTextPart, LanguageModelToolResult, MarkdownString } from "vscode";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../../authn/constants";
-import {
-  Connection,
-  ConnectionsList,
-  ConnectionsResourceApi,
-  ConnectionType,
-} from "../../clients/sidecar";
+import type { Connection, ConnectionsList, ConnectionsResourceApi } from "../../clients/sidecar";
+import { ConnectionType } from "../../clients/sidecar";
 import { ContextValues, getContextValue } from "../../context/values";
 import { Logger } from "../../logging";
 import { getConnectionLabel } from "../../models/resource";

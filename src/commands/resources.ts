@@ -1,7 +1,8 @@
-import { Disposable } from "vscode";
+import type { Disposable } from "vscode";
 
 import { registerCommandWithLogging } from ".";
-import { AnyConnectionRow, ConnectionRow, ResourceViewProvider } from "../viewProviders/resources";
+import type { AnyConnectionRow } from "../viewProviders/resources";
+import { ConnectionRow, ResourceViewProvider } from "../viewProviders/resources";
 
 /** User gestured to refresh a single connection in the resources view when new resource view provider is enabled. */
 export async function refreshConnectionCommand(connectionRow: AnyConnectionRow): Promise<void> {

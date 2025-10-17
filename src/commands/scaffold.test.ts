@@ -7,7 +7,7 @@ import {
   TEST_CCLOUD_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { CCloudResourceLoader } from "../loaders";
+import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { KafkaTopic } from "../models/topic";
 import * as notifications from "../notifications";

@@ -3,8 +3,9 @@ import sinon from "sinon";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { TEST_CCLOUD_KAFKA_TOPIC, TEST_LOCAL_KAFKA_TOPIC } from "../../tests/unit/testResources";
 import { createTestTopicData } from "../../tests/unit/testUtils";
-import { TopicData, TopicV3Api } from "../clients/kafkaRest";
-import { SidecarHandle } from "../sidecar";
+import type { TopicData } from "../clients/kafkaRest";
+import { TopicV3Api } from "../clients/kafkaRest";
+import type { SidecarHandle } from "../sidecar";
 import { KAFKA_TOPIC_OPERATIONS } from "./constants";
 import { fetchTopicAuthorizedOperations } from "./topics";
 

@@ -1,5 +1,6 @@
-import { SinonSandbox, SinonStub, SinonStubbedInstance } from "sinon";
-import { ExtensionContext, Memento, SecretStorage } from "vscode";
+import type { SinonSandbox, SinonStub, SinonStubbedInstance } from "sinon";
+import type { Memento, SecretStorage } from "vscode";
+import { ExtensionContext } from "vscode";
 import { ResourceManager } from "../../src/storage/resourceManager";
 import { GlobalState, WorkspaceState } from "../../src/storage/types";
 import * as storageUtils from "../../src/storage/utils";

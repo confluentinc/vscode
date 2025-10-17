@@ -2,7 +2,8 @@
 
 import { ConnectedState, ConnectionType } from "../../../src/clients/sidecar";
 import { CCLOUD_AUTH_CALLBACK_URI } from "../../../src/constants";
-import { ConnectionEventAction, Message, MessageType } from "../../../src/ws/messageTypes";
+import type { Message } from "../../../src/ws/messageTypes";
+import { ConnectionEventAction, MessageType } from "../../../src/ws/messageTypes";
 
 export const GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE: Message<MessageType.CONNECTION_EVENT> = {
   headers: {

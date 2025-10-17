@@ -22,9 +22,9 @@ import {
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { ArtifactV1FlinkArtifactMetadata } from "../clients/flinkArtifacts";
+import type { ArtifactV1FlinkArtifactMetadata } from "../clients/flinkArtifacts";
+import type { ConnectionSpec } from "../clients/sidecar";
 import {
-  ConnectionSpec,
   ConnectionType,
   KafkaClusterConfigFromJSON,
   KafkaClusterConfigToJSON,
@@ -33,33 +33,29 @@ import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkUdf } from "../models/flinkSystemCatalog";
-import {
-  CCloudFlinkDbKafkaCluster,
-  CCloudKafkaCluster,
-  KafkaCluster,
-} from "../models/kafkaCluster";
-import { ConnectionId, EnvironmentId, IEnvProviderRegion } from "../models/resource";
+import type { CCloudFlinkDbKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import type { ConnectionId, EnvironmentId, IEnvProviderRegion } from "../models/resource";
 import { Subject } from "../models/schema";
-import {
-  CCloudSchemaRegistry,
-  LocalSchemaRegistry,
-  SchemaRegistry,
-} from "../models/schemaRegistry";
+import type { SchemaRegistry } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry, LocalSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { UriMetadataKeys } from "./constants";
-import {
+import type {
   CustomConnectionSpec,
+  DirectConnectionsById,
+  GeneratedWorkspaceKey,
+  ResourceManager,
+} from "./resourceManager";
+import {
   CustomConnectionSpecFromJSON,
   CustomConnectionSpecToJSON,
-  DirectConnectionsById,
   GeneratedKeyResourceType,
-  GeneratedWorkspaceKey,
   getResourceManager,
   mapToString,
-  ResourceManager,
   stringToMap,
 } from "./resourceManager";
-import { UriMetadata, UriMetadataMap } from "./types";
+import type { UriMetadata, UriMetadataMap } from "./types";
 import { clearWorkspaceState, getWorkspaceState } from "./utils";
 
 describe("storage/resourceManager", () => {

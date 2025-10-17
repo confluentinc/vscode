@@ -3,7 +3,8 @@ import * as sinon from "sinon";
 import { getSidecar } from ".";
 import { GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE } from "../../tests/unit/testResources/websocketMessages";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { Message, MessageType, newMessageHeaders, WorkspacesChangedBody } from "../ws/messageTypes";
+import type { Message, WorkspacesChangedBody } from "../ws/messageTypes";
+import { MessageType, newMessageHeaders } from "../ws/messageTypes";
 import { constructMessageRouter, WebsocketManager } from "./websocketManager";
 
 // tests over WebsocketManager

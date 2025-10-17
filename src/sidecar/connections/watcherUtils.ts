@@ -1,7 +1,8 @@
 // helpers for connection status testing, factored out for test spying
 
 import { handleUpdatedConnection } from "../../authn/ccloudStateHandling";
-import { ConnectedState, Connection, ConnectionType } from "../../clients/sidecar/models";
+import type { Connection } from "../../clients/sidecar/models";
+import { ConnectedState, ConnectionType } from "../../clients/sidecar/models";
 import {
   connectionDisconnected,
   connectionStable,
@@ -9,8 +10,8 @@ import {
   environmentChanged,
 } from "../../emitters";
 import { Logger } from "../../logging";
-import { ConnectionId, EnvironmentId } from "../../models/resource";
-import { ConnectionEventBody } from "../../ws/messageTypes";
+import type { ConnectionId, EnvironmentId } from "../../models/resource";
+import type { ConnectionEventBody } from "../../ws/messageTypes";
 
 const logger = new Logger("sidecar.connections.statusUtils");
 

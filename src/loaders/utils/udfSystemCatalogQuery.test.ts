@@ -5,10 +5,10 @@ import {
   makeUdfFunctionRow,
   makeUdfParameterRow,
 } from "../../../tests/unit/testResources/makeUdfRow";
-import { FlinkUdfParameter } from "../../models/flinkSystemCatalog";
+import type { FlinkUdfParameter } from "../../models/flinkSystemCatalog";
+import type { RawUdfSystemCatalogRow } from "./udfSystemCatalogQuery";
 import {
   getUdfSystemCatalogQuery,
-  RawUdfSystemCatalogRow,
   sortUdfSystemCatalogRows,
   transformUdfSystemCatalogRows,
 } from "./udfSystemCatalogQuery";

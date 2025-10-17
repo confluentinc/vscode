@@ -1,5 +1,5 @@
 import { FlinkUdf } from "../../../src/models/flinkSystemCatalog";
-import { CCloudFlinkDbKafkaCluster } from "../../../src/models/kafkaCluster";
+import type { CCloudFlinkDbKafkaCluster } from "../../../src/models/kafkaCluster";
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "./kafkaCluster";
 
 /** Make a quick FlinkUDF instance for tests. Defaults to being from TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER. */

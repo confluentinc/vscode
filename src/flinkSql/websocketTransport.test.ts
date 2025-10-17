@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { Message, RequestMessage } from "vscode-languageclient/node";
+import type { Message, RequestMessage } from "vscode-languageclient/node";
 import { WebSocket } from "ws";
 import { Logger } from "../logging";
 import { WebsocketTransport } from "./websocketTransport";

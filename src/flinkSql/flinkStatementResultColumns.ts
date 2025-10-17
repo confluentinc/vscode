@@ -1,4 +1,4 @@
-import { SqlV1ResultSchema } from "../clients/flinkSql";
+import type { SqlV1ResultSchema } from "../clients/flinkSql";
 
 export type ViewMode = "table" | "changelog";
 

@@ -17,7 +17,7 @@ import {
   DirectKafkaCluster,
   LocalKafkaCluster,
 } from "./kafkaCluster";
-import { EnvironmentId } from "./resource";
+import type { EnvironmentId } from "./resource";
 import { KafkaTopic } from "./topic";
 
 describe("models/kafkaCluster", () => {

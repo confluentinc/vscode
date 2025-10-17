@@ -1,5 +1,5 @@
 import { MarkdownString } from "vscode";
-import {
+import type {
   ScaffoldV1Template,
   ScaffoldV1TemplateOption,
   ScaffoldV1TemplateSpec,

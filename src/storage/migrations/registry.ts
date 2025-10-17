@@ -1,5 +1,5 @@
 // import future migration versions here
-import { BaseMigration } from "./base";
+import type { BaseMigration } from "./base";
 import { MigrationV2 } from "./v2";
 
 /** Mapping of storage version numbers to migration class instances. */

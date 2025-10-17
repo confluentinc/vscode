@@ -8,7 +8,7 @@ import {
   TEST_KAFKA_CONTAINERS,
 } from "../../../tests/unit/testResources/docker";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
-import {
+import type {
   ContainerCreateOperationRequest,
   ContainerCreateResponse,
   ContainerInspectResponse,

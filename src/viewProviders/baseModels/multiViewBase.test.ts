@@ -1,11 +1,12 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { CancellationToken, EventEmitter, Progress, TreeItem, window } from "vscode";
+import type { CancellationToken, Progress } from "vscode";
+import { EventEmitter, TreeItem, window } from "vscode";
 import { ConnectionType } from "../../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../constants";
 import * as contextValues from "../../context/values";
-import { ContextValues } from "../../context/values";
-import { ConnectionId, EnvironmentId } from "../../models/resource";
+import type { ContextValues } from "../../context/values";
+import type { ConnectionId, EnvironmentId } from "../../models/resource";
 import * as collapsingUtils from "../utils/collapsing";
 import { SEARCH_DECORATION_URI_SCHEME } from "../utils/search";
 import { MultiModeViewProvider, ViewProviderDelegate } from "./multiViewBase";

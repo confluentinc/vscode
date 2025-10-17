@@ -5,16 +5,16 @@ import { flinkDatabaseViewMode, udfsChanged } from "../emitters";
 import { isResponseError, logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { FlinkArtifact } from "../models/flinkArtifact";
-import { FlinkUdf } from "../models/flinkSystemCatalog";
-import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import type { FlinkArtifact } from "../models/flinkArtifact";
+import type { FlinkUdf } from "../models/flinkSystemCatalog";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
   showInfoNotificationWithButtons,
 } from "../notifications";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-import { UriMetadata } from "../storage/types";
+import type { UriMetadata } from "../storage/types";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
