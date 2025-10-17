@@ -1,4 +1,4 @@
-import { ProgressLocation, Uri, window } from "vscode";
+import { Progress, ProgressLocation, Uri, window } from "vscode";
 import { udfsChanged } from "../../emitters";
 import { logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
@@ -22,8 +22,9 @@ export interface UdfRegistrationData {
   functionName: string;
 }
 // internal for ease of passing it down a level
-export interface ProgressReporter {
-  report(value: { message?: string; increment?: number }): void;
+export interface ProgressReport {
+  message?: string;
+  increment?: number;
 }
 
 // internal for reuse in multiple functions along the way
@@ -208,7 +209,7 @@ export async function executeUdfRegistrations(
   registrations: UdfRegistrationData[],
   artifactId: string,
   selectedFlinkDatabase: CCloudFlinkDbKafkaCluster,
-  progress: ProgressReporter,
+  progress: Progress<ProgressReport>,
 ): Promise<RegistrationResults> {
   const ccloudResourceLoader = CCloudResourceLoader.getInstance();
 
@@ -241,6 +242,8 @@ export async function executeUdfRegistrations(
         kind: "quick-register",
         cloud: selectedFlinkDatabase.provider,
         region: selectedFlinkDatabase.region,
+        registrationNum: i + 1,
+        totalRegistrations: registrations.length,
       });
     } catch (error) {
       logger.error(`Failed to register UDF ${registration.functionName}:`, error);
