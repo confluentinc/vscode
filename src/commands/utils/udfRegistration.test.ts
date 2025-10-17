@@ -1,6 +1,8 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoaders";
+import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources/kafkaCluster";
 import * as emitters from "../../emitters";
 import { CCloudResourceLoader } from "../../loaders";
 import * as notifications from "../../notifications";
@@ -10,13 +12,21 @@ import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import {
   detectClassesAndRegisterUDFs,
   executeUdfRegistrations,
-  ProgressReporter,
+  ProgressReport,
   promptForFunctionNames,
   registerMultipleUdfs,
   reportRegistrationResults,
   selectClassesForUdfRegistration,
   UdfRegistrationData,
 } from "./udfRegistration";
+
+// test helper for creating UdfRegistrationData stubs
+function makeUdfReg(name: string): UdfRegistrationData {
+  return {
+    classInfo: { className: `com.acme.${name}Class`, simpleName: `${name}Class` },
+    functionName: name,
+  };
+}
 
 describe("commands/utils/udfRegistration", () => {
   let sandbox: sinon.SinonSandbox;
@@ -186,16 +196,10 @@ describe("commands/utils/udfRegistration", () => {
   });
 
   describe("registerMultipleUdfs", () => {
-    const exampleDatabase = { provider: "aws", region: "us-east-1" } as any;
-    function makeRegistration(name: string): UdfRegistrationData {
-      return {
-        classInfo: { className: `com.acme.${name}Class`, simpleName: `${name}Class` },
-        functionName: name,
-      };
-    }
+    const exampleDatabase = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
     let withProgressStub: sinon.SinonStub;
-    let getDbStub: sinon.SinonStub;
-    let loaderStub: sinon.SinonStub;
+    let getDbViewStub: sinon.SinonStubbedInstance<FlinkDatabaseViewProvider>;
+    let loaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
     let infoNotifStub: sinon.SinonStub;
     let errorMsgStub: sinon.SinonStub;
     let fireStub: sinon.SinonStub;
@@ -204,24 +208,24 @@ describe("commands/utils/udfRegistration", () => {
       withProgressStub = sandbox
         .stub(vscode.window, "withProgress")
         .callsFake(async (_o: any, task: any) => task({ report: () => {} }));
-      getDbStub = sandbox
-        .stub(FlinkDatabaseViewProvider, "getInstance")
-        .returns({ database: exampleDatabase } as unknown as FlinkDatabaseViewProvider);
-      loaderStub = sandbox.stub(CCloudResourceLoader, "getInstance").returns({
-        executeBackgroundFlinkStatement: sandbox.stub().resolves(undefined),
-      } as unknown as CCloudResourceLoader);
+      getDbViewStub = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+      sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(getDbViewStub);
+      getDbViewStub.resource = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+
+      loaderStub = getStubbedCCloudResourceLoader(sandbox);
+
       infoNotifStub = sandbox.stub(notifications, "showInfoNotificationWithButtons").resolves();
       errorMsgStub = sandbox.stub(vscode.window, "showErrorMessage").resolves(undefined);
       fireStub = sandbox.stub(emitters.udfsChanged, "fire");
     });
 
     it("throws when no database selected", async () => {
-      getDbStub.returns({ database: undefined } as unknown as FlinkDatabaseViewProvider);
+      getDbViewStub.resource = null; // no db selected
       const qpStub = sandbox
         .stub(kafkaClusterQuickpicks, "flinkDatabaseQuickpick")
         .resolves(undefined); // user did not select a db
       await assert.rejects(
-        () => registerMultipleUdfs([makeRegistration("foo")], "artifact123"),
+        () => registerMultipleUdfs([makeUdfReg("foo")], "artifact123"),
         /No Flink database selected/,
       );
       sinon.assert.calledOnce(qpStub);
@@ -237,94 +241,72 @@ describe("commands/utils/udfRegistration", () => {
     });
 
     it("registers each UDF successfully returning successes", async () => {
-      const regs = [makeRegistration("foo"), makeRegistration("bar")];
+      const regs = [makeUdfReg("foo"), makeUdfReg("bar")];
       const result = await registerMultipleUdfs(regs, "artifact123");
       sinon.assert.calledOnce(withProgressStub);
-      const execStub = loaderStub.returnValues[0]
-        .executeBackgroundFlinkStatement as sinon.SinonStub;
-      sinon.assert.callCount(execStub, 2);
+      sinon.assert.calledTwice(loaderStub.executeBackgroundFlinkStatement);
       sinon.assert.calledOnce(fireStub);
       assert.deepStrictEqual(result.successes, ["foo", "bar"]);
       assert.deepStrictEqual(result.failures, []);
     });
 
     it("handles partial failures returning mixed results", async () => {
-      const regs = [makeRegistration("okFn"), makeRegistration("failFn")];
-      const execStub = sandbox
-        .stub()
+      const regs = [makeUdfReg("okFn"), makeUdfReg("failFn")];
+      loaderStub.executeBackgroundFlinkStatement
         .onFirstCall()
         .resolves(undefined)
         .onSecondCall()
         .rejects(new Error("boom failure"));
-      loaderStub.returns({
-        executeBackgroundFlinkStatement: execStub,
-      } as unknown as CCloudResourceLoader);
 
       const result = await registerMultipleUdfs(regs, "artifact123");
+
+      sinon.assert.calledTwice(loaderStub.executeBackgroundFlinkStatement);
       assert.deepStrictEqual(result.successes, ["okFn"]);
       assert.strictEqual(result.failures.length, 1);
       assert.strictEqual(result.failures[0].functionName, "failFn");
     });
 
     it("calls the flinkDatabaseQuickpick function when no database is selected", async () => {
-      getDbStub.returns({ database: undefined } as unknown as FlinkDatabaseViewProvider);
+      getDbViewStub.resource = null; // no db selected
       const qpStub = sandbox
         .stub(kafkaClusterQuickpicks, "flinkDatabaseQuickpick")
         .resolves(exampleDatabase);
-      await registerMultipleUdfs([makeRegistration("foo")], "artifact123");
+      await registerMultipleUdfs([makeUdfReg("foo")], "artifact123");
       sinon.assert.calledOnce(qpStub);
     });
   });
 
   describe("executeUdfRegistrations", () => {
-    let sandboxExec: sinon.SinonSandbox;
-    let loaderStub: sinon.SinonStub;
+    const db = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+    let loaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
     let fireStub: sinon.SinonStub;
 
-    const db = { provider: "aws", region: "us-west-2" } as any;
-
-    function makeReg(name: string): UdfRegistrationData {
-      return {
-        classInfo: { className: `com.acme.${name}Cls`, simpleName: `${name}Cls` },
-        functionName: name,
-      };
-    }
-
     beforeEach(() => {
-      sandboxExec = sandbox;
-      loaderStub = sandboxExec.stub(CCloudResourceLoader, "getInstance").returns({
-        executeBackgroundFlinkStatement: sandboxExec.stub().resolves(undefined),
-      } as unknown as CCloudResourceLoader);
-      fireStub = sandboxExec.stub(emitters.udfsChanged, "fire");
+      loaderStub = getStubbedCCloudResourceLoader(sandbox);
+      fireStub = sandbox.stub(emitters.udfsChanged, "fire");
     });
-
     it("executes statements and returns all successes", async () => {
-      const regs = [makeReg("alpha"), makeReg("beta")];
-      const progress: ProgressReporter = { report: () => {} };
+      const regs = [makeUdfReg("alpha"), makeUdfReg("beta")];
+      const progress: vscode.Progress<ProgressReport> = { report: () => {} };
       const result = await executeUdfRegistrations(regs, "artifactABC", db, progress);
-      const execStub = loaderStub.returnValues[0]
-        .executeBackgroundFlinkStatement as sinon.SinonStub;
-      sinon.assert.callCount(execStub, 2);
+      sinon.assert.calledTwice(loaderStub.executeBackgroundFlinkStatement);
       assert.deepStrictEqual(result.successes, ["alpha", "beta"]);
       assert.deepStrictEqual(result.failures, []);
       sinon.assert.calledOnce(fireStub);
     });
 
     it("records failures while continuing processing", async () => {
-      const regs = [makeReg("okFn"), makeReg("badFn"), makeReg("alsoOk")];
-      const execStub = sandboxExec
-        .stub()
+      const regs = [makeUdfReg("okFn"), makeUdfReg("badFn"), makeUdfReg("alsoOk")];
+
+      loaderStub.executeBackgroundFlinkStatement
         .onFirstCall()
         .resolves(undefined)
         .onSecondCall()
         .rejects(new Error("boom"))
         .onThirdCall()
         .resolves(undefined);
-      loaderStub.returns({
-        executeBackgroundFlinkStatement: execStub,
-      } as unknown as CCloudResourceLoader);
 
-      const progress: ProgressReporter = { report: () => {} };
+      const progress: vscode.Progress<ProgressReport> = { report: () => {} };
       const result = await executeUdfRegistrations(regs, "artifactZ", db, progress);
 
       assert.deepStrictEqual(result.successes, ["okFn", "alsoOk"]);
@@ -334,15 +316,12 @@ describe("commands/utils/udfRegistration", () => {
     });
 
     it("extracts Flink detail from error message when present", async () => {
-      const regs = [makeReg("detailFn")];
-      const execStub = sandboxExec
-        .stub()
-        .rejects(new Error("Some wrapper msg Error detail: Specific failure reason here"));
-      loaderStub.returns({
-        executeBackgroundFlinkStatement: execStub,
-      } as unknown as CCloudResourceLoader);
+      const regs = [makeUdfReg("detailFn")];
+      loaderStub.executeBackgroundFlinkStatement.rejects(
+        new Error("Some wrapper msg Error detail: Specific failure reason here"),
+      );
 
-      const progress: ProgressReporter = { report: () => {} };
+      const progress: vscode.Progress<ProgressReport> = { report: () => {} };
       const result = await executeUdfRegistrations(regs, "artifactY", db, progress);
 
       assert.strictEqual(result.successes.length, 0);
@@ -351,9 +330,9 @@ describe("commands/utils/udfRegistration", () => {
     });
 
     it("reports progress messages", async () => {
-      const regs = [makeReg("one")];
+      const regs = [makeUdfReg("one")];
       const reports: string[] = [];
-      const progress: ProgressReporter = {
+      const progress: vscode.Progress<ProgressReport> = {
         report: (v) => {
           if (v.message) reports.push(v.message);
         },
