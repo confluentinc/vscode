@@ -30,9 +30,12 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
   describe("FlinkDatabaseViewProvider", () => {
     let viewProvider: FlinkDatabaseViewProvider;
+    let artifactsDelegateFetchChildrenStub: sinon.SinonStub;
 
     beforeEach(() => {
       viewProvider = FlinkDatabaseViewProvider.getInstance();
+      const artifactsDelegate = viewProvider["artifactsDelegate"];
+      artifactsDelegateFetchChildrenStub = sandbox.stub(artifactsDelegate, "fetchChildren");
     });
 
     afterEach(() => {
@@ -110,9 +113,9 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         sinon.assert.calledOnce(windowWithProgressStub);
         sinon.assert.calledOnce(logErrorStub);
-        sinon.assert.calledWith(logErrorStub, fakeError, "Failed to load Flink artifacts.");
+        sinon.assert.calledWith(logErrorStub, fakeError, "Failed to load Flink UDFs");
         sinon.assert.calledOnce(showErrorNotificationStub);
-        sinon.assert.calledWith(showErrorNotificationStub, "Failed to load Flink artifacts.");
+        sinon.assert.calledWith(showErrorNotificationStub, "Failed to load Flink UDFs");
       });
 
       it("should use the current delegate's loading message in progress indicator", async () => {
@@ -128,7 +131,6 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
     describe("artifactsChangedHandler", () => {
       let refreshStub: sinon.SinonStub;
-      let artifactsDelegateFetchChildrenStub: sinon.SinonStub;
 
       const someOtherEnvRegion = {
         provider: "aws",
@@ -138,8 +140,6 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       beforeEach(async () => {
         refreshStub = sandbox.stub(viewProvider, "refresh").resolves();
-        const artifactsDelegate = viewProvider["artifactsDelegate"];
-        artifactsDelegateFetchChildrenStub = sandbox.stub(artifactsDelegate, "fetchChildren");
 
         // Ensure we're in artifacts mode
         await viewProvider.switchMode(FlinkDatabaseViewProviderMode.Artifacts);
@@ -301,6 +301,60 @@ describe("viewProviders/flinkDatabase.ts", () => {
         await viewProvider.updateTreeViewDescription();
 
         assert.strictEqual(getDescription(), TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name);
+      });
+    });
+
+    describe("getChildren()", () => {
+      it("should return info item when in UDF mode with no UDFs but artifacts exist", async () => {
+        await viewProvider.switchMode(FlinkDatabaseViewProviderMode.UDFs);
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+        viewProvider["udfsDelegate"]["children"] = [];
+        viewProvider["artifactsDelegate"]["children"] = [
+          { id: "artifact-1" },
+          { id: "artifact-2" },
+        ] as any;
+
+        const children = viewProvider.getChildren();
+
+        assert.strictEqual(children.length, 1);
+        assert.strictEqual(children[0]._isInfo, true);
+        assert.strictEqual(children[0]._count, 2);
+      });
+
+      it("should return normal children when in UDF mode with UDFs present", async () => {
+        await viewProvider.switchMode(FlinkDatabaseViewProviderMode.UDFs);
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+
+        const fakeUdfs = [{ id: "udf-1" }, { id: "udf-2" }] as any;
+        viewProvider["udfsDelegate"]["children"] = fakeUdfs;
+
+        const children = viewProvider.getChildren();
+
+        assert.deepStrictEqual(children, fakeUdfs);
+      });
+    });
+
+    describe("getTreeItem()", () => {
+      it("should return correct TreeItem for info element", () => {
+        const infoElement = { _isInfo: true, _count: 3 };
+
+        const treeItem = viewProvider.getTreeItem(infoElement);
+
+        assert.strictEqual(treeItem.label, "Found 3 uploaded artifacts");
+        assert.strictEqual(treeItem.description, "Switch to Flink Artifacts to register UDFs");
+        assert.strictEqual(
+          treeItem.command?.command,
+          "confluent.flinkdatabase.setArtifactsViewMode",
+        );
+      });
+
+      it("should return correct TreeItem from super.getTreeItem() for non-info elements", async () => {
+        await viewProvider.switchMode(FlinkDatabaseViewProviderMode.UDFs);
+        const delegateGetTreeItemStub = sandbox.stub(viewProvider["udfsDelegate"], "getTreeItem");
+
+        viewProvider.getTreeItem({ id: "udf-1", name: "test-udf" });
+
+        sinon.assert.calledOnce(delegateGetTreeItemStub);
       });
     });
   });
