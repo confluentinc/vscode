@@ -1,9 +1,10 @@
 import { TreeItem } from "vscode";
-import { extractResponseBody, isResponseError, logError } from "../../errors";
+import { extractResponseBody, isResponseError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../../models/flinkArtifact";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
+import { FlinkDatabaseViewProvider } from "../flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "./constants";
 
 export class FlinkArtifactsDelegate extends ViewProviderDelegate<
@@ -30,8 +31,9 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
   }
 }
 
-export async function revealArtifact(artifact: FlinkArtifact): Promise<void> {
-// 
+export async function revealArtifact(): Promise<void> {
+  const flinkDatabaseViewProvider = FlinkDatabaseViewProvider.getInstance();
+  await flinkDatabaseViewProvider.reveal();
 }
 
 export async function getFlinkArtifactsErrorMessage(error: unknown): Promise<string> {

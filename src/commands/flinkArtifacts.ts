@@ -18,6 +18,7 @@ import {
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
+import { revealArtifact } from "../viewProviders/multiViewDelegates/flinkArtifactsDelegate";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import { detectClassesAndRegisterUDFs } from "./utils/udfRegistration";
 import {
@@ -56,6 +57,7 @@ export async function uploadArtifactCommand(
       },
       async (progress) => {
         const response = await executeArtifactUpload(params, progress);
+        const viewArtifactsButton = "View Artifacts";
         if (response) {
           logUsage(UserEvent.FlinkArtifactAction, {
             action: "upload",
@@ -69,6 +71,9 @@ export async function uploadArtifactCommand(
             {
               "Register UDFs": async () => {
                 await detectClassesAndRegisterUDFs({ selectedFile: params.selectedFile });
+              },
+              [viewArtifactsButton]: async () => {
+                await revealArtifact();
               },
             },
           );

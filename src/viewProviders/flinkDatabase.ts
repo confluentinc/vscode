@@ -1,3 +1,4 @@
+import * as vscode from "vscode";
 import { Disposable } from "vscode";
 import { ContextValues } from "../context/values";
 import {
@@ -170,7 +171,17 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
     }
   }
 
-  // getParent method here always returns undefined because it is not going ot reveal interior, nothing under expandedItem
-  // reveal cascades call down to current delegate, FIRST CHECK IF WE CAN OPEN EXTENSION SIDEBAR IN VSCODE API, makes sure the artifact looks at right db, looks at right mode (udf or artifact)
-  // can do confluent.flinkdatabase.focus in order to make sure the view is open
+  // Dummy getParent method always returns undefined because there is nothing under expandedItem
+  async getParent(): Promise<CCloudFlinkDbKafkaCluster | undefined> {
+    return undefined;
+  }
+
+  async reveal(): Promise<void> {
+    // Open the Extensions sidebar and show the Confluent extension
+    //To add: open on the right Flink db
+    //To add: open on the right mode (artifacts/udfs)
+    await vscode.commands.executeCommand("workbench.extensions.action.showExtensionsWithIds", [
+      "confluentinc.vscode-confluent",
+    ]);
+  }
 }
