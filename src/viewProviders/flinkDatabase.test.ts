@@ -7,6 +7,7 @@ import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as errors from "../errors";
 import type { CCloudResourceLoader } from "../loaders";
 import type { CCloudEnvironment } from "../models/environment";
@@ -20,8 +21,9 @@ import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 describe("viewProviders/flinkDatabase.ts", () => {
   let sandbox: sinon.SinonSandbox;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sandbox = sinon.createSandbox();
+    await getTestExtensionContext();
   });
 
   afterEach(() => {
@@ -31,8 +33,10 @@ describe("viewProviders/flinkDatabase.ts", () => {
   describe("FlinkDatabaseViewProvider", () => {
     let viewProvider: FlinkDatabaseViewProvider;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       viewProvider = FlinkDatabaseViewProvider.getInstance();
+      // Start in a known state.
+      await viewProvider.switchMode(FlinkDatabaseViewProviderMode.Artifacts);
     });
 
     afterEach(() => {

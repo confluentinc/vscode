@@ -25,7 +25,7 @@ import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { FlinkStatement } from "../models/flinkStatement";
 import { Phase, restFlinkStatementToModel } from "../models/flinkStatement";
-import type { FlinkUdf } from "../models/flinkUDF";
+import type { FlinkUdf } from "../models/flinkSystemCatalog";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { CCloudOrganization } from "../models/organization";
@@ -39,9 +39,9 @@ import type { ExecutionResult } from "../utils/workerPool";
 import { executeInWorkerPool, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 import { generateFlinkStatementKey } from "./utils/loaderUtils";
+import type { RawUdfSystemCatalogRow } from "./utils/udfSystemCatalogQuery";
 import {
   getUdfSystemCatalogQuery,
-  RawUdfSystemCatalogRow,
   transformUdfSystemCatalogRows,
 } from "./utils/udfSystemCatalogQuery";
 

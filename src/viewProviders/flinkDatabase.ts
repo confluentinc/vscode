@@ -10,7 +10,7 @@ import {
 import { logError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import type { FlinkArtifact } from "../models/flinkArtifact";
-import type { FlinkUdf } from "../models/flinkUDF";
+import type { FlinkRelation, FlinkRelationColumn, FlinkUdf } from "../models/flinkSystemCatalog";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import type { IEnvProviderRegion } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
@@ -21,10 +21,11 @@ import {
   FlinkArtifactsDelegate,
   getFlinkArtifactsErrorMessage,
 } from "./multiViewDelegates/flinkArtifactsDelegate";
+import { FlinkRelationsDelegate } from "./multiViewDelegates/flinkRelationsDelegate";
 import { FlinkUDFsDelegate } from "./multiViewDelegates/flinkUDFsDelegate";
 
 /** The row models used as view children */
-export type ArtifactOrUdf = FlinkArtifact | FlinkUdf;
+export type DatabaseChildrenType = FlinkArtifact | FlinkUdf | FlinkRelation | FlinkRelationColumn;
 
 /**
  * Multi-mode view provider for Flink artifacts and UDFs.
@@ -36,7 +37,7 @@ export type ArtifactOrUdf = FlinkArtifact | FlinkUdf;
 export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   FlinkDatabaseViewProviderMode,
   CCloudFlinkDbKafkaCluster,
-  ArtifactOrUdf
+  DatabaseChildrenType
 > {
   viewId = "confluent-flink-database";
   kind = "flinkdatabase";
@@ -47,24 +48,30 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   searchChangedEmitter = flinkDatabaseViewSearchSet;
   searchContextValue = ContextValues.flinkDatabaseSearchApplied;
 
-  children: ArtifactOrUdf[] = [];
+  children: DatabaseChildrenType[] = [];
 
   private readonly artifactsDelegate = new FlinkArtifactsDelegate();
   private readonly udfsDelegate = new FlinkUDFsDelegate();
+  private readonly relationsDelegate = new FlinkRelationsDelegate();
 
   treeViewDelegates = new Map<
     FlinkDatabaseViewProviderMode,
-    ViewProviderDelegate<FlinkDatabaseViewProviderMode, CCloudFlinkDbKafkaCluster, ArtifactOrUdf>
+    ViewProviderDelegate<
+      FlinkDatabaseViewProviderMode,
+      CCloudFlinkDbKafkaCluster,
+      DatabaseChildrenType
+    >
   >([
     [FlinkDatabaseViewProviderMode.Artifacts, this.artifactsDelegate],
     [FlinkDatabaseViewProviderMode.UDFs, this.udfsDelegate],
+    [FlinkDatabaseViewProviderMode.Relations, this.relationsDelegate],
   ]);
 
   constructor() {
     super();
 
-    // Start in artifacts mode by default.
-    this.defaultDelegate = this.artifactsDelegate;
+    // Start in relations mode by default.
+    this.defaultDelegate = this.relationsDelegate;
     this.currentDelegate = this.defaultDelegate;
   }
 

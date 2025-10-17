@@ -56,7 +56,7 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { FlinkStatement } from "../models/flinkStatement";
 import { Phase, restFlinkStatementToModel } from "../models/flinkStatement";
-import type { FlinkUdf } from "../models/flinkUDF";
+import type { FlinkUdf } from "../models/flinkSystemCatalog";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { EnvironmentId } from "../models/resource";
