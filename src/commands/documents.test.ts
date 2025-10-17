@@ -11,7 +11,7 @@ import {
   UPDATE_DEFAULT_DATABASE_FROM_LENS,
   UPDATE_DEFAULT_POOL_ID_FROM_LENS,
 } from "../extensionSettings/constants";
-import { CCloudResourceLoader } from "../loaders";
+import type { CCloudResourceLoader } from "../loaders";
 import * as flinkComputePoolsQuickPick from "../quickpicks/flinkComputePools";
 import * as flinkDatabaseQuickpick from "../quickpicks/kafkaClusters";
 import * as ccloudConnections from "../sidecar/connections/ccloud";

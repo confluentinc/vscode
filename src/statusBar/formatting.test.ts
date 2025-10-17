@@ -5,7 +5,7 @@ import {
   TEST_CCLOUD_SCHEDULED_MAINTENANCE,
   TEST_CCLOUD_STATUS_SUMMARY,
 } from "../../tests/unit/testResources/ccloudStatus";
-import {
+import type {
   CCloudStatusSummary,
   ImpactIndicator,
   Incident,

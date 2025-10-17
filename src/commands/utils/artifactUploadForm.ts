@@ -9,7 +9,7 @@ import { flinkDatabaseRegionsQuickPick } from "../../quickpicks/cloudProviderReg
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
-import { ArtifactUploadParams } from "./uploadArtifactOrUDF";
+import type { ArtifactUploadParams } from "./uploadArtifactOrUDF";
 
 const logger = new Logger("commands/artifactUploadForm");
 

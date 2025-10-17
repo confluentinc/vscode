@@ -1,5 +1,11 @@
-import { SinonSandbox, SinonStub } from "sinon";
-import { Webview, WebviewOptions, WebviewPanel, WebviewPanelOptions, WebviewView } from "vscode";
+import type { SinonSandbox, SinonStub } from "sinon";
+import type {
+  Webview,
+  WebviewOptions,
+  WebviewPanel,
+  WebviewPanelOptions,
+  WebviewView,
+} from "vscode";
 
 /**
  * The {@link Webview} interface, where all methods are replaced with {@link SinonStub stubs}.

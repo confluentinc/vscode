@@ -1,19 +1,19 @@
-import {
+import type {
   Disposable,
   Event,
-  EventEmitter,
   ProgressOptions,
   TreeDataProvider,
   TreeItem,
   TreeView,
-  window,
 } from "vscode";
+import { EventEmitter, window } from "vscode";
 import { getExtensionContext } from "../../context/extension";
-import { ContextValues, setContextValue } from "../../context/values";
+import type { ContextValues } from "../../context/values";
+import { setContextValue } from "../../context/values";
 import { ExtensionContextNotSetError } from "../../errors";
 import { Logger } from "../../logging";
-import { IdItem } from "../../models/main";
-import { IResourceBase, ISearchable } from "../../models/resource";
+import type { IdItem } from "../../models/main";
+import type { IResourceBase, ISearchable } from "../../models/resource";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { titleCase } from "../../utils";
 import { DisposableCollection } from "../../utils/disposables";

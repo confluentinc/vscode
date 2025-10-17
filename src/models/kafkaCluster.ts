@@ -9,19 +9,18 @@ import {
   UTM_SOURCE_VSCODE,
 } from "../constants";
 import { localTimezoneOffset } from "../utils/timezone";
-import { CCloudFlinkComputePool } from "./flinkComputePool";
+import type { CCloudFlinkComputePool } from "./flinkComputePool";
 import { FlinkSpecProperties } from "./flinkStatement";
 import { CustomMarkdownString } from "./main";
-import {
+import type {
   ConnectionId,
-  connectionIdToType,
   EnvironmentId,
   IEnvProviderRegion,
   IResourceBase,
-  isCCloud,
   ISearchable,
 } from "./resource";
-import { KafkaTopic } from "./topic";
+import { connectionIdToType, isCCloud } from "./resource";
+import type { KafkaTopic } from "./topic";
 
 /** Base class for all KafkaClusters */
 export abstract class KafkaCluster extends Data implements IResourceBase, ISearchable {

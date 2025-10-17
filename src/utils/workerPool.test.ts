@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { CancellationTokenSource, Progress } from "vscode";
+import type { Progress } from "vscode";
+import { CancellationTokenSource } from "vscode";
 import { executeInWorkerPool, extract, isErrorResult, isSuccessResult } from "./workerPool";
 
 describe("utils/workerPool.ts executeInWorkerPool()", () => {

@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { commands, QuickPickItemKind, ThemeIcon, window } from "vscode";
+import type { ThemeIcon } from "vscode";
+import { commands, QuickPickItemKind, window } from "vscode";
 import {
   getStubbedCCloudResourceLoader,
   getStubbedDirectResourceLoader,
@@ -20,13 +21,13 @@ import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
 import * as contextValues from "../context/values";
-import { CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader } from "../loaders";
+import type { CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader } from "../loaders";
 import { ConnectionLabel } from "../models/resource";
-import { SchemaRegistry } from "../models/schemaRegistry";
+import type { SchemaRegistry } from "../models/schemaRegistry";
 import { BaseViewProvider } from "../viewProviders/baseModels/base";
 import { SchemasViewProvider } from "../viewProviders/schemas";
 import { schemaRegistryQuickPick } from "./schemaRegistries";
-import { QuickPickItemWithValue } from "./types";
+import type { QuickPickItemWithValue } from "./types";
 
 describe("quickpicks/schemaRegistries.ts schemaRegistryQuickPick()", function () {
   let sandbox: sinon.SinonSandbox;

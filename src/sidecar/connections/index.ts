@@ -1,14 +1,9 @@
 import { getSidecar } from "..";
-import {
-  Connection,
-  ConnectionSpec,
-  ConnectionSpecToJSON,
-  ConnectionsResourceApi,
-  ResponseError,
-} from "../../clients/sidecar";
+import type { Connection, ConnectionSpec, ConnectionsResourceApi } from "../../clients/sidecar";
+import { ConnectionSpecToJSON, ResponseError } from "../../clients/sidecar";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
-import { ConnectionId } from "../../models/resource";
+import type { ConnectionId } from "../../models/resource";
 import { ConnectionStateWatcher } from "./watcher";
 
 const logger = new Logger("sidecar.connections");

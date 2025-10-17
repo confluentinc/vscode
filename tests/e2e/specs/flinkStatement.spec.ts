@@ -1,4 +1,5 @@
-import { expect, FrameLocator } from "@playwright/test";
+import type { FrameLocator } from "@playwright/test";
+import { expect } from "@playwright/test";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { test } from "../baseTest";

@@ -2,13 +2,12 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
+import type { ScaffoldV1Template, ScaffoldV1TemplateList } from "../clients/scaffoldingService";
 import {
-  ScaffoldV1Template,
-  ScaffoldV1TemplateList,
   ScaffoldV1TemplateListFromJSON,
   TemplatesScaffoldV1Api,
 } from "../clients/scaffoldingService";
-import { SidecarHandle } from "../sidecar";
+import type { SidecarHandle } from "../sidecar";
 import {
   filterSensitiveKeys,
   getTemplatesList,

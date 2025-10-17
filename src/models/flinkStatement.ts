@@ -1,5 +1,5 @@
 import { ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
-import {
+import type {
   CreateSqlv1Statement201Response,
   GetSqlv1Statement200Response,
   SqlV1StatementListDataInner,
@@ -9,8 +9,9 @@ import {
 } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, IconNames, UTM_SOURCE_VSCODE } from "../constants";
-import { CustomMarkdownString, IdItem } from "./main";
-import {
+import type { IdItem } from "./main";
+import { CustomMarkdownString } from "./main";
+import type {
   ConnectionId,
   EnvironmentId,
   IEnvProviderRegion,

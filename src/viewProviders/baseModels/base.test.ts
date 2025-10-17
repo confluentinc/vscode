@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { Disposable, EventEmitter, TreeItem, window } from "vscode";
+import type { Disposable, TreeItem } from "vscode";
+import { EventEmitter, window } from "vscode";
 import {
   makeStatus,
   TEST_CCLOUD_FLINK_STATEMENT,

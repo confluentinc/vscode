@@ -1,12 +1,5 @@
-import {
-  CancellationToken,
-  Disposable,
-  ProgressLocation,
-  Uri,
-  window,
-  workspace,
-  WorkspaceConfiguration,
-} from "vscode";
+import type { CancellationToken, Disposable, Uri, WorkspaceConfiguration } from "vscode";
+import { ProgressLocation, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
 import { isDockerAvailable } from "../docker/configs";

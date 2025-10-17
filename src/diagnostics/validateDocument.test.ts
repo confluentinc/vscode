@@ -1,14 +1,11 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { Diagnostic, DiagnosticSeverity, Uri } from "vscode";
+import type { Diagnostic } from "vscode";
+import { DiagnosticSeverity, Uri } from "vscode";
 import * as fileUtils from "../utils/file";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./constants";
-import {
-  PRODUCE_MESSAGE_SCHEMA,
-  ProduceMessage,
-  SchemaInfo,
-  SubjectNameStrategy,
-} from "./produceMessage";
+import type { ProduceMessage, SchemaInfo } from "./produceMessage";
+import { PRODUCE_MESSAGE_SCHEMA, SubjectNameStrategy } from "./produceMessage";
 import { validateDocument } from "./validateDocument";
 
 const BASIC_MESSAGE: ProduceMessage = {

@@ -1,6 +1,7 @@
 import assert from "assert";
 import sinon from "sinon";
-import { env, InputBoxValidationMessage, InputBoxValidationSeverity, window } from "vscode";
+import type { InputBoxValidationMessage } from "vscode";
+import { env, InputBoxValidationSeverity, window } from "vscode";
 import { EXTENSION_ID } from "../constants";
 import { UriEventHandler } from "../uriHandler";
 import { EXT_URI_PREFIX, handleUriCommand, uriValidator } from "./uris";

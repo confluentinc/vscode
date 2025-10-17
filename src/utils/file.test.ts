@@ -1,12 +1,8 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
-import {
-  fileUriExists,
-  getEditorOrFileContents,
-  LoadedDocumentContent,
-  WriteableTmpDir,
-} from "./file";
+import type { LoadedDocumentContent } from "./file";
+import { fileUriExists, getEditorOrFileContents, WriteableTmpDir } from "./file";
 import * as fsWrappers from "./fsWrappers";
 
 describe("fileUriExists", () => {

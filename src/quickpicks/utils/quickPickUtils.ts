@@ -1,5 +1,6 @@
-import { Disposable, QuickInputButton, QuickPick, QuickPickOptions, window } from "vscode";
-import { QuickPickItemWithValue } from "../types";
+import type { Disposable, QuickInputButton, QuickPick, QuickPickOptions } from "vscode";
+import { window } from "vscode";
+import type { QuickPickItemWithValue } from "../types";
 
 /**
  * Enhanced options for creating a QuickPick with additional functionality.

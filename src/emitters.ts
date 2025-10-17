@@ -1,12 +1,12 @@
 import * as vscode from "vscode";
-import { CCloudEnvironment } from "./models/environment";
-import { CCloudFlinkComputePool } from "./models/flinkComputePool";
-import { FlinkStatement, FlinkStatementId } from "./models/flinkStatement";
-import { CCloudFlinkDbKafkaCluster, KafkaCluster } from "./models/kafkaCluster";
-import { ConnectionId, EnvironmentId, IEnvProviderRegion } from "./models/resource";
-import { Subject, SubjectWithSchemas } from "./models/schema";
-import { SchemaRegistry } from "./models/schemaRegistry";
-import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
+import type { CCloudEnvironment } from "./models/environment";
+import type { CCloudFlinkComputePool } from "./models/flinkComputePool";
+import type { FlinkStatement, FlinkStatementId } from "./models/flinkStatement";
+import type { CCloudFlinkDbKafkaCluster, KafkaCluster } from "./models/kafkaCluster";
+import type { ConnectionId, EnvironmentId, IEnvProviderRegion } from "./models/resource";
+import type { Subject, SubjectWithSchemas } from "./models/schema";
+import type { SchemaRegistry } from "./models/schemaRegistry";
+import type { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
 
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
 // we .fire() events and where we react to them via .event()

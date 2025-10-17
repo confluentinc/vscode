@@ -1,6 +1,5 @@
+import type { Event, EventHint } from "@sentry/node";
 import {
-  Event,
-  EventHint,
   NodeClient,
   Scope,
   defaultStackParser,
