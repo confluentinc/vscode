@@ -48,6 +48,7 @@
     "workspaceContains:**/*.confluent.*",
     "onUri"
   ],
+  "enabledApiProposals": ["codiconDecoration"],
   "main": "./out/extension.js",
   "contributes": {
     "authentication": [
