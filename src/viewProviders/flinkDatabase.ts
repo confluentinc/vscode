@@ -1,5 +1,4 @@
 import type { Disposable } from "vscode";
-import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ContextValues } from "../context/values";
 import {
   artifactsChanged,
@@ -77,39 +76,6 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
     ];
   }
 
-  override getChildren(element?: ArtifactOrUdf): any[] {
-    const children = super.getChildren(element);
-
-    // retrieve if there are artifacts but no UDFs to show the info message in UDFs mode.
-    if (
-      !element &&
-      this.currentDelegate.mode === FlinkDatabaseViewProviderMode.UDFs &&
-      children.length === 0 &&
-      this.artifactsDelegate.children.length > 0
-    ) {
-      return [{ _isInfo: true, _count: this.artifactsDelegate.children.length }];
-    }
-
-    return children;
-  }
-
-  override getTreeItem(element: any): TreeItem {
-    // default info message when there are artifacts but no UDFs.
-    if (element._isInfo) {
-      const item = new TreeItem(
-        `Found ${element._count} uploaded artifact${element._count > 1 ? "s" : ""}`,
-        TreeItemCollapsibleState.None,
-      );
-      item.description = "Switch to Flink Artifacts to register UDFs";
-      item.command = { command: "confluent.flinkdatabase.setArtifactsViewMode", title: "" };
-      item.iconPath = new ThemeIcon("info");
-      item.tooltip = "Click to switch to Flink Artifacts view";
-      return item;
-    }
-
-    return super.getTreeItem(element);
-  }
-
   /**
    * The list of artifacts in the given env/provider/region has just changed.
    * If it matches our current database, we may need to refresh.
@@ -161,15 +127,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
         this.currentDelegate.loadingMessage,
         async () => {
           try {
-            if (this.currentDelegate.mode === FlinkDatabaseViewProviderMode.UDFs) {
-              this.children = await this.currentDelegate.fetchChildren(db, forceDeepRefresh);
-              // If no UDFs found, fetch artifacts to show info message to register UDFs.
-              if (this.children.length === 0) {
-                await this.artifactsDelegate.fetchChildren(db, forceDeepRefresh);
-              }
-            } else {
-              this.children = await this.currentDelegate.fetchChildren(db, forceDeepRefresh);
-            }
+            this.children = await this.currentDelegate.fetchChildren(db, forceDeepRefresh);
           } catch (error) {
             let msg = `Failed to load Flink ${this.currentDelegate.mode}`;
             if (this.currentDelegate.mode === FlinkDatabaseViewProviderMode.Artifacts) {
