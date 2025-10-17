@@ -18,6 +18,7 @@ import {
   directConnectionsChanged,
   dockerServiceAvailable,
   localKafkaConnected,
+  localMedusaConnected,
   localSchemaRegistryConnected,
   resourceSearchSet,
 } from "../emitters";
@@ -46,7 +47,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { IdItem } from "../models/main";
-import { LocalMedusa } from "../models/medusa";
+import { LocalMedusa, MedusaTreeItem } from "../models/medusa";
 import { CCloudOrganization } from "../models/organization";
 import {
   ConnectionId,
@@ -459,10 +460,16 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   }
 
   get status(): string {
-    const isDockerAvailable = getContextValue(ContextValues.dockerServiceAvailable) === true;
+    const isDockerAvailable =
+      getContextValue<boolean>(ContextValues.dockerServiceAvailable) === true;
 
     if (isDockerAvailable) {
-      return this.connected ? this.kafkaCluster!.uri! : "(Local Kafka not running)";
+      if (this.kafkaCluster) {
+        return this.kafkaCluster.uri!;
+      } else if (this.medusa) {
+        return "Only Medusa available";
+      }
+      return "(No connection)";
     } else {
       return "(Docker Unavailable)";
     }
@@ -514,6 +521,7 @@ export class ResourceViewProvider
       ccloudConnected.event(this.ccloudConnectedEventHandler.bind(this)),
       localKafkaConnected.event(this.localConnectedEventHandler.bind(this)),
       localSchemaRegistryConnected.event(this.localConnectedEventHandler.bind(this)),
+      localMedusaConnected.event(this.localConnectedEventHandler.bind(this)),
       dockerServiceAvailable.event(this.localConnectedEventHandler.bind(this)),
       directConnectionsChanged.event(this.reconcileDirectConnections.bind(this)),
       connectionStable.event(this.refreshConnection.bind(this)),
@@ -662,6 +670,7 @@ export class ResourceViewProvider
         Array.isArray(localEnv?.kafkaClusters) && localEnv.kafkaClusters.length !== 0,
       ),
       setContextValue(ContextValues.localSchemaRegistryAvailable, !!localEnv?.schemaRegistry),
+      setContextValue(ContextValues.localMedusaAvailable, !!localEnv?.medusa),
     ]);
   }
 
@@ -740,6 +749,8 @@ export class ResourceViewProvider
       treeItem = new KafkaClusterTreeItem(element);
     } else if (element instanceof SchemaRegistry) {
       treeItem = new SchemaRegistryTreeItem(element);
+    } else if (element instanceof LocalMedusa) {
+      treeItem = new MedusaTreeItem(element);
     } else if (element instanceof CCloudFlinkComputePool) {
       treeItem = new FlinkComputePoolTreeItem(element);
     } else {
