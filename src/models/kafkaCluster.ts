@@ -23,6 +23,11 @@ import {
 } from "./resource";
 import { KafkaTopic } from "./topic";
 
+export enum clusterLabel {
+  KafkaCluster = "Kafka Cluster",
+  FlinkableKafkaCluster = "Flinkable Kafka Cluster",
+}
+
 /** Base class for all KafkaClusters */
 export abstract class KafkaCluster extends Data implements IResourceBase, ISearchable {
   abstract connectionId: ConnectionId;
@@ -199,7 +204,7 @@ export class KafkaClusterTreeItem extends TreeItem {
 
     // Set accessibility information based on whether cluster is Flinkable
     this.accessibilityInformation = {
-      label: `${this.resource.connectionType} connection: ${isFlinkable ? "Flinkable Kafka Cluster" : "Kafka Cluster"}`,
+      label: `${this.resource.connectionType} connection: ${isFlinkable ? clusterLabel.FlinkableKafkaCluster : clusterLabel.KafkaCluster}`,
     };
 
     // set primary click action to select this cluster as the current one, focusing it in the Topics view
