@@ -85,13 +85,13 @@ export class ResourcesView extends View {
   }
 
   /**
-   * Alternative approach: Find clusters that are followed by compute pool items with lfcp IDs.
-   * This accounts for cases where compute pools appear as sibling elements rather than children.
    */
-  get flinkableCcloudKafkaClustersByProximity(): Locator {
-    // Find cluster elements that have sibling compute pool elements with lfcp IDs
+  get flinkableCcloudKafkaClusters(): Locator {
+    // Find CCloud Kafka clusters that have sibling Flink compute pool elements
     return this.ccloudKafkaClusters.filter({
-      has: this.page.locator("..").locator("span.label-description").filter({ hasText: /^lfcp/ }),
+      has: this.page.locator("xpath=..//*").filter({
+        has: this.page.locator(".codicon-confluent-flink-compute-pool"),
+      }),
     });
   }
 

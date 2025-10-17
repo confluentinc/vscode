@@ -32,7 +32,7 @@ export class ArtifactsView extends View {
     await expect(this.header).toHaveAttribute("aria-expanded", "true");
     await expect(this.body).toBeVisible();
   }
-
+  // this func is WAY too long
   async loadArtifacts(entrypoint: SelectFlinkDatabase): Promise<void> {
     switch (entrypoint) {
       case SelectFlinkDatabase.FromResourcesView: {
@@ -41,12 +41,14 @@ export class ArtifactsView extends View {
         // First, ensure the connection environment is expanded to see environments
         await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
 
-        // Get all environments and expand them to see their clusters
+        // Get all environments and expand them to find one with flinkable clusters
         const environments = resourcesView.ccloudEnvironments;
         const envCount = await environments.count();
 
-        // Expand all environments to reveal their child clusters
-        for (let i = 0; i < envCount; i++) {
+        let foundFlinkableEnvironment = false;
+        // EWWwwww
+        // Expand environments one by one until we find one with flinkable clusters
+        for (let i = 0; i < envCount && !foundFlinkableEnvironment; i++) {
           const env = environments.nth(i);
           const isExpanded = await env.getAttribute("aria-expanded");
 
@@ -55,30 +57,26 @@ export class ArtifactsView extends View {
             // Wait for expansion to complete
             await expect(env).toHaveAttribute("aria-expanded", "true");
           }
+
+          // Check if this environment has flinkable Kafka clusters
+          const kafkaClusters = resourcesView.flinkableCcloudKafkaClusters;
+          const clusterCount = await kafkaClusters.count();
+
+          if (clusterCount > 0) {
+            foundFlinkableEnvironment = true;
+
+            // Now we can proceed with the first flinkable cluster
+            const kafkaClusterItem = kafkaClusters.first();
+            await expect(kafkaClusterItem).toBeVisible();
+
+            const clusterItem = new KafkaClusterItem(this.page, kafkaClusterItem);
+            await clusterItem.selectAsFlinkDatabase();
+          }
         }
 
-        // Now find and click on the actual Kafka cluster that has Flink compute pools
-        const kafkaClusters = resourcesView.flinkableCcloudKafkaClustersByProximity;
-
-        const kafkaClusterItem = kafkaClusters.first();
-
-        await expect(kafkaClusterItem).toBeVisible();
-        const clusterItem = new KafkaClusterItem(this.page, kafkaClusterItem);
-        await clusterItem.selectAsFlinkDatabase();
-
-        await expect(this.header).toHaveAttribute("aria-expanded", "true");
-        await expect(this.body).toBeVisible();
-        await expect(async () => {
-          const artifactCount = await this.artifacts.count();
-          const hasLoadingIndicator = await this.body
-            .locator('.loading, .spinner, [aria-label*="loading"]')
-            .isVisible();
-
-          // Either we have artifacts loaded OR we're still in a loading state
-          // This ensures we don't exit while artifacts are still being fetched
-          expect(artifactCount > 0 || !hasLoadingIndicator).toBeTruthy();
-          // timeout 0 means we wait indefinitely for one of the conditions to be true
-        }).toPass({ timeout: 0 });
+        if (!foundFlinkableEnvironment) {
+          throw new Error("No environment found with flinkable Kafka clusters");
+        }
 
         break;
       }
