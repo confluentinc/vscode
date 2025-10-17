@@ -1,4 +1,4 @@
-import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
+import { ErrorMessage, ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
@@ -79,7 +79,7 @@ export async function canAccessSchemaTypeForTopic(
 }
 
 export async function determineAccessFromResponseError(response: Response): Promise<boolean> {
-  let body: any;
+  let body: ErrorMessage;
   try {
     body = await response.json();
   } catch (error) {
