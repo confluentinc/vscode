@@ -15,13 +15,14 @@ import {
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { CCloudResourceLoader, LocalResourceLoader } from "../loaders";
+import type { CCloudResourceLoader, LocalResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
-import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId } from "../models/resource";
+import type { KafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
+import type { EnvironmentId } from "../models/resource";
 import * as topicsViewProviders from "../viewProviders/topics";
 import { flinkDatabaseQuickpick, kafkaClusterQuickPick } from "./kafkaClusters";
-import { QuickPickItemWithValue } from "./types";
+import type { QuickPickItemWithValue } from "./types";
 
 describe("quickpicks/kafkaClusters", () => {
   let sandbox: sinon.SinonSandbox;

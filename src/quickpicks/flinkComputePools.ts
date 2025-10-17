@@ -5,11 +5,11 @@ import { ContextValues, getContextValue } from "../context/values";
 import { FLINK_CONFIG_COMPUTE_POOL } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { Environment } from "../models/environment";
+import type { Environment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { getConnectionLabel, isCCloud } from "../models/resource";
 import { showInfoNotificationWithButtons } from "../notifications";
-import { QuickPickItemWithValue } from "./types";
+import type { QuickPickItemWithValue } from "./types";
 
 const logger = new Logger("quickpicks.flinkComputePools");
 

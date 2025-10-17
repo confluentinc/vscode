@@ -1,4 +1,4 @@
-import { SinonSandbox, SinonStubbedInstance } from "sinon";
+import type { SinonSandbox, SinonStubbedInstance } from "sinon";
 
 import * as sidecar from "../../src/sidecar";
 

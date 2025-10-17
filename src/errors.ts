@@ -1,4 +1,4 @@
-import { ScopeContext } from "@sentry/core";
+import type { ScopeContext } from "@sentry/core";
 import { ResponseError as DockerResponseError } from "./clients/docker";
 import { ResponseError as FlinkArtifactsResponseError } from "./clients/flinkArtifacts";
 import { ResponseError as FlinkComputePoolResponseError } from "./clients/flinkComputePool";

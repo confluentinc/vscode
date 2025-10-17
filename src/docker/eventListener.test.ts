@@ -1,11 +1,10 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import type { ApiResponse, EventMessage } from "../clients/docker";
 import {
-  ApiResponse,
   ContainerApi,
   ContainerStateStatusEnum,
-  EventMessage,
   EventMessageTypeEnum,
   SystemApi,
 } from "../clients/docker";
@@ -18,7 +17,8 @@ import {
 import { LOCAL_KAFKA_IMAGE } from "../extensionSettings/constants";
 import * as localConnections from "../sidecar/connections/local";
 import * as configs from "./configs";
-import { EventListener, SystemEventMessage } from "./eventListener";
+import type { SystemEventMessage } from "./eventListener";
+import { EventListener } from "./eventListener";
 
 const TEST_CONTAINER_EVENT: SystemEventMessage = {
   id: "test-id",

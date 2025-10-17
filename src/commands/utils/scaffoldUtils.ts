@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import { posix } from "path";
 import { unzip } from "unzipit";
 import { ViewColumn } from "vscode";
-import {
+import type {
   ApplyScaffoldV1TemplateOperationRequest,
   ResponseError,
   ScaffoldV1Template,
@@ -21,7 +21,7 @@ import { logUsage, UserEvent } from "../../telemetry/events";
 import { fileUriExists } from "../../utils/file";
 import { WebviewPanelCache } from "../../webview-cache";
 import { handleWebviewMessage } from "../../webview/comms/comms";
-import { PostResponse, type post } from "../../webview/scaffold-form";
+import type { post, PostResponse } from "../../webview/scaffold-form";
 import scaffoldFormTemplate from "../../webview/scaffold-form.html";
 
 const logger = new Logger("scaffoldutils");

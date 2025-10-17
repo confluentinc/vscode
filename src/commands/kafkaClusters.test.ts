@@ -1,12 +1,14 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
+import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
+import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources/kafkaCluster";
-import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import * as kafkaClusterQuickpicks from "../quickpicks/kafkaClusters";
 import {
   copyBootstrapServers,

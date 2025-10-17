@@ -1,13 +1,14 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { ThemeIcon, window } from "vscode";
+import type { ThemeIcon } from "vscode";
+import { window } from "vscode";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { IconNames } from "../constants";
 import * as organizationsGraphQL from "../graphql/organizations";
 import { CCloudOrganization } from "../models/organization";
-import { OrganizationId } from "../models/resource";
+import type { OrganizationId } from "../models/resource";
 import { organizationQuickPick } from "./organizations";
-import { QuickPickItemWithValue } from "./types";
+import type { QuickPickItemWithValue } from "./types";
 
 describe("quickpicks/organizations.ts organizationQuickPick()", function () {
   let sandbox: sinon.SinonSandbox;

@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { ConfigurationChangeEvent } from "vscode";
+import type { ConfigurationChangeEvent } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
@@ -12,15 +12,13 @@ import {
   STATEMENT_POLLING_LIMIT,
 } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
-import { FlinkStatement, FlinkStatementId, Phase } from "../models/flinkStatement";
+import type { FlinkStatement, FlinkStatementId } from "../models/flinkStatement";
+import { Phase } from "../models/flinkStatement";
 import { DisposableCollection } from "../utils/disposables";
-import { IntervalPoller } from "../utils/timing";
+import type { IntervalPoller } from "../utils/timing";
 import * as workerPool from "../utils/workerPool";
-import {
-  FlinkStatementManager,
-  MonitoredStatement,
-  MonitoredStatements,
-} from "./flinkStatementManager";
+import type { MonitoredStatement } from "./flinkStatementManager";
+import { FlinkStatementManager, MonitoredStatements } from "./flinkStatementManager";
 
 describe("flinkStatementManager.ts", () => {
   before(async () => {

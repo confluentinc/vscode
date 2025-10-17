@@ -1,4 +1,5 @@
-import { ConfigurationChangeEvent, Disposable, workspace } from "vscode";
+import type { ConfigurationChangeEvent, Disposable } from "vscode";
+import { workspace } from "vscode";
 import { ccloudConnected, flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
 import {
   STATEMENT_POLLING_CONCURRENCY,
@@ -7,7 +8,7 @@ import {
 } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { FlinkStatement, FlinkStatementId } from "../models/flinkStatement";
+import type { FlinkStatement, FlinkStatementId } from "../models/flinkStatement";
 import { DisposableCollection } from "../utils/disposables";
 import { IntervalPoller } from "../utils/timing";
 import { executeInWorkerPool, extract } from "../utils/workerPool";

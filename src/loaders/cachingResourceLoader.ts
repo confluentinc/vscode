@@ -1,11 +1,11 @@
-import { TopicData } from "../clients/kafkaRest";
+import type { TopicData } from "../clients/kafkaRest";
 import { Logger } from "../logging";
-import { Environment, EnvironmentType } from "../models/environment";
-import { KafkaCluster, KafkaClusterType } from "../models/kafkaCluster";
-import { EnvironmentId } from "../models/resource";
-import { Subject } from "../models/schema";
-import { SchemaRegistry, SchemaRegistryType } from "../models/schemaRegistry";
-import { KafkaTopic } from "../models/topic";
+import type { Environment, EnvironmentType } from "../models/environment";
+import type { KafkaCluster, KafkaClusterType } from "../models/kafkaCluster";
+import type { EnvironmentId } from "../models/resource";
+import type { Subject } from "../models/schema";
+import type { SchemaRegistry, SchemaRegistryType } from "../models/schemaRegistry";
+import type { KafkaTopic } from "../models/topic";
 import { getResourceManager } from "../storage/resourceManager";
 import { ResourceLoader } from "./resourceLoader";
 import { correlateTopicsWithSchemaSubjects, fetchTopics } from "./utils/loaderUtils";

@@ -1,8 +1,9 @@
-import { TopicV3Api } from "../clients/kafkaRest";
+import type { TopicV3Api } from "../clients/kafkaRest";
 import { Logger } from "../logging";
-import { KafkaTopic } from "../models/topic";
+import type { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
-import { KafkaTopicOperation, toKafkaTopicOperations } from "./types";
+import type { KafkaTopicOperation } from "./types";
+import { toKafkaTopicOperations } from "./types";
 
 const logger = new Logger("authz.topics");
 

@@ -11,16 +11,16 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResource
 import { TEST_CCLOUD_ORGANIZATION_ID } from "../../../tests/unit/testResources/organization";
 import { createResponseError, createTestTopicData } from "../../../tests/unit/testUtils";
 import { TopicV3Api } from "../../clients/kafkaRest";
-import { TopicData } from "../../clients/kafkaRest/models";
-import {
+import type { TopicData } from "../../clients/kafkaRest/models";
+import type {
   GetSchemaByVersionRequest,
   Schema as ResponseSchema,
-  SubjectsV1Api,
 } from "../../clients/schemaRegistryRest";
-import { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";
-import { Schema, SchemaType, Subject } from "../../models/schema";
-import * as sidecar from "../../sidecar";
-import { SidecarHandle } from "../../sidecar";
+import { SubjectsV1Api } from "../../clients/schemaRegistryRest";
+import type { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";
+import type { Schema } from "../../models/schema";
+import { SchemaType, Subject } from "../../models/schema";
+import type * as sidecar from "../../sidecar";
 import * as privateNetworking from "../../utils/privateNetworking";
 import * as loaderUtils from "./loaderUtils";
 
@@ -115,7 +115,8 @@ describe("loaderUtils.ts", () => {
     let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
 
     beforeEach(() => {
-      const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
+      const stubbedSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+        getSidecarStub(sandbox);
       stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
       stubbedSidecar.getSubjectsV1Api.returns(stubbedSubjectsV1Api);
     });

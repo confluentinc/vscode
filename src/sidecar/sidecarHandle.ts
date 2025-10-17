@@ -35,14 +35,12 @@ import {
   SchemasV1Api,
   SubjectsV1Api,
 } from "../clients/schemaRegistryRest";
+import type { ConfigurationParameters, HTTPHeaders, Middleware } from "../clients/sidecar";
 import {
-  ConfigurationParameters,
   ConfluentCloudProduceRecordsResourceApi,
   ConnectionsResourceApi,
-  HTTPHeaders,
   KafkaConsumeResourceApi,
   MicroProfileHealthApi,
-  Middleware,
   PreferencesResourceApi,
   ResponseError,
   Configuration as SidecarRestConfiguration,
@@ -51,9 +49,9 @@ import {
 
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
-import { ConnectionId, IEnvProviderRegion } from "../models/resource";
+import type { ConnectionId, IEnvProviderRegion } from "../models/resource";
 import { showWarningNotificationWithButtons } from "../notifications";
-import { Message, MessageType } from "../ws/messageTypes";
+import type { Message, MessageType } from "../ws/messageTypes";
 import {
   CCLOUD_ENV_ID_HEADER,
   CCLOUD_PROVIDER_HEADER,

@@ -1,11 +1,11 @@
 import * as assert from "assert";
 
-import { ThemeIcon } from "vscode";
+import type { ThemeIcon } from "vscode";
 import {
   createFlinkStatement,
   TEST_CCLOUD_FLINK_STATEMENT,
 } from "../../tests/unit/testResources/flinkStatement";
-import { SqlV1StatementStatus } from "../clients/flinkSql";
+import type { SqlV1StatementStatus } from "../clients/flinkSql";
 import { CCLOUD_BASE_PATH, IconNames } from "../constants";
 import {
   FlinkStatement,
@@ -18,8 +18,8 @@ import {
   STATUS_YELLOW,
   TERMINAL_PHASES,
 } from "./flinkStatement";
-import { CustomMarkdownString, KeyValuePairArray } from "./main";
-import { EnvironmentId } from "./resource";
+import type { CustomMarkdownString, KeyValuePairArray } from "./main";
+import type { EnvironmentId } from "./resource";
 
 describe("FlinkStatement", () => {
   it("uses env+name as id", () => {

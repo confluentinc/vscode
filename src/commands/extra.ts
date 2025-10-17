@@ -1,4 +1,5 @@
-import { Disposable, env, Uri, window } from "vscode";
+import type { Disposable } from "vscode";
+import { env, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { Logger } from "../logging";
 

@@ -1,9 +1,10 @@
 import * as assert from "assert";
 import { TEST_LOCAL_KEY_SCHEMA, TEST_LOCAL_SCHEMA } from "../../../tests/unit/testResources";
-import { SchemaInfo, SubjectNameStrategy } from "../../diagnostics/produceMessage";
-import { Schema } from "../../models/schema";
+import type { SchemaInfo } from "../../diagnostics/produceMessage";
+import { SubjectNameStrategy } from "../../diagnostics/produceMessage";
+import type { Schema } from "../../models/schema";
 import { createProduceRequestData, extractSchemaInfo } from "./produceMessage";
-import { ProduceMessageSchemaOptions } from "./types";
+import type { ProduceMessageSchemaOptions } from "./types";
 
 describe("commands/utils/produceMessage.ts createProduceRequestData()", function () {
   it("should nest key/value data under keyData.data and valueData.data", async function () {

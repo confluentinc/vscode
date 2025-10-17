@@ -9,12 +9,13 @@ import {
 } from "../emitters";
 import { logError } from "../errors";
 import { ResourceLoader } from "../loaders";
-import { FlinkArtifact } from "../models/flinkArtifact";
-import { FlinkUdf } from "../models/flinkUDF";
-import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
-import { IEnvProviderRegion } from "../models/resource";
+import type { FlinkArtifact } from "../models/flinkArtifact";
+import type { FlinkUdf } from "../models/flinkUDF";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import type { IEnvProviderRegion } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
-import { MultiModeViewProvider, ViewProviderDelegate } from "./baseModels/multiViewBase";
+import type { ViewProviderDelegate } from "./baseModels/multiViewBase";
+import { MultiModeViewProvider } from "./baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 import {
   FlinkArtifactsDelegate,

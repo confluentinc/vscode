@@ -1,16 +1,18 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { CancellationToken, Progress, window } from "vscode";
+import type { CancellationToken, Progress } from "vscode";
+import { window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
 import * as errors from "../errors";
-import { CCloudResourceLoader } from "../loaders";
-import { CCloudEnvironment } from "../models/environment";
-import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId } from "../models/resource";
+import type { CCloudResourceLoader } from "../loaders";
+import type { CCloudEnvironment } from "../models/environment";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import type { EnvironmentId } from "../models/resource";
 import * as notifications from "../notifications";
 import { FlinkDatabaseViewProvider } from "./flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";

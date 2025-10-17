@@ -1,9 +1,9 @@
 import { commands, ThemeIcon, window } from "vscode";
 import { IconNames } from "../constants";
 import { ResourceLoader } from "../loaders";
-import { KafkaCluster } from "../models/kafkaCluster";
-import { KafkaTopic } from "../models/topic";
-import { QuickPickItemWithValue } from "./types";
+import type { KafkaCluster } from "../models/kafkaCluster";
+import type { KafkaTopic } from "../models/topic";
+import type { QuickPickItemWithValue } from "./types";
 
 /**
  * Displays a quickpick for selecting a Kafka topic from the given {@link KafkaCluster}.
