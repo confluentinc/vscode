@@ -1,4 +1,5 @@
-import { Disposable, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import type { Disposable } from "vscode";
+import { TreeItem, TreeItemCollapsibleState, ThemeIcon } from "vscode";
 import { ContextValues } from "../context/values";
 import {
   artifactsChanged,
