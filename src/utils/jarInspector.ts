@@ -3,7 +3,6 @@ import path from "path";
 import { Uri } from "vscode";
 import yauzl, { Entry, ZipFile } from "yauzl";
 import { Logger } from "../logging";
-import { showInfoNotificationWithButtons } from "../notifications";
 
 export interface JarClassInfo {
   /** The fully qualified class name */
@@ -30,9 +29,6 @@ export async function inspectJarClasses(file: Uri): Promise<JarClassInfo[]> {
       return { className, simpleName };
     });
     logger.debug("inspectJarClasses: extracted classes", { count: infos.length });
-    void showInfoNotificationWithButtons(
-      `Found ${infos.length} top-level classes in ${path.basename(file.fsPath)}`,
-    );
     return infos;
   } catch (err) {
     throw new Error("Unable to inspect JAR file", { cause: err });
