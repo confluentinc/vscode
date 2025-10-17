@@ -24,7 +24,7 @@ semaphore:
           options:
             - "true"
             - "false"
-          default: "true"
+          default_value: "true"
           description: |
             Whether the release is a pre-release (true/false)
         - name: TARGET_BRANCH
@@ -82,7 +82,7 @@ semaphore:
       parameters:
         - name: IS_PRERELEASE
           required: true
-          default: "true"
+          default_value: "true"
         - name: TARGET_BRANCH
           required: true
           default_value: "main"
