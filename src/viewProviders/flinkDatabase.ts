@@ -1,4 +1,4 @@
-import { Disposable } from "vscode";
+import { Disposable, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ContextValues } from "../context/values";
 import {
   artifactsChanged,
@@ -75,6 +75,38 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
     ];
   }
 
+  override getChildren(element?: ArtifactOrUdf): any[] {
+    const children = super.getChildren(element);
+
+    // In UDF mode with no UDFs but artifacts exist, show info message
+    if (
+      !element &&
+      this.currentDelegate.mode === FlinkDatabaseViewProviderMode.UDFs &&
+      children.length === 0 &&
+      this.artifactsDelegate.children.length > 0
+    ) {
+      return [{ _isInfo: true, _count: this.artifactsDelegate.children.length }];
+    }
+
+    return children;
+  }
+
+  override getTreeItem(element: any): TreeItem {
+    // Info message for when artifacts exist but no UDFs
+    if (element._isInfo) {
+      const item = new TreeItem(
+        `You have ${element._count} uploaded artifact${element._count > 1 ? "s" : ""}`,
+        TreeItemCollapsibleState.None,
+      );
+      item.description = "Click to register UDFs";
+      item.command = { command: "confluent.flinkdatabase.setArtifactsViewMode", title: "" };
+      item.iconPath = new ThemeIcon("info");
+      return item;
+    }
+
+    return super.getTreeItem(element);
+  }
+
   /**
    * The list of artifacts in the given env/provider/region has just changed.
    * If it matches our current database, we may need to refresh.
@@ -89,7 +121,6 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
         // Not viewing artifacts right this second, but we're the entity responsible for cache busting
         // in response to this event.
         // Tell the artifacts delegate to preemptively refresh its cache for next time we switch to it
-
         await this.artifactsDelegate.fetchChildren(this.database, true);
       }
     }
@@ -112,22 +143,28 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   }
 
   async refresh(forceDeepRefresh: boolean = false): Promise<void> {
-    this.children = [];
-
     if (this.database) {
       // Capture the database in a local variable so that will never change
       // while we're in the middle of this async operation.
       const db = this.database;
 
       this.logger.debug(`refreshing Flink Database view for ${db.name} (${db.id})`);
-      // clear out the current delegate's children
-      this._onDidChangeTreeData.fire();
 
       await this.withProgress(
         this.currentDelegate.loadingMessage,
         async () => {
           try {
-            this.children = await this.currentDelegate.fetchChildren(db, forceDeepRefresh);
+            // In UDF mode, fetch both in parallel (artifacts just for the info item)
+            if (this.currentDelegate.mode === FlinkDatabaseViewProviderMode.UDFs) {
+              const [udfs] = await Promise.allSettled([
+                this.currentDelegate.fetchChildren(db, forceDeepRefresh),
+                this.artifactsDelegate.fetchChildren(db, forceDeepRefresh),
+              ]);
+              this.children = udfs.status === "fulfilled" ? udfs.value : [];
+              if (udfs.status === "rejected") throw udfs.reason;
+            } else {
+              this.children = await this.currentDelegate.fetchChildren(db, forceDeepRefresh);
+            }
           } catch (error) {
             let msg = `Failed to load Flink ${this.currentDelegate.mode}`;
             if (this.currentDelegate.mode === FlinkDatabaseViewProviderMode.Artifacts) {
@@ -139,9 +176,12 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
         },
         false,
       );
+    } else {
+      // No database selected, clear children
+      this.children = [];
     }
 
-    // either show the empty state or the current delegate's children
+    // Update the view with the new children
     this._onDidChangeTreeData.fire();
   }
 
