@@ -402,4 +402,47 @@ describe("commands/utils/uploadArtifact", () => {
       sinon.assert.calledWith(showInfoStub, "testFunction function created successfully.");
     });
   });
+
+  describe("getArtifactPatchParams", () => {
+    it("should build patch payload correctly", async () => {
+      const existingArtifact = new FlinkArtifact({
+        id: "artifact-id",
+        name: "old-name",
+        description: "old description",
+        connectionId: "conn-id" as ConnectionId,
+        connectionType: "ccloud" as ConnectionType,
+        environmentId: "env-id" as EnvironmentId,
+        provider: "aws",
+        region: "us-west-2",
+        documentationLink: "https://old-link.com",
+        metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
+          self: {},
+          resource_name: "old-name",
+          created_at: new Date(),
+          updated_at: new Date(),
+          deleted_at: new Date(),
+        }),
+      });
+
+      const showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick");
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showQuickPickStub.onFirstCall().resolves({ value: "description" } as any);
+      showInputBoxStub.onFirstCall().resolves("new description");
+
+      showQuickPickStub.onSecondCall().resolves({ value: "documentationLink" } as any);
+      showInputBoxStub.onSecondCall().resolves("https://new-link.com");
+
+      showQuickPickStub.onThirdCall().resolves({ value: "complete" } as any);
+
+      const patchPayload = await uploadArtifactModule.getArtifactPatchParams(existingArtifact);
+
+      sinon.assert.calledThrice(showQuickPickStub);
+      sinon.assert.calledTwice(showInputBoxStub);
+
+      assert.deepStrictEqual(patchPayload, {
+        description: "new description",
+        documentation_link: "https://new-link.com",
+      });
+    });
+  });
 });
