@@ -15,6 +15,7 @@ import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import type { EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import { CloudProvider } from "../../models/resource";
 import { showInfoNotificationWithButtons } from "../../notifications";
+import { type QuickPickItemWithValue } from "../../quickpicks/types";
 import { getSidecar } from "../../sidecar";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { readFileBuffer } from "../../utils/fsWrappers";
@@ -343,13 +344,12 @@ export async function executeCreateFunction(
   const createdMsg = `${userInput.functionName} function created successfully.`;
   void showInfoNotificationWithButtons(createdMsg);
 }
-interface QuickPickWizardItem extends vscode.QuickPickItem {
-  value: string;
-}
+
 interface UpdateArtifactPayload {
   description: string | undefined;
   documentation_link: string | undefined;
 }
+
 export async function getArtifactPatchParams(
   artifact: FlinkArtifact,
 ): Promise<UpdateArtifactPayload | undefined> {
@@ -438,7 +438,7 @@ export async function getArtifactPatchParams(
 export function makeMenuItems(
   patches: UpdateArtifactPayload,
   artifact: FlinkArtifact,
-): QuickPickWizardItem[] {
+): QuickPickItemWithValue<string>[] {
   const completedIcon = "pass-filled";
   const incompleteIcon = "circle-large-outline";
   // We cannot disable a menu item. This adjusts the label on Submit instead of hiding it.
