@@ -60,10 +60,10 @@ export async function uploadArtifactCommand(
         if (response) {
           logUsage(UserEvent.FlinkArtifactAction, {
             action: "upload",
-            status: "succeeded",
-            kind: "CloudProviderUpload",
+            step: "succeeded",
             cloud: params.cloud,
             region: params.region,
+            artifactId: response.id,
           });
           void showInfoNotificationWithButtons(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
@@ -77,14 +77,14 @@ export async function uploadArtifactCommand(
       },
     );
   } catch (err) {
+    const errorMessage = await buildUploadErrorMessage(err, "Failed to upload artifact:");
     logUsage(UserEvent.FlinkArtifactAction, {
       action: "upload",
-      status: "failed",
-      kind: "CloudProviderUpload",
+      step: "failed",
       cloud: params.cloud,
       region: params.region,
+      message: errorMessage,
     });
-    const errorMessage = await buildUploadErrorMessage(err, "Failed to upload artifact:");
     logError(err, errorMessage);
     void showErrorNotificationWithButtons(errorMessage);
   }
@@ -102,8 +102,7 @@ async function executeArtifactUpload(
 
   logUsage(UserEvent.FlinkArtifactAction, {
     action: "upload",
-    status: "started",
-    kind: "CloudProviderUpload",
+    step: "upload started",
     cloud: params.cloud,
     region: params.region,
   });
@@ -129,6 +128,7 @@ async function executeArtifactUpload(
     message: "Uploading artifact binary to cloud storage...",
     increment: stepPortion,
   });
+
   await handleUploadToCloudProvider(params, uploadUrl);
 
   // Step 3: Create artifact in Confluent Cloud

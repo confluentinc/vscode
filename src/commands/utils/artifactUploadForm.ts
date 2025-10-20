@@ -132,6 +132,12 @@ export async function artifactUploadQuickPickForm(
     },
   ];
 
+  // Emit telemetry: user entered the form to specify params
+  logUsage(UserEvent.FlinkArtifactAction, {
+    action: "upload",
+    step: "upload form opened",
+  });
+
   while (true) {
     const menuItems = createMenuItems();
     const canComplete =
@@ -154,7 +160,8 @@ export async function artifactUploadQuickPickForm(
     if (!selection) {
       logUsage(UserEvent.FlinkArtifactAction, {
         action: "upload",
-        status: "exited early from quickpick form",
+        step: "cancelled",
+        message: "User exited artifact upload form early",
       });
       return;
     }
@@ -166,7 +173,7 @@ export async function artifactUploadQuickPickForm(
         if (environment) {
           logUsage(UserEvent.FlinkArtifactAction, {
             action: "upload",
-            status: "selected environment",
+            step: "selected environment",
             environment: environment.id,
           });
           state.environment = { id: environment.id, name: environment.name };
@@ -179,7 +186,7 @@ export async function artifactUploadQuickPickForm(
         if (cloudRegion) {
           logUsage(UserEvent.FlinkArtifactAction, {
             action: "upload",
-            status: "selected cloud region",
+            step: "selected cloud region",
             cloud: cloudRegion.provider,
             region: cloudRegion.region,
           });
@@ -204,7 +211,7 @@ export async function artifactUploadQuickPickForm(
         if (selectedFiles && selectedFiles.length > 0) {
           logUsage(UserEvent.FlinkArtifactAction, {
             action: "upload",
-            status: "selected a file",
+            step: "selected a file",
           });
           state.selectedFile = selectedFiles[0];
           // populate artifact name from filename if not already set
@@ -234,7 +241,7 @@ export async function artifactUploadQuickPickForm(
         if (artifactName !== undefined) {
           logUsage(UserEvent.FlinkArtifactAction, {
             action: "upload",
-            status: "input name",
+            step: "input name",
           });
           state.artifactName = artifactName;
         }
@@ -251,7 +258,7 @@ export async function artifactUploadQuickPickForm(
         if (description !== undefined) {
           logUsage(UserEvent.FlinkArtifactAction, {
             action: "upload",
-            status: "input description",
+            step: "input description",
           });
           state.description = description;
         }
@@ -279,7 +286,7 @@ export async function artifactUploadQuickPickForm(
         if (documentationUrl !== undefined) {
           logUsage(UserEvent.FlinkArtifactAction, {
             action: "upload",
-            status: "input documentation url",
+            step: "input documentation url",
           });
           state.documentationUrl = documentationUrl;
         }
@@ -308,7 +315,7 @@ export async function artifactUploadQuickPickForm(
 
         logUsage(UserEvent.FlinkArtifactAction, {
           action: "upload",
-          status: "completed form",
+          step: "completed form",
         });
 
         return {
