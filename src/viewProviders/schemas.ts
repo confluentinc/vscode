@@ -134,7 +134,7 @@ export class SchemasViewProvider
       treeItem = new SchemaTreeItem(element);
     }
 
-    this.adjustTreeItemForSearch(element, treeItem, true);
+    this.adjustTreeItemForSearch(element, treeItem);
 
     return treeItem;
   }

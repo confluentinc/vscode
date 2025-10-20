@@ -109,7 +109,9 @@ export abstract class MultiModeViewProvider<
 
   getTreeItem(element: T): TreeItem {
     const treeItem = this.currentDelegate.getTreeItem(element);
-    this.adjustTreeItemForSearch(element, treeItem, true);
+
+    // Decorate the tree item based on search state, if any.
+    this.adjustTreeItemForSearch(element, treeItem);
 
     return treeItem;
   }

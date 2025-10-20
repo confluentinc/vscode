@@ -197,7 +197,9 @@ export class FlinkStatementsViewProvider
 
   getTreeItem(element: FlinkStatement): TreeItem {
     let treeItem = new FlinkStatementTreeItem(element);
-    this.adjustTreeItemForSearch(element, treeItem, true);
+
+    // Decorate the tree item based on search state.
+    this.adjustTreeItemForSearch(element, treeItem);
 
     return treeItem;
   }

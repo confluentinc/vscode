@@ -137,20 +137,15 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
    * Adjust the given TreeItem based on matching the current {@link itemSearchString search string}, if any.
    * @param element The base model instance corresponding to the TreeItem
    * @param treeItem The TreeItem corresponding to the element.
-   * @param updateCollapsibleState Should the TreeItem's collapsable state be adjusted (if this item can possibly have matching children) based on search matches?
    */
-  adjustTreeItemForSearch(
-    element: T,
-    treeItem: TreeItem,
-    updateCollapsibleState: boolean = false,
-  ): void {
+  adjustTreeItemForSearch(element: T, treeItem: TreeItem): void {
     if (this.itemSearchString) {
       if (itemMatchesSearch(element, this.itemSearchString)) {
         // special URI scheme to decorate the tree item with a dot to the right of the label,
         // and color the label, description, and decoration so it stands out in the tree view
         treeItem.resourceUri = Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
       }
-      if (updateCollapsibleState) {
+      if (element.children && element.children.length > 0) {
         treeItem = updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
       }
     }
