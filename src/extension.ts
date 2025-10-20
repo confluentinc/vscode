@@ -73,6 +73,7 @@ import {
   checkForExtensionDisabledReason,
   showExtensionDisabledNotification,
 } from "./featureFlags/evaluation";
+import { FLINK_SQL_LANGUAGE_ID } from "./flinkSql/constants";
 import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageClientManager";
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
@@ -343,7 +344,7 @@ async function _activateExtension(
 
   const provider = FlinkSqlCodelensProvider.getInstance();
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider("flinksql", provider),
+    vscode.languages.registerCodeLensProvider(FLINK_SQL_LANGUAGE_ID, provider),
     provider,
   );
 
