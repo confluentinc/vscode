@@ -160,7 +160,7 @@ export async function artifactUploadQuickPickForm(
       logUsage(UserEvent.FlinkArtifactAction, {
         action: "upload",
         step: "cancelled",
-        message: "User exited artifact upload form early",
+        message: "Artifact upload form exited early",
       });
       return;
     }
