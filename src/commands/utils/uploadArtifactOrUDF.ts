@@ -289,7 +289,6 @@ export async function buildUploadErrorMessage(err: unknown, base: string): Promi
  * This function prompts the user for a function name and class name for a new UDF.
  * It returns an object containing the function name and class name, or undefined if the user cancels.
  *
- * @param selectedArtifact The selected Flink artifact, used to generate a default function name.
  */
 export async function promptForFunctionAndClassName(): Promise<
   { functionName: string; className: string } | undefined
