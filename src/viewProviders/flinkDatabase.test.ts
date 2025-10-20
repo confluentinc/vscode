@@ -35,8 +35,8 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
     beforeEach(async () => {
       viewProvider = FlinkDatabaseViewProvider.getInstance();
-      // Start in a known state.
-      await viewProvider.switchMode(FlinkDatabaseViewProviderMode.Artifacts);
+      // Start in a test-suite known state.
+      await viewProvider.switchMode(FlinkDatabaseViewProviderMode.UDFs);
     });
 
     afterEach(() => {
@@ -107,6 +107,8 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should show an error notification when the delegate's fetchChildren() fails", async () => {
         viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+        assert.ok(viewProvider.database);
+
         const fakeError = new Error("uh oh");
         delegateFetchStub.rejects(fakeError);
 
