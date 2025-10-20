@@ -86,6 +86,7 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   vscode.languages.setTextDocumentLanguage(doc, FLINK_SQL_LANGUAGE_ID);
   await vscode.window.showTextDocument(doc, { preview: false });
 }
+
 /**
  * Submit a Flink statement to a Flink cluster.
  *
