@@ -395,6 +395,17 @@ export async function getArtifactPatchParams(
           prompt: "Enter a documentation URL for the Flink artifact (optional)",
           placeHolder: "https://example.com/docs",
           value: patchPayload.documentation_link,
+          validateInput: (value) => {
+            if (value && value.trim()) {
+              try {
+                new URL(value);
+                return undefined;
+              } catch {
+                return "Please enter a valid URL";
+              }
+            }
+            return undefined;
+          },
           ignoreFocusOut: true,
         });
         patchPayload.documentation_link = documentationLink;
