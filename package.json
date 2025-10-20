@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.8.0-50",
+  "version": "1.8.0-51",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -1813,16 +1813,6 @@
           "group": "navigation@1"
         },
         {
-          "command": "confluent.flink.database.search",
-          "when": "view == confluent-flink-database && confluent.flinkDatabaseSelected && !confluent.flinkDatabaseSearchApplied",
-          "group": "navigation@1"
-        },
-        {
-          "command": "confluent.flink.database.search.clear",
-          "when": "view == confluent-flink-database && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied",
-          "group": "navigation@1"
-        },
-        {
           "command": "confluent.statements.create",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected",
           "group": "navigation@2"
@@ -1843,19 +1833,29 @@
           "group": "navigation@5"
         },
         {
+          "command": "confluent.flink.database.search",
+          "when": "view == confluent-flink-database && confluent.flinkDatabaseSelected && !confluent.flinkDatabaseSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.flink.database.search.clear",
+          "when": "view == confluent-flink-database && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.artifacts.scaffold",
           "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts && confluent.flinkDatabaseSelected",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "confluent.uploadArtifact",
           "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && config.confluent.flink.artifacts",
-          "group": "navigation@2"
+          "group": "navigation@3"
         },
         {
           "command": "confluent.flinkdatabase.kafka-cluster.select",
           "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts",
-          "group": "navigation@3"
+          "group": "navigation@4"
         },
         {
           "command": "confluent.flinkdatabase.refresh",
