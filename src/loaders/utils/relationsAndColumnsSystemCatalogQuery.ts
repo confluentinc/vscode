@@ -6,7 +6,7 @@ import {
   toRelationType,
 } from "../../models/flinkSystemCatalog";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
-import { relationColumnFactory } from "../../models/utils/relation_column_parser";
+import { relationColumnFactory } from "../../models/utils/relationColumnParser";
 
 const logger = new Logger("relationsAndColumnsSystemCatalogQuery");
 
