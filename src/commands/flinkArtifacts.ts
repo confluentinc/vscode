@@ -189,7 +189,7 @@ export async function deleteArtifactCommand(
   );
 }
 
-/** Update an artifact using the artifactQuickPick form */
+/** Update an artifact's editable fields */
 export async function updateArtifactCommand(
   selectedArtifact: FlinkArtifact | undefined,
 ): Promise<void> {
@@ -200,6 +200,12 @@ export async function updateArtifactCommand(
 
   const patchPayload = await getArtifactPatchParams(selectedArtifact);
   if (!patchPayload) {
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "update",
+      status: "exited early with no changes",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
     return;
   }
   const request: UpdateArtifactV1FlinkArtifactRequest = {
@@ -209,14 +215,14 @@ export async function updateArtifactCommand(
     id: selectedArtifact.id,
     ArtifactV1FlinkArtifact: patchPayload,
   };
-  logUsage(UserEvent.FlinkArtifactAction, {
-    action: "update",
-    status: "started",
-    cloud: selectedArtifact.provider,
-    region: selectedArtifact.region,
-  });
 
   try {
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "update",
+      status: "request started",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
     const sidecarHandle = await getSidecar();
     const artifactsClient = sidecarHandle.getFlinkArtifactsApi({
       region: selectedArtifact.region,

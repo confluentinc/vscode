@@ -347,13 +347,13 @@ interface QuickPickWizardItem extends vscode.QuickPickItem {
   value: string;
 }
 interface UpdateArtifactPaylod {
-  description?: string;
-  documentation_link?: string;
+  description: string | undefined;
+  documentation_link: string | undefined;
 }
 export async function getArtifactPatchParams(
   artifact: FlinkArtifact,
 ): Promise<UpdateArtifactPaylod | undefined> {
-  let patchPayload = {
+  let patchPayload: UpdateArtifactPaylod = {
     description: artifact.description,
     documentation_link: artifact.documentationLink,
   };
@@ -381,9 +381,13 @@ export async function getArtifactPatchParams(
           value: patchPayload.description,
           ignoreFocusOut: true,
         });
-        if (description !== undefined) {
-          patchPayload.description = description;
-        }
+        patchPayload.description = description;
+        logUsage(UserEvent.FlinkArtifactAction, {
+          action: "update",
+          status: "description changed",
+          cloud: artifact.provider,
+          region: artifact.region,
+        });
         break;
       }
       case "documentationLink": {
@@ -393,9 +397,13 @@ export async function getArtifactPatchParams(
           value: patchPayload.documentation_link,
           ignoreFocusOut: true,
         });
-        if (documentationLink !== undefined) {
-          patchPayload.documentation_link = documentationLink;
-        }
+        patchPayload.documentation_link = documentationLink;
+        logUsage(UserEvent.FlinkArtifactAction, {
+          action: "update",
+          status: "documentation link changed",
+          cloud: artifact.provider,
+          region: artifact.region,
+        });
         break;
       }
       case "complete": {
@@ -407,8 +415,20 @@ export async function getArtifactPatchParams(
           void vscode.window.showInformationMessage(
             "No changes have been made. Please update at least one field.",
           );
+          logUsage(UserEvent.FlinkArtifactAction, {
+            action: "update",
+            status: "submitted with no changes",
+            cloud: artifact.provider,
+            region: artifact.region,
+          });
           break;
         }
+        logUsage(UserEvent.FlinkArtifactAction, {
+          action: "update",
+          status: "submitted changes",
+          cloud: artifact.provider,
+          region: artifact.region,
+        });
         return patchPayload;
       }
     }
