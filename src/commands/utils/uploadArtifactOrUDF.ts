@@ -452,21 +452,22 @@ export function makeMenuItems(
 ): QuickPickItemWithValue<string>[] {
   const completedIcon = "pass-filled";
   const incompleteIcon = "circle-large-outline";
+  const descChanged = patches.description !== artifact.description;
+  const docsChanged = patches.documentation_link !== artifact.documentationLink;
   // We cannot disable a menu item. This adjusts the label on Submit instead of hiding it.
-  const hasChanges =
-    patches.description !== artifact.description ||
-    patches.documentation_link !== artifact.documentationLink;
+  const hasChanges = descChanged || docsChanged;
+
   return [
     {
       label: `Update the Description (Optional)`,
       description: patches.description || "None",
-      iconPath: new vscode.ThemeIcon(patches.description ? completedIcon : incompleteIcon),
+      iconPath: new vscode.ThemeIcon(descChanged ? completedIcon : incompleteIcon),
       value: "description",
     },
     {
       label: `Update the Documentation URL (Optional)`,
       description: patches.documentation_link || "None",
-      iconPath: new vscode.ThemeIcon(patches.documentation_link ? completedIcon : incompleteIcon),
+      iconPath: new vscode.ThemeIcon(docsChanged ? completedIcon : incompleteIcon),
       value: "documentationLink",
     },
     {
