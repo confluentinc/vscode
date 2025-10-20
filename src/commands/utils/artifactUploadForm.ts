@@ -32,7 +32,7 @@ export async function artifactUploadQuickPickForm(
 ): Promise<ArtifactUploadParams | undefined> {
   logUsage(UserEvent.FlinkArtifactAction, {
     action: "upload",
-    step: "upload form opened",
+    step: "form opened",
   });
 
   const state: FormState = {};
