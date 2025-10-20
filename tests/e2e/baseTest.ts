@@ -290,6 +290,16 @@ async function globalBeforeEach(page: Page, electronApp: ElectronApplication): P
   await expect(infoNotifications).not.toHaveCount(0);
   const notification = new Notification(page, infoNotifications.first());
   await notification.dismiss();
+
+  // collapse the secondary sidebar if it's expanded since it isn't used for anything
+  try {
+    await expect(page.locator(`[id="workbench.parts.auxiliarybar"]`)).toBeVisible({
+      timeout: 1000,
+    });
+    await executeVSCodeCommand(page, "View: Toggle Secondary Side Bar Visibility");
+  } catch (error) {
+    console.warn("Error locating/toggling secondary sidebar:", error);
+  }
 }
 
 async function globalAfterEach(
