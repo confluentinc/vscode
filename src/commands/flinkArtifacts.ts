@@ -206,6 +206,7 @@ export async function updateArtifactCommand(
       cloud: selectedArtifact.provider,
       region: selectedArtifact.region,
     });
+    void vscode.window.showInformationMessage("Update cancelled. No changes were made.");
     return;
   }
   const request: UpdateArtifactV1FlinkArtifactRequest = {
@@ -258,9 +259,7 @@ export async function updateArtifactCommand(
         region: selectedArtifact.region,
       },
     });
-    void showErrorNotificationWithButtons(
-      `Failed to update artifact "${selectedArtifact.name}". Please check the logs for more details.`,
-    );
+    void showErrorNotificationWithButtons(`Failed to update artifact "${selectedArtifact.name}".`);
   }
 }
 
