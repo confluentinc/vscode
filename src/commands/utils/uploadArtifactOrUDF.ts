@@ -291,10 +291,9 @@ export async function buildUploadErrorMessage(err: unknown, base: string): Promi
  *
  * @param selectedArtifact The selected Flink artifact, used to generate a default function name.
  */
-export async function promptForFunctionAndClassName(
-  selectedArtifact: FlinkArtifact | undefined,
-): Promise<{ functionName: string; className: string } | undefined> {
-  const defaultFunctionName = `udf_${selectedArtifact?.name?.substring(0, 6) ?? ""}`;
+export async function promptForFunctionAndClassName(): Promise<
+  { functionName: string; className: string } | undefined
+> {
   const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
   const classNameRegex = /^[a-zA-Z_][a-zA-Z0-9_.]*$/;
 
@@ -307,7 +306,7 @@ export async function promptForFunctionAndClassName(
   if (className === undefined) {
     return undefined;
   }
-
+  const defaultFunctionName = className.split(".").pop() || className;
   const functionName = await vscode.window.showInputBox({
     prompt: "Enter a name for the new UDF",
     placeHolder: defaultFunctionName,

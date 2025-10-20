@@ -178,7 +178,7 @@ export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtif
       throw new Error("No Flink database.");
     }
 
-    let userInput = await promptForFunctionAndClassName(selectedArtifact);
+    let userInput = await promptForFunctionAndClassName();
     if (!userInput) {
       return; // User cancelled the input
     }
