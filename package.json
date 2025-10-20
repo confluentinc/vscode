@@ -812,6 +812,12 @@
         "category": "Confluent: Topics View"
       },
       {
+        "command": "confluent.updateArtifact",
+        "icon": "$(pencil)",
+        "title": "Update Artifact",
+        "category": "Confluent: Flink Artifacts"
+      },
+      {
         "command": "confluent.uploadArtifact",
         "icon": "$(cloud-upload)",
         "title": "Upload Flink Artifact to Confluent Cloud",
@@ -1655,6 +1661,10 @@
           "when": "confluent.topicSearchApplied"
         },
         {
+          "command": "confluent.updateArtifact",
+          "when": "false"
+        },
+        {
           "command": "confluent.uploadArtifact",
           "when": "confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts"
         }
@@ -1994,6 +2004,11 @@
         },
         {
           "command": "confluent.deleteArtifact",
+          "when": "view == confluent-flink-database && viewItem =~ /.*-flink-artifact$/",
+          "group": "artifacts"
+        },
+        {
+          "command": "confluent.updateArtifact",
           "when": "view == confluent-flink-database && viewItem =~ /.*-flink-artifact$/",
           "group": "artifacts"
         },
