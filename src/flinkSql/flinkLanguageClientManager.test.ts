@@ -32,8 +32,9 @@ import * as ccloud from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
 import { SecretStorageKeys, UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
+import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import type { ComputePoolInfo } from "./flinkLanguageClientManager";
-import { FlinkLanguageClientManager, FLINKSQL_LANGUAGE_ID } from "./flinkLanguageClientManager";
+import { FlinkLanguageClientManager } from "./flinkLanguageClientManager";
 import * as languageClient from "./languageClient";
 
 describe("FlinkLanguageClientManager", () => {
@@ -92,7 +93,7 @@ describe("FlinkLanguageClientManager", () => {
       // Stub the workspace.textDocuments to return a document with flinksql language id
       const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
       const fakeDocument = {
-        languageId: FLINKSQL_LANGUAGE_ID,
+        languageId: FLINK_SQL_LANGUAGE_ID,
         uri: fakeUri,
       } as vscode.TextDocument;
       sandbox.stub(vscode.workspace, "textDocuments").value([fakeDocument]);
@@ -137,7 +138,7 @@ describe("FlinkLanguageClientManager", () => {
     for (const goodScheme of ["file", "untitled"]) {
       it(`should return true for Flink SQL + ${goodScheme} documents`, () => {
         const uri = vscode.Uri.parse(`${goodScheme}:///test.flink.sql`);
-        const document = { languageId: FLINKSQL_LANGUAGE_ID, uri } as vscode.TextDocument;
+        const document = { languageId: FLINK_SQL_LANGUAGE_ID, uri } as vscode.TextDocument;
         assert.strictEqual(flinkManager.isAppropriateDocument(document), true);
       });
     }
@@ -150,7 +151,7 @@ describe("FlinkLanguageClientManager", () => {
 
     it("should return false for read-only FlinkStatement URIs", () => {
       const uri = vscode.Uri.parse(`${FLINKSTATEMENT_URI_SCHEME}://test-statement`);
-      const document = { languageId: FLINKSQL_LANGUAGE_ID, uri } as vscode.TextDocument;
+      const document = { languageId: FLINK_SQL_LANGUAGE_ID, uri } as vscode.TextDocument;
       assert.strictEqual(flinkManager.isAppropriateDocument(document), false);
     });
   });
@@ -384,7 +385,10 @@ describe("FlinkLanguageClientManager", () => {
   describe("document tracking", () => {
     it("should add open flink documents to the tracking set when initializing", () => {
       const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
-      const fakeDocument = { languageId: "flinksql", uri: fakeUri } as vscode.TextDocument;
+      const fakeDocument = {
+        languageId: FLINK_SQL_LANGUAGE_ID,
+        uri: fakeUri,
+      } as vscode.TextDocument;
       sandbox.stub(vscode.workspace, "textDocuments").value([fakeDocument]);
 
       // Re-initialize the singleton so the constructor runs
@@ -400,7 +404,10 @@ describe("FlinkLanguageClientManager", () => {
 
     it("should track documents when opened", () => {
       const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
-      const fakeDocument = { languageId: "flinksql", uri: fakeUri } as vscode.TextDocument;
+      const fakeDocument = {
+        languageId: FLINK_SQL_LANGUAGE_ID,
+        uri: fakeUri,
+      } as vscode.TextDocument;
       sandbox.stub(vscode.workspace, "textDocuments").value([fakeDocument]);
 
       flinkManager.trackDocument(fakeUri);
@@ -942,7 +949,7 @@ describe("FlinkLanguageClientManager", () => {
     it("should call simulateDocumentChangeToTriggerDiagnostics() in finally block when client is created", async () => {
       const testDocument = {
         uri: TEST_FILE_URI,
-        languageId: FLINKSQL_LANGUAGE_ID,
+        languageId: FLINK_SQL_LANGUAGE_ID,
       } as vscode.TextDocument;
       workspaceTextDocumentsStub.value([testDocument]);
 
@@ -955,7 +962,7 @@ describe("FlinkLanguageClientManager", () => {
     it("should not call simulateDocumentChangeToTriggerDiagnostics() if no matching document is found", async () => {
       const otherDocument = {
         uri: vscode.Uri.parse("file:///other.flink.sql"),
-        languageId: FLINKSQL_LANGUAGE_ID,
+        languageId: FLINK_SQL_LANGUAGE_ID,
       } as vscode.TextDocument;
       workspaceTextDocumentsStub.value([otherDocument]);
 
@@ -976,7 +983,7 @@ describe("FlinkLanguageClientManager", () => {
       flinkManager["languageClient"] = sandbox.createStubInstance(LanguageClient);
       const testDocument = {
         uri: TEST_FILE_URI,
-        languageId: FLINKSQL_LANGUAGE_ID,
+        languageId: FLINK_SQL_LANGUAGE_ID,
       } as vscode.TextDocument;
       workspaceTextDocumentsStub.value([testDocument]);
       const testError = new Error("Test error");
@@ -1007,7 +1014,7 @@ describe("FlinkLanguageClientManager", () => {
 
     const goodFlinkUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
     const goodFlinkDocument = {
-      languageId: FLINKSQL_LANGUAGE_ID,
+      languageId: FLINK_SQL_LANGUAGE_ID,
       uri: goodFlinkUri,
     } as vscode.TextDocument;
 
@@ -1134,7 +1141,7 @@ describe("FlinkLanguageClientManager", () => {
 
         // as if perhaps they just set the language id from plaintext to flinksql
         openTextDocumentStub.resolves({
-          languageId: "flinksql",
+          languageId: FLINK_SQL_LANGUAGE_ID,
           uri: documentUri,
         } as vscode.TextDocument);
 
@@ -1163,7 +1170,7 @@ describe("FlinkLanguageClientManager", () => {
         flinkManager["lastDocUri"] = null; // No last document
 
         openTextDocumentStub.resolves({
-          languageId: "flinksql",
+          languageId: FLINK_SQL_LANGUAGE_ID,
           uri: documentUri,
         } as vscode.TextDocument);
 
@@ -1178,7 +1185,7 @@ describe("FlinkLanguageClientManager", () => {
         it(`should call maybeStartLanguageClient for flinksql document in ${goodScheme} scheme`, async () => {
           const fakeUri = vscode.Uri.parse(`${goodScheme}:///fake/path/test.flinksql`);
           const fakeDocument = {
-            languageId: FLINKSQL_LANGUAGE_ID,
+            languageId: FLINK_SQL_LANGUAGE_ID,
             uri: fakeUri,
           } as vscode.TextDocument;
           const fakeEditor = { document: fakeDocument } as vscode.TextEditor;
@@ -1205,7 +1212,7 @@ describe("FlinkLanguageClientManager", () => {
       it("Should not call maybeStartLanguageClient when active editor is flinksql but not a valid uri", async () => {
         const fakeUri = vscode.Uri.parse(`${FLINKSTATEMENT_URI_SCHEME}:///fake/path/test.flinksql`);
         const fakeDocument = {
-          languageId: FLINKSQL_LANGUAGE_ID,
+          languageId: FLINK_SQL_LANGUAGE_ID,
           uri: fakeUri,
         } as vscode.TextDocument;
         const fakeEditor = { document: fakeDocument } as vscode.TextEditor;
@@ -1247,7 +1254,7 @@ describe("FlinkLanguageClientManager", () => {
       it("Should not call maybeStartLanguageClient when flinksql document is opened but not the active editor", async () => {
         const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
         const fakeDocument = {
-          languageId: FLINKSQL_LANGUAGE_ID,
+          languageId: FLINK_SQL_LANGUAGE_ID,
           uri: fakeUri,
         } as vscode.TextDocument;
 
@@ -1271,7 +1278,7 @@ describe("FlinkLanguageClientManager", () => {
         it(`should call maybeStartLanguageClient when a flinksql document is opened when no active editor at all: scheme ${goodScheme}`, async () => {
           const fakeUri = vscode.Uri.parse(`${goodScheme}:///fake/path/test.flinksql`);
           const fakeDocument = {
-            languageId: FLINKSQL_LANGUAGE_ID,
+            languageId: FLINK_SQL_LANGUAGE_ID,
             uri: fakeUri,
           } as vscode.TextDocument;
 
@@ -1291,7 +1298,7 @@ describe("FlinkLanguageClientManager", () => {
         it(`should call maybeStartLanguageClient when open document changes language id: scheme ${goodScheme}`, async () => {
           const fakeUri = vscode.Uri.parse(`${goodScheme}:///fake/path/test.flinksql`);
           const fakeDocument = {
-            languageId: FLINKSQL_LANGUAGE_ID,
+            languageId: FLINK_SQL_LANGUAGE_ID,
             uri: fakeUri,
           } as vscode.TextDocument;
 
@@ -1353,7 +1360,7 @@ describe("FlinkLanguageClientManager", () => {
       it("should not clear diagnostics for flinksql documents on text change if no prior diagnostics", () => {
         const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
         const fakeDocument = {
-          languageId: FLINKSQL_LANGUAGE_ID,
+          languageId: FLINK_SQL_LANGUAGE_ID,
           uri: fakeUri,
         } as vscode.TextDocument;
 
@@ -1380,7 +1387,7 @@ describe("FlinkLanguageClientManager", () => {
         flinkManager["languageClient"] = null; // Simulate no language client
         const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
         const fakeDocument = {
-          languageId: FLINKSQL_LANGUAGE_ID,
+          languageId: FLINK_SQL_LANGUAGE_ID,
           uri: fakeUri,
         } as vscode.TextDocument;
         const fakeEvent: vscode.TextDocumentChangeEvent = {
@@ -1399,7 +1406,7 @@ describe("FlinkLanguageClientManager", () => {
       it("should clear diagnostics for flinksql documents on text change if had prior diagnostics and the TextDocumentChangeEvent has contentChanges", () => {
         const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
         const fakeDocument = {
-          languageId: FLINKSQL_LANGUAGE_ID,
+          languageId: FLINK_SQL_LANGUAGE_ID,
           uri: fakeUri,
         } as vscode.TextDocument;
 
@@ -1437,7 +1444,7 @@ describe("FlinkLanguageClientManager", () => {
       it("should not clear diagnostics if the TextDocumentChangeEvent does not have any contentChanges", () => {
         const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
         const fakeDocument = {
-          languageId: FLINKSQL_LANGUAGE_ID,
+          languageId: FLINK_SQL_LANGUAGE_ID,
           uri: fakeUri,
         } as vscode.TextDocument;
 
