@@ -361,12 +361,6 @@
         "category": "Confluent: Flink Artifacts"
       },
       {
-        "command": "confluent.updateArtifact",
-        "icon": "$(pencil)",
-        "title": "Update Artifact",
-        "category": "Confluent: Flink Artifacts"
-      },
-      {
         "command": "confluent.deleteFlinkUDF",
         "title": "Delete UDF",
         "category": "Confluent: Flink UDFs"
@@ -816,6 +810,12 @@
         "command": "confluent.topics.search.clear",
         "title": "Clear Search",
         "category": "Confluent: Topics View"
+      },
+      {
+        "command": "confluent.updateArtifact",
+        "icon": "$(pencil)",
+        "title": "Update Artifact",
+        "category": "Confluent: Flink Artifacts"
       },
       {
         "command": "confluent.uploadArtifact",
@@ -1345,10 +1345,6 @@
           "when": "false"
         },
         {
-          "command": "confluent.updateArtifact",
-          "when": "false"
-        },
-        {
           "command": "confluent.deleteFlinkUDF",
           "when": "false"
         },
@@ -1663,6 +1659,10 @@
         {
           "command": "confluent.topics.search.clear",
           "when": "confluent.topicSearchApplied"
+        },
+        {
+          "command": "confluent.updateArtifact",
+          "when": "false"
         },
         {
           "command": "confluent.uploadArtifact",
