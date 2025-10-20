@@ -405,23 +405,10 @@ describe("commands/utils/uploadArtifact", () => {
 
   describe("getArtifactPatchParams", () => {
     it("should build patch payload correctly", async () => {
-      const existingArtifact = new FlinkArtifact({
+      const existingArtifact = createFlinkArtifact({
         id: "artifact-id",
-        name: "old-name",
         description: "old description",
-        connectionId: "conn-id" as ConnectionId,
-        connectionType: "ccloud" as ConnectionType,
-        environmentId: "env-id" as EnvironmentId,
-        provider: "aws",
-        region: "us-west-2",
         documentationLink: "https://old-link.com",
-        metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
-          self: {},
-          resource_name: "old-name",
-          created_at: new Date(),
-          updated_at: new Date(),
-          deleted_at: new Date(),
-        }),
       });
 
       const showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick");
