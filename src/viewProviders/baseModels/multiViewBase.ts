@@ -1,9 +1,6 @@
 import type { TreeItem } from "vscode";
-import { Uri } from "vscode";
 import type { ContextValues } from "../../context/values";
 import { setContextValue } from "../../context/values";
-import { updateCollapsibleStateFromSearch } from "../utils/collapsing";
-import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "../utils/search";
 import type { BaseViewProviderData } from "./base";
 import type { EnvironmentedBaseViewProviderData } from "./parentedBase";
 import { ParentedBaseViewProvider } from "./parentedBase";
@@ -112,15 +109,8 @@ export abstract class MultiModeViewProvider<
 
   getTreeItem(element: T): TreeItem {
     const treeItem = this.currentDelegate.getTreeItem(element);
-    if (this.itemSearchString !== null) {
-      if (itemMatchesSearch(element, this.itemSearchString)) {
-        // special URI scheme to decorate the tree item with a dot to the right of the label,
-        // and color the label, description, and decoration so it stands out in the tree view
-        treeItem.resourceUri = Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
-      }
+    this.adjustTreeItemForSearch(element, treeItem, true);
 
-      updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
-    }
     return treeItem;
   }
 
