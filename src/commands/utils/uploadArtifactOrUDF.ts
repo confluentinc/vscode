@@ -346,14 +346,14 @@ export async function executeCreateFunction(
 interface QuickPickWizardItem extends vscode.QuickPickItem {
   value: string;
 }
-interface UpdateArtifactPaylod {
+interface UpdateArtifactPayload {
   description: string | undefined;
   documentation_link: string | undefined;
 }
 export async function getArtifactPatchParams(
   artifact: FlinkArtifact,
-): Promise<UpdateArtifactPaylod | undefined> {
-  let patchPayload: UpdateArtifactPaylod = {
+): Promise<UpdateArtifactPayload | undefined> {
+  let patchPayload: UpdateArtifactPayload = {
     description: artifact.description,
     documentation_link: artifact.documentationLink,
   };
@@ -436,7 +436,7 @@ export async function getArtifactPatchParams(
 }
 
 export function makeMenuItems(
-  patches: UpdateArtifactPaylod,
+  patches: UpdateArtifactPayload,
   artifact: FlinkArtifact,
 ): QuickPickWizardItem[] {
   const completedIcon = "pass-filled";
