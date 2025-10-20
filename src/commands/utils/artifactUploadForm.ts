@@ -2,7 +2,6 @@ import path from "path";
 import * as vscode from "vscode";
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
-import { FlinkArtifact } from "../../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import { CloudProvider } from "../../models/resource";
@@ -29,33 +28,23 @@ interface FormState {
  * @returns A promise that resolves to the artifact upload parameters or undefined if canceled.
  */
 export async function artifactUploadQuickPickForm(
-  item?: CCloudKafkaCluster | CCloudFlinkComputePool | vscode.Uri | FlinkArtifact,
+  item?: CCloudKafkaCluster | CCloudFlinkComputePool | vscode.Uri,
 ): Promise<ArtifactUploadParams | undefined> {
   const state: FormState = {};
   const loader = CCloudResourceLoader.getInstance();
-  const isEditMode = item instanceof FlinkArtifact;
-  let action: "upload" | "update";
-  if (isEditMode) {
-    action = "update";
-  } else {
-    action = "upload";
-  }
+
   const assignStateFromKnownResource = async (
-    resource: CCloudKafkaCluster | CCloudFlinkComputePool | FlinkArtifact,
+    resource: CCloudKafkaCluster | CCloudFlinkComputePool,
   ) => {
     logUsage(UserEvent.FlinkArtifactAction, {
-      action,
+      action: "upload",
       status: "form state from resource",
       environment: resource.environmentId,
       cloud: resource.provider,
       region: resource.region,
     });
     state.cloudRegion = { provider: resource.provider, region: resource.region };
-    if (resource instanceof FlinkArtifact) {
-      state.artifactName = resource.name;
-      state.description = resource.description;
-      state.documentationUrl = resource.documentationLink;
-    }
+
     // Only call getEnvironment if we do not already have this environment in state
     // Starting upload from right-clicking on Flink database cluster will override the selectedFlinkDatabase env
     if (!state.environment || state.environment.id !== resource.environmentId) {
@@ -80,11 +69,7 @@ export async function artifactUploadQuickPickForm(
 
   // Pre-populate state from item if provided (invoked from context menu)
   if (item) {
-    if (
-      item instanceof CCloudFlinkComputePool ||
-      item instanceof CCloudKafkaCluster ||
-      item instanceof FlinkArtifact
-    ) {
+    if (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster) {
       logger.debug("Pre-populating upload form with provided context", {
         environment: item.environmentId,
         cloud: item.provider,
@@ -93,7 +78,7 @@ export async function artifactUploadQuickPickForm(
       await assignStateFromKnownResource(item);
     } else if (item instanceof vscode.Uri) {
       logUsage(UserEvent.FlinkArtifactAction, {
-        action,
+        action: "upload",
         status: "form state from file",
       });
       state.selectedFile = item;
@@ -150,11 +135,10 @@ export async function artifactUploadQuickPickForm(
   while (true) {
     const menuItems = createMenuItems();
     const canComplete =
-      isEditMode ||
-      (state.environment && state.cloudRegion && state.selectedFile && state.artifactName);
+      state.environment && state.cloudRegion && state.selectedFile && state.artifactName;
     if (canComplete) {
       menuItems.push({
-        label: isEditMode ? "Update Artifact" : "Upload Artifact",
+        label: "Upload Artifact",
         description: "All required fields provided",
         iconPath: new vscode.ThemeIcon("cloud-upload"),
         value: "complete",
@@ -163,13 +147,13 @@ export async function artifactUploadQuickPickForm(
 
     // Top-level quickpick. If user cancels here, we abort the entire flow
     const selection = await vscode.window.showQuickPick(menuItems, {
-      title: isEditMode ? "Update Flink Artifact" : "Upload Flink Artifact",
+      title: "Upload Flink Artifact",
       placeHolder: "Select a step to provide details",
       ignoreFocusOut: true,
     });
     if (!selection) {
       logUsage(UserEvent.FlinkArtifactAction, {
-        action,
+        action: "upload",
         status: "exited early from quickpick form",
       });
       return;
@@ -181,7 +165,7 @@ export async function artifactUploadQuickPickForm(
         const environment = await flinkCcloudEnvironmentQuickPick();
         if (environment) {
           logUsage(UserEvent.FlinkArtifactAction, {
-            action,
+            action: "upload",
             status: "selected environment",
             environment: environment.id,
           });
@@ -194,7 +178,7 @@ export async function artifactUploadQuickPickForm(
         const cloudRegion = await flinkDatabaseRegionsQuickPick();
         if (cloudRegion) {
           logUsage(UserEvent.FlinkArtifactAction, {
-            action,
+            action: "upload",
             status: "selected cloud region",
             cloud: cloudRegion.provider,
             region: cloudRegion.region,
@@ -219,7 +203,7 @@ export async function artifactUploadQuickPickForm(
         });
         if (selectedFiles && selectedFiles.length > 0) {
           logUsage(UserEvent.FlinkArtifactAction, {
-            action,
+            action: "upload",
             status: "selected a file",
           });
           state.selectedFile = selectedFiles[0];
@@ -249,7 +233,7 @@ export async function artifactUploadQuickPickForm(
         });
         if (artifactName !== undefined) {
           logUsage(UserEvent.FlinkArtifactAction, {
-            action,
+            action: "upload",
             status: "input name",
           });
           state.artifactName = artifactName;
@@ -266,7 +250,7 @@ export async function artifactUploadQuickPickForm(
         });
         if (description !== undefined) {
           logUsage(UserEvent.FlinkArtifactAction, {
-            action,
+            action: "upload",
             status: "input description",
           });
           state.description = description;
@@ -294,7 +278,7 @@ export async function artifactUploadQuickPickForm(
         });
         if (documentationUrl !== undefined) {
           logUsage(UserEvent.FlinkArtifactAction, {
-            action,
+            action: "upload",
             status: "input documentation url",
           });
           state.documentationUrl = documentationUrl;
@@ -320,10 +304,10 @@ export async function artifactUploadQuickPickForm(
 
         // Our file picker and context menu filter on `.jar`, so this should be safe
         // When we add Python support we may want to make it more robust
-        const fileFormat = state.selectedFile?.fsPath.split(".").pop() ?? "";
+        const fileFormat = state.selectedFile!.fsPath.split(".").pop() ?? "";
 
         logUsage(UserEvent.FlinkArtifactAction, {
-          action,
+          action: "upload",
           status: "completed form",
         });
 
