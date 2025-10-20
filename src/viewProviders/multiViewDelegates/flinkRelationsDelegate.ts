@@ -1,12 +1,7 @@
-import { TreeItem } from "vscode";
+import type { TreeItem } from "vscode";
 import { CCloudResourceLoader } from "../../loaders";
-import {
-  getRelationsAndColumnsSystemCatalogQuery,
-  parseRelationsAndColumnsSystemCatalogQueryResponse,
-  RawRelationsAndColumnsRow,
-} from "../../loaders/utils/relationsAndColumnsSystemCatalogQuery";
-import { FlinkRelation, FlinkRelationColumn } from "../../models/flinkSystemCatalog";
-import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
+import type { FlinkRelation, FlinkRelationColumn } from "../../models/flinkSystemCatalog";
+import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";
 
@@ -30,20 +25,9 @@ export class FlinkRelationsDelegate extends ViewProviderDelegate<
   }
 
   async fetchChildren(database: CCloudFlinkDbKafkaCluster): Promise<FlinkRelationElements[]> {
-    this.children = [];
-
     const ccloudResourceLoader = CCloudResourceLoader.getInstance();
 
-    // temp block
-    const query = getRelationsAndColumnsSystemCatalogQuery(database);
-    const relationsAndColumns =
-      await ccloudResourceLoader.executeBackgroundFlinkStatement<RawRelationsAndColumnsRow>(
-        query,
-        database,
-      );
-    this.children = parseRelationsAndColumnsSystemCatalogQueryResponse(relationsAndColumns);
-
-    // end temp block
+    this.children = await ccloudResourceLoader.getFlinkRelations(database);
 
     return this.children;
   }

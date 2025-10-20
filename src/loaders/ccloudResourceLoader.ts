@@ -25,7 +25,7 @@ import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { FlinkStatement } from "../models/flinkStatement";
 import { Phase, restFlinkStatementToModel } from "../models/flinkStatement";
-import type { FlinkUdf } from "../models/flinkSystemCatalog";
+import type { FlinkRelation, FlinkUdf } from "../models/flinkSystemCatalog";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { CCloudOrganization } from "../models/organization";
@@ -39,6 +39,11 @@ import type { ExecutionResult } from "../utils/workerPool";
 import { executeInWorkerPool, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 import { generateFlinkStatementKey } from "./utils/loaderUtils";
+import type { RawRelationsAndColumnsRow } from "./utils/relationsAndColumnsSystemCatalogQuery";
+import {
+  getRelationsAndColumnsSystemCatalogQuery,
+  parseRelationsAndColumnsSystemCatalogQueryResponse,
+} from "./utils/relationsAndColumnsSystemCatalogQuery";
 import type { RawUdfSystemCatalogRow } from "./utils/udfSystemCatalogQuery";
 import {
   getUdfSystemCatalogQuery,
@@ -471,6 +476,16 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     }
 
     return udfs;
+  }
+
+  /**
+   * Get the tables / views / columns of a given Flink database via system catalog queries.
+   */
+  public async getFlinkRelations(database: CCloudFlinkDbKafkaCluster): Promise<FlinkRelation[]> {
+    const query = getRelationsAndColumnsSystemCatalogQuery(database);
+    const relationsAndColumns =
+      await this.executeBackgroundFlinkStatement<RawRelationsAndColumnsRow>(query, database);
+    return parseRelationsAndColumnsSystemCatalogQueryResponse(relationsAndColumns);
   }
 
   /**

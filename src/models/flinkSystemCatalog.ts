@@ -313,60 +313,6 @@ export class FlinkRelationColumn {
   }
 }
 
-/** Corresponding to a ROW column which itself holds an open-ended number of sub-columns. */
-export class CompositeFlinkRelationColumn extends FlinkRelationColumn {
-  /** Sub-columns for this ROW column */
-  readonly columns: FlinkRelationColumn[];
-
-  constructor(
-    props: FlinkRelationColumnProps & {
-      columns: FlinkRelationColumn[];
-    },
-  ) {
-    super(props);
-    this.columns = props.columns;
-  }
-
-  getTreeItem(): TreeItem {
-    const item = super.getTreeItem();
-
-    // Having sub-columns, make it collapsible
-    item.collapsibleState = TreeItemCollapsibleState.Collapsed;
-
-    return item;
-  }
-}
-
-/**
- * Composite column representing a MAP<K,V>. Children are synthetic and named 'key' and 'value'.
- */
-export class MapFlinkRelationColumn extends FlinkRelationColumn {
-  readonly keyColumn: FlinkRelationColumn;
-  readonly valueColumn: FlinkRelationColumn;
-
-  constructor(
-    props: FlinkRelationColumnProps & {
-      keyColumn: FlinkRelationColumn;
-      valueColumn: FlinkRelationColumn;
-    },
-  ) {
-    super(props);
-    this.keyColumn = props.keyColumn;
-    this.valueColumn = props.valueColumn;
-  }
-
-  /** Convenience accessor returning both synthetic children. */
-  get columns(): FlinkRelationColumn[] {
-    return [this.keyColumn, this.valueColumn];
-  }
-
-  getTreeItem(): TreeItem {
-    const item = super.getTreeItem();
-    item.collapsibleState = TreeItemCollapsibleState.Collapsed;
-    return item;
-  }
-}
-
 /** Type of a Flink relation (table, view, system or external table). */
 export enum FlinkRelationType {
   /** A CCloud Kafka-topic-based table */
