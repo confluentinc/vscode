@@ -142,6 +142,8 @@ export function parseRelationsAndColumnsSystemCatalogQueryResponse(
   sortRawRelationsAndColumnsRows(rows);
 
   const relations: FlinkRelation[] = [];
+  let mostRecentRelationName = "";
+
   let currentColumns: FlinkRelationColumn[] | undefined = undefined;
 
   for (const row of rows) {
@@ -159,13 +161,15 @@ export function parseRelationsAndColumnsSystemCatalogQueryResponse(
         columns: [],
       });
       relations.push(newRelation);
+      mostRecentRelationName = row.relationName;
       currentColumns = newRelation.columns;
     } else {
-      if (!currentColumns) {
-        const message = `Column ${row.columnName} for relation ${row.relationName} had no preceding relation entry!`;
+      if (row.relationName !== mostRecentRelationName || !currentColumns) {
+        const message = `Column ${row.columnName} for relation ${row.relationName} does not match current relation "${mostRecentRelationName}"!`;
         logger.error(message);
         throw new Error(message);
       }
+
       currentColumns.push(
         new FlinkRelationColumn({
           relationName: row.relationName,
@@ -191,7 +195,7 @@ export function parseRelationsAndColumnsSystemCatalogQueryResponse(
  * In-place sort the intermixed table + column raw rows by table name highest priority,
  * then by column number with null (table rows) first.
  */
-export function sortRawRelationsAndColumnsRows(rows: RawRelationsAndColumnsRow[]): void {
+function sortRawRelationsAndColumnsRows(rows: RawRelationsAndColumnsRow[]): void {
   rows.sort((a, b) => {
     if (a.relationName !== b.relationName) {
       return a.relationName.localeCompare(b.relationName);
