@@ -17,6 +17,9 @@ All notable changes to this extension will be documented in this file.
     simultaneously
   - "panel": opens results in the panel area, allowing only one result set to be visible at a time,
     but less intrusive than opening a new editor tab
+- "Open New Flink SQL Document" command to open a new untitled Flink SQL document for writing Flink
+  SQL statements locally, available through the command palette, the Resources view context menu on
+  Flink compute pools, and in the Flink Statements view.
 
 ### Changed
 
