@@ -16,7 +16,6 @@ import type { EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import { CloudProvider } from "../../models/resource";
 import { showInfoNotificationWithButtons } from "../../notifications";
 import { getSidecar } from "../../sidecar";
-import { logUsage, UserEvent } from "../../telemetry/events";
 import { readFileBuffer } from "../../utils/fsWrappers";
 import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
 export { uploadFileToAzure };
@@ -140,14 +139,6 @@ export async function handleUploadToCloudProvider(
         uploadFormData,
       });
 
-      logUsage(UserEvent.FlinkArtifactAction, {
-        action: "upload",
-        status: "succeeded",
-        kind: "CloudProviderUpload",
-        cloud: params.cloud,
-        region: params.region,
-      });
-
       logger.info(`AWS upload completed for artifact "${params.artifactName}"`, {
         status: response.status,
         statusText: response.statusText,
@@ -197,27 +188,12 @@ export async function uploadArtifactToCCloud(
       artifactName: params.artifactName,
     });
 
-    logUsage(UserEvent.FlinkArtifactAction, {
-      action: "upload",
-      status: "succeeded",
-      kind: "CCloudUpload",
-      cloud: params.cloud,
-      region: params.region,
-    });
-
     // Inform all interested parties that we just mutated the artifacts list
     // in this env/region.
     artifactsChanged.fire(providerRegion);
 
     return response;
   } catch (error) {
-    logUsage(UserEvent.FlinkArtifactAction, {
-      action: "upload",
-      status: "failed",
-      kind: "CCloudUpload",
-      cloud: params.cloud,
-      region: params.region,
-    });
     let extra: Record<string, unknown> = {
       cloud: params.cloud,
       region: params.region,
