@@ -63,8 +63,8 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   constructor() {
     super();
 
-    // Start in artifacts mode by default.
-    this.defaultDelegate = this.artifactsDelegate;
+    // Start in UDFs mode by default.
+    this.defaultDelegate = this.udfsDelegate;
     this.currentDelegate = this.defaultDelegate;
   }
 
@@ -90,7 +90,6 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
         // Not viewing artifacts right this second, but we're the entity responsible for cache busting
         // in response to this event.
         // Tell the artifacts delegate to preemptively refresh its cache for next time we switch to it
-
         await this.artifactsDelegate.fetchChildren(this.database, true);
       }
     }

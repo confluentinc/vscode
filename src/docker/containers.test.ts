@@ -237,7 +237,8 @@ describe("docker/containers.ts waitForServiceHealthCheck", () => {
     const result = await waitForServiceHealthCheck("9090", "/health", "TestService");
 
     assert.strictEqual(result, true);
-    assert.ok(fetchStub.calledWith("http://localhost:9090/health"));
+    sinon.assert.calledOnce(fetchStub);
+    sinon.assert.calledWith(fetchStub, "http://localhost:9090/health");
   });
 
   it("should return false when health check fails consistently", async () => {
@@ -246,7 +247,7 @@ describe("docker/containers.ts waitForServiceHealthCheck", () => {
     const result = await waitForServiceHealthCheck("9090", "/health", "TestService", 3);
 
     assert.strictEqual(result, false);
-    assert.ok(fetchStub.called);
+    sinon.assert.called(fetchStub);
   });
 
   it("should return false when service returns non-ok status", async () => {
@@ -255,7 +256,7 @@ describe("docker/containers.ts waitForServiceHealthCheck", () => {
     const result = await waitForServiceHealthCheck("9090", "/health", "TestService", 3);
 
     assert.strictEqual(result, false);
-    assert.ok(fetchStub.called);
+    sinon.assert.called(fetchStub);
   });
 
   it("should retry failed requests and eventually succeed", async () => {
@@ -265,7 +266,7 @@ describe("docker/containers.ts waitForServiceHealthCheck", () => {
 
     const result = await waitForServiceHealthCheck("9090", "/health", "TestService", 5);
 
-    assert.strictEqual(result, true);
-    assert.strictEqual(fetchStub.callCount, 2);
+    assert.strictEqual(result, true, "Health check should eventually succeed");
+    sinon.assert.calledTwice(fetchStub);
   });
 });

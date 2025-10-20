@@ -453,10 +453,10 @@ async function setupContextValues() {
     SCHEMA_URI_SCHEME,
     MESSAGE_URI_SCHEME,
   ]);
-  // set the initial Flink artifacts view mode to "Artifacts" so the UDF mode toggle is visible
+  // set the initial Flink database view mode to "UDFs" so the Artifacts mode toggle is visible
   const flinkViewMode = setContextValue(
     ContextValues.flinkDatabaseViewMode,
-    FlinkDatabaseViewProviderMode.Artifacts,
+    FlinkDatabaseViewProviderMode.UDFs,
   );
 
   // Default to Docker daemon not being available until proven otherwise

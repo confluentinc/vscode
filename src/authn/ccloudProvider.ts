@@ -4,7 +4,7 @@ import { join } from "path";
 import * as vscode from "vscode";
 import type { CCloudStatus, Connection, UserInfo } from "../clients/sidecar";
 import { ConnectedState } from "../clients/sidecar";
-import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "../constants";
+import { AUTH_PROVIDER_ID, AUTH_SCOPES, CCLOUD_CONNECTION_ID } from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { observabilityContext } from "../context/observability";
 import { ContextValues, setContextValue } from "../context/values";
@@ -600,7 +600,7 @@ export class ConfluentCloudAuthProvider
    */
   private async handleSessionSecretChange() {
     logger.debug("handleSessionSecretChange()");
-    const session = await vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
+    const session = await vscode.authentication.getSession(AUTH_PROVIDER_ID, AUTH_SCOPES, {
       createIfNone: false,
     });
     if (!session) {
@@ -698,7 +698,7 @@ export function convertToAuthSession(connection: Connection): vscode.Authenticat
       id: ccloudUser.id,
       label: ccloudUser.username,
     },
-    scopes: [],
+    scopes: AUTH_SCOPES,
   };
   return session;
 }

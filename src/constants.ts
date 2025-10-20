@@ -66,6 +66,15 @@ export const DIFFABLE_READONLY_SCHEME = "confluent.resource";
 export const AUTH_PROVIDER_ID = "confluent-cloud-auth-provider";
 /** This is what appears in "Sign in with <label> to use Confluent" from the Accounts action. */
 export const AUTH_PROVIDER_LABEL = "Confluent Cloud";
+/**
+ * Placeholder scopes for the VS Code authentication API. (NOTE: As of VS Code 1.104.x, empty arrays
+ * are no longer good enough and will continue to show the "Sign in" prompt even after successful
+ * authentication with Confluent Cloud.)
+ *
+ * Actual scopes are handled by the sidecar process.
+ * {@see https://github.com/confluentinc/ide-sidecar/blob/0843c7e10f2c5e38d6ab444286cb2cc3b80fbf69/src/main/resources/application.yml#L124}
+ */
+export const AUTH_SCOPES = ["ccloud"];
 
 /** Single CCloud connection spec to be used with the sidecar Connections API. */
 export const CCLOUD_CONNECTION_SPEC: ConnectionSpec = {
