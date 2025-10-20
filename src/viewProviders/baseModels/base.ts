@@ -146,7 +146,7 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
         treeItem.resourceUri = Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
       }
       if (element.children && element.children.length > 0) {
-        treeItem = updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
+        updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
       }
     }
   }
