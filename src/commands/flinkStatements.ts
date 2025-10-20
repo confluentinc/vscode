@@ -82,7 +82,7 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   await rm.setUriMetadata(uri, updatedMetadata);
 
   const doc = await vscode.workspace.openTextDocument(uri);
-  vscode.languages.setTextDocumentLanguage(doc, "flinksql");
+  vscode.languages.setTextDocumentLanguage(doc, FLINK_SQL_LANGUAGE_ID);
   await vscode.window.showTextDocument(doc, { preview: false });
 }
 /**
