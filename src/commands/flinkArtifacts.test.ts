@@ -253,7 +253,7 @@ describe("flinkArtifacts", () => {
       sinon.assert.calledWith(showInfoStub, "Update cancelled. No changes were made.");
     });
 
-    it.only("should show an error notification when API call fails", async () => {
+    it("should show an error notification when API call fails", async () => {
       sandbox.stub(uploadArtifact, "getArtifactPatchParams").resolves(mockPatchPayload);
       artifactsApiStub.updateArtifactV1FlinkArtifact.rejects(new Error("API Error"));
 
