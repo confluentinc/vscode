@@ -6,7 +6,7 @@ import type {
   TreeItem,
   TreeView,
 } from "vscode";
-import { EventEmitter, window } from "vscode";
+import { EventEmitter, Uri, window } from "vscode";
 import { getExtensionContext } from "../../context/extension";
 import type { ContextValues } from "../../context/values";
 import { setContextValue } from "../../context/values";
@@ -17,7 +17,8 @@ import type { IResourceBase, ISearchable } from "../../models/resource";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { titleCase } from "../../utils";
 import { DisposableCollection } from "../../utils/disposables";
-import { filterItems, itemMatchesSearch } from "../utils/search";
+import { updateCollapsibleStateFromSearch } from "../utils/collapsing";
+import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "../utils/search";
 
 /** View providers offering our common refresh() pattern. */
 export interface RefreshableTreeViewProvider {
@@ -131,6 +132,24 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
   abstract getChildren(element?: T): T[];
 
   abstract getTreeItem(element: T): TreeItem;
+
+  /**
+   * Adjust the given TreeItem based on matching the current {@link itemSearchString search string}, if any.
+   * @param element The base model instance corresponding to the TreeItem
+   * @param treeItem The TreeItem corresponding to the element.
+   */
+  adjustTreeItemForSearch(element: T, treeItem: TreeItem): void {
+    if (this.itemSearchString) {
+      if (itemMatchesSearch(element, this.itemSearchString)) {
+        // special URI scheme to decorate the tree item with a dot to the right of the label,
+        // and color the label, description, and decoration so it stands out in the tree view
+        treeItem.resourceUri = Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
+      }
+      if (element.children && element.children.length > 0) {
+        treeItem = updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
+      }
+    }
+  }
 
   /** Convenience method to revert this view to its original state. */
   async reset(): Promise<void> {

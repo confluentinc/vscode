@@ -1,5 +1,4 @@
 import type { Disposable, TreeDataProvider, TreeItem } from "vscode";
-import { Uri } from "vscode";
 import { ContextValues } from "../context/values";
 import type {
   EnvironmentChangeEvent,
@@ -20,8 +19,6 @@ import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import type { SchemaRegistry } from "../models/schemaRegistry";
 import { ParentedBaseViewProvider } from "./baseModels/parentedBase";
-import { updateCollapsibleStateFromSearch } from "./utils/collapsing";
-import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 /**
  * The types managed by the {@link SchemasViewProvider}, which are converted to their appropriate tree item
  * type via the `getTreeItem()` method.
@@ -137,14 +134,7 @@ export class SchemasViewProvider
       treeItem = new SchemaTreeItem(element);
     }
 
-    if (this.itemSearchString) {
-      if (itemMatchesSearch(element, this.itemSearchString)) {
-        // special URI scheme to decorate the tree item with a dot to the right of the label,
-        // and color the label, description, and decoration so it stands out in the tree view
-        treeItem.resourceUri = Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
-      }
-      treeItem = updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
-    }
+    this.adjustTreeItemForSearch(element, treeItem);
 
     return treeItem;
   }
