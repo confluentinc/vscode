@@ -5,8 +5,7 @@ import {
   FlinkRelationType,
   toRelationType,
 } from "../../models/flinkSystemCatalog";
-import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
-import { relationColumnFactory } from "../../models/utils/relationColumnParser";
+import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 
 const logger = new Logger("relationsAndColumnsSystemCatalogQuery");
 
@@ -168,7 +167,7 @@ export function parseRelationsAndColumnsSystemCatalogQueryResponse(
         throw new Error(message);
       }
       currentColumns.push(
-        relationColumnFactory({
+        new FlinkRelationColumn({
           relationName: row.relationName,
           name: row.columnName,
           fullDataType: row.columnFullDataType,

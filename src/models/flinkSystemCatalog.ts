@@ -1,8 +1,9 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
-import { CustomMarkdownString, IdItem } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
+import type { IdItem } from "./main";
+import { CustomMarkdownString } from "./main";
+import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
 export class FlinkUdfParameter {
   name: string;
@@ -141,12 +142,8 @@ export type FlinkRelationColumnProps = Pick<
   | "isHidden"
   | "metadataKey"
   | "comment"
-> & {
-  isNullable?: boolean;
-  isArray?: boolean;
-  isArrayMemberNullable?: boolean;
-  arrayDimensions?: number;
-};
+  | "isNullable"
+>;
 
 /** Represents a column of a Flink table or view. */
 export class FlinkRelationColumn {
@@ -166,11 +163,6 @@ export class FlinkRelationColumn {
   readonly isPersisted: boolean;
   /** Is the column hidden (not normally visible)? */
   readonly isHidden: boolean;
-  readonly isArray: boolean;
-  /** If the column is an array, are the array members themselves nullable? */
-  readonly isArrayMemberNullable: boolean;
-  /** If the column is an array, how many dimensions does it have? */
-  readonly arrayDimensions: number | null;
   readonly comment: string | null;
 
   /** If a metadata column, what Kafka topic metadata key does it map to? */
@@ -180,19 +172,13 @@ export class FlinkRelationColumn {
     this.relationName = props.relationName;
     this.name = props.name;
     this.fullDataType = props.fullDataType;
-    this.isNullable = props.isNullable === true;
+    this.isNullable = props.isNullable;
     this.distributionKeyNumber = props.distributionKeyNumber;
     this.isGenerated = props.isGenerated;
     this.isPersisted = props.isPersisted;
     this.isHidden = props.isHidden;
     this.metadataKey = props.metadataKey;
-    this.comment = props.comment ?? null;
-    this.isArray = props.isArray ?? false;
-    if (props.isArrayMemberNullable && !this.isArray) {
-      throw new Error("isArrayMemberNullable cannot be true if isArray is false");
-    }
-    this.isArrayMemberNullable = props.isArrayMemberNullable ?? false;
-    this.arrayDimensions = props.arrayDimensions ?? null;
+    this.comment = props.comment;
   }
 
   get id(): string {
@@ -223,27 +209,11 @@ export class FlinkRelationColumn {
     return ConnectionType.Ccloud;
   }
 
-  /** Return the simple datatype with possible ARRAY<> wrappings(s). */
-  get simpleTypeWithArray(): string {
-    if (this.isArray) {
-      const parts = [];
-      for (let i = 0; i < (this.arrayDimensions ?? 1); i++) {
-        parts.push("ARRAY<");
-      }
-      parts.push(this.simpleDataType);
-      for (let i = 0; i < (this.arrayDimensions ?? 1); i++) {
-        parts.push(">");
-      }
-      return parts.join("");
-    }
-    return this.simpleDataType;
-  }
-
   searchableText(): string {
     const parts = [];
 
     parts.push(this.name);
-    parts.push(this.simpleTypeWithArray);
+    parts.push(this.simpleDataType);
     if (this.metadataKey) {
       parts.push(this.metadataKey);
     }
@@ -273,11 +243,6 @@ export class FlinkRelationColumn {
   /** A terse easy to read overview of the field's data type */
   get formattedSimpleDataType(): string {
     let desc = formatSqlType(this.simpleDataType);
-    if (this.isArray) {
-      for (let i = 0; i < (this.arrayDimensions ?? 1); i++) {
-        desc += "[]";
-      }
-    }
     return desc;
   }
 
@@ -305,11 +270,6 @@ export class FlinkRelationColumn {
       .addField("Data Type", formatSqlType(this.fullDataType))
       .addField("Nullable", this.isNullable ? "Yes" : "No")
       .addField("Persisted", this.isPersisted ? "Yes" : "No");
-
-    if (this.isArray) {
-      tooltip.addField("Array", "Yes");
-      tooltip.addField("Array Type", this.simpleTypeWithArray);
-    }
 
     if (this.distributionKeyNumber !== null) {
       tooltip.addField("Distribution Key Number", this.distributionKeyNumber.toString());
