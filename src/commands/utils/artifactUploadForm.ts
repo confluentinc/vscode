@@ -30,6 +30,11 @@ interface FormState {
 export async function artifactUploadQuickPickForm(
   item?: CCloudKafkaCluster | CCloudFlinkComputePool | vscode.Uri,
 ): Promise<ArtifactUploadParams | undefined> {
+  logUsage(UserEvent.FlinkArtifactAction, {
+    action: "upload",
+    step: "upload form opened",
+  });
+
   const state: FormState = {};
   const loader = CCloudResourceLoader.getInstance();
 
@@ -131,12 +136,6 @@ export async function artifactUploadQuickPickForm(
       value: "documentationUrl",
     },
   ];
-
-  // Emit telemetry: user entered the form to specify params
-  logUsage(UserEvent.FlinkArtifactAction, {
-    action: "upload",
-    step: "upload form opened",
-  });
 
   while (true) {
     const menuItems = createMenuItems();
