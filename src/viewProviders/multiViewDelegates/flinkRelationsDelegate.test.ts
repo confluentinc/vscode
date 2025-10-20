@@ -4,7 +4,7 @@ import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testReso
 import {
   TEST_FLINK_RELATION,
   TEST_VARCHAR_COLUMN,
-} from "../../../tests/unit/testResources/flinkRelations";
+} from "../../../tests/unit/testResources/flinkRelation";
 import type { CCloudResourceLoader } from "../../loaders";
 import { FlinkRelationsDelegate } from "./flinkRelationsDelegate";
 
