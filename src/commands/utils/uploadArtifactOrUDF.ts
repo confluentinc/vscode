@@ -297,16 +297,6 @@ export async function promptForFunctionAndClassName(
   const defaultFunctionName = `udf_${selectedArtifact?.name?.substring(0, 6) ?? ""}`;
   const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
   const classNameRegex = /^[a-zA-Z_][a-zA-Z0-9_.]*$/;
-  const functionName = await vscode.window.showInputBox({
-    prompt: "Enter a name for the new UDF",
-    placeHolder: defaultFunctionName,
-    validateInput: (value) => validateUdfInput(value, functionNameRegex),
-    ignoreFocusOut: true,
-  });
-
-  if (functionName === undefined) {
-    return undefined;
-  }
 
   const className = await vscode.window.showInputBox({
     prompt: 'Enter the fully qualified class name, e.g. "com.example.MyUDF"',
@@ -317,7 +307,18 @@ export async function promptForFunctionAndClassName(
   if (className === undefined) {
     return undefined;
   }
-  return { functionName, className };
+
+  const functionName = await vscode.window.showInputBox({
+    prompt: "Enter a name for the new UDF",
+    placeHolder: defaultFunctionName,
+    validateInput: (value) => validateUdfInput(value, functionNameRegex),
+    ignoreFocusOut: true,
+  });
+
+  if (functionName === undefined) {
+    return undefined;
+  }
+  return { className, functionName };
 }
 
 /**
