@@ -407,7 +407,7 @@ export async function openNewSqlDocumentCommand(
     // only set the pool ID metadata and leave catalog/database selection to the user or their
     // default settings
     await ResourceManager.getInstance().setUriMetadata(document.uri, {
-      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: computePool?.id,
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: computePool.id,
     });
   }
   await vscode.window.showTextDocument(document, {
