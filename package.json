@@ -664,6 +664,12 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.statements.openNewDocument",
+        "icon": "$(plus)",
+        "title": "Open New Flink SQL Document",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.statements.refresh",
         "icon": "$(sync)",
         "title": "Refresh",
@@ -1547,6 +1553,10 @@
           "when": "confluent.ccloudConnectionAvailable"
         },
         {
+          "command": "confluent.statements.openNewDocument",
+          "when": "true"
+        },
+        {
           "command": "confluent.statements.refresh",
           "when": "false"
         },
@@ -1802,6 +1812,11 @@
           "group": "navigation@1"
         },
         {
+          "command": "confluent.statements.openNewDocument",
+          "when": "view == confluent-flink-statements",
+          "group": "navigation@2"
+        },
+        {
           "command": "confluent.statements.create",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected",
           "group": "navigation@2"
@@ -1944,9 +1959,14 @@
           "group": "4_flink@1"
         },
         {
-          "command": "confluent.uploadArtifact",
-          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/) && config.confluent.flink.artifacts",
+          "command": "confluent.statements.openNewDocument",
+          "when": "view == confluent-resources && viewItem =~ /.*flink-compute-pool.*/",
           "group": "4_flink@1"
+        },
+        {
+          "command": "confluent.uploadArtifact",
+          "when": "view == confluent-resources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/) && config.confluent.flink.artifacts",
+          "group": "4_flink@2"
         },
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
@@ -2069,7 +2089,7 @@
         },
         {
           "command": "confluent.openCCloudApiKeysUrl",
-          "when": "view in confluent.viewsWithResources && (viewItem =~ /ccloud.*kafka-cluster/ || viewItem == ccloud-schema-registry)",
+          "when": "view == confluent-resources && (viewItem =~ /ccloud.*kafka-cluster/ || viewItem == ccloud-schema-registry)",
           "group": "z_openInCloud"
         },
         {

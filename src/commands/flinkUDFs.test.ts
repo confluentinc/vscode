@@ -13,6 +13,7 @@ import {
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { createResponseError, ResponseErrorSource } from "../../tests/unit/testUtils";
 import type { ResponseError as FlinkArtifactsResponseError } from "../clients/flinkArtifacts";
+import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
 import type { CCloudEnvironment } from "../models/environment";
 import type { FlinkArtifact } from "../models/flinkArtifact";
@@ -242,7 +243,7 @@ describe("commands/flinkUDFs.ts", () => {
       sinon.assert.calledOnce(openTextDocStub);
       const callArgs = openTextDocStub.getCall(0).args[0];
       assert.ok(callArgs, "openTextDocStub was not called with any arguments");
-      assert.strictEqual(callArgs.language, "flinksql");
+      assert.strictEqual(callArgs.language, FLINK_SQL_LANGUAGE_ID);
       sinon.assert.calledOnce(showTextDocStub);
       sinon.assert.calledOnce(insertSnippetStub);
       const snippetArg = insertSnippetStub.getCall(0).args[0];
