@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
+import type { ConfigurationChangeEvent } from "vscode";
 import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
@@ -21,6 +22,7 @@ import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import * as contextValues from "../context/values";
+import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import {
   CCloudResourceLoader,
   DirectResourceLoader,
@@ -828,7 +830,12 @@ describe("viewProviders/resources.ts", () => {
       it("setEventListeners() + setCustomEventListeners() should return the expected number of listeners", () => {
         // @ts-expect-error protected method
         const listeners = provider.setEventListeners();
-        assert.strictEqual(listeners.length, handlerEmitterPairs.length);
+
+        // Sigh, workspace.onDidChangeConfiguration event registration
+        // is a different beast not represented in our emitterStubs.
+        const extras = 1;
+
+        assert.strictEqual(listeners.length, handlerEmitterPairs.length + extras);
       });
 
       handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
@@ -970,6 +977,32 @@ describe("viewProviders/resources.ts", () => {
         await provider.localConnectedEventHandler();
         sinon.assert.calledOnce(refreshConnectionStub);
         sinon.assert.calledWith(refreshConnectionStub, LOCAL_CONNECTION_ID, true);
+      });
+    });
+
+    describe("changedSettingsEventHandler()", () => {
+      let refreshConnectionStub: sinon.SinonStub;
+      beforeEach(() => {
+        refreshConnectionStub = sandbox.stub(provider, "refreshConnection");
+      });
+
+      it("Refreshes local connection when ENABLE_MEDUSA_CONTAINER setting is changed", async () => {
+        const event: ConfigurationChangeEvent = {
+          affectsConfiguration: (settingId: string) => settingId === ENABLE_MEDUSA_CONTAINER.id,
+        };
+
+        await provider.changedSettingsEventHandler(event);
+        sinon.assert.calledOnce(refreshConnectionStub);
+        sinon.assert.calledWith(refreshConnectionStub, LOCAL_CONNECTION_ID, true);
+      });
+
+      it("Does not refresh any connection when unrelated setting is changed", async () => {
+        const event: ConfigurationChangeEvent = {
+          affectsConfiguration: (settingId: string) => settingId === "some.unrelated.setting",
+        };
+
+        await provider.changedSettingsEventHandler(event);
+        sinon.assert.notCalled(refreshConnectionStub);
       });
     });
 
