@@ -2,12 +2,21 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
+import { createFlinkArtifact } from "../../tests/unit/testResources/flinkArtifact";
 import { createResponseError } from "../../tests/unit/testUtils";
+
+import { FlinkArtifactsArtifactV1Api } from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
 import type {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrl200Response";
-import { registerFlinkArtifactCommands, uploadArtifactCommand } from "./flinkArtifacts";
+import { type EnvironmentId } from "../models/resource";
+import {
+  registerFlinkArtifactCommands,
+  updateArtifactCommand,
+  uploadArtifactCommand,
+} from "./flinkArtifacts";
 import * as commands from "./index";
 import * as artifactUploadForm from "./utils/artifactUploadForm";
 import * as uploadArtifact from "./utils/uploadArtifactOrUDF";
@@ -175,6 +184,83 @@ describe("flinkArtifacts", () => {
 
       sinon.assert.calledOnce(createArtifactStub);
       sinon.assert.calledWithExactly(createArtifactStub, mockParams, mockUploadId);
+    });
+  });
+
+  describe("updateArtifactCommand", () => {
+    const mockArtifact = createFlinkArtifact({
+      id: "artifact-123",
+      name: "test-artifact",
+      environmentId: "env-123456" as EnvironmentId,
+      provider: "Azure",
+      region: "australiaeast",
+      description: "Original description",
+    });
+
+    const mockPatchPayload = {
+      documentation_link: "https://example.com",
+      description: "Updated description",
+    };
+
+    let showErrorStub: sinon.SinonStub;
+    let showInfoStub: sinon.SinonStub;
+    let artifactsApiStub: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
+
+    beforeEach(() => {
+      showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+      showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
+
+      const stubbedSidecar = getSidecarStub(sandbox);
+      artifactsApiStub = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
+      stubbedSidecar.getFlinkArtifactsApi.returns(artifactsApiStub);
+    });
+
+    it("should show error notification if no artifact is selected", async () => {
+      await updateArtifactCommand(undefined);
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWithMatch(showErrorStub, "No Flink artifact selected for update");
+    });
+
+    it("should successfully update artifact when user provides changes", async () => {
+      sandbox.stub(uploadArtifact, "getArtifactPatchParams").resolves(mockPatchPayload);
+      artifactsApiStub.updateArtifactV1FlinkArtifact.resolves({} as any);
+
+      await updateArtifactCommand(mockArtifact);
+
+      // Assert the API was called with correct parameters
+      sinon.assert.calledOnce(artifactsApiStub.updateArtifactV1FlinkArtifact);
+      sinon.assert.calledWithExactly(artifactsApiStub.updateArtifactV1FlinkArtifact, {
+        cloud: mockArtifact.provider,
+        region: mockArtifact.region,
+        environment: mockArtifact.environmentId,
+        id: mockArtifact.id,
+        ArtifactV1FlinkArtifact: mockPatchPayload,
+      });
+      // Assert success notification
+      sinon.assert.calledOnce(showInfoStub);
+      sinon.assert.calledWithMatch(showInfoStub, /updated successfully in Confluent Cloud/);
+    });
+
+    it("should exit early if user cancels without making changes", async () => {
+      sandbox.stub(uploadArtifact, "getArtifactPatchParams").resolves(undefined); // simulate cancel from quickpick form
+
+      await updateArtifactCommand(mockArtifact);
+
+      sinon.assert.notCalled(artifactsApiStub.updateArtifactV1FlinkArtifact);
+      sinon.assert.calledOnce(showInfoStub);
+
+      sinon.assert.calledWith(showInfoStub, "Update cancelled. No changes were made.");
+    });
+
+    it("should show an error notification when API call fails", async () => {
+      sandbox.stub(uploadArtifact, "getArtifactPatchParams").resolves(mockPatchPayload);
+      artifactsApiStub.updateArtifactV1FlinkArtifact.rejects(new Error("API Error"));
+
+      await updateArtifactCommand(mockArtifact);
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWithMatch(showErrorStub, /Failed to update artifact/);
     });
   });
 });

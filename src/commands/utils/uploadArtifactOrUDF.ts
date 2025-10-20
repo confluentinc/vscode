@@ -343,3 +343,125 @@ export async function executeCreateFunction(
   const createdMsg = `${userInput.functionName} function created successfully.`;
   void showInfoNotificationWithButtons(createdMsg);
 }
+interface QuickPickWizardItem extends vscode.QuickPickItem {
+  value: string;
+}
+interface UpdateArtifactPaylod {
+  description: string | undefined;
+  documentation_link: string | undefined;
+}
+export async function getArtifactPatchParams(
+  artifact: FlinkArtifact,
+): Promise<UpdateArtifactPaylod | undefined> {
+  let patchPayload: UpdateArtifactPaylod = {
+    description: artifact.description,
+    documentation_link: artifact.documentationLink,
+  };
+
+  while (true) {
+    const menuItems = makeMenuItems(patchPayload, artifact);
+    // Top-level quickpick. If user cancels here, we abort the entire flow
+    const selection = await vscode.window.showQuickPick(menuItems, {
+      title: `Update Flink Artifact '${artifact.name}'`,
+      placeHolder: "Select a step to provide details",
+      ignoreFocusOut: true,
+    });
+    if (!selection) {
+      logUsage(UserEvent.FlinkArtifactAction, {
+        action: "update",
+        status: "exited early from quickpick form",
+      });
+      return;
+    }
+    switch (selection.value) {
+      case "description": {
+        const description = await vscode.window.showInputBox({
+          prompt: "Enter a description for the Flink artifact (optional)",
+          placeHolder: "Description",
+          value: patchPayload.description,
+          ignoreFocusOut: true,
+        });
+        patchPayload.description = description;
+        logUsage(UserEvent.FlinkArtifactAction, {
+          action: "update",
+          status: "description changed",
+          cloud: artifact.provider,
+          region: artifact.region,
+        });
+        break;
+      }
+      case "documentationLink": {
+        const documentationLink = await vscode.window.showInputBox({
+          prompt: "Enter a documentation URL for the Flink artifact (optional)",
+          placeHolder: "https://example.com/docs",
+          value: patchPayload.documentation_link,
+          ignoreFocusOut: true,
+        });
+        patchPayload.documentation_link = documentationLink;
+        logUsage(UserEvent.FlinkArtifactAction, {
+          action: "update",
+          status: "documentation link changed",
+          cloud: artifact.provider,
+          region: artifact.region,
+        });
+        break;
+      }
+      case "complete": {
+        const hasChanges =
+          patchPayload.description !== artifact.description ||
+          patchPayload.documentation_link !== artifact.documentationLink;
+        // We cannot disable a menu item. This warns the user if they tried to submit w/no changes.
+        if (!hasChanges) {
+          void vscode.window.showInformationMessage(
+            "No changes have been made. Please update at least one field.",
+          );
+          logUsage(UserEvent.FlinkArtifactAction, {
+            action: "update",
+            status: "submitted with no changes",
+            cloud: artifact.provider,
+            region: artifact.region,
+          });
+          break;
+        }
+        logUsage(UserEvent.FlinkArtifactAction, {
+          action: "update",
+          status: "submitted changes",
+          cloud: artifact.provider,
+          region: artifact.region,
+        });
+        return patchPayload;
+      }
+    }
+  }
+}
+
+export function makeMenuItems(
+  patches: UpdateArtifactPaylod,
+  artifact: FlinkArtifact,
+): QuickPickWizardItem[] {
+  const completedIcon = "pass-filled";
+  const incompleteIcon = "circle-large-outline";
+  // We cannot disable a menu item. This adjusts the label on Submit instead of hiding it.
+  const hasChanges =
+    patches.description !== artifact.description ||
+    patches.documentation_link !== artifact.documentationLink;
+  return [
+    {
+      label: `Update the Description (Optional)`,
+      description: patches.description || "None",
+      iconPath: new vscode.ThemeIcon(patches.description ? completedIcon : incompleteIcon),
+      value: "description",
+    },
+    {
+      label: `Update the Documentation URL (Optional)`,
+      description: patches.documentation_link || "None",
+      iconPath: new vscode.ThemeIcon(patches.documentation_link ? completedIcon : incompleteIcon),
+      value: "documentationLink",
+    },
+    {
+      label: hasChanges ? "Submit Changes" : "No changes to submit",
+      iconPath: new vscode.ThemeIcon("cloud-upload"),
+      value: "complete",
+    },
+  ];
+}
