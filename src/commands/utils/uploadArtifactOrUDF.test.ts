@@ -402,4 +402,34 @@ describe("commands/utils/uploadArtifact", () => {
       sinon.assert.calledWith(showInfoStub, "testFunction function created successfully.");
     });
   });
+
+  describe("getArtifactPatchParams", () => {
+    it("should build patch payload correctly", async () => {
+      const existingArtifact = createFlinkArtifact({
+        id: "artifact-id",
+        description: "old description",
+        documentationLink: "https://old-link.com",
+      });
+
+      const showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick");
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showQuickPickStub.onFirstCall().resolves({ value: "description" } as any);
+      showInputBoxStub.onFirstCall().resolves("new description");
+
+      showQuickPickStub.onSecondCall().resolves({ value: "documentationLink" } as any);
+      showInputBoxStub.onSecondCall().resolves("https://new-link.com");
+
+      showQuickPickStub.onThirdCall().resolves({ value: "complete" } as any);
+
+      const patchPayload = await uploadArtifactModule.getArtifactPatchParams(existingArtifact);
+
+      sinon.assert.calledThrice(showQuickPickStub);
+      sinon.assert.calledTwice(showInputBoxStub);
+
+      assert.deepStrictEqual(patchPayload, {
+        description: "new description",
+        documentation_link: "https://new-link.com",
+      });
+    });
+  });
 });
