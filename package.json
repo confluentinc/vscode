@@ -950,7 +950,7 @@
           },
           "confluent.flink.artifacts": {
             "type": "boolean",
-            "default": false,
+            "default": true,
             "order": 1,
             "markdownDescription": "Enable Flink Artifacts functionality including the artifacts view and related features for managing Flink artifacts in Confluent Cloud. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)",
             "tags": [

@@ -32,6 +32,7 @@ All notable changes to this extension will be documented in this file.
 - Submitted Flink statements now allow you to choose your own statement name prefix (or to leave
   generic). Set your prefix using preference:
   [`confluent.flink.statementPrefix`](vscode://settings/confluent.flink.statementPrefix).
+- The `confluent.flink.artifacts` preview setting is now enabled by default for all users.
 
 ### Fixed
 
