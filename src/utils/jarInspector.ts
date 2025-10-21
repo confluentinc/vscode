@@ -1,8 +1,9 @@
 import fs from "fs";
 import path from "path";
-import { Uri } from "vscode";
-import yauzl, { Entry, ZipFile } from "yauzl";
+import { type Uri } from "vscode";
+import yauzl, { type Entry, type ZipFile } from "yauzl";
 import { Logger } from "../logging";
+import { logUsage, UserEvent } from "../telemetry/events";
 
 export interface JarClassInfo {
   /** The fully qualified class name */
@@ -29,6 +30,13 @@ export async function inspectJarClasses(file: Uri): Promise<JarClassInfo[]> {
       return { className, simpleName };
     });
     logger.debug("inspectJarClasses: extracted classes", { count: infos.length });
+    logUsage(UserEvent.FlinkUDFAction, {
+      action: "created",
+      status: "ok",
+      kind: "quick-register",
+      step: "jar inspection: class extraction",
+      numClasses: infos.length,
+    });
     return infos;
   } catch (err) {
     throw new Error("Unable to inspect JAR file", { cause: err });
