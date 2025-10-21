@@ -1975,7 +1975,7 @@
         },
         {
           "command": "confluent.uploadArtifact",
-          "when": "view == confluent-resources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/) && config.confluent.flink.artifacts",
+          "when": "view == confluent-resources && (viewItem =~ /ccloud.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool.*/) && config.confluent.flink.artifacts",
           "group": "4_flink@2"
         },
         {
