@@ -20,7 +20,6 @@ import { PARTICIPANT_ID } from "./chat/constants";
 import { chatHandler } from "./chat/participant";
 import { handleFeedback } from "./chat/telemetry";
 import { registerChatTools } from "./chat/tools/registration";
-import { AvroCodelensProvider } from "./codelens/avroProvider";
 import { FlinkSqlCodelensProvider } from "./codelens/flinkSqlProvider";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
@@ -75,11 +74,11 @@ import {
   checkForExtensionDisabledReason,
   showExtensionDisabledNotification,
 } from "./featureFlags/evaluation";
+import { FLINK_SQL_LANGUAGE_ID } from "./flinkSql/constants";
 import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageClientManager";
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
-import { getLanguageTypes, SchemaType } from "./models/schema";
 import { FlinkStatementResultsPanelProvider } from "./panelProviders/flinkStatementResults";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { createLocalConnection, getLocalConnection } from "./sidecar/connections/local";
@@ -347,18 +346,8 @@ async function _activateExtension(
 
   const flinkProvider = FlinkSqlCodelensProvider.getInstance();
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider("flinksql", flinkProvider),
+    vscode.languages.registerCodeLensProvider(FLINK_SQL_LANGUAGE_ID, flinkProvider),
     flinkProvider,
-  );
-
-  // register the Avro code lens provider (it will check the feature flag internally)
-  const avroProvider = AvroCodelensProvider.getInstance();
-
-  context.subscriptions.push(
-    ...getLanguageTypes(SchemaType.Avro).map((language) =>
-      vscode.languages.registerCodeLensProvider({ language }, avroProvider),
-    ),
-    avroProvider,
   );
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented

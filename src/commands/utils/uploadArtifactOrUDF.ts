@@ -15,6 +15,7 @@ import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import type { EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import { CloudProvider } from "../../models/resource";
 import { showInfoNotificationWithButtons } from "../../notifications";
+import { type QuickPickItemWithValue } from "../../quickpicks/types";
 import { getSidecar } from "../../sidecar";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { readFileBuffer } from "../../utils/fsWrappers";
@@ -140,14 +141,6 @@ export async function handleUploadToCloudProvider(
         uploadFormData,
       });
 
-      logUsage(UserEvent.FlinkArtifactAction, {
-        action: "upload",
-        status: "succeeded",
-        kind: "CloudProviderUpload",
-        cloud: params.cloud,
-        region: params.region,
-      });
-
       logger.info(`AWS upload completed for artifact "${params.artifactName}"`, {
         status: response.status,
         statusText: response.statusText,
@@ -197,27 +190,12 @@ export async function uploadArtifactToCCloud(
       artifactName: params.artifactName,
     });
 
-    logUsage(UserEvent.FlinkArtifactAction, {
-      action: "upload",
-      status: "succeeded",
-      kind: "CCloudUpload",
-      cloud: params.cloud,
-      region: params.region,
-    });
-
     // Inform all interested parties that we just mutated the artifacts list
     // in this env/region.
     artifactsChanged.fire(providerRegion);
 
     return response;
   } catch (error) {
-    logUsage(UserEvent.FlinkArtifactAction, {
-      action: "upload",
-      status: "failed",
-      kind: "CCloudUpload",
-      cloud: params.cloud,
-      region: params.region,
-    });
     let extra: Record<string, unknown> = {
       cloud: params.cloud,
       region: params.region,
@@ -289,24 +267,12 @@ export async function buildUploadErrorMessage(err: unknown, base: string): Promi
  * This function prompts the user for a function name and class name for a new UDF.
  * It returns an object containing the function name and class name, or undefined if the user cancels.
  *
- * @param selectedArtifact The selected Flink artifact, used to generate a default function name.
  */
-export async function promptForFunctionAndClassName(
-  selectedArtifact: FlinkArtifact | undefined,
-): Promise<{ functionName: string; className: string } | undefined> {
-  const defaultFunctionName = `udf_${selectedArtifact?.name?.substring(0, 6) ?? ""}`;
+export async function promptForFunctionAndClassName(): Promise<
+  { functionName: string; className: string } | undefined
+> {
   const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
   const classNameRegex = /^[a-zA-Z_][a-zA-Z0-9_.]*$/;
-  const functionName = await vscode.window.showInputBox({
-    prompt: "Enter a name for the new UDF",
-    placeHolder: defaultFunctionName,
-    validateInput: (value) => validateUdfInput(value, functionNameRegex),
-    ignoreFocusOut: true,
-  });
-
-  if (functionName === undefined) {
-    return undefined;
-  }
 
   const className = await vscode.window.showInputBox({
     prompt: 'Enter the fully qualified class name, e.g. "com.example.MyUDF"',
@@ -317,7 +283,18 @@ export async function promptForFunctionAndClassName(
   if (className === undefined) {
     return undefined;
   }
-  return { functionName, className };
+  const defaultFunctionName = className.split(".").pop() || className;
+  const functionName = await vscode.window.showInputBox({
+    prompt: "Enter a name for the new UDF",
+    placeHolder: defaultFunctionName,
+    validateInput: (value) => validateUdfInput(value, functionNameRegex),
+    ignoreFocusOut: true,
+  });
+
+  if (functionName === undefined) {
+    return undefined;
+  }
+  return { className, functionName };
 }
 
 /**
@@ -342,4 +319,137 @@ export async function executeCreateFunction(
   );
   const createdMsg = `${userInput.functionName} function created successfully.`;
   void showInfoNotificationWithButtons(createdMsg);
+}
+
+interface UpdateArtifactPayload {
+  description: string | undefined;
+  documentation_link: string | undefined;
+}
+
+export async function getArtifactPatchParams(
+  artifact: FlinkArtifact,
+): Promise<UpdateArtifactPayload | undefined> {
+  let patchPayload: UpdateArtifactPayload = {
+    description: artifact.description,
+    documentation_link: artifact.documentationLink,
+  };
+
+  while (true) {
+    const menuItems = makeMenuItems(patchPayload, artifact);
+    // Top-level quickpick. If user cancels here, we abort the entire flow
+    const selection = await vscode.window.showQuickPick(menuItems, {
+      title: `Update Flink Artifact '${artifact.name}'`,
+      placeHolder: "Select a step to provide details",
+      ignoreFocusOut: true,
+    });
+    if (!selection) {
+      logUsage(UserEvent.FlinkArtifactAction, {
+        action: "update",
+        status: "exited early from quickpick form",
+      });
+      return;
+    }
+    switch (selection.value) {
+      case "description": {
+        const description = await vscode.window.showInputBox({
+          prompt: "Enter a description for the Flink artifact (optional)",
+          placeHolder: "Description",
+          value: patchPayload.description,
+          ignoreFocusOut: true,
+        });
+        patchPayload.description = description;
+        logUsage(UserEvent.FlinkArtifactAction, {
+          action: "update",
+          status: "description changed",
+          cloud: artifact.provider,
+          region: artifact.region,
+        });
+        break;
+      }
+      case "documentationLink": {
+        const documentationLink = await vscode.window.showInputBox({
+          prompt: "Enter a documentation URL for the Flink artifact (optional)",
+          placeHolder: "https://example.com/docs",
+          value: patchPayload.documentation_link,
+          validateInput: (value) => {
+            if (value && value.trim()) {
+              try {
+                new URL(value);
+                return undefined;
+              } catch {
+                return "Please enter a valid URL";
+              }
+            }
+            return undefined;
+          },
+          ignoreFocusOut: true,
+        });
+        patchPayload.documentation_link = documentationLink;
+        logUsage(UserEvent.FlinkArtifactAction, {
+          action: "update",
+          status: "documentation link changed",
+          cloud: artifact.provider,
+          region: artifact.region,
+        });
+        break;
+      }
+      case "complete": {
+        const hasChanges =
+          patchPayload.description !== artifact.description ||
+          patchPayload.documentation_link !== artifact.documentationLink;
+        // We cannot disable a menu item. This warns the user if they tried to submit w/no changes.
+        if (!hasChanges) {
+          void vscode.window.showInformationMessage(
+            "No changes have been made. Please update at least one field.",
+          );
+          logUsage(UserEvent.FlinkArtifactAction, {
+            action: "update",
+            status: "submitted with no changes",
+            cloud: artifact.provider,
+            region: artifact.region,
+          });
+          break;
+        }
+        logUsage(UserEvent.FlinkArtifactAction, {
+          action: "update",
+          status: "submitted changes",
+          cloud: artifact.provider,
+          region: artifact.region,
+        });
+        return patchPayload;
+      }
+    }
+  }
+}
+
+export function makeMenuItems(
+  patches: UpdateArtifactPayload,
+  artifact: FlinkArtifact,
+): QuickPickItemWithValue<string>[] {
+  const completedIcon = "pass-filled";
+  const incompleteIcon = "circle-large-outline";
+  const descChanged = patches.description !== artifact.description;
+  const docsChanged = patches.documentation_link !== artifact.documentationLink;
+  // We cannot disable a menu item. This adjusts the label on Submit instead of hiding it.
+  const hasChanges = descChanged || docsChanged;
+
+  return [
+    {
+      label: `Update the Description (Optional)`,
+      description: patches.description || "None",
+      iconPath: new vscode.ThemeIcon(descChanged ? completedIcon : incompleteIcon),
+      value: "description",
+    },
+    {
+      label: `Update the Documentation URL (Optional)`,
+      description: patches.documentation_link || "None",
+      iconPath: new vscode.ThemeIcon(docsChanged ? completedIcon : incompleteIcon),
+      value: "documentationLink",
+    },
+    {
+      label: hasChanges ? "Submit Changes" : "No changes to submit",
+      iconPath: new vscode.ThemeIcon("cloud-upload"),
+      value: "complete",
+    },
+  ];
 }
