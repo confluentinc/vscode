@@ -10,6 +10,7 @@ import { Logger } from "../logging";
 import { defaultRequestInit } from "./configs";
 import { MANAGED_CONTAINER_LABEL } from "./constants";
 import { imageExists, pullImage } from "./images";
+import { containerFetch } from "./wrappers";
 
 const logger = new Logger("docker.containers");
 
@@ -157,7 +158,7 @@ export async function waitForServiceHealthCheck(
     const healthCheckStartTime = Date.now();
     while (Date.now() - healthCheckStartTime < maxWaitTimeSec * 1000) {
       try {
-        const response = await fetch(healthUrl, {
+        const response = await containerFetch(healthUrl, {
           method: "GET",
           signal: AbortSignal.timeout(requestTimeoutMs),
         });
