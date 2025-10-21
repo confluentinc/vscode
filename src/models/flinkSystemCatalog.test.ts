@@ -1,9 +1,11 @@
 import assert from "assert";
 import { describe, it } from "mocha";
+import { TEST_VARCHAR_COLUMN } from "../../tests/unit/testResources/flinkRelation";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import {
+  FlinkRelationColumn,
   FlinkRelationType,
   FlinkUdfParameter,
   FlinkUdfTreeItem,
@@ -183,6 +185,92 @@ describe("flinkSystemCatalogs.ts", () => {
     });
     it("should throw an error for unknown relation types", () => {
       assert.throws(() => toRelationType("UNKNOWN"), /Unknown relation type: UNKNOWN/);
+    });
+  });
+
+  describe("FlinkRelationColumn", () => {
+    describe("Simple properties", () => {
+      it("id property", () => {
+        assert.deepEqual(
+          TEST_VARCHAR_COLUMN.id,
+          `${TEST_VARCHAR_COLUMN.relationName}.${TEST_VARCHAR_COLUMN.name}`,
+        );
+      });
+
+      it("connectionId property", () => {
+        assert.strictEqual(TEST_VARCHAR_COLUMN.connectionId, CCLOUD_CONNECTION_ID);
+      });
+
+      it("connectionType property", () => {
+        assert.strictEqual(TEST_VARCHAR_COLUMN.connectionType, ConnectionType.Ccloud);
+      });
+
+      it("isMetaColumn property", () => {
+        const metaColumn = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          metadataKey: "topicMetadata",
+        });
+        assert.strictEqual(metaColumn.isMetadata, true);
+        assert.strictEqual(TEST_VARCHAR_COLUMN.isMetadata, false);
+      });
+    });
+
+    describe("simpleDataType property", () => {
+      it("should simplify max varchar types", () => {
+        const column = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          fullDataType: "VARCHAR(2147483647)",
+        });
+        const simpleType = column.simpleDataType;
+        assert.strictEqual(simpleType, "VARCHAR");
+      });
+
+      it("should simplify ROW types", () => {
+        const column = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          fullDataType: "ROW<`field1` INT, `field2` VARCHAR(2147483647)>",
+        });
+        const simpleType = column.simpleDataType;
+        assert.strictEqual(simpleType, "ROW");
+      });
+
+      it("should simplify MAP types", () => {
+        const column = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          fullDataType: "MAP<STRING, VARCHAR(2147483647)>",
+        });
+        const simpleType = column.simpleDataType;
+        assert.strictEqual(simpleType, "MAP");
+      });
+
+      it("should simplify ARRAY types", () => {
+        const column = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          fullDataType: "ARRAY<INT>",
+        });
+        const simpleType = column.simpleDataType;
+        assert.strictEqual(simpleType, "ARRAY");
+      });
+
+      it("shoud simplify MULTISET types", () => {
+        const column = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          fullDataType: "MULTISET<STRING>",
+        });
+        const simpleType = column.simpleDataType;
+        assert.strictEqual(simpleType, "MULTISET");
+      });
+
+      for (const type of ["INT", "VARCHAR(100)", "BOOLEAN", "TIMESTAMP(3)"]) {
+        it(`should return base type for simple type: ${type}`, () => {
+          const column = new FlinkRelationColumn({
+            ...TEST_VARCHAR_COLUMN,
+            fullDataType: type,
+          });
+          const simpleType = column.simpleDataType;
+          assert.strictEqual(simpleType, type);
+        });
+      }
     });
   });
 });

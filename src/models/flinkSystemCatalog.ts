@@ -185,6 +185,9 @@ export class FlinkRelationColumn {
     return `${this.relationName}.${this.name}`;
   }
 
+  /** Simplified spelling of the datatype.
+   * Compound types reduced, max varchar legnths eroded away.
+   **/
   get simpleDataType(): string {
     let type = this.fullDataType;
 
@@ -198,7 +201,18 @@ export class FlinkRelationColumn {
       return "MAP";
     }
 
-    return type;
+    // Likewise ARRAY
+    if (type.startsWith("ARRAY<")) {
+      return "ARRAY";
+    }
+
+    // and MULTISET
+    if (type.startsWith("MULTISET<")) {
+      return "MULTISET";
+    }
+
+    // Erode max size specifications like VARCHAR(2147483647) to just VARCHAR.
+    return formatSqlType(type);
   }
 
   get connectionId(): ConnectionId {
@@ -207,6 +221,11 @@ export class FlinkRelationColumn {
 
   get connectionType(): ConnectionType {
     return ConnectionType.Ccloud;
+  }
+
+  /** Is this column a metadata column? */
+  get isMetadata(): boolean {
+    return this.metadataKey !== null;
   }
 
   searchableText(): string {
@@ -224,11 +243,6 @@ export class FlinkRelationColumn {
     return parts.join(" ");
   }
 
-  /** Is this column a metadata column? */
-  get isMetadata(): boolean {
-    return this.metadataKey !== null;
-  }
-
   getTreeItem(): TreeItem {
     const item = new TreeItem(this.name, TreeItemCollapsibleState.None);
     // item.iconPath = new ThemeIcon(IconNames.FLINK_FUNCTION); // TODO replace with column specific icon when available
@@ -240,15 +254,9 @@ export class FlinkRelationColumn {
     return item;
   }
 
-  /** A terse easy to read overview of the field's data type */
-  get formattedSimpleDataType(): string {
-    let desc = formatSqlType(this.simpleDataType);
-    return desc;
-  }
-
   /** Make a nice overview of the column type, nullability, comment prefix */
   get treeItemDescription(): string {
-    let desc = this.formattedSimpleDataType;
+    let desc = this.simpleDataType;
     if (!this.isNullable) {
       desc += " NOT NULL";
     }
