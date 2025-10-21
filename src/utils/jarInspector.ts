@@ -34,8 +34,8 @@ export async function inspectJarClasses(file: Uri): Promise<JarClassInfo[]> {
       action: "created",
       status: "ok",
       kind: "quick-register",
-      step: "jar inspection",
-      detail: `extracted ${infos.length} classes from JAR`,
+      step: "jar inspection: class extraction",
+      numClasses: `${infos.length}`,
     });
     return infos;
   } catch (err) {
