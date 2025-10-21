@@ -17,6 +17,7 @@ import { CloudProvider } from "../../models/resource";
 import { showInfoNotificationWithButtons } from "../../notifications";
 import { type QuickPickItemWithValue } from "../../quickpicks/types";
 import { getSidecar } from "../../sidecar";
+import { logUsage, UserEvent } from "../../telemetry/events";
 import { readFileBuffer } from "../../utils/fsWrappers";
 import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
 export { uploadFileToAzure };
