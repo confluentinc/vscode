@@ -96,6 +96,7 @@ export async function detectClassesAndRegisterUDFs(artifactFile: Uri, artifactId
       status: "failed",
       kind: "quick-register",
       step: "exception thrown",
+      message: message,
     });
     void showErrorNotificationWithButtons(
       `Failed to register UDF(s): ${message}. Try again by right-clicking the artifact from the list in the Flink Database Explorer view.`,
