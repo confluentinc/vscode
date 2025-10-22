@@ -25,7 +25,7 @@ describe("commands/flinkDatabaseView.ts", () => {
     let registerCommandWithLoggingStub: sinon.SinonStub;
 
     beforeEach(() => {
-      registerCommandWithLoggingStub = sinon.stub(indexModule, "registerCommandWithLogging");
+      registerCommandWithLoggingStub = sandbox.stub(indexModule, "registerCommandWithLogging");
     });
 
     it("should register the setFlinkRelationsViewModeCommand command", () => {
