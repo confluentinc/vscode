@@ -1,6 +1,9 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import type { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
+import type {
+  DeleteArtifactV1FlinkArtifactRequest,
+  UpdateArtifactV1FlinkArtifactRequest,
+} from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
 import type {
   CreateArtifactV1FlinkArtifact201Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
@@ -20,9 +23,10 @@ import { logUsage, UserEvent } from "../telemetry/events";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import { detectClassesAndRegisterUDFs } from "./utils/udfRegistration";
+import type { ArtifactUploadParams } from "./utils/uploadArtifactOrUDF";
 import {
-  ArtifactUploadParams,
   buildUploadErrorMessage,
+  getArtifactPatchParams,
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
   uploadArtifactToCCloud,
@@ -60,10 +64,10 @@ export async function uploadArtifactCommand(
         if (response) {
           logUsage(UserEvent.FlinkArtifactAction, {
             action: "upload",
-            status: "succeeded",
-            kind: "CloudProviderUpload",
+            step: "succeeded",
             cloud: params.cloud,
             region: params.region,
+            artifactId: response.id,
           });
           void showInfoNotificationWithButtons(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
@@ -77,14 +81,14 @@ export async function uploadArtifactCommand(
       },
     );
   } catch (err) {
+    const errorMessage = await buildUploadErrorMessage(err, "Failed to upload artifact:");
     logUsage(UserEvent.FlinkArtifactAction, {
       action: "upload",
-      status: "failed",
-      kind: "CloudProviderUpload",
+      step: "failed",
       cloud: params.cloud,
       region: params.region,
+      message: errorMessage,
     });
-    const errorMessage = await buildUploadErrorMessage(err, "Failed to upload artifact:");
     logError(err, errorMessage);
     void showErrorNotificationWithButtons(errorMessage);
   }
@@ -102,8 +106,7 @@ async function executeArtifactUpload(
 
   logUsage(UserEvent.FlinkArtifactAction, {
     action: "upload",
-    status: "started",
-    kind: "CloudProviderUpload",
+    step: "upload to cloud started",
     cloud: params.cloud,
     region: params.region,
   });
@@ -129,6 +132,7 @@ async function executeArtifactUpload(
     message: "Uploading artifact binary to cloud storage...",
     increment: stepPortion,
   });
+
   await handleUploadToCloudProvider(params, uploadUrl);
 
   // Step 3: Create artifact in Confluent Cloud
@@ -185,6 +189,80 @@ export async function deleteArtifactCommand(
   );
 }
 
+/** Update an artifact's editable fields */
+export async function updateArtifactCommand(
+  selectedArtifact: FlinkArtifact | undefined,
+): Promise<void> {
+  if (!selectedArtifact) {
+    void showErrorNotificationWithButtons("No Flink artifact selected for update.");
+    return;
+  }
+
+  const patchPayload = await getArtifactPatchParams(selectedArtifact);
+  if (!patchPayload) {
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "update",
+      status: "exited early with no changes",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
+    void vscode.window.showInformationMessage("Update cancelled. No changes were made.");
+    return;
+  }
+  const request: UpdateArtifactV1FlinkArtifactRequest = {
+    cloud: selectedArtifact.provider,
+    region: selectedArtifact.region,
+    environment: selectedArtifact.environmentId,
+    id: selectedArtifact.id,
+    ArtifactV1FlinkArtifact: patchPayload,
+  };
+
+  try {
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "update",
+      status: "request started",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
+    const sidecarHandle = await getSidecar();
+    const artifactsClient = sidecarHandle.getFlinkArtifactsApi({
+      region: selectedArtifact.region,
+      environmentId: selectedArtifact.environmentId,
+      provider: selectedArtifact.provider,
+    });
+
+    await artifactsClient.updateArtifactV1FlinkArtifact(request);
+
+    artifactsChanged.fire(selectedArtifact);
+
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "update",
+      status: "succeeded",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
+
+    void vscode.window.showInformationMessage(
+      `Artifact "${selectedArtifact.name}" updated successfully in Confluent Cloud.`,
+    );
+  } catch (err) {
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "update",
+      status: "failed",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
+    logError(err, "Failed to update Flink artifact in Confluent Cloud", {
+      extra: {
+        artifactId: selectedArtifact.id,
+        cloud: selectedArtifact.provider,
+        region: selectedArtifact.region,
+      },
+    });
+    void showErrorNotificationWithButtons(`Failed to update artifact "${selectedArtifact.name}".`);
+  }
+}
+
 /** Set the Flink Database view to Artifacts mode */
 export async function setFlinkArtifactsViewModeCommand() {
   flinkDatabaseViewMode.fire(FlinkDatabaseViewProviderMode.Artifacts);
@@ -205,5 +283,6 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
       "confluent.flinkdatabase.setArtifactsViewMode",
       setFlinkArtifactsViewModeCommand,
     ),
+    registerCommandWithLogging("confluent.updateArtifact", updateArtifactCommand),
   ];
 }

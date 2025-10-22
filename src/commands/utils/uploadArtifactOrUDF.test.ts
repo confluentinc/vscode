@@ -15,17 +15,15 @@ import {
 } from "../../../tests/unit/testResources";
 import type { PresignedUploadUrlArtifactV1PresignedUrl200Response } from "../../clients/flinkArtifacts";
 import {
-  ArtifactV1FlinkArtifactMetadataFromJSON,
   FlinkArtifactsArtifactV1Api,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../../clients/flinkArtifacts";
 import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
 import type { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
-import type { ConnectionType } from "../../clients/sidecar";
 import type { CCloudResourceLoader } from "../../loaders";
-import { FlinkArtifact } from "../../models/flinkArtifact";
-import type { ConnectionId, EnvironmentId } from "../../models/resource";
+import type { FlinkArtifact } from "../../models/flinkArtifact";
+import type { EnvironmentId } from "../../models/resource";
 import * as notifications from "../../notifications";
 import type { SidecarHandle } from "../../sidecar";
 import * as fsWrappers from "../../utils/fsWrappers";
@@ -309,37 +307,18 @@ describe("commands/utils/uploadArtifact", () => {
   });
 
   describe("promptForFunctionAndClassName", () => {
-    const selectedArtifact = new FlinkArtifact({
-      id: "artifact-id",
-      name: "test-artifact",
-      description: "description",
-      connectionId: "conn-id" as ConnectionId,
-      connectionType: "ccloud" as ConnectionType,
-      environmentId: "env-id" as EnvironmentId,
-      provider: "aws",
-      region: "us-west-2",
-      documentationLink: "https://confluent.io",
-      metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
-        self: {},
-        resource_name: "test-artifact",
-        created_at: new Date(),
-        updated_at: new Date(),
-        deleted_at: new Date(),
-      }),
-    });
-
     it("should accept well-formed input", async () => {
       const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
-      showInputBoxStub.onFirstCall().resolves("myFunction");
-      showInputBoxStub.onSecondCall().resolves("com.example.MyClass");
+      showInputBoxStub.onFirstCall().resolves("com.example.MyClass");
+      showInputBoxStub.onSecondCall().resolves("MyClass");
 
-      const result = await promptForFunctionAndClassName(selectedArtifact);
+      const result = await promptForFunctionAndClassName();
 
       sinon.assert.calledTwice(showInputBoxStub);
 
       assert.deepStrictEqual(result, {
-        functionName: "myFunction",
         className: "com.example.MyClass",
+        functionName: "MyClass",
       });
     });
   });
@@ -400,6 +379,36 @@ describe("commands/utils/uploadArtifact", () => {
       );
       sinon.assert.calledOnce(showInfoStub);
       sinon.assert.calledWith(showInfoStub, "testFunction function created successfully.");
+    });
+  });
+
+  describe("getArtifactPatchParams", () => {
+    it("should build patch payload correctly", async () => {
+      const existingArtifact = createFlinkArtifact({
+        id: "artifact-id",
+        description: "old description",
+        documentationLink: "https://old-link.com",
+      });
+
+      const showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick");
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showQuickPickStub.onFirstCall().resolves({ value: "description" } as any);
+      showInputBoxStub.onFirstCall().resolves("new description");
+
+      showQuickPickStub.onSecondCall().resolves({ value: "documentationLink" } as any);
+      showInputBoxStub.onSecondCall().resolves("https://new-link.com");
+
+      showQuickPickStub.onThirdCall().resolves({ value: "complete" } as any);
+
+      const patchPayload = await uploadArtifactModule.getArtifactPatchParams(existingArtifact);
+
+      sinon.assert.calledThrice(showQuickPickStub);
+      sinon.assert.calledTwice(showInputBoxStub);
+
+      assert.deepStrictEqual(patchPayload, {
+        description: "new description",
+        documentation_link: "https://new-link.com",
+      });
     });
   });
 });

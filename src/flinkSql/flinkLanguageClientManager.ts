@@ -22,6 +22,7 @@ import type { UriMetadata } from "../storage/types";
 import { getSecretStorage } from "../storage/utils";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { DisposableCollection } from "../utils/disposables";
+import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import { createLanguageClientFromWebsocket } from "./languageClient";
 
 const logger = new Logger("flinkSql.languageClient.FlinkLanguageClientManager");
@@ -42,8 +43,6 @@ export interface ComputePoolInfo {
   region: string;
   provider: string;
 }
-
-export const FLINKSQL_LANGUAGE_ID = "flinksql";
 
 /**
  * Singleton class that handles Flink configuration settings and language client management.
@@ -103,7 +102,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
    * Yes if language id is flinksql and the URI scheme is not flinkstatement (the readonly statements)
    */
   isAppropriateDocument(document: TextDocument): boolean {
-    return document.languageId === FLINKSQL_LANGUAGE_ID && this.isAppropriateUri(document.uri);
+    return document.languageId === FLINK_SQL_LANGUAGE_ID && this.isAppropriateUri(document.uri);
   }
 
   /** Should we consider language serving for this sort of document URI? */

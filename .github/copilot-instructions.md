@@ -147,6 +147,13 @@ When reviewing pull requests for this VS Code extension:
 - If code appears self-explanatory, comments may explain _why_ rather than _what_
 - When suggesting improvements, enhance comments rather than removing them
 
+### Style Preferences (Avoid Nitpicking)
+
+- **Import statements**: Don't require `import type { }` vs `import { }` changes - both are valid
+  and TypeScript handles them correctly
+- Focus reviews on substantive issues: logic, architecture, testing, and critical requirements
+- Let automated tooling (ESLint, Prettier) handle formatting and style consistency
+
 ### Review Checklist
 
 - Verify the PR description is clear and applicable checklist items are completed
