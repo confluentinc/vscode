@@ -3,12 +3,14 @@ import * as sinon from "sinon";
 
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import {
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_MEDUSA,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { LOCAL_CONNECTION_ID } from "../constants";
+import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import type { SidecarHandle } from "../sidecar";
 import * as sidecarLocalConnections from "../sidecar/connections/local";
 import { getLocalResources } from "./local";
@@ -24,6 +26,7 @@ describe("local.ts getLocalResources()", () => {
     sandbox = sinon.createSandbox();
     sidecarStub = getSidecarStub(sandbox);
     showErrorNotificationStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
     discoverMedusaStub = sandbox
       .stub(sidecarLocalConnections, "discoverMedusa")
       .resolves(undefined);
@@ -134,6 +137,13 @@ describe("local.ts getLocalResources()", () => {
   });
 
   describe("Medusa integration", () => {
+    let stubbedConfigs: StubbedWorkspaceConfiguration;
+    beforeEach(() => {
+      stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+      // default to Medusa integration being enabled
+      stubbedConfigs.stubGet(ENABLE_MEDUSA_CONTAINER, true);
+    });
+
     it("calls discoverMedusa to check for Medusa containers", async () => {
       sidecarStub.query.resolves({ localConnections: [] });
 
@@ -205,6 +215,31 @@ describe("local.ts getLocalResources()", () => {
       const result = await getLocalResources();
 
       assert.deepStrictEqual(result, [], "Should return empty array when nothing is running");
+    });
+
+    it("does not call discoverMedusa() when Medusa integration is disabled", async () => {
+      stubbedConfigs.stubGet(ENABLE_MEDUSA_CONTAINER, false);
+
+      sidecarStub.query.resolves({
+        localConnections: [
+          {
+            id: "local-connection-id",
+            kafkaCluster: TEST_LOCAL_KAFKA_CLUSTER,
+          },
+        ],
+      });
+
+      const result = await getLocalResources();
+
+      // Should not have even tried to discover Medusa since integration is disabled.
+      sinon.assert.notCalled(discoverMedusaStub);
+
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(
+        result[0].medusa,
+        undefined,
+        "Should not have Medusa when integration disabled",
+      );
     });
   });
 });
