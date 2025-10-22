@@ -19,6 +19,9 @@ export class FlinkUdfParameter {
   }
 }
 
+/**
+ * Represents a Flink UDF.
+ */
 export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
   /** What CCloud environment this UDF came from (from the Kafka Cluster) */
   environmentId: EnvironmentId;
@@ -131,21 +134,57 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
   }
 }
 
-export type FlinkRelationColumnProps = Pick<
-  FlinkRelationColumn,
-  | "relationName"
-  | "name"
-  | "fullDataType"
-  | "distributionKeyNumber"
-  | "isGenerated"
-  | "isPersisted"
-  | "isHidden"
-  | "metadataKey"
-  | "comment"
-  | "isNullable"
->;
+/** TreeItem subclass for FlinkUdf */
+export class FlinkUdfTreeItem extends TreeItem {
+  resource: FlinkUdf;
 
-/** Represents a column of a Flink table or view. */
+  constructor(resource: FlinkUdf) {
+    super(resource.name, TreeItemCollapsibleState.None);
+    this.iconPath = new ThemeIcon(resource.iconName);
+    this.id = resource.id;
+    this.resource = resource;
+    this.contextValue = `${resource.connectionType.toLowerCase()}-flink-udf`;
+
+    this.description = `${resource.parametersSignature} → ${formatSqlType(resource.returnType)}`;
+    this.tooltip = createFlinkUdfToolTip(resource);
+  }
+}
+
+/**
+ * Creates a rich markdown tooltip describing the given Flink UDF.
+ * @param resource The Flink UDF to create a tooltip for.
+ * @returns CustomMarkdownString for the tooltip for the UDF.
+ */
+export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString {
+  const tooltip = new CustomMarkdownString()
+    .addHeader("Flink UDF", IconNames.FLINK_FUNCTION)
+    .addField("ID", resource.id)
+    .addField("Description", resource.description)
+    .addField("Return Type", formatSqlType(resource.returnType));
+
+  if (resource.parameters.length > 0) {
+    tooltip.addField("Parameters", `${resource.parametersSignature}`);
+  } else {
+    tooltip.addField("Parameters", "None");
+  }
+
+  // Additional function properties
+  tooltip.addField("Language", resource.language);
+  tooltip.addField("External Name", resource.externalName);
+  tooltip.addField("Deterministic", resource.isDeterministic ? "Yes" : "No");
+  tooltip.addField("Kind", resource.kind ?? "UNKNOWN");
+  tooltip.addField(
+    "Created At",
+    resource.creationTs.toLocaleString(undefined, { timeZoneName: "short" }),
+  );
+  tooltip.addField("Artifact Reference", resource.artifactReferenceExtracted);
+  return tooltip;
+}
+
+/**
+ * Represents a column of a Flink relation (table or view).
+ * Collected into the {@link FlinkRelation#columns | columns} property of a {@link FlinkRelation}.
+ **/
 export class FlinkRelationColumn {
   /** Name of the containing relation */
   readonly relationName: string;
@@ -168,7 +207,21 @@ export class FlinkRelationColumn {
   /** If a metadata column, what Kafka topic metadata key does it map to? */
   readonly metadataKey: string | null;
 
-  constructor(props: FlinkRelationColumnProps) {
+  constructor(
+    props: Pick<
+      FlinkRelationColumn,
+      | "relationName"
+      | "name"
+      | "fullDataType"
+      | "distributionKeyNumber"
+      | "isGenerated"
+      | "isPersisted"
+      | "isHidden"
+      | "metadataKey"
+      | "comment"
+      | "isNullable"
+    >,
+  ) {
     this.relationName = props.relationName;
     this.name = props.name;
     this.fullDataType = props.fullDataType;
@@ -331,22 +384,6 @@ export enum FlinkRelationType {
   ExternalTable = "EXTERNAL TABLE",
   /** Flink-managed tables, such as $error and system catalog tables. Read-only. */
   SystemTable = "SYSTEM TABLE",
-}
-
-/** Convert string spelling of a relation type to its enum. */
-export function toRelationType(type: string): FlinkRelationType {
-  switch (type) {
-    case "BASE TABLE":
-      return FlinkRelationType.BaseTable;
-    case "VIEW":
-      return FlinkRelationType.View;
-    case "SYSTEM TABLE":
-      return FlinkRelationType.SystemTable;
-    case "EXTERNAL TABLE":
-      return FlinkRelationType.ExternalTable;
-    default:
-      throw new Error(`Unknown relation type: ${type}`);
-  }
 }
 
 /**
@@ -517,45 +554,23 @@ export class FlinkRelation {
   }
 }
 
-export class FlinkUdfTreeItem extends TreeItem {
-  resource: FlinkUdf;
-
-  constructor(resource: FlinkUdf) {
-    super(resource.name, TreeItemCollapsibleState.None);
-    this.iconPath = new ThemeIcon(resource.iconName);
-    this.id = resource.id;
-    this.resource = resource;
-    this.contextValue = `${resource.connectionType.toLowerCase()}-flink-udf`;
-
-    this.description = `${resource.parametersSignature} → ${formatSqlType(resource.returnType)}`;
-    this.tooltip = createFlinkUdfToolTip(resource);
+/**
+ * Convert the string spelling of a relation type (from system catalog query results)
+ * to its corresponding enum.
+ **/
+export function toRelationType(type: string): FlinkRelationType {
+  switch (type) {
+    case "BASE TABLE":
+      return FlinkRelationType.BaseTable;
+    case "VIEW":
+      return FlinkRelationType.View;
+    case "SYSTEM TABLE":
+      return FlinkRelationType.SystemTable;
+    case "EXTERNAL TABLE":
+      return FlinkRelationType.ExternalTable;
+    default:
+      throw new Error(`Unknown relation type: ${type}`);
   }
-}
-
-export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString {
-  const tooltip = new CustomMarkdownString()
-    .addHeader("Flink UDF", IconNames.FLINK_FUNCTION)
-    .addField("ID", resource.id)
-    .addField("Description", resource.description)
-    .addField("Return Type", formatSqlType(resource.returnType));
-
-  if (resource.parameters.length > 0) {
-    tooltip.addField("Parameters", `${resource.parametersSignature}`);
-  } else {
-    tooltip.addField("Parameters", "None");
-  }
-
-  // Additional function properties
-  tooltip.addField("Language", resource.language);
-  tooltip.addField("External Name", resource.externalName);
-  tooltip.addField("Deterministic", resource.isDeterministic ? "Yes" : "No");
-  tooltip.addField("Kind", resource.kind ?? "UNKNOWN");
-  tooltip.addField(
-    "Created At",
-    resource.creationTs.toLocaleString(undefined, { timeZoneName: "short" }),
-  );
-  tooltip.addField("Artifact Reference", resource.artifactReferenceExtracted);
-  return tooltip;
 }
 
 /**
