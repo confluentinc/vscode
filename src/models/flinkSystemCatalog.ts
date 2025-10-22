@@ -257,6 +257,7 @@ export class FlinkRelationColumn {
   /** Make a nice overview of the column type, nullability, comment prefix */
   get treeItemDescription(): string {
     let desc = this.simpleDataType;
+    // Only show NOT NULL if applicable, as NULL is default in DB-lands and would be noisy
     if (!this.isNullable) {
       desc += " NOT NULL";
     }
@@ -280,17 +281,13 @@ export class FlinkRelationColumn {
       .addField("Persisted", this.isPersisted ? "Yes" : "No");
 
     if (this.distributionKeyNumber !== null) {
-      tooltip.addField("Distribution Key Number", this.distributionKeyNumber.toString());
-    } else {
-      tooltip.addField("Distribution Key Number", "Not part of distribution key");
+      tooltip.addField("Distribution Key Number", `${this.distributionKeyNumber}`);
     }
 
     tooltip.addField("Generated", this.isGenerated ? "Yes" : "No");
 
-    if (this.isMetadata && this.metadataKey) {
+    if (this.isMetadata) {
       tooltip.addField("Metadata Column", `Yes, maps to key: ${this.metadataKey}`);
-    } else {
-      tooltip.addField("Metadata Column", "No");
     }
 
     if (this.comment) {
@@ -308,15 +305,18 @@ export class FlinkRelationColumn {
     } else {
       parts.push("NULL");
     }
-    if (this.distributionKeyNumber !== null) {
-      parts.push(`DistKey#${this.distributionKeyNumber}`);
-    }
     if (this.isGenerated) {
       parts.push("GENERATED");
     }
-    if (this.isMetadata) {
-      parts.push(`METADATA(${this.metadataKey})`);
+
+    if (this.distributionKeyNumber !== null) {
+      parts.push(`DISTKEY(${this.distributionKeyNumber})`);
     }
+
+    if (this.isMetadata) {
+      parts.push(`METADATA('${this.metadataKey}')`);
+    }
+
     return parts.join(" ");
   }
 }
@@ -419,14 +419,11 @@ export class FlinkRelation {
     return this.columns.filter((c) => !c.isHidden);
   }
 
-  get isView(): boolean {
-    return this.type === FlinkRelationType.View;
-  }
-
   searchableText(): string {
     const parts = [];
 
     parts.push(this.name);
+    parts.push(this.type);
     if (this.comment) {
       parts.push(this.comment);
     }
@@ -445,7 +442,8 @@ export class FlinkRelation {
     const item = new TreeItem(this.name, TreeItemCollapsibleState.Collapsed);
     // item.iconPath = new ThemeIcon(IconNames.FLINK_FUNCTION); // TODO replace with table/view specific icons when available
     item.id = this.name;
-    item.contextValue = `ccloud-flink-relation-${this.isView ? "view" : "table"}`;
+    const typeSnippet = this.type.toLowerCase().replace(" ", "-");
+    item.contextValue = `ccloud-flink-relation-${typeSnippet}`;
     item.tooltip = this.getToolTip();
     return item;
   }
