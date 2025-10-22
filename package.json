@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "2.1.0-2",
+  "version": "2.1.0-4",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -1986,7 +1986,7 @@
         },
         {
           "command": "confluent.uploadArtifact",
-          "when": "view == confluent-resources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/) && config.confluent.flink.artifacts",
+          "when": "view == confluent-resources && (viewItem =~ /ccloud.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool.*/) && config.confluent.flink.artifacts",
           "group": "4_flink@2"
         },
         {
