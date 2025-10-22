@@ -979,6 +979,7 @@ export async function apigen() {
     ],
     ["src/clients/sidecar-openapi-specs/flink-sql.openapi.yaml", "src/clients/flinkSql"],
     ["src/clients/docker.openapi.yaml", "src/clients/docker"],
+    ["src/clients/medusa-openapi-spec/openapi.yaml", "src/clients/medusa"],
   ];
 
   // other configs here: https://openapi-generator.tech/docs/generators/typescript-fetch/#config-options

@@ -4,6 +4,7 @@ import { ResponseError as FlinkArtifactsResponseError } from "./clients/flinkArt
 import { ResponseError as FlinkComputePoolResponseError } from "./clients/flinkComputePool";
 import { ResponseError as FlinkSqlResponseError } from "./clients/flinkSql";
 import { ResponseError as KafkaResponseError } from "./clients/kafkaRest";
+import { ResponseError as MedusaResponseError } from "./clients/medusa";
 import { ResponseError as ScaffoldingServiceResponseError } from "./clients/scaffoldingService";
 import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRegistryRest";
 import { ResponseError as SidecarResponseError } from "./clients/sidecar";
@@ -27,6 +28,7 @@ export type AnyResponseError =
   | FlinkArtifactsResponseError
   | FlinkComputePoolResponseError
   | FlinkSqlResponseError
+  | MedusaResponseError
   | ScaffoldingServiceResponseError
   | DockerResponseError;
 
@@ -39,6 +41,7 @@ export function isResponseError(error: unknown): error is AnyResponseError {
     error instanceof FlinkArtifactsResponseError ||
     error instanceof FlinkComputePoolResponseError ||
     error instanceof FlinkSqlResponseError ||
+    error instanceof MedusaResponseError ||
     error instanceof ScaffoldingServiceResponseError ||
     error instanceof DockerResponseError
   );
