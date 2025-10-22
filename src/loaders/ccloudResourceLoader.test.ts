@@ -56,13 +56,16 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { FlinkStatement } from "../models/flinkStatement";
 import { Phase, restFlinkStatementToModel } from "../models/flinkStatement";
-import type { FlinkUdf } from "../models/flinkUDF";
+import type { FlinkUdf } from "../models/flinkSystemCatalog";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { EnvironmentId } from "../models/resource";
 import type * as sidecar from "../sidecar";
 import type { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
+import * as relationsUtils from "./utils/relationsAndColumnsSystemCatalogQuery";
+
+import { TEST_FLINK_RELATION } from "../../tests/unit/testResources/flinkRelation";
 import {
   CCloudResourceLoader,
   loadArtifactsForProviderRegion,
@@ -861,6 +864,39 @@ describe("CCloudResourceLoader", () => {
         TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
         udfs,
       );
+    });
+  });
+
+  describe("getFlinkRelations", () => {
+    let executeBackgroundFlinkStatementStub: sinon.SinonStub;
+    let getRelationsAndColumnsSystemCatalogQueryStub: sinon.SinonStub;
+    let parseRelationsAndColumnsSystemCatalogQueryResponseStub: sinon.SinonStub;
+    beforeEach(() => {
+      executeBackgroundFlinkStatementStub = sandbox.stub(loader, "executeBackgroundFlinkStatement");
+      getRelationsAndColumnsSystemCatalogQueryStub = sandbox.stub(
+        relationsUtils,
+        "getRelationsAndColumnsSystemCatalogQuery",
+      );
+      parseRelationsAndColumnsSystemCatalogQueryResponseStub = sandbox.stub(
+        relationsUtils,
+        "parseRelationsAndColumnsSystemCatalogQueryResponse",
+      );
+    });
+
+    it("should call parseRelationsAndColumnsSystemCatalogQueryResponse with result from catalog statement", async () => {
+      parseRelationsAndColumnsSystemCatalogQueryResponseStub.returns([TEST_FLINK_RELATION]);
+
+      const results = await loader.getFlinkRelations(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+
+      assert.deepStrictEqual(
+        results,
+        [TEST_FLINK_RELATION],
+        "Expected relations to match parsed results",
+      );
+
+      sinon.assert.calledOnce(getRelationsAndColumnsSystemCatalogQueryStub);
+      sinon.assert.calledOnce(executeBackgroundFlinkStatementStub);
+      sinon.assert.calledOnce(parseRelationsAndColumnsSystemCatalogQueryResponseStub);
     });
   });
 
