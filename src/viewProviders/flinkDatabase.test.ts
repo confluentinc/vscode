@@ -7,6 +7,7 @@ import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as errors from "../errors";
 import type { CCloudResourceLoader } from "../loaders";
 import type { CCloudEnvironment } from "../models/environment";
@@ -20,6 +21,10 @@ import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 describe("viewProviders/flinkDatabase.ts", () => {
   let sandbox: sinon.SinonSandbox;
 
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
   beforeEach(() => {
     sandbox = sinon.createSandbox();
   });
@@ -31,8 +36,10 @@ describe("viewProviders/flinkDatabase.ts", () => {
   describe("FlinkDatabaseViewProvider", () => {
     let viewProvider: FlinkDatabaseViewProvider;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       viewProvider = FlinkDatabaseViewProvider.getInstance();
+      // Start in a test-suite known state.
+      await viewProvider.switchMode(FlinkDatabaseViewProviderMode.UDFs);
     });
 
     afterEach(() => {
@@ -103,6 +110,8 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should show an error notification when the delegate's fetchChildren() fails", async () => {
         viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+        assert.ok(viewProvider.database);
+
         const fakeError = new Error("uh oh");
         delegateFetchStub.rejects(fakeError);
 

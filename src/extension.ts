@@ -31,6 +31,7 @@ import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
 import { registerFlinkArtifactCommands } from "./commands/flinkArtifacts";
 import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
+import { registerFlinkDatabaseViewCommands } from "./commands/flinkDatabaseView";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerFlinkUDFCommands } from "./commands/flinkUDFs";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
@@ -209,7 +210,7 @@ async function _activateExtension(
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
-  const artifactsViewProvider = FlinkDatabaseViewProvider.getInstance();
+  const flinkDatabaseViewProvider = FlinkDatabaseViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
 
   // ...and any panel view providers
@@ -221,7 +222,7 @@ async function _activateExtension(
     schemasViewProvider,
     supportViewProvider,
     statementsViewProvider,
-    artifactsViewProvider,
+    flinkDatabaseViewProvider,
     flinkStatementResultsPanelProvider,
   ];
   logger.info("View providers initialized");
@@ -262,6 +263,7 @@ async function _activateExtension(
     ...registerProjectGenerationCommands(),
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
+    ...registerFlinkDatabaseViewCommands(),
     ...registerFlinkUDFCommands(),
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
@@ -440,10 +442,10 @@ async function setupContextValues() {
     SCHEMA_URI_SCHEME,
     MESSAGE_URI_SCHEME,
   ]);
-  // set the initial Flink database view mode to "UDFs" so the Artifacts mode toggle is visible
+  // set the initial Flink database view mode to "Relations"
   const flinkViewMode = setContextValue(
     ContextValues.flinkDatabaseViewMode,
-    FlinkDatabaseViewProviderMode.UDFs,
+    FlinkDatabaseViewProviderMode.Relations,
   );
 
   // Default to Docker daemon not being available until proven otherwise
