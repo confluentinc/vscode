@@ -25,7 +25,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
     await getTestExtensionContext();
   });
 
-  beforeEach(async () => {
+  beforeEach(() => {
     sandbox = sinon.createSandbox();
   });
 
