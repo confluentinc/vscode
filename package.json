@@ -1287,7 +1287,7 @@
       },
       {
         "view": "confluent-flink-database",
-        "contents": "No Flink relations found.\n[Create Table/Topic](command:confluent.flinkdatabase.createTopic)",
+        "contents": "No Flink relations found.\n[Create Topic](command:confluent.flinkdatabase.createTopic)",
         "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'relations' && !confluent.flinkDatabaseSearchApplied"
       },
       {
