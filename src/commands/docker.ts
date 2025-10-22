@@ -73,6 +73,14 @@ export async function runWorkflowWithProgress(
       return;
     }
   }
+  if (resources.includes(LocalResourceKind.Medusa)) {
+    try {
+      subworkflows.push(LocalResourceWorkflow.getMedusaWorkflow());
+    } catch (error) {
+      logger.error("error getting Medusa workflow:", error);
+      return;
+    }
+  }
   // add logic for looking up other resources' workflows here
 
   if (subworkflows.length === 0) {
@@ -84,7 +92,7 @@ export async function runWorkflowWithProgress(
   const orderedWorkflows: LocalResourceWorkflow[] = orderWorkflows(subworkflows, start);
 
   logger.debug("running local resource workflow(s)", { start, resources });
-  window.withProgress(
+  await window.withProgress(
     {
       location: ProgressLocation.Notification,
       title: ConnectionLabel.LOCAL,

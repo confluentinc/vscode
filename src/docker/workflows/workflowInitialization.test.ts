@@ -20,6 +20,7 @@ describe("docker/workflows/workflowInitialization.ts registerLocalResourceWorkfl
       () => LocalResourceWorkflow.getSchemaRegistryWorkflow(),
       /Unsupported Schema Registry image repo/,
     );
+    assert.throws(() => LocalResourceWorkflow.getMedusaWorkflow(), /Unsupported Medusa image repo/);
 
     // register the workflows
     registerLocalResourceWorkflows();
@@ -33,6 +34,10 @@ describe("docker/workflows/workflowInitialization.ts registerLocalResourceWorkfl
       () => LocalResourceWorkflow.getSchemaRegistryWorkflow(),
       /Unsupported Schema Registry image repo/,
     );
+    assert.doesNotThrow(
+      () => LocalResourceWorkflow.getMedusaWorkflow(),
+      /Unsupported Medusa image repo/,
+    );
 
     // just check some basics of the registered workflows; other tests handle the details for the
     // workflow properties themselves
@@ -40,5 +45,7 @@ describe("docker/workflows/workflowInitialization.ts registerLocalResourceWorkfl
     assert.strictEqual(kafkaWorkflow.resourceKind, LocalResourceKind.Kafka);
     const schemaRegistryWorkflow = LocalResourceWorkflow.getSchemaRegistryWorkflow();
     assert.strictEqual(schemaRegistryWorkflow.resourceKind, LocalResourceKind.SchemaRegistry);
+    const medusaWorkflow = LocalResourceWorkflow.getMedusaWorkflow();
+    assert.strictEqual(medusaWorkflow.resourceKind, LocalResourceKind.Medusa);
   });
 });

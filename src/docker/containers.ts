@@ -10,6 +10,7 @@ import { Logger } from "../logging";
 import { defaultRequestInit } from "./configs";
 import { MANAGED_CONTAINER_LABEL } from "./constants";
 import { imageExists, pullImage } from "./images";
+import { containerFetch } from "./wrappers";
 
 const logger = new Logger("docker.containers");
 
@@ -140,6 +141,51 @@ export async function getContainer(id: string): Promise<ContainerInspectResponse
   }
 }
 
+/**
+ * Generic health check method for any containerized service.
+ */
+export async function waitForServiceHealthCheck(
+  containerPort: string,
+  healthEndpoint: string,
+  serviceName: string,
+  maxWaitTimeSec: number = 60,
+  requestTimeoutMs: number = 5000,
+): Promise<boolean> {
+  try {
+    const healthUrl = `http://localhost:${containerPort}${healthEndpoint}`;
+    logger.debug(`Starting ${serviceName} health check at ${healthUrl}`);
+
+    const healthCheckStartTime = Date.now();
+    while (Date.now() - healthCheckStartTime < maxWaitTimeSec * 1000) {
+      try {
+        const response = await containerFetch(healthUrl, {
+          method: "GET",
+          signal: AbortSignal.timeout(requestTimeoutMs),
+        });
+
+        if (response.ok) {
+          logger.debug(`${serviceName} health check succeeded`);
+          return true;
+        }
+        logger.debug(
+          `${serviceName} health check failed with status ${response.status}, retrying...`,
+        );
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.debug(`${serviceName} health check request failed: ${errorMessage}, retrying...`);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    logger.warn(`${serviceName} health check timed out after ${maxWaitTimeSec}s`);
+    return false;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Critical error during ${serviceName} health check: ${errorMessage}`);
+    return false;
+  }
+}
 export function getContainerEnvVars(container: ContainerInspectResponse): Record<string, string> {
   const envVars: Record<string, string> = {};
   container.Config?.Env?.forEach((envVar) => {
@@ -161,4 +207,13 @@ export function getContainerPorts(container: ContainerInspectResponse): Record<s
     });
   }
   return ports;
+}
+
+export function getFirstExternalPort(container: ContainerInspectResponse): string {
+  const ports = Object.values(getContainerPorts(container));
+  if (ports.length === 0) {
+    logger.error("No external ports found for container", { containerId: container.Id });
+    return "";
+  }
+  return ports[0];
 }

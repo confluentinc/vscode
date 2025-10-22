@@ -8,6 +8,7 @@ import { LocalResourceKind } from "../docker/constants";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
+import { MedusaWorkflow } from "../docker/workflows/medusa";
 import { LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";
 import * as notifications from "../notifications";
 import * as quickpicks from "../quickpicks/localResources";
@@ -24,9 +25,11 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
 
   let getKafkaWorkflowStub: sinon.SinonStub;
   let getSchemaRegistryWorkflowStub: sinon.SinonStub;
+  let getMedusaWorkflowStub: sinon.SinonStub;
 
   let stubKafkaWorkflow: sinon.SinonStubbedInstance<ConfluentLocalWorkflow>;
   let stubSchemaRegistryWorkflow: sinon.SinonStubbedInstance<ConfluentPlatformSchemaRegistryWorkflow>;
+  let stubMedusaWorkflow: sinon.SinonStubbedInstance<MedusaWorkflow>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -54,6 +57,11 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
     getSchemaRegistryWorkflowStub = sandbox
       .stub(LocalResourceWorkflow, "getSchemaRegistryWorkflow")
       .returns(stubSchemaRegistryWorkflow);
+
+    stubMedusaWorkflow = sandbox.createStubInstance(MedusaWorkflow);
+    getMedusaWorkflowStub = sandbox
+      .stub(LocalResourceWorkflow, "getMedusaWorkflow")
+      .returns(stubMedusaWorkflow);
   });
 
   afterEach(() => {
@@ -68,6 +76,7 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
     sinon.assert.notCalled(localResourcesQuickPickStub);
     sinon.assert.notCalled(getKafkaWorkflowStub);
     sinon.assert.notCalled(getSchemaRegistryWorkflowStub);
+    sinon.assert.notCalled(getMedusaWorkflowStub);
   });
 
   it("should skip running a workflow for unsupported Kafka images", async () => {
@@ -88,6 +97,17 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
     // `docker/workflows/index.test.ts` tests the error notification for this case
     sinon.assert.notCalled(stubSchemaRegistryWorkflow.start);
     sinon.assert.notCalled(stubSchemaRegistryWorkflow.stop);
+  });
+
+  it("should skip running a workflow for unsupported Medusa images", async () => {
+    localResourcesQuickPickStub.resolves([LocalResourceKind.Medusa]);
+    getMedusaWorkflowStub.throws(new Error("Unsupported Medusa image blah blah"));
+
+    await runWorkflowWithProgress();
+
+    // `docker/workflows/index.test.ts` tests the error notification for this case
+    sinon.assert.notCalled(stubMedusaWorkflow.start);
+    sinon.assert.notCalled(stubMedusaWorkflow.stop);
   });
 
   it("should show an workflow's error notification for uncaught errors in the workflow .start()", async () => {
@@ -129,24 +149,28 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
     localResourcesQuickPickStub.resolves([
       LocalResourceKind.Kafka,
       LocalResourceKind.SchemaRegistry,
+      LocalResourceKind.Medusa,
     ]);
 
     await runWorkflowWithProgress();
 
     sinon.assert.calledOnce(stubKafkaWorkflow.start);
     sinon.assert.calledOnce(stubSchemaRegistryWorkflow.start);
+    sinon.assert.calledOnce(stubMedusaWorkflow.start);
   });
 
   it("should call multiple workflows' .stop() methods when multiple resources are selected and start=false", async () => {
     localResourcesQuickPickStub.resolves([
       LocalResourceKind.Kafka,
       LocalResourceKind.SchemaRegistry,
+      LocalResourceKind.Medusa,
     ]);
 
     await runWorkflowWithProgress(false);
 
     sinon.assert.calledOnce(stubKafkaWorkflow.stop);
     sinon.assert.calledOnce(stubSchemaRegistryWorkflow.stop);
+    sinon.assert.calledOnce(stubMedusaWorkflow.stop);
   });
 });
 

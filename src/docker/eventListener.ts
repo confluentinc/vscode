@@ -10,13 +10,20 @@ import { ContextValues, getContextValue, setContextValue } from "../context/valu
 import {
   dockerServiceAvailable,
   localKafkaConnected,
+  localMedusaConnected,
   localSchemaRegistryConnected,
 } from "../emitters";
-import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../extensionSettings/constants";
+import {
+  LOCAL_KAFKA_IMAGE,
+  LOCAL_MEDUSA_IMAGE,
+  LOCAL_SCHEMA_REGISTRY_IMAGE,
+} from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { IntervalPoller } from "../utils/timing";
 import { defaultRequestInit, isDockerAvailable } from "./configs";
+import { LocalResourceKind } from "./constants";
+import { LocalResourceWorkflow } from "./workflows/base";
 
 const logger = new Logger("docker.eventListener");
 
@@ -313,12 +320,17 @@ export class EventListener {
     // compare it to container log timestamps
     const eventTime: number = event.time ? event.time : new Date().getTime();
 
-    // first, make sure it's an image we support tracking for updates in the Resources view
-    const kafkaImage: string = LOCAL_KAFKA_IMAGE.value;
-    const schemaRegistryImage: string = LOCAL_SCHEMA_REGISTRY_IMAGE.value;
-    const isManagedImage =
-      imageName.startsWith(kafkaImage) || imageName.startsWith(schemaRegistryImage);
-    if (!isManagedImage) {
+    let resourceKind: LocalResourceKind | null = null;
+
+    if (imageName.startsWith(LOCAL_KAFKA_IMAGE.value)) {
+      resourceKind = LocalResourceKind.Kafka;
+    } else if (imageName.startsWith(LOCAL_SCHEMA_REGISTRY_IMAGE.value)) {
+      resourceKind = LocalResourceKind.SchemaRegistry;
+    } else if (imageName.startsWith(LOCAL_MEDUSA_IMAGE.value)) {
+      resourceKind = LocalResourceKind.Medusa;
+    }
+
+    if (!resourceKind) {
       logger.debug(`ignoring container start event for image: "${imageName}"`);
       return;
     }
@@ -334,45 +346,38 @@ export class EventListener {
       return;
     }
 
-    // then if it's an image that requires a specific log line to appear before it's fully ready, wait
-    // for that log line to appear before considering the container fully started
-    const needToWaitForLog =
-      imageName.startsWith(LOCAL_KAFKA_IMAGE.defaultValue) ||
-      imageName.startsWith(LOCAL_SCHEMA_REGISTRY_IMAGE.defaultValue);
-    if (needToWaitForLog) {
-      // when the `confluent-local` container starts, it should show the following log line once it's ready:
-      // "Server started, listening for requests..."
-      logger.debug("container status shows 'running', checking container logs...", {
-        stringToInclude: SERVER_STARTED_LOG_LINE,
-        imageName,
-      });
-      // show loader in the Resources view while we wait for the correct log line to appear
-      // TODO: also update status bar item once it's available
+    logger.debug("container status shows 'running', checking container readiness...", {
+      imageName,
+    });
 
-      // Show progress in both old and new Resources view
-      await window.withProgress(
-        {
-          location: { viewId: "confluent-resources" },
-          title: "Waiting for local resources to be ready...",
-        },
-        async () => {
+    await window.withProgress(
+      {
+        location: { viewId: "confluent-resources" },
+        title: "Waiting for local resources to be ready...",
+      },
+      async () => {
+        if (resourceKind === LocalResourceKind.Kafka) {
           started = await this.waitForContainerLog(containerId, SERVER_STARTED_LOG_LINE, eventTime);
-        },
-      );
+        } else {
+          const workflow = LocalResourceWorkflow.getWorkflowForKind(resourceKind);
+          started = await workflow.waitForReadiness(containerId);
+        }
+      },
+    );
 
-      logger.debug("done waiting for container log line", {
-        started,
-        stringToInclude: SERVER_STARTED_LOG_LINE,
-        imageName,
-      });
-    }
-
-    if (imageName.startsWith(kafkaImage)) {
-      await setContextValue(ContextValues.localKafkaClusterAvailable, started);
-      localKafkaConnected.fire(started);
-    } else if (imageName.startsWith(schemaRegistryImage)) {
-      await setContextValue(ContextValues.localSchemaRegistryAvailable, started);
-      localSchemaRegistryConnected.fire(started);
+    switch (resourceKind) {
+      case LocalResourceKind.Kafka:
+        await setContextValue(ContextValues.localKafkaClusterAvailable, started);
+        localKafkaConnected.fire(started);
+        break;
+      case LocalResourceKind.SchemaRegistry:
+        await setContextValue(ContextValues.localSchemaRegistryAvailable, started);
+        localSchemaRegistryConnected.fire(started);
+        break;
+      case LocalResourceKind.Medusa:
+        await setContextValue(ContextValues.localMedusaAvailable, started);
+        localMedusaConnected.fire(started);
+        break;
     }
     // delete+recreate the local connection to purge any previous clusters from the sidecar cache
     await updateLocalConnection();
@@ -388,6 +393,7 @@ export class EventListener {
 
     const kafkaImage: string = LOCAL_KAFKA_IMAGE.value;
     const schemaRegistryImage: string = LOCAL_SCHEMA_REGISTRY_IMAGE.value;
+    const medusaImage: string = LOCAL_MEDUSA_IMAGE.value;
 
     if (imageName.startsWith(kafkaImage)) {
       await setContextValue(ContextValues.localKafkaClusterAvailable, false);
@@ -395,6 +401,9 @@ export class EventListener {
     } else if (imageName.startsWith(schemaRegistryImage)) {
       await setContextValue(ContextValues.localSchemaRegistryAvailable, false);
       localSchemaRegistryConnected.fire(false);
+    } else if (imageName.startsWith(medusaImage)) {
+      await setContextValue(ContextValues.localMedusaAvailable, false);
+      localMedusaConnected.fire(false);
     }
   }
 
