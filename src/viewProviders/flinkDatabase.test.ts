@@ -21,9 +21,12 @@ import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 describe("viewProviders/flinkDatabase.ts", () => {
   let sandbox: sinon.SinonSandbox;
 
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
   beforeEach(async () => {
     sandbox = sinon.createSandbox();
-    await getTestExtensionContext();
   });
 
   afterEach(() => {
