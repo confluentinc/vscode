@@ -11,7 +11,7 @@ import {
   FlinkRelationColumn,
   FlinkRelationType,
   toRelationType,
-} from "./flinkSystemCatalog";
+} from "./flinkRelation";
 
 describe("flinkSystemCatalogs.ts", () => {
   describe("toRelationType", () => {

@@ -1,6 +1,6 @@
 import type { TreeItem } from "vscode";
 import { CCloudResourceLoader } from "../../loaders";
-import type { FlinkRelation, FlinkRelationColumn } from "../../models/flinkSystemCatalog";
+import type { FlinkRelation, FlinkRelationColumn } from "../../models/flinkRelation";
 import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";

@@ -4,7 +4,7 @@ import {
   FlinkRelationColumn,
   FlinkRelationType,
   toRelationType,
-} from "../../models/flinkSystemCatalog";
+} from "../../models/flinkRelation";
 import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 
 const logger = new Logger("relationsAndColumnsSystemCatalogQuery");

@@ -2,7 +2,7 @@ import {
   FlinkRelation,
   FlinkRelationColumn,
   FlinkRelationType,
-} from "../../../src/models/flinkSystemCatalog";
+} from "../../../src/models/flinkRelation";
 
 export const TEST_VARCHAR_COLUMN = new FlinkRelationColumn({
   relationName: "test_relation",
