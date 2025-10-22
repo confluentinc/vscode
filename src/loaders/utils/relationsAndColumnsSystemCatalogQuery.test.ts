@@ -114,7 +114,7 @@ describe("relationsAndColumnsSystemCatalogQuery.ts", () => {
       assert.strictEqual(relation2.distributionBucketCount, 0);
       assert.strictEqual(relation2.isDistributed, false);
       assert.strictEqual(relation2.isWatermarked, true);
-      assert.strictEqual(relation2.watermarkColumn, "colA");
+      assert.strictEqual(relation2.watermarkColumnName, "colA");
       assert.strictEqual(relation2.watermarkExpression, "colA - INTERVAL '1' MINUTE");
       assert.strictEqual(relation2.columns.length, 1);
 

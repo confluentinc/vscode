@@ -155,7 +155,7 @@ export function parseRelationsAndColumnsSystemCatalogQueryResponse(
         distributionBucketCount: row.relationDistributionBucketCount,
         isDistributed: row.relationIsDistributed === "YES",
         isWatermarked: row.relationIsWatermarked === "YES",
-        watermarkColumn: row.relationWatermarkColumn,
+        watermarkColumnName: row.relationWatermarkColumn,
         watermarkExpression: row.relationWatermarkExpression,
         watermarkColumnIsHidden: row.relationWatermarkColumnIsHidden === "YES",
         columns: [],

@@ -367,7 +367,7 @@ export class FlinkRelation {
   /** Whether a watermark is defined */
   readonly isWatermarked: boolean;
   /** Column the watermark is defined on (if any) */
-  readonly watermarkColumn: string | null;
+  readonly watermarkColumnName: string | null;
   /** Watermark expression (if any) */
   readonly watermarkExpression: string | null;
   /** Whether the watermark column is hidden */
@@ -384,7 +384,7 @@ export class FlinkRelation {
       | "distributionBucketCount"
       | "isDistributed"
       | "isWatermarked"
-      | "watermarkColumn"
+      | "watermarkColumnName"
       | "watermarkExpression"
       | "watermarkColumnIsHidden"
       | "columns"
@@ -396,7 +396,7 @@ export class FlinkRelation {
     this.distributionBucketCount = props.distributionBucketCount;
     this.isDistributed = props.isDistributed;
     this.isWatermarked = props.isWatermarked;
-    this.watermarkColumn = props.watermarkColumn;
+    this.watermarkColumnName = props.watermarkColumnName;
     this.watermarkExpression = props.watermarkExpression;
     this.watermarkColumnIsHidden = props.watermarkColumnIsHidden;
     this.columns = props.columns;
@@ -417,6 +417,22 @@ export class FlinkRelation {
   /** Returns the visible (non-hidden) columns. */
   get visibleColumns(): FlinkRelationColumn[] {
     return this.columns.filter((c) => !c.isHidden);
+  }
+
+  get typeLabel(): string {
+    switch (this.type) {
+      case FlinkRelationType.BaseTable:
+        return "Flink Table";
+      case FlinkRelationType.View:
+        return "Flink View";
+      case FlinkRelationType.ExternalTable:
+        return "External Table";
+      case FlinkRelationType.SystemTable:
+        return "System Table";
+      default:
+        // should not happen
+        return "Flink Relation";
+    }
   }
 
   searchableText(): string {
@@ -442,8 +458,10 @@ export class FlinkRelation {
     const item = new TreeItem(this.name, TreeItemCollapsibleState.Collapsed);
     // item.iconPath = new ThemeIcon(IconNames.FLINK_FUNCTION); // TODO replace with table/view specific icons when available
     item.id = this.name;
+
     const typeSnippet = this.type.toLowerCase().replace(" ", "-");
     item.contextValue = `ccloud-flink-relation-${typeSnippet}`;
+
     item.tooltip = this.getToolTip();
     return item;
   }
@@ -455,10 +473,9 @@ export class FlinkRelation {
   getToolTip(): CustomMarkdownString {
     // Choose icon + title based on relation type (fall back to function icon if specific ones are unavailable)
     // IconNames.FLINK_TABLE / IconNames.FLINK_VIEW are expected to exist alongside FLINK_FUNCTION.
-    const headerIcon: IconNames = IconNames.FLINK_FUNCTION; // TODO replace with table/view specific icons when available
-    const headerTitle = this.isView ? "Flink View" : "Flink Table";
+    // const headerIcon: IconNames = IconNames.FLINK_FUNCTION; // TODO replace with table/view specific icons when available
 
-    const tooltip = new CustomMarkdownString().addHeader(headerTitle, headerIcon);
+    const tooltip = new CustomMarkdownString().addHeader(this.typeLabel); //, headerIcon);
 
     tooltip.addField("Name", this.name);
 
@@ -468,28 +485,23 @@ export class FlinkRelation {
 
     // Distribution
     if (this.isDistributed) {
-      tooltip.addField(
-        "Distribution",
-        `${this.distributionBucketCount} bucket${this.distributionBucketCount === 1 ? "" : "s"}`,
-      );
+      tooltip.addField("Distribution Bucket Count", this.distributionBucketCount.toString());
     } else {
       tooltip.addField("Distribution", "Not distributed");
     }
 
     // Watermark
     if (this.isWatermarked) {
-      const wmParts: string[] = [];
-      if (this.watermarkColumn) {
-        wmParts.push(
-          `Column: ${this.watermarkColumn}${this.watermarkColumnIsHidden ? " (hidden)" : ""}`,
+      tooltip.addField("Watermarked", "Yes");
+      if (this.watermarkColumnName) {
+        tooltip.addField(
+          "Watermark Column",
+          `${this.watermarkColumnName}${this.watermarkColumnIsHidden ? " (hidden)" : ""}`,
         );
       }
-      if (this.watermarkExpression) {
-        wmParts.push(`Expression: ${this.watermarkExpression}`);
-      }
-      tooltip.addField("Watermark", wmParts.join("\n"));
+      tooltip.addField("Watermark Expression", this.watermarkExpression!);
     } else {
-      tooltip.addField("Watermark", "None");
+      tooltip.addField("Watermarked", "No");
     }
 
     // List visible columns

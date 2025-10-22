@@ -482,4 +482,69 @@ describe("flinkSystemCatalogs.ts", () => {
       assert.ok(searchText.includes(TEST_VARCHAR_COLUMN.simpleDataType));
     });
   });
+
+  it("getTreeItem()", () => {
+    const relation = new FlinkRelation({
+      ...TEST_FLINK_RELATION,
+      name: "treeItemRelation",
+      type: FlinkRelationType.BaseTable,
+    });
+    const treeItem = relation.getTreeItem();
+    assert.strictEqual(treeItem.label, relation.name);
+    assert.strictEqual(treeItem.contextValue, "ccloud-flink-relation-base-table");
+    assert.deepStrictEqual(treeItem.tooltip, relation.getToolTip());
+  });
+
+  describe("getToolTip()", () => {
+    // Refactored: generate one test per expected pattern
+    const nonWatermarkedTablePatterns: RegExp[] = [
+      /Flink View/,
+      /Name: `tooltipRelation`/,
+      /Distribution Bucket Count: `4`/,
+      /Comment: `Tooltip relation comment`/,
+      /Visible Columns: `test_column: VARCHAR\(255\) NULL`/,
+      /Watermarked: `No`/,
+    ];
+
+    for (const pattern of nonWatermarkedTablePatterns) {
+      it(`Formats non-watermarked table (matches: ${pattern})`, () => {
+        const relation = new FlinkRelation({
+          ...TEST_FLINK_RELATION,
+          name: "tooltipRelation",
+          type: FlinkRelationType.View,
+          comment: "Tooltip relation comment",
+          distributionBucketCount: 4,
+          columns: [TEST_VARCHAR_COLUMN],
+        });
+        const tooltip = relation.getToolTip();
+
+        assert.match(tooltip.value, pattern);
+      });
+    }
+
+    it("Formats non-distributed, watermarked table", () => {
+      const relation = new FlinkRelation({
+        ...TEST_FLINK_RELATION,
+        name: "watermarkedRelation",
+        type: FlinkRelationType.BaseTable,
+        isDistributed: false,
+        distributionBucketCount: 0,
+        isWatermarked: true,
+        watermarkExpression: "WATERMARK FOR ts AS ts - INTERVAL '5' SECOND",
+        watermarkColumnName: "ts",
+        watermarkColumnIsHidden: true,
+        columns: [TEST_VARCHAR_COLUMN],
+      });
+      const tooltip = relation.getToolTip();
+
+      for (const pattern of [
+        /Distribution: `Not distributed`/,
+        /Watermarked: `Yes`/,
+        /Watermark Column: `ts \(hidden\)`/,
+        /Watermark Expression: `WATERMARK FOR ts AS ts - INTERVAL '5' SECOND`/,
+      ]) {
+        assert.match(tooltip.value, pattern);
+      }
+    });
+  });
 });

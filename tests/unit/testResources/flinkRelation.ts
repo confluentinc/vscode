@@ -32,7 +32,7 @@ export const TEST_FLINK_RELATION = new FlinkRelation({
   distributionBucketCount: 4,
   isDistributed: true,
   isWatermarked: false,
-  watermarkColumn: null,
+  watermarkColumnName: null,
   watermarkExpression: null,
   watermarkColumnIsHidden: false,
 });
