@@ -2173,7 +2173,7 @@
         },
         {
           "command": "confluent.flinkdatabase.setArtifactsViewMode",
-          "group": "viewMode@13"
+          "group": "viewMode@3"
         }
       ]
     },

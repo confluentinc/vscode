@@ -238,8 +238,9 @@ export class FlinkRelationColumn {
     return `${this.relationName}.${this.name}`;
   }
 
-  /** Simplified spelling of the datatype.
-   * Compound types reduced, max varchar legnths eroded away.
+  /**
+   * Simplified spelling of the datatype.
+   * Compound types reduced, max varchar lengths eroded away.
    **/
   get simpleDataType(): string {
     let type = this.fullDataType;

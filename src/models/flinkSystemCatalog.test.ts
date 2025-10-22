@@ -294,7 +294,7 @@ describe("flinkSystemCatalogs.ts", () => {
           assert.strictEqual(simpleType, "ARRAY");
         });
 
-        it("shoud simplify MULTISET types", () => {
+        it("should simplify MULTISET types", () => {
           const column = new FlinkRelationColumn({
             ...TEST_VARCHAR_COLUMN,
             fullDataType: "MULTISET<STRING>",
