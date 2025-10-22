@@ -122,6 +122,7 @@ export async function selectClassesForUdfRegistration(
     placeHolder: "Select classes to register as UDFs",
     canPickMany: true,
     ignoreFocusOut: true,
+    matchOnDescription: true,
   });
 
   return selectedItems?.map((item) => item.classInfo);

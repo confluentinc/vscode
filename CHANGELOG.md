@@ -2,6 +2,13 @@
 
 All notable changes to this extension will be documented in this file.
 
+## 2.1 Pre Unreleased
+
+### Added
+
+- New "Relations" mode for the Flink Database view, now the default mode. Displays tables, views,
+  and their columns.
+
 ## Unreleased
 
 ### Added
@@ -39,6 +46,8 @@ All notable changes to this extension will be documented in this file.
 - Issue with sometimes reporting the wrong number of "matching elements" when searching some views.
 - Issue with not offering 'Query with Flink SQL' on topics whose possible Flink compute pool is in a
   separate environment (they should be matched by cloud/region and not also CCloud environment).
+- The Flink artifact upload command is no longer shown for non-CCloud Kafka clusters.
+  ([#2925](https://github.com/confluentinc/vscode/issues/2925))
 
 ## 1.7.0
 
