@@ -1,7 +1,7 @@
 import type { TreeItem } from "vscode";
 import { CCloudResourceLoader } from "../../loaders";
-import type { FlinkUdf } from "../../models/flinkSystemCatalog";
-import { FlinkUdfTreeItem } from "../../models/flinkSystemCatalog";
+import type { FlinkUdf } from "../../models/flinkUDF";
+import { FlinkUdfTreeItem } from "../../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";

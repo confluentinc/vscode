@@ -6,7 +6,7 @@ import { createFlinkUDF } from "../../../tests/unit/testResources/flinkUDF";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import { setExtensionContext } from "../../context/extension";
 import type { CCloudResourceLoader } from "../../loaders";
-import type { FlinkUdf } from "../../models/flinkSystemCatalog";
+import type { FlinkUdf } from "../../models/flinkUDF";
 import { FlinkDatabaseViewProvider } from "../flinkDatabase";
 import { FlinkUDFsDelegate } from "./flinkUDFsDelegate";
 

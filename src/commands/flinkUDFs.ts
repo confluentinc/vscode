@@ -7,7 +7,7 @@ import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import type { FlinkArtifact } from "../models/flinkArtifact";
-import type { FlinkUdf } from "../models/flinkSystemCatalog";
+import type { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,

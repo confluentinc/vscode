@@ -1,4 +1,4 @@
-import { FlinkUdf } from "../../../src/models/flinkSystemCatalog";
+import { FlinkUdf } from "../../../src/models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../../../src/models/kafkaCluster";
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "./kafkaCluster";
 

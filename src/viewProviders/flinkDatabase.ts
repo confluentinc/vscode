@@ -10,7 +10,8 @@ import {
 import { logError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import type { FlinkArtifact } from "../models/flinkArtifact";
-import type { FlinkRelation, FlinkRelationColumn, FlinkUdf } from "../models/flinkSystemCatalog";
+import type { FlinkRelation, FlinkRelationColumn } from "../models/flinkSystemCatalog";
+import { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import type { IEnvProviderRegion } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
