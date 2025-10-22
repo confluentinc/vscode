@@ -12,6 +12,7 @@ import {
   waitForServiceHealthCheck,
 } from "./containers";
 import * as dockerImages from "./images";
+import * as dockerWrappers from "./wrappers";
 
 describe("docker/containers.ts ContainerApi wrappers", () => {
   let sandbox: sinon.SinonSandbox;
@@ -220,53 +221,71 @@ describe("docker/containers.ts getFirstExternalPort", () => {
 
 describe("docker/containers.ts waitForServiceHealthCheck", () => {
   let sandbox: sinon.SinonSandbox;
-  let fetchStub: sinon.SinonStub;
+  let clock: sinon.SinonFakeTimers;
+  let containerFetchStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    fetchStub = sandbox.stub(globalThis, "fetch");
+    clock = sandbox.useFakeTimers();
+    containerFetchStub = sandbox.stub(dockerWrappers, "containerFetch");
   });
 
   afterEach(() => {
+    clock.restore();
     sandbox.restore();
   });
 
   it("should return true when service health check succeeds", async () => {
-    fetchStub.resolves({ ok: true, status: 200 });
+    containerFetchStub.resolves({ ok: true, status: 200 });
 
     const result = await waitForServiceHealthCheck("9090", "/health", "TestService");
 
     assert.strictEqual(result, true);
-    sinon.assert.calledOnce(fetchStub);
-    sinon.assert.calledWith(fetchStub, "http://localhost:9090/health");
+    sinon.assert.calledOnce(containerFetchStub);
+    sinon.assert.calledWith(containerFetchStub, "http://localhost:9090/health");
   });
 
   it("should return false when health check fails consistently", async () => {
-    fetchStub.rejects(new Error("Connection refused"));
+    containerFetchStub.rejects(new Error("Connection refused"));
 
-    const result = await waitForServiceHealthCheck("9090", "/health", "TestService", 3);
+    const waitPromise = waitForServiceHealthCheck("9090", "/health", "TestService", 3);
+
+    // Advance time to exceed maxWaitTimeSec
+    for (let i = 0; i < 4; i++) {
+      await clock.tickAsync(1000); // wait 1 second between retries
+    }
+    const result = await waitPromise;
 
     assert.strictEqual(result, false);
-    sinon.assert.called(fetchStub);
+    sinon.assert.called(containerFetchStub);
   });
 
   it("should return false when service returns non-ok status", async () => {
-    fetchStub.resolves({ ok: false, status: 503 });
+    containerFetchStub.resolves({ ok: false, status: 503 });
 
-    const result = await waitForServiceHealthCheck("9090", "/health", "TestService", 3);
-
+    const waitPromise = waitForServiceHealthCheck("9090", "/health", "TestService", 3);
+    // Advance time to exceed maxWaitTimeSec
+    for (let i = 0; i < 4; i++) {
+      await clock.tickAsync(1000); // wait 1 second between retries
+    }
+    const result = await waitPromise;
     assert.strictEqual(result, false);
-    sinon.assert.called(fetchStub);
+    sinon.assert.called(containerFetchStub);
   });
 
   it("should retry failed requests and eventually succeed", async () => {
     // First call fails, second call succeeds
-    fetchStub.onFirstCall().rejects(new Error("Connection refused"));
-    fetchStub.onSecondCall().resolves({ ok: true, status: 200 });
+    containerFetchStub.onFirstCall().rejects(new Error("Connection refused"));
+    containerFetchStub.onSecondCall().resolves({ ok: true, status: 200 });
 
-    const result = await waitForServiceHealthCheck("9090", "/health", "TestService", 5);
+    const waitPromise = waitForServiceHealthCheck("9090", "/health", "TestService", 5);
+    // Advance time to allow for retries
+    await clock.tickAsync(1000); // after first failure
+    await clock.tickAsync(1000); // after second attempt
+
+    const result = await waitPromise;
 
     assert.strictEqual(result, true, "Health check should eventually succeed");
-    sinon.assert.calledTwice(fetchStub);
+    sinon.assert.calledTwice(containerFetchStub);
   });
 });
