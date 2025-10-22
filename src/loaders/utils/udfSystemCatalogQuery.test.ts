@@ -5,6 +5,7 @@ import {
   makeUdfFunctionRow,
   makeUdfParameterRow,
 } from "../../../tests/unit/testResources/makeUdfRow";
+import type { FlinkUdfParameter } from "../../models/flinkSystemCatalog";
 import type { RawUdfSystemCatalogRow } from "./udfSystemCatalogQuery";
 import {
   getUdfSystemCatalogQuery,
@@ -196,7 +197,7 @@ describe("udfSystemCatalogQuery.ts", () => {
       ];
       const udfs = transformUdfSystemCatalogRows(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, rows);
       assert.strictEqual(udfs.length, 1);
-      const paramOptionality = udfs[0].parameters.map((p) => p.isOptional);
+      const paramOptionality = udfs[0].parameters.map((p: FlinkUdfParameter) => p.isOptional);
       assert.deepStrictEqual(paramOptionality, [true, false]);
     });
 
@@ -209,7 +210,7 @@ describe("udfSystemCatalogQuery.ts", () => {
       ];
       const udfs = transformUdfSystemCatalogRows(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, rows);
       assert.strictEqual(udfs.length, 1);
-      const paramDataTypes = udfs[0].parameters.map((p) => p.dataType);
+      const paramDataTypes = udfs[0].parameters.map((p: FlinkUdfParameter) => p.dataType);
       assert.deepStrictEqual(paramDataTypes, ["INT", "STRING", "BOOLEAN"]);
     });
 

@@ -10,7 +10,7 @@ import { Logger } from "../logging";
 import type { Environment, EnvironmentType } from "../models/environment";
 import { getEnvironmentClass } from "../models/environment";
 import { FlinkArtifact } from "../models/flinkArtifact";
-import { FlinkUdf } from "../models/flinkUDF";
+import { FlinkUdf } from "../models/flinkSystemCatalog";
 import type { CCloudFlinkDbKafkaCluster, KafkaClusterType } from "../models/kafkaCluster";
 import { getKafkaClusterClass } from "../models/kafkaCluster";
 import type {
