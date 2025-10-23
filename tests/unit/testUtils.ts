@@ -69,6 +69,7 @@ export function createTestTopicData(
   clusterId: string,
   topicName: string,
   authorizedOperations: KafkaTopicOperation[],
+  replicationFactor: number = 1,
 ): TopicData {
   return TopicDataFromJSON({
     kind: "KafkaTopic",
@@ -78,7 +79,7 @@ export function createTestTopicData(
     cluster_id: clusterId,
     topic_name: topicName,
     is_internal: false,
-    replication_factor: 1,
+    replication_factor: replicationFactor,
     partitions_count: 3,
     partitions: {
       related: "test",
