@@ -443,6 +443,12 @@
         "category": "Confluent: Flink Statements View"
       },
       {
+        "command": "confluent.flinkdatabase.createTopic",
+        "icon": "$(plus)",
+        "title": "Create Flink Database Topic",
+        "category": "Confluent: Flink Database View"
+      },
+      {
         "command": "confluent.flinkdatabase.kafka-cluster.select",
         "icon": "$(confluent-kafka-cluster)",
         "title": "Select Kafka Cluster as Flink Database",
@@ -1417,6 +1423,10 @@
         {
           "command": "confluent.flink.statements.search.clear",
           "when": "confluent.flinkStatementsSearchApplied"
+        },
+        {
+          "command": "confluent.flinkdatabase.createTopic",
+          "when": "false"
         },
         {
           "command": "confluent.flinkdatabase.kafka-cluster.select",
