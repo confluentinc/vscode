@@ -22,6 +22,11 @@ import type {
 import { connectionIdToType, isCCloud } from "./resource";
 import type { KafkaTopic } from "./topic";
 
+export enum clusterLabel {
+  KafkaCluster = "Kafka Cluster",
+  FlinkableKafkaCluster = "Flinkable Kafka Cluster",
+}
+
 /** Base class for all KafkaClusters */
 export abstract class KafkaCluster extends Data implements IResourceBase, ISearchable {
   abstract connectionId: ConnectionId;
@@ -181,12 +186,12 @@ export class KafkaClusterTreeItem extends TreeItem {
     // internal properties
     this.resource = resource;
     const contextParts = [this.resource.connectionType.toLowerCase()];
-    if (isCCloud(resource)) {
-      const ccloudCluster = resource as CCloudKafkaCluster;
-      // Can we do Flink things with this cluster?
-      if (ccloudCluster.isFlinkable()) {
-        contextParts.push("flinkable");
-      }
+
+    const isCCloudCluster = isCCloud(resource);
+    const isFlinkable = isCCloudCluster && (resource as CCloudKafkaCluster).isFlinkable();
+
+    if (isFlinkable) {
+      contextParts.push("flinkable");
     }
     contextParts.push("kafka-cluster");
     this.contextValue = contextParts.join("-"); // e.g. "ccloud-flinkable-kafka-cluster" or "direct-kafka-cluster"
@@ -196,9 +201,9 @@ export class KafkaClusterTreeItem extends TreeItem {
     this.iconPath = new ThemeIcon(this.resource.iconName);
     this.tooltip = createKafkaClusterTooltip(this.resource);
 
-    // mainly to help E2E tests more easily identify these items between different connection types
+    // Set accessibility information based on whether cluster is Flinkable
     this.accessibilityInformation = {
-      label: `${this.resource.connectionType} connection: Kafka Cluster`,
+      label: `${this.resource.connectionType} connection: Kafka Cluster${isFlinkable ? " (Flinkable)" : ""}`,
     };
 
     // set primary click action to select this cluster as the current one, focusing it in the Topics view

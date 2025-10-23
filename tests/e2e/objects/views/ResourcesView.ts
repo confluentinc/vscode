@@ -10,6 +10,7 @@ import { View } from "./View";
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  */
+
 export class ResourcesView extends View {
   constructor(page: Page) {
     // we don't need a regex pattern here because we don't update the tree view title/description
@@ -79,9 +80,20 @@ export class ResourcesView extends View {
    * Only visible when a {@link ccloudEnvironments CCloud environment item} is expanded.
    */
   get ccloudKafkaClusters(): Locator {
-    // third nested element: Confluent Cloud item -> environment item -> Kafka cluster item
     return this.kafkaClusters.and(
       this.page.locator("[aria-level='3'][aria-label^='CCLOUD connection: Kafka Cluster']"),
+    );
+  }
+
+  /**
+   * Locator for Flinkable CCloud Kafka cluster tree items.
+   * Only visible when a {@link ccloudEnvironments CCloud environment item} is expanded.
+   */
+  get ccloudFlinkableKafkaClusters(): Locator {
+    return this.kafkaClusters.and(
+      this.page.locator(
+        "[aria-level='3'][aria-label^='CCLOUD connection: Kafka Cluster (Flinkable)']",
+      ),
     );
   }
 
