@@ -130,7 +130,7 @@ async function deleteTopicCommand(topic: KafkaTopic) {
   );
 }
 
-async function createTopicCommand(item?: KafkaCluster) {
+export async function createTopicCommand(item?: KafkaCluster) {
   const topicsViewCluster = getTopicViewProvider().kafkaCluster;
 
   let cluster: KafkaCluster | undefined;
