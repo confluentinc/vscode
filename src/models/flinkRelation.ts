@@ -234,6 +234,10 @@ export class FlinkRelation {
   readonly watermarkExpression: string | null;
   /** Whether the watermark column is hidden */
   readonly watermarkColumnIsHidden: boolean;
+
+  /** If is a view (and we had permissions to see the definition), what is the view definition SQL? */
+  viewDefinition: string | null = null;
+
   /** Columns of the relation */
   columns: FlinkRelationColumn[];
 
@@ -366,13 +370,9 @@ export class FlinkRelation {
       tooltip.addField("Watermarked", "No");
     }
 
-    // List visible columns
-    const visible = this.visibleColumns;
-    if (visible.length === 0) {
-      tooltip.addField("Visible Columns", "None");
-    } else {
-      const rendered = visible.map((c) => c.tooltipLine());
-      tooltip.addField("Visible Columns", rendered.join("\n"));
+    // If has a view definition, show it here for the time being.
+    if (this.type === FlinkRelationType.View && this.viewDefinition) {
+      tooltip.addField("View Definition", `\`\`\`\n${this.viewDefinition}\n\`\`\``);
     }
 
     return tooltip;
