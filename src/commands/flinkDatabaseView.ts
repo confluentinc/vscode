@@ -3,6 +3,7 @@ import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
 import { flinkDatabaseViewMode } from "../emitters";
 import { Logger } from "../logging";
+import { pause } from "../sidecar/utils";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import { createTopicCommand } from "./kafkaClusters";
@@ -45,5 +46,28 @@ export async function createTopicInFlinkDatabaseViewCommand(): Promise<void> {
   }
 
   // Directly invoke the command implementation so as to get type safety on parameter.
-  await createTopicCommand(selectedFlinkDatabase);
+  const topicWasCreated = await createTopicCommand(selectedFlinkDatabase);
+
+  if (topicWasCreated) {
+    if (flinkDBViewProvider.mode !== FlinkDatabaseViewProviderMode.Relations) {
+      // Crafty user managed to switch the view mode prior to topic creation completing.
+      // Switch to back relations mode to see the new (schemaless) topic-as-table.
+      await flinkDBViewProvider.switchMode(FlinkDatabaseViewProviderMode.Relations);
+    }
+
+    // Refresh the view to show the new topic.
+    // Retry a few times if necessary, as the topic creation may take a moment to propagate.
+    for (let i = 0; i < 5 && !flinkDBViewProvider.hasChildren(); i++) {
+      await pause(500);
+      // Deep refresh the view to (hopefully) show the new topic.
+      await flinkDBViewProvider.refresh(true);
+    }
+
+    // If we have any children at all, we're good. If not, log a warning and give up.
+    if (!flinkDBViewProvider.hasChildren()) {
+      logger.warn(
+        "Topic was created but Flink Database view has no children after several refresh attempts.",
+      );
+    }
+  }
 }
