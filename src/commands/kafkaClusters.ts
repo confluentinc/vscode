@@ -130,7 +130,13 @@ async function deleteTopicCommand(topic: KafkaTopic) {
   );
 }
 
-async function createTopicCommand(item?: KafkaCluster) {
+/**
+ * Command implementation behind creating a Kafka topic.
+ *
+ * @param item Optional KafkaCluster to create the topic in. If not provided, the user will be prompted to select one.
+ * @returns True if the topic was created, false otherwise.
+ */
+export async function createTopicCommand(item?: KafkaCluster): Promise<boolean> {
   const topicsViewCluster = getTopicViewProvider().kafkaCluster;
 
   let cluster: KafkaCluster | undefined;
@@ -149,7 +155,7 @@ async function createTopicCommand(item?: KafkaCluster) {
   }
 
   if (!cluster) {
-    return;
+    return false;
   }
 
   // TODO: add RBAC check here once we can get the user's permissions for the cluster
@@ -162,7 +168,7 @@ async function createTopicCommand(item?: KafkaCluster) {
     ignoreFocusOut: true,
   });
   if (!topicName) {
-    return;
+    return false;
   }
 
   const partitionsCount: string | undefined = await vscode.window.showInputBox({
@@ -182,12 +188,12 @@ async function createTopicCommand(item?: KafkaCluster) {
   });
 
   const client: TopicV3Api = (await getSidecar()).getTopicV3Api(cluster.id, cluster.connectionId);
-  await vscode.window.withProgress(
+  return await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: `Creating topic "${topicName}"...`,
     },
-    async (progress) => {
+    async (progress): Promise<boolean> => {
       try {
         await client.createKafkaTopic({
           cluster_id: cluster.id,
@@ -207,13 +213,15 @@ async function createTopicCommand(item?: KafkaCluster) {
         // immediately after the progress window closes (assuming topics view is showing this cluster).
 
         getTopicViewProvider().refresh(true, cluster);
+
+        return true; // indicate the user actually created a topic.
       } catch (error) {
         if (!(error instanceof ResponseError)) {
           // generic error handling
           const errorMessage = `Error creating topic in "${cluster.name}": ${error}`;
           logger.error(errorMessage);
           vscode.window.showErrorMessage(errorMessage);
-          return;
+          return false;
         }
 
         // try to parse the error response to provide a more specific error message to the user,
@@ -234,6 +242,7 @@ async function createTopicCommand(item?: KafkaCluster) {
         } catch (parseError) {
           logger.error("error parsing response from createKafkaTopic():", { error, parseError });
         }
+        return false;
       }
     },
   );

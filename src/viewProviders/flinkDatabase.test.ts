@@ -48,6 +48,18 @@ describe("viewProviders/flinkDatabase.ts", () => {
       FlinkDatabaseViewProvider["instanceMap"].clear();
     });
 
+    describe("hasChildren()", () => {
+      it("returns false when there are no children", () => {
+        viewProvider["children"] = [];
+        assert.strictEqual(viewProvider.hasChildren(), false);
+      });
+
+      it("returns true when there are children", () => {
+        viewProvider["children"] = [{ id: "child-1" } as any];
+        assert.strictEqual(viewProvider.hasChildren(), true);
+      });
+    });
+
     describe("refresh()", () => {
       let changeFireStub: sinon.SinonStub;
       let logErrorStub: sinon.SinonStub;
