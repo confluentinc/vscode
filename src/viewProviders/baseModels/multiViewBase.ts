@@ -76,6 +76,11 @@ export abstract class MultiModeViewProvider<
     this.currentDelegate = this.defaultDelegate;
   }
 
+  /** Get the current view mode. */
+  get mode(): M {
+    return this.currentDelegate.mode;
+  }
+
   /** Switch to a specific mode by its ID. */
   async switchMode(mode: M): Promise<void> {
     const newMode = this.treeViewDelegates.get(mode);

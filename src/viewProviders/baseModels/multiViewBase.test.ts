@@ -145,6 +145,21 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
       TestMultiViewProvider["instanceMap"].clear();
     });
 
+    describe("mode getter", () => {
+      beforeEach(() => {
+        // Stubs for setMode side-effects.
+        sandbox.stub(provider, "refresh").resolves();
+        sandbox.stub(contextValues, "setContextValue").resolves();
+        sandbox.spy(provider["searchMatches"], "clear");
+      });
+
+      it("returns the current delegate's mode", async () => {
+        assert.strictEqual(provider.mode, TestMode.Foo);
+        await provider.switchMode(TestMode.Bar);
+        assert.strictEqual(provider.mode, TestMode.Bar);
+      });
+    });
+
     it("starts with default delegate and delegates children", () => {
       // no resource -> no children
       const childrenNone = provider.getChildren();
@@ -175,6 +190,7 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
       it("should update delegate, title, context, and then call refresh()", async () => {
         await provider.switchMode(TestMode.Bar);
 
+        assert.strictEqual(provider.mode, TestMode.Bar);
         const delegate = provider["currentDelegate"];
         assert.strictEqual(delegate.mode, TestMode.Bar);
         assert.strictEqual(provider["treeView"].title, "Mode Bar");

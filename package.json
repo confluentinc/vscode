@@ -443,6 +443,12 @@
         "category": "Confluent: Flink Statements View"
       },
       {
+        "command": "confluent.flinkdatabase.createTopic",
+        "icon": "$(plus)",
+        "title": "Create Flink Database Topic",
+        "category": "Confluent: Flink Database View"
+      },
+      {
         "command": "confluent.flinkdatabase.kafka-cluster.select",
         "icon": "$(confluent-kafka-cluster)",
         "title": "Select Kafka Cluster as Flink Database",
@@ -1287,6 +1293,11 @@
       },
       {
         "view": "confluent-flink-database",
+        "contents": "No Flink relations found.\n[Create Topic](command:confluent.flinkdatabase.createTopic)",
+        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'relations' && !confluent.flinkDatabaseSearchApplied"
+      },
+      {
+        "view": "confluent-flink-database",
         "contents": "No Flink database contents matches search string. [Clear search](command:confluent.flink.database.search.clear) or [try a new search](command:confluent.flink.database.search).",
         "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied"
       }
@@ -1412,6 +1423,10 @@
         {
           "command": "confluent.flink.statements.search.clear",
           "when": "confluent.flinkStatementsSearchApplied"
+        },
+        {
+          "command": "confluent.flinkdatabase.createTopic",
+          "when": "false"
         },
         {
           "command": "confluent.flinkdatabase.kafka-cluster.select",
