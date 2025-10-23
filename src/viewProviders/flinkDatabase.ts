@@ -45,6 +45,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
 
   parentResourceChangedEmitter = flinkDatabaseViewResourceChanged;
   parentResourceChangedContextValue = ContextValues.flinkDatabaseSelected;
+  delegateContextValue = ContextValues.flinkDatabaseViewMode;
 
   searchChangedEmitter = flinkDatabaseViewSearchSet;
   searchContextValue = ContextValues.flinkDatabaseSearchApplied;
