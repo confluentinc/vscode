@@ -23,11 +23,6 @@ import {
 } from "./resource";
 import { KafkaTopic } from "./topic";
 
-export enum clusterLabel {
-  KafkaCluster = "Kafka Cluster",
-  FlinkableKafkaCluster = "Flinkable Kafka Cluster",
-}
-
 /** Base class for all KafkaClusters */
 export abstract class KafkaCluster extends Data implements IResourceBase, ISearchable {
   abstract connectionId: ConnectionId;

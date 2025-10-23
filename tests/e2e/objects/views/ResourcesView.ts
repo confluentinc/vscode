@@ -9,7 +9,6 @@ import { View } from "./View";
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  */
-
 export class ResourcesView extends View {
   constructor(page: Page) {
     // we don't need a regex pattern here because we don't update the tree view title/description
