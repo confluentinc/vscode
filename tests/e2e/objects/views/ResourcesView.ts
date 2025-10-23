@@ -86,6 +86,18 @@ export class ResourcesView extends View {
   }
 
   /**
+   * Locator for Flinkable CCloud Kafka cluster tree items.
+   * Only visible when a {@link ccloudEnvironments CCloud environment item} is expanded.
+   */
+  get ccloudFlinkableKafkaClusters(): Locator {
+    return this.kafkaClusters.and(
+      this.page.locator(
+        "[aria-level='3'][aria-label^='CCLOUD connection: Kafka Cluster (Flinkable)']",
+      ),
+    );
+  }
+
+  /**
    * Locator for local Kafka cluster tree items.
    * Only visible when the {@link localItem "Local" item} is expanded.
    */
