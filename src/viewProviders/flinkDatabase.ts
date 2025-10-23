@@ -119,6 +119,11 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
     }
   }
 
+  /** Does the current view mode have any children? */
+  hasChildren(): boolean {
+    return this.children.length > 0;
+  }
+
   async refresh(forceDeepRefresh: boolean = false): Promise<void> {
     this.children = [];
 
