@@ -79,6 +79,7 @@ export class ResourcesView extends View {
    * Only visible when a {@link ccloudEnvironments CCloud environment item} is expanded.
    */
   get ccloudKafkaClusters(): Locator {
+    // third nested element: Confluent Cloud item -> environment item -> Kafka cluster item
     return this.kafkaClusters.and(
       this.page.locator("[aria-level='3'][aria-label^='CCLOUD connection: Kafka Cluster']"),
     );
