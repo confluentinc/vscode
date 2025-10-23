@@ -33,7 +33,7 @@ export async function setFlinkRelationsViewModeCommand() {
 
 /**
  * Start the flow to create a new topic in the currently selected Flink database's Kafka cluster.
- * @returns
+ * When the topic is created, refresh the view to show the new topic as a (schemaless) table.
  */
 export async function createTopicInFlinkDatabaseViewCommand(): Promise<void> {
   // get the currently selected Flink database from the view, create a topic in that cluster.
