@@ -70,10 +70,14 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
     }
   }
 
-  // sort multiple topics by name
+  // Sort multiple topics by name
   if (topicsResp.data.length > 1) {
     topicsResp.data.sort((a, b) => a.topic_name.localeCompare(b.topic_name));
   }
+
+  // Exclude "virtual" topics (say, corresponding to Flink views) that have 0 replication factor per #2940.
+  // (These cannot be queried or used in any way.)
+  topicsResp.data = topicsResp.data.filter((topic) => topic.replication_factor! > 0);
 
   return topicsResp.data;
 }
