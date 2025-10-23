@@ -3,11 +3,12 @@ import * as sinon from "sinon";
 import * as indexModule from ".";
 import {
   registerFlinkDatabaseViewCommands,
+  setFlinkArtifactsViewModeCommand,
   setFlinkRelationsViewModeCommand,
+  setFlinkUDFViewModeCommand,
 } from "./flinkDatabaseView";
 
-import * as contextValuesModule from "../context/values";
-import * as emittersModule from "../emitters";
+import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 
 describe("commands/flinkDatabaseView.ts", () => {
@@ -28,40 +29,68 @@ describe("commands/flinkDatabaseView.ts", () => {
       registerCommandWithLoggingStub = sandbox.stub(indexModule, "registerCommandWithLogging");
     });
 
-    it("should register the setFlinkRelationsViewModeCommand command", () => {
+    it("should register the expected commands", () => {
       registerFlinkDatabaseViewCommands();
 
-      sinon.assert.calledOnce(registerCommandWithLoggingStub);
-      sinon.assert.calledWithExactly(
+      sinon.assert.calledWith(
         registerCommandWithLoggingStub,
         "confluent.flinkdatabase.setRelationsViewMode",
         setFlinkRelationsViewModeCommand,
       );
+
+      sinon.assert.calledWith(
+        registerCommandWithLoggingStub,
+        "confluent.flinkdatabase.setUDFsViewMode",
+        setFlinkUDFViewModeCommand,
+      );
+
+      sinon.assert.calledWith(
+        registerCommandWithLoggingStub,
+        "confluent.flinkdatabase.setArtifactsViewMode",
+        setFlinkArtifactsViewModeCommand,
+      );
     });
   });
 
-  describe("setFlinkRelationsViewModeCommand", () => {
-    let flinkDatabaseViewModeFireStub: sinon.SinonStub;
-    let setContextValueStub: sinon.SinonStub;
+  describe("mode switching commands", () => {
+    let provider: FlinkDatabaseViewProvider;
+    let switchModeStub: sinon.SinonStub;
 
     beforeEach(() => {
-      flinkDatabaseViewModeFireStub = sandbox.stub(emittersModule.flinkDatabaseViewMode, "fire");
-      setContextValueStub = sandbox.stub(contextValuesModule, "setContextValue");
+      provider = FlinkDatabaseViewProvider.getInstance();
+      // switchMode itself is tested in the multiViewProvider tests, so we just stub it here
+      switchModeStub = sandbox.stub(provider, "switchMode").resolves();
     });
 
-    it("should set the Flink Database View mode to Relations and update the context value", async () => {
-      await setFlinkRelationsViewModeCommand();
+    interface ModeTestCase {
+      name: string;
+      execute: () => Promise<void>;
+      expectedMode: FlinkDatabaseViewProviderMode;
+    }
 
-      sinon.assert.calledOnceWithExactly(
-        flinkDatabaseViewModeFireStub,
-        FlinkDatabaseViewProviderMode.Relations,
-      );
+    const testCases: readonly ModeTestCase[] = [
+      {
+        name: "setFlinkUDFViewModeCommand",
+        execute: setFlinkUDFViewModeCommand,
+        expectedMode: FlinkDatabaseViewProviderMode.UDFs,
+      },
+      {
+        name: "setFlinkRelationsViewModeCommand",
+        execute: setFlinkRelationsViewModeCommand,
+        expectedMode: FlinkDatabaseViewProviderMode.Relations,
+      },
+      {
+        name: "setFlinkArtifactsViewModeCommand",
+        execute: setFlinkArtifactsViewModeCommand,
+        expectedMode: FlinkDatabaseViewProviderMode.Artifacts,
+      },
+    ];
 
-      sinon.assert.calledOnceWithExactly(
-        setContextValueStub,
-        contextValuesModule.ContextValues.flinkDatabaseViewMode,
-        FlinkDatabaseViewProviderMode.Relations,
-      );
-    });
+    for (const { name, execute, expectedMode } of testCases) {
+      it(name, async () => {
+        await execute();
+        sinon.assert.calledOnceWithExactly(switchModeStub, expectedMode);
+      });
+    }
   });
 });

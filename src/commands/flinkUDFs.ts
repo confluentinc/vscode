@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { ContextValues, setContextValue } from "../context/values";
-import { flinkDatabaseViewMode, udfsChanged } from "../emitters";
+import { udfsChanged } from "../emitters";
 import { isResponseError, logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { CCloudResourceLoader } from "../loaders";
@@ -18,7 +17,6 @@ import { ResourceManager } from "../storage/resourceManager";
 import type { UriMetadata } from "../storage/types";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
-import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import { executeCreateFunction, promptForFunctionAndClassName } from "./utils/uploadArtifactOrUDF";
 
 const logger = new Logger("commands.flinkUDFs");
@@ -109,10 +107,6 @@ export function registerFlinkUDFCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.deleteFlinkUDF", deleteFlinkUDFCommand),
     registerCommandWithLogging(
-      "confluent.flinkdatabase.setUDFsViewMode",
-      setFlinkUDFViewModeCommand,
-    ),
-    registerCommandWithLogging(
       "confluent.artifacts.createUdfRegistrationDocument",
       createUdfRegistrationDocumentCommand,
     ),
@@ -121,11 +115,6 @@ export function registerFlinkUDFCommands(): vscode.Disposable[] {
       startGuidedUdfCreationCommand,
     ),
   ];
-}
-
-export async function setFlinkUDFViewModeCommand() {
-  flinkDatabaseViewMode.fire(FlinkDatabaseViewProviderMode.UDFs);
-  await setContextValue(ContextValues.flinkDatabaseViewMode, FlinkDatabaseViewProviderMode.UDFs);
 }
 
 export async function createUdfRegistrationDocumentCommand(selectedArtifact: FlinkArtifact) {

@@ -26,7 +26,6 @@ import {
   createUdfRegistrationDocumentCommand,
   deleteFlinkUDFCommand,
   registerFlinkUDFCommands,
-  setFlinkUDFViewModeCommand,
   startGuidedUdfCreationCommand,
 } from "./flinkUDFs";
 import * as commands from "./index";
@@ -187,7 +186,7 @@ describe("commands/flinkUDFs.ts", () => {
 
       registerFlinkUDFCommands();
 
-      sinon.assert.callCount(registerCommandWithLoggingStub, 4);
+      sinon.assert.callCount(registerCommandWithLoggingStub, 3);
 
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub.getCall(0),
@@ -196,16 +195,11 @@ describe("commands/flinkUDFs.ts", () => {
       );
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub.getCall(1),
-        "confluent.flinkdatabase.setUDFsViewMode",
-        setFlinkUDFViewModeCommand,
-      );
-      sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub.getCall(2),
         "confluent.artifacts.createUdfRegistrationDocument",
         createUdfRegistrationDocumentCommand,
       );
       sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub.getCall(3),
+        registerCommandWithLoggingStub.getCall(2),
         "confluent.artifacts.startGuidedUdfCreation",
         startGuidedUdfCreationCommand,
       );
