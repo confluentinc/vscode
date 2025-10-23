@@ -253,6 +253,27 @@ describe("loaderUtils.ts", () => {
       assert.deepStrictEqual(topicNames, ["topic1", "topic2", "topic3", "topic4"]);
     });
 
+    it("fetchTopics should exclude virtual topics with 0 replication factor", async () => {
+      const topicsResponseData: TopicData[] = [
+        createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic1", ["READ", "WRITE"], 1),
+        createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic2", ["READ", "WRITE"], 0), // virtual topic
+        createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic3", ["READ", "WRITE"], 3),
+        createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic4", ["READ", "WRITE"], 0), // virtual topic
+      ];
+
+      mockClient.listKafkaTopics.resolves({
+        kind: "kind",
+        metadata: {} as any,
+        data: topicsResponseData,
+      });
+
+      const topics = await loaderUtils.fetchTopics(TEST_LOCAL_KAFKA_CLUSTER);
+
+      // Check that the topics with replication_factor 0 are excluded.
+      const topicNames = topics.map((t) => t.topic_name);
+      assert.deepStrictEqual(topicNames, ["topic1", "topic3"]);
+    });
+
     describe("fetchTopics error handling", () => {
       let containsPrivateNetworkPatternStub: sinon.SinonStub;
       let showPrivateNetworkingHelpNotificationStub: sinon.SinonStub;
