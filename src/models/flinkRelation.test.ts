@@ -355,7 +355,7 @@ describe("flinkSystemCatalogs.ts", () => {
       });
     }
 
-    it("shows view definition for views", () => {
+    it("shows view definition for views with known definitions", () => {
       const relation = new FlinkRelation({
         ...TEST_FLINK_RELATION,
         name: "viewRelation",
@@ -363,13 +363,29 @@ describe("flinkSystemCatalogs.ts", () => {
         columns: [TEST_VARCHAR_COLUMN],
       });
 
-      // hotrodded into the object after construction since the information
+      // Hotrodded into the object after construction since the view definition information
       // isn't known at construction time (see parseRelationsAndColumnsSystemCatalogQueryResponse())
       relation.viewDefinition = "SELECT * FROM some_table";
 
       const tooltip = relation.getToolTip();
 
-      assert.match(tooltip.value, /View Definition: `SELECT \* FROM some_table`/);
+      assert.match(tooltip.value, /View Definition:/);
+      assert.match(tooltip.value, /SELECT \* FROM some_table/);
+    });
+
+    it("Does not fail if a view has no definition", () => {
+      const relation = new FlinkRelation({
+        ...TEST_FLINK_RELATION,
+        name: "viewRelationNoDef",
+        type: FlinkRelationType.View,
+        columns: [TEST_VARCHAR_COLUMN],
+      });
+
+      // No viewDefinition set
+
+      const tooltip = relation.getToolTip();
+
+      assert.doesNotMatch(tooltip.value, /View Definition:/);
     });
 
     it("Formats non-distributed, watermarked table", () => {

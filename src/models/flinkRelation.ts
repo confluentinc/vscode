@@ -236,6 +236,8 @@ export class FlinkRelation {
   readonly watermarkColumnIsHidden: boolean;
 
   /** If is a view (and we had permissions to see the definition), what is the view definition SQL? */
+  // (explicitly not in constructor props as it will not be known at construction time due to limitations
+  //  on how we can query the system catalog (no joins + this info in another table))
   viewDefinition: string | null = null;
 
   /** Columns of the relation */
