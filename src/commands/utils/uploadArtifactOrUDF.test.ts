@@ -411,4 +411,14 @@ describe("commands/utils/uploadArtifact", () => {
       });
     });
   });
+  describe("focusArtifactsInView", () => {
+    it("should execute command to set artifacts view mode", async () => {
+      const executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
+
+      await uploadArtifactModule.focusArtifactsInView();
+
+      sinon.assert.calledOnce(executeCommandStub);
+      sinon.assert.calledWith(executeCommandStub, "confluent.flinkdatabase.setArtifactsViewMode");
+    });
+  });
 });
