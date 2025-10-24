@@ -198,7 +198,7 @@ export class KafkaClusterTreeItem extends TreeItem {
 
     // Set accessibility information based on whether cluster is Flinkable
     this.accessibilityInformation = {
-      label: `${this.resource.connectionType} connection: Kafka Cluster${isFlinkable ? " (Flinkable)" : ""}`,
+      label: `${this.resource.connectionType} connection: Kafka Cluster${isFlinkable ? " (Flink available)" : ""}`,
     };
 
     // set primary click action to select this cluster as the current one, focusing it in the Topics view

@@ -92,7 +92,7 @@ export class ResourcesView extends View {
   get ccloudFlinkableKafkaClusters(): Locator {
     return this.kafkaClusters.and(
       this.page.locator(
-        "[aria-level='3'][aria-label^='CCLOUD connection: Kafka Cluster (Flinkable)']",
+        "[aria-level='3'][aria-label^='CCLOUD connection: Kafka Cluster (Flink available)']",
       ),
     );
   }
