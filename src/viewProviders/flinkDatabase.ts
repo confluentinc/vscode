@@ -154,6 +154,11 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
     this._onDidChangeTreeData.fire();
   }
 
+  /** Does the current view mode have any children? */
+  hasChildren(): boolean {
+    return this.children.length > 0;
+  }
+
   get loggerName() {
     return `viewProviders.flink.${this.currentDelegate?.mode ?? "unknown"}`;
   }
