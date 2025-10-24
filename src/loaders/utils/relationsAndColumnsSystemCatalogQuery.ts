@@ -59,7 +59,7 @@ export function getRelationsAndColumnsSystemCatalogQuery(
     'viewDefinition' as \`rowType\`,
     \`TABLE_NAME\` as \`relationName\`,
     CAST(NULL AS STRING) as \`relationComment\`,
-    CAST(NULL AS STRING) as \`relationIsTable\`,
+    CAST(NULL AS STRING) as \`relationType\`,
     CAST(NULL AS INT) as \`relationDistributionBucketCount\`,
     CAST(NULL AS STRING) as \`relationIsDistributed\`,
     CAST(NULL AS STRING) as \`relationIsWatermarked\`,
@@ -94,7 +94,7 @@ export function getRelationsAndColumnsSystemCatalogQuery(
 
     \`TABLE_NAME\` as \`relationName\`,
     CAST(NULL AS STRING) as \`relationComment\`,
-    CAST(NULL AS STRING) as \`relationIsTable\`,
+    CAST(NULL AS STRING) as \`relationType\`,
     CAST(NULL AS INT) as \`relationDistributionBucketCount\`,
     CAST(NULL AS STRING) as \`relationIsDistributed\`,
     CAST(NULL AS STRING) as \`relationIsWatermarked\`,
