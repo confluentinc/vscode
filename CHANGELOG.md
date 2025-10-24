@@ -11,6 +11,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 2.0.0
+
 ### Added
 
 - New "Delete Flink Statement" context menu command in the Flink Statements view, only offerred for
@@ -48,6 +50,8 @@ All notable changes to this extension will be documented in this file.
   separate environment (they should be matched by cloud/region and not also CCloud environment).
 - The Flink artifact upload command is no longer shown for non-CCloud Kafka clusters.
   ([#2925](https://github.com/confluentinc/vscode/issues/2925))
+- Virtual topics will no longer be shown in the Topics view.
+  ([#2940](https://github.com/confluentinc/vscode/issues/2940))
 
 ## 1.7.0
 
