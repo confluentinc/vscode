@@ -8,8 +8,7 @@ import type {
   CreateArtifactV1FlinkArtifact201Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../clients/flinkArtifacts/models";
-import { ContextValues, setContextValue } from "../context/values";
-import { artifactsChanged, flinkDatabaseViewMode } from "../emitters";
+import { artifactsChanged } from "../emitters";
 import { logError } from "../errors";
 import type { FlinkArtifact } from "../models/flinkArtifact";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
@@ -20,7 +19,6 @@ import {
 } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import { detectClassesAndRegisterUDFs } from "./utils/udfRegistration";
 import type { ArtifactUploadParams } from "./utils/uploadArtifactOrUDF";
@@ -47,14 +45,16 @@ import {
  */
 
 export async function uploadArtifactCommand(
-  // check item type and if URI don't show success btn yet
   item?: CCloudFlinkComputePool | CCloudKafkaCluster | vscode.Uri,
 ): Promise<void> {
   // 1. Gather the request parameters from user or item (before showing progress)
   const params = await artifactUploadQuickPickForm(item);
   if (!params) return; // User cancelled the prompt
 
+  // Determine if we should show the "View Artifacts" button based on item type
+  const isFromJarFile = item instanceof vscode.Uri;
   const viewArtifactButton = "View Artifact";
+
   try {
     await vscode.window.withProgress(
       {
@@ -72,16 +72,23 @@ export async function uploadArtifactCommand(
             region: params.region,
             artifactId: response.id,
           });
+
+          const notificationButtons: Record<string, () => Promise<void>> = {
+            "Register UDFs": async () => {
+              await detectClassesAndRegisterUDFs(params.selectedFile, response.id);
+            },
+          };
+
+          // Only show "View Artifacts" button when not uploading from a file directly
+          if (!isFromJarFile) {
+            notificationButtons[viewArtifactButton] = async () => {
+              await focusArtifactsInView();
+            };
+          }
+
           void showInfoNotificationWithButtons(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
-            {
-              "Register UDFs": async () => {
-                await detectClassesAndRegisterUDFs(params.selectedFile, response.id);
-              },
-              [viewArtifactButton]: async () => {
-                await focusArtifactsInView();
-              },
-            },
+            notificationButtons,
           );
         }
       },
@@ -269,15 +276,6 @@ export async function updateArtifactCommand(
   }
 }
 
-/** Set the Flink Database view to Artifacts mode */
-export async function setFlinkArtifactsViewModeCommand() {
-  flinkDatabaseViewMode.fire(FlinkDatabaseViewProviderMode.Artifacts);
-  await setContextValue(
-    ContextValues.flinkDatabaseViewMode,
-    FlinkDatabaseViewProviderMode.Artifacts,
-  );
-}
-
 /**
  * Registers the Flink Artifact commands with logging.
  */
@@ -285,10 +283,6 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.uploadArtifact", uploadArtifactCommand),
     registerCommandWithLogging("confluent.deleteArtifact", deleteArtifactCommand),
-    registerCommandWithLogging(
-      "confluent.flinkdatabase.setArtifactsViewMode",
-      setFlinkArtifactsViewModeCommand,
-    ),
     registerCommandWithLogging("confluent.updateArtifact", updateArtifactCommand),
   ];
 }
