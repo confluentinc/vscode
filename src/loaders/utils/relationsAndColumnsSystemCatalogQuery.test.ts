@@ -1,7 +1,11 @@
 import * as assert from "assert";
 
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
-import { makeColumnRow, makeRelationRow } from "../../../tests/unit/testResources/makeRelationRow";
+import {
+  makeColumnRow,
+  makeRelationRow,
+  makeViewDefinitionRow,
+} from "../../../tests/unit/testResources/makeRelationRow";
 import {
   getRelationsAndColumnsSystemCatalogQuery,
   parseRelationsAndColumnsSystemCatalogQueryResponse,
@@ -122,6 +126,37 @@ describe("relationsAndColumnsSystemCatalogQuery.ts", () => {
       assert.strictEqual(relation2ColA.name, "colA");
       assert.strictEqual(relation2ColA.fullDataType, "TIMESTAMP");
       assert.strictEqual(relation2ColA.isNullable, true);
+    });
+
+    describe("view support", () => {
+      it("handles view definitions correctly", () => {
+        const rows = [
+          makeRelationRow("my_view", {
+            type: "VIEW",
+          }),
+          makeViewDefinitionRow("my_view", "SELECT * FROM some_table WHERE col1 > 100"),
+          makeColumnRow("my_view", "view_col1", 1, {
+            fullDataType: "INT",
+            isNullable: "NO",
+          }),
+        ];
+
+        const relations = parseRelationsAndColumnsSystemCatalogQueryResponse(rows);
+        assert.strictEqual(relations.length, 1);
+
+        const view = relations[0];
+        assert.strictEqual(view.name, "my_view");
+        assert.strictEqual(view.type, "VIEW");
+        assert.strictEqual(view.viewDefinition, "SELECT * FROM some_table WHERE col1 > 100");
+        assert.strictEqual(view.columns.length, 1);
+      });
+
+      it("raises exception if no relation row for a view definition", () => {
+        const rows = [makeViewDefinitionRow("orphan_view", "SELECT 1")];
+        assert.throws(() => {
+          parseRelationsAndColumnsSystemCatalogQueryResponse(rows);
+        }, /does not match current relation/);
+      });
     });
   });
 });

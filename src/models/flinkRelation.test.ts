@@ -355,6 +355,23 @@ describe("flinkSystemCatalogs.ts", () => {
       });
     }
 
+    it("shows view definition for views", () => {
+      const relation = new FlinkRelation({
+        ...TEST_FLINK_RELATION,
+        name: "viewRelation",
+        type: FlinkRelationType.View,
+        columns: [TEST_VARCHAR_COLUMN],
+      });
+
+      // hotrodded into the object after construction since the information
+      // isn't known at construction time (see parseRelationsAndColumnsSystemCatalogQueryResponse())
+      relation.viewDefinition = "SELECT * FROM some_table";
+
+      const tooltip = relation.getToolTip();
+
+      assert.match(tooltip.value, /View Definition: `SELECT \* FROM some_table`/);
+    });
+
     it("Formats non-distributed, watermarked table", () => {
       const relation = new FlinkRelation({
         ...TEST_FLINK_RELATION,
