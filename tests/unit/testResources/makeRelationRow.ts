@@ -1,6 +1,7 @@
 import type {
   RawColumnRow,
   RawRelationRow,
+  RawViewDefinitionRow,
 } from "../../../src/loaders/utils/relationsAndColumnsSystemCatalogQuery";
 
 export function makeRelationRow(
@@ -27,6 +28,7 @@ export function makeRelationRow(
     relationWatermarkColumn: opts.watermarkColumn ?? null,
     relationWatermarkExpression: opts.watermarkExpression ?? null,
     relationWatermarkColumnIsHidden: opts.watermarkColumnIsHidden ?? "NO",
+    viewDefinition: null,
 
     columnName: null,
     columnNumber: null,
@@ -71,6 +73,7 @@ export function makeColumnRow(
     relationWatermarkColumn: null,
     relationWatermarkExpression: null,
     relationWatermarkColumnIsHidden: null,
+    viewDefinition: null,
 
     columnName: columnName,
     columnNumber: position,
@@ -84,5 +87,37 @@ export function makeColumnRow(
     columnIsHidden: opts.isHidden ?? "NO",
     columnIsMetadata: opts.isMetadata ?? "NO",
     columnMetadataKey: opts.metadataKey ?? null,
+  };
+}
+
+export function makeViewDefinitionRow(
+  relationName: string,
+  viewDefinition: string,
+): RawViewDefinitionRow {
+  return {
+    rowType: "viewDefinition",
+    relationName: relationName,
+    relationComment: null,
+    relationType: null,
+    relationDistributionBucketCount: null,
+    relationIsDistributed: null,
+    relationIsWatermarked: null,
+    relationWatermarkColumn: null,
+    relationWatermarkExpression: null,
+    relationWatermarkColumnIsHidden: null,
+    viewDefinition: viewDefinition,
+
+    columnName: null,
+    columnNumber: null,
+    columnDataType: null,
+    columnFullDataType: null,
+    columnIsNullable: null,
+    columnComment: null,
+    columnDistributionKeyNumber: null,
+    columnIsGenerated: null,
+    columnIsPersisted: null,
+    columnIsHidden: null,
+    columnIsMetadata: null,
+    columnMetadataKey: null,
   };
 }
