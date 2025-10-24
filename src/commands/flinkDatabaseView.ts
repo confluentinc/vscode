@@ -1,7 +1,5 @@
-import * as vscode from "vscode";
+import type * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { ContextValues, setContextValue } from "../context/values";
-import { flinkDatabaseViewMode } from "../emitters";
 import { Logger } from "../logging";
 import { pause } from "../sidecar/utils";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
@@ -16,19 +14,36 @@ export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {
       "confluent.flinkdatabase.setRelationsViewMode",
       setFlinkRelationsViewModeCommand,
     ),
+
+    registerCommandWithLogging(
+      "confluent.flinkdatabase.setUDFsViewMode",
+      setFlinkUDFViewModeCommand,
+    ),
+
+    registerCommandWithLogging(
+      "confluent.flinkdatabase.setArtifactsViewMode",
+      setFlinkArtifactsViewModeCommand,
+    ),
+
     registerCommandWithLogging(
       "confluent.flinkdatabase.createTopic",
       createTopicInFlinkDatabaseViewCommand,
     ),
   ];
 }
-
+/** Set the Flink Database view to Relations mode */
 export async function setFlinkRelationsViewModeCommand() {
-  flinkDatabaseViewMode.fire(FlinkDatabaseViewProviderMode.Relations);
-  await setContextValue(
-    ContextValues.flinkDatabaseViewMode,
-    FlinkDatabaseViewProviderMode.Relations,
-  );
+  await FlinkDatabaseViewProvider.getInstance().switchMode(FlinkDatabaseViewProviderMode.Relations);
+}
+
+/** Set the Flink Database view to UDFs mode */
+export async function setFlinkUDFViewModeCommand() {
+  await FlinkDatabaseViewProvider.getInstance().switchMode(FlinkDatabaseViewProviderMode.UDFs);
+}
+
+/** Set the Flink Database view to Artifacts mode */
+export async function setFlinkArtifactsViewModeCommand() {
+  await FlinkDatabaseViewProvider.getInstance().switchMode(FlinkDatabaseViewProviderMode.Artifacts);
 }
 
 /**
