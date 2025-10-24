@@ -1,18 +1,17 @@
-import {
+import type {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
-  LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolConfirmationMessages,
   LanguageModelToolInvocationOptions,
   LanguageModelToolInvocationPrepareOptions,
-  LanguageModelToolResult,
-  MarkdownString,
   PreparedToolInvocation,
   ProviderResult,
 } from "vscode";
-import { ContainerInspectResponse, ContainerSummary, SystemApi } from "../../clients/docker";
+import { LanguageModelTextPart, LanguageModelToolResult, MarkdownString } from "vscode";
+import type { ContainerInspectResponse, ContainerSummary } from "../../clients/docker";
+import { SystemApi } from "../../clients/docker";
 import { defaultRequestInit } from "../../docker/configs";
 import { LocalResourceKind } from "../../docker/constants";
 import { getContainer } from "../../docker/containers";

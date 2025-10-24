@@ -1,7 +1,8 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { createEnhancedQuickPick, EnhancedQuickPickOptions } from "./quickPickUtils";
+import type { EnhancedQuickPickOptions } from "./quickPickUtils";
+import { createEnhancedQuickPick } from "./quickPickUtils";
 
 describe("createEnhancedQuickPick", () => {
   let sandbox: sinon.SinonSandbox;

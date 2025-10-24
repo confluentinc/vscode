@@ -1,4 +1,4 @@
-import { Disposable } from "vscode";
+import type { Disposable } from "vscode";
 
 export abstract class DisposableCollection implements Disposable {
   protected disposables: Disposable[] = [];

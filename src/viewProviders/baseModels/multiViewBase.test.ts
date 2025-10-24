@@ -1,11 +1,12 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { CancellationToken, EventEmitter, Progress, TreeItem, window } from "vscode";
+import type { CancellationToken, Progress } from "vscode";
+import { EventEmitter, TreeItem, window } from "vscode";
 import { ConnectionType } from "../../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../constants";
+import type { ContextValues } from "../../context/values";
 import * as contextValues from "../../context/values";
-import { ContextValues } from "../../context/values";
-import { ConnectionId, EnvironmentId } from "../../models/resource";
+import type { ConnectionId, EnvironmentId } from "../../models/resource";
 import * as collapsingUtils from "../utils/collapsing";
 import { SEARCH_DECORATION_URI_SCHEME } from "../utils/search";
 import { MultiModeViewProvider, ViewProviderDelegate } from "./multiViewBase";
@@ -35,6 +36,7 @@ class TestDelegateChild {
   constructor(
     public id: string,
     public name: string,
+    public children?: TestDelegateChild[],
   ) {}
 
   searchableText(): string {
@@ -203,6 +205,9 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
 
     describe("getTreeItem()", () => {
       const fakeChildItem = new TestDelegateChild("id1", "Test Item 1");
+      const fakeChildItemWithChildren = new TestDelegateChild("id2", "Test Item 2", [
+        fakeChildItem,
+      ]);
       let updateCollapsibleStateFromSearchStub: sinon.SinonStub;
 
       beforeEach(() => {
@@ -226,14 +231,15 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
       it("decorates the item when it matches the search string", () => {
         provider["resource"] = new TestParentResource();
         const delegate = provider["currentDelegate"];
-        delegate.children = [fakeChildItem];
-        provider["itemSearchString"] = "Item 1";
+        delegate.children = [fakeChildItemWithChildren];
+        provider["itemSearchString"] = fakeChildItemWithChildren.name;
         const item = provider.getTreeItem(delegate.children[0]);
 
-        assert.strictEqual(item.label, fakeChildItem.name);
+        assert.strictEqual(item.label, fakeChildItemWithChildren.name);
         // should have the special URI scheme to indicate a search match
         assert.ok(item.resourceUri);
         assert.strictEqual(item.resourceUri!.scheme, SEARCH_DECORATION_URI_SCHEME);
+        // should have had its collapsible state updated based on search + itself having children
         sinon.assert.calledOnce(updateCollapsibleStateFromSearchStub);
       });
     });

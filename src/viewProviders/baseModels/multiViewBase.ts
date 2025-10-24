@@ -1,9 +1,9 @@
-import { TreeItem, Uri } from "vscode";
-import { ContextValues, setContextValue } from "../../context/values";
-import { updateCollapsibleStateFromSearch } from "../utils/collapsing";
-import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "../utils/search";
-import { BaseViewProviderData } from "./base";
-import { EnvironmentedBaseViewProviderData, ParentedBaseViewProvider } from "./parentedBase";
+import type { TreeItem } from "vscode";
+import type { ContextValues } from "../../context/values";
+import { setContextValue } from "../../context/values";
+import type { BaseViewProviderData } from "./base";
+import type { EnvironmentedBaseViewProviderData } from "./parentedBase";
+import { ParentedBaseViewProvider } from "./parentedBase";
 
 export abstract class ViewProviderDelegate<
   M extends string,
@@ -22,8 +22,15 @@ export abstract class ViewProviderDelegate<
   /** The most recent results from fetchChildren() */
   children: T[] = [];
 
-  /** Returns the most recent results from fetchChildren() */
-  getChildren(): T[] {
+  /**
+   * Return the children of this element for populating the tree view.
+   *
+   * @param element The parent element to get children for, or undefined to get root-level children.
+   * @return The children of the given element, or all root-level children if no element is provided.
+   * */
+  // element may be unused in some implementations, but needed in others.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getChildren(element?: T): T[] {
     return this.children;
   }
 
@@ -103,21 +110,16 @@ export abstract class MultiModeViewProvider<
     if (!this.resource) {
       return [];
     }
-    const children = this.currentDelegate.getChildren();
+    const children = this.currentDelegate.getChildren(element);
     return this.filterChildren(element, children);
   }
 
   getTreeItem(element: T): TreeItem {
     const treeItem = this.currentDelegate.getTreeItem(element);
-    if (this.itemSearchString !== null) {
-      if (itemMatchesSearch(element, this.itemSearchString)) {
-        // special URI scheme to decorate the tree item with a dot to the right of the label,
-        // and color the label, description, and decoration so it stands out in the tree view
-        treeItem.resourceUri = Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
-      }
 
-      updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
-    }
+    // Decorate the tree item based on search state, if any.
+    this.adjustTreeItemForSearch(element, treeItem);
+
     return treeItem;
   }
 

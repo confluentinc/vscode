@@ -1,4 +1,5 @@
-import { DiagnosticCollection, languages } from "vscode";
+import type { DiagnosticCollection } from "vscode";
+import { languages } from "vscode";
 
 /** The name of the diagnostic collection for JSON validation. */
 const JSON_DIAGNOSTIC_COLLECTION_NAME = "confluent.json";

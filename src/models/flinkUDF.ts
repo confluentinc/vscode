@@ -1,9 +1,12 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
-import { CustomMarkdownString, IdItem } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
+import { formatSqlType } from "../utils/flinkTypes";
+import type { IdItem } from "./main";
+import { CustomMarkdownString } from "./main";
+import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
+/** Class representing a parameter for a Flink UDF. */
 export class FlinkUdfParameter {
   name: string;
   dataType: string;
@@ -16,18 +19,11 @@ export class FlinkUdfParameter {
     this.isOptional = props.isOptional;
     this.traits = props.traits;
   }
-
-  /**
-   * Returns a display-friendly version of the data type by removing max-int size specifications and escaping backticks.
-   */
-  static formatSqlType(sqlType: string): string {
-    // Remove noisy (2GBs) max size type values
-    const cleaned = sqlType.replace(/\(2147483647\)/g, "");
-    // Remove backticks that are part of SQL syntax (e.g., in ROW<`field` VARCHAR>)
-    return cleaned.replace(/`/g, "");
-  }
 }
 
+/**
+ * Represents a Flink UDF.
+ */
 export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
   /** What CCloud environment this UDF came from (from the Kafka Cluster) */
   environmentId: EnvironmentId;
@@ -135,15 +131,12 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
   /** Returns a formatted string of the function parameters' signatures. */
   get parametersSignature(): string {
     return (
-      "(" +
-      this.parameters
-        .map((p) => `${p.name} : ${FlinkUdfParameter.formatSqlType(p.dataType)}`)
-        .join(", ") +
-      ")"
+      "(" + this.parameters.map((p) => `${p.name} : ${formatSqlType(p.dataType)}`).join(", ") + ")"
     );
   }
 }
 
+/** TreeItem subclass for FlinkUdf */
 export class FlinkUdfTreeItem extends TreeItem {
   resource: FlinkUdf;
 
@@ -154,17 +147,22 @@ export class FlinkUdfTreeItem extends TreeItem {
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-udf`;
 
-    this.description = `${resource.parametersSignature} → ${FlinkUdfParameter.formatSqlType(resource.returnType)}`;
+    this.description = `${resource.parametersSignature} → ${formatSqlType(resource.returnType)}`;
     this.tooltip = createFlinkUdfToolTip(resource);
   }
 }
 
+/**
+ * Creates a rich markdown tooltip describing the given Flink UDF.
+ * @param resource The Flink UDF to create a tooltip for.
+ * @returns CustomMarkdownString for the tooltip for the UDF.
+ */
 export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString {
   const tooltip = new CustomMarkdownString()
     .addHeader("Flink UDF", IconNames.FLINK_FUNCTION)
     .addField("ID", resource.id)
     .addField("Description", resource.description)
-    .addField("Return Type", FlinkUdfParameter.formatSqlType(resource.returnType));
+    .addField("Return Type", formatSqlType(resource.returnType));
 
   if (resource.parameters.length > 0) {
     tooltip.addField("Parameters", `${resource.parametersSignature}`);

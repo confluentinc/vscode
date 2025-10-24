@@ -1,9 +1,10 @@
-import { Disposable, EventEmitter, window } from "vscode";
+import type { Disposable, EventEmitter } from "vscode";
+import { window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
 import { schemaSearchSet, topicSearchSet } from "../emitters";
 import { Logger } from "../logging";
-import { BaseViewProvider } from "../viewProviders/baseModels/base";
+import type { BaseViewProvider } from "../viewProviders/baseModels/base";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 import { ResourceViewProvider } from "../viewProviders/resources";

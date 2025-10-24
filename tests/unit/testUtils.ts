@@ -1,19 +1,20 @@
 import * as vscode from "vscode";
-import { KafkaTopicOperation } from "../../src/authz/types";
+import type { KafkaTopicOperation } from "../../src/authz/types";
 import { ResponseError as DockerResponseError } from "../../src/clients/docker";
 import { ResponseError as FlinkArtifactsResponseError } from "../../src/clients/flinkArtifacts";
 import { ResponseError as FlinkComputePoolResponseError } from "../../src/clients/flinkComputePool";
 import { ResponseError as FlinkSqlResponseError } from "../../src/clients/flinkSql";
 import { ResponseError as KafkaResponseError } from "../../src/clients/kafkaRest";
-import { TopicData, TopicDataFromJSON } from "../../src/clients/kafkaRest/models";
+import type { TopicData } from "../../src/clients/kafkaRest/models";
+import { TopicDataFromJSON } from "../../src/clients/kafkaRest/models";
 import { ResponseError as ScaffoldingServiceResponseError } from "../../src/clients/scaffoldingService";
 import { ResponseError as SchemaRegistryResponseError } from "../../src/clients/schemaRegistryRest";
 import { ResponseError as SidecarResponseError } from "../../src/clients/sidecar";
 import { EXTENSION_ID } from "../../src/constants";
 import { setExtensionContext } from "../../src/context/extension";
-import { AnyResponseError } from "../../src/errors";
+import type { AnyResponseError } from "../../src/errors";
 import { Subject } from "../../src/models/schema";
-import { SchemaRegistry } from "../../src/models/schemaRegistry";
+import type { SchemaRegistry } from "../../src/models/schemaRegistry";
 
 /**
  * Convenience function to get the extension.
@@ -68,6 +69,7 @@ export function createTestTopicData(
   clusterId: string,
   topicName: string,
   authorizedOperations: KafkaTopicOperation[],
+  replicationFactor: number = 1,
 ): TopicData {
   return TopicDataFromJSON({
     kind: "KafkaTopic",
@@ -77,7 +79,7 @@ export function createTestTopicData(
     cluster_id: clusterId,
     topic_name: topicName,
     is_internal: false,
-    replication_factor: 1,
+    replication_factor: replicationFactor,
     partitions_count: 3,
     partitions: {
       related: "test",

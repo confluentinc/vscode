@@ -1,13 +1,11 @@
 import { window } from "vscode";
-import {
+import type {
   ApiResponse,
-  ContainerApi,
   ContainerInspectResponse,
-  ContainerStateStatusEnum,
   EventMessage,
-  SystemApi,
   SystemEventsRequest,
 } from "../clients/docker";
+import { ContainerApi, ContainerStateStatusEnum, SystemApi } from "../clients/docker";
 import { ContextValues, getContextValue, setContextValue } from "../context/values";
 import {
   dockerServiceAvailable,

@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.8.0-38",
+  "version": "2.1.0-7",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -462,6 +462,13 @@
         "enablement": "confluent.flinkDatabaseViewMode != 'artifacts'"
       },
       {
+        "command": "confluent.flinkdatabase.setRelationsViewMode",
+        "title": "Switch to Flink Relations",
+        "icon": "$(confluent-code)",
+        "category": "Confluent: Flink Database View",
+        "enablement": "confluent.flinkDatabaseViewMode != 'relations'"
+      },
+      {
         "command": "confluent.flinkdatabase.setUDFsViewMode",
         "title": "Switch to Flink UDFs",
         "icon": "$(confluent-function)",
@@ -664,6 +671,12 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.statements.openNewDocument",
+        "icon": "$(plus)",
+        "title": "Open New Flink SQL Document",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.statements.refresh",
         "icon": "$(sync)",
         "title": "Refresh",
@@ -713,12 +726,6 @@
         "command": "confluent.support.saveSupportZip",
         "title": "Save Support File (.zip)",
         "category": "Confluent: Support"
-      },
-      {
-        "command": "confluent.testInspectJar",
-        "icon": "$(file-binary)",
-        "title": "Inspect JAR File",
-        "category": "Confluent: Flink Artifacts"
       },
       {
         "command": "confluent.topic.consume",
@@ -816,6 +823,12 @@
         "command": "confluent.topics.search.clear",
         "title": "Clear Search",
         "category": "Confluent: Topics View"
+      },
+      {
+        "command": "confluent.updateArtifact",
+        "icon": "$(pencil)",
+        "title": "Update Artifact",
+        "category": "Confluent: Flink Artifacts"
       },
       {
         "command": "confluent.uploadArtifact",
@@ -944,7 +957,7 @@
           },
           "confluent.flink.artifacts": {
             "type": "boolean",
-            "default": false,
+            "default": true,
             "order": 1,
             "markdownDescription": "Enable Flink Artifacts functionality including the artifacts view and related features for managing Flink artifacts in Confluent Cloud. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)",
             "tags": [
@@ -1157,7 +1170,7 @@
         },
         {
           "id": "confluent-flink-database",
-          "name": "Flink Artifacts (Preview)",
+          "name": "Flink Database (Preview)",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)",
           "when": "config.confluent.flink.artifacts",
@@ -1413,6 +1426,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.flinkdatabase.setRelationsViewMode",
+          "when": "false"
+        },
+        {
           "command": "confluent.flinkdatabase.setUDFsViewMode",
           "when": "false"
         },
@@ -1553,6 +1570,10 @@
           "when": "confluent.ccloudConnectionAvailable"
         },
         {
+          "command": "confluent.statements.openNewDocument",
+          "when": "true"
+        },
+        {
           "command": "confluent.statements.refresh",
           "when": "false"
         },
@@ -1591,10 +1612,6 @@
         {
           "command": "confluent.support.saveSupportZip",
           "when": "true"
-        },
-        {
-          "command": "confluent.testInspectJar",
-          "when": "false"
         },
         {
           "command": "confluent.topic.consume",
@@ -1663,6 +1680,10 @@
         {
           "command": "confluent.topics.search.clear",
           "when": "confluent.topicSearchApplied"
+        },
+        {
+          "command": "confluent.updateArtifact",
+          "when": "false"
         },
         {
           "command": "confluent.uploadArtifact",
@@ -1812,14 +1833,9 @@
           "group": "navigation@1"
         },
         {
-          "command": "confluent.flink.database.search",
-          "when": "view == confluent-flink-database && confluent.flinkDatabaseSelected && !confluent.flinkDatabaseSearchApplied",
-          "group": "navigation@1"
-        },
-        {
-          "command": "confluent.flink.database.search.clear",
-          "when": "view == confluent-flink-database && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied",
-          "group": "navigation@1"
+          "command": "confluent.statements.openNewDocument",
+          "when": "view == confluent-flink-statements",
+          "group": "navigation@2"
         },
         {
           "command": "confluent.statements.create",
@@ -1842,19 +1858,29 @@
           "group": "navigation@5"
         },
         {
+          "command": "confluent.flink.database.search",
+          "when": "view == confluent-flink-database && confluent.flinkDatabaseSelected && !confluent.flinkDatabaseSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.flink.database.search.clear",
+          "when": "view == confluent-flink-database && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.artifacts.scaffold",
           "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts && confluent.flinkDatabaseSelected",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "confluent.uploadArtifact",
           "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && config.confluent.flink.artifacts",
-          "group": "navigation@2"
+          "group": "navigation@3"
         },
         {
           "command": "confluent.flinkdatabase.kafka-cluster.select",
           "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts",
-          "group": "navigation@3"
+          "group": "navigation@4"
         },
         {
           "command": "confluent.flinkdatabase.refresh",
@@ -1954,9 +1980,14 @@
           "group": "4_flink@1"
         },
         {
-          "command": "confluent.uploadArtifact",
-          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/) && config.confluent.flink.artifacts",
+          "command": "confluent.statements.openNewDocument",
+          "when": "view == confluent-resources && viewItem =~ /.*flink-compute-pool.*/",
           "group": "4_flink@1"
+        },
+        {
+          "command": "confluent.uploadArtifact",
+          "when": "view == confluent-resources && (viewItem =~ /ccloud.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool.*/) && config.confluent.flink.artifacts",
+          "group": "4_flink@2"
         },
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
@@ -2004,6 +2035,11 @@
         },
         {
           "command": "confluent.deleteArtifact",
+          "when": "view == confluent-flink-database && viewItem =~ /.*-flink-artifact$/",
+          "group": "artifacts"
+        },
+        {
+          "command": "confluent.updateArtifact",
           "when": "view == confluent-flink-database && viewItem =~ /.*-flink-artifact$/",
           "group": "artifacts"
         },
@@ -2079,7 +2115,7 @@
         },
         {
           "command": "confluent.openCCloudApiKeysUrl",
-          "when": "view in confluent.viewsWithResources && (viewItem =~ /ccloud.*kafka-cluster/ || viewItem == ccloud-schema-registry)",
+          "when": "view == confluent-resources && (viewItem =~ /ccloud.*kafka-cluster/ || viewItem == ccloud-schema-registry)",
           "group": "z_openInCloud"
         },
         {
@@ -2124,21 +2160,20 @@
           "command": "confluent.uploadArtifact",
           "group": "confluent@1",
           "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && resourceExtname == .jar"
-        },
-        {
-          "command": "confluent.testInspectJar",
-          "group": "confluent@2",
-          "when": "isDevelopment && resourceExtname == .jar"
         }
       ],
       "confluent.flinkdatabase.viewMode": [
         {
-          "command": "confluent.flinkdatabase.setArtifactsViewMode",
+          "command": "confluent.flinkdatabase.setRelationsViewMode",
           "group": "viewMode@1"
         },
         {
           "command": "confluent.flinkdatabase.setUDFsViewMode",
           "group": "viewMode@2"
+        },
+        {
+          "command": "confluent.flinkdatabase.setArtifactsViewMode",
+          "group": "viewMode@3"
         }
       ]
     },

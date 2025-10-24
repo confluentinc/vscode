@@ -3,18 +3,19 @@ import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
 import { flinkDatabaseViewMode, udfsChanged } from "../emitters";
 import { isResponseError, logError } from "../errors";
+import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { FlinkArtifact } from "../models/flinkArtifact";
-import { FlinkUdf } from "../models/flinkUDF";
-import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import type { FlinkArtifact } from "../models/flinkArtifact";
+import type { FlinkUdf } from "../models/flinkUDF";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
   showInfoNotificationWithButtons,
 } from "../notifications";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-import { UriMetadata } from "../storage/types";
+import type { UriMetadata } from "../storage/types";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
@@ -142,7 +143,7 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
     .appendText("-- confirm with 'SHOW USER FUNCTIONS';\n");
 
   const document = await vscode.workspace.openTextDocument({
-    language: "flinksql",
+    language: FLINK_SQL_LANGUAGE_ID,
     // content is initialized as an empty string, we insert the snippet next due to how the Snippets API works
     content: "",
   });
@@ -178,7 +179,7 @@ export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtif
       throw new Error("No Flink database.");
     }
 
-    let userInput = await promptForFunctionAndClassName(selectedArtifact);
+    let userInput = await promptForFunctionAndClassName();
     if (!userInput) {
       return; // User cancelled the input
     }

@@ -1,15 +1,16 @@
 /** Commands for scaffolding new projects using the template service **/
 
-import * as vscode from "vscode";
+import type * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { CCloudOrganization } from "../models/organization";
+import type { CCloudOrganization } from "../models/organization";
 import { KafkaTopic } from "../models/topic";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { removeProtocolPrefix } from "../utils/bootstrapServers";
-import { PrefilledTemplateOptions, scaffoldProjectRequest } from "./utils/scaffoldUtils";
+import type { PrefilledTemplateOptions } from "./utils/scaffoldUtils";
+import { scaffoldProjectRequest } from "./utils/scaffoldUtils";
 
 /** Scaffold a project w/o any additional information. Offers all templates, no pre-filled-out information. */
 export async function scaffoldProjectCommand() {

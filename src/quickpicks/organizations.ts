@@ -1,8 +1,8 @@
 import { ThemeIcon, window } from "vscode";
 import { IconNames } from "../constants";
 import { getOrganizations } from "../graphql/organizations";
-import { CCloudOrganization } from "../models/organization";
-import { QuickPickItemWithValue } from "./types";
+import type { CCloudOrganization } from "../models/organization";
+import type { QuickPickItemWithValue } from "./types";
 
 /**
  * Displays a quickpick for selecting a CCloud organization.

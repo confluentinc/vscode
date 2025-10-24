@@ -1,12 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import {
-  InputBoxValidationMessage,
-  InputBoxValidationSeverity,
-  languages,
-  Uri,
-  window,
-} from "vscode";
+import type { InputBoxValidationMessage } from "vscode";
+import { InputBoxValidationSeverity, languages, Uri, window } from "vscode";
 
 import {
   getStubbedCCloudResourceLoader,
@@ -32,25 +27,20 @@ import {
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../../../tests/unit/testUtils";
-import {
-  Configuration,
-  RegisterRequest,
-  ResponseError,
-  SchemasV1Api,
-  SubjectsV1Api,
-} from "../../../clients/schemaRegistryRest";
+import type { Configuration, RegisterRequest } from "../../../clients/schemaRegistryRest";
+import { ResponseError, SchemasV1Api, SubjectsV1Api } from "../../../clients/schemaRegistryRest";
 import { ConnectionType } from "../../../clients/sidecar";
 import { schemaSubjectChanged, schemaVersionsChanged } from "../../../emitters";
-import { CCloudResourceLoader, ResourceLoader } from "../../../loaders";
+import type { CCloudResourceLoader, ResourceLoader } from "../../../loaders";
 import { Schema, SchemaType, Subject } from "../../../models/schema";
-import {
+import type {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
   LocalSchemaRegistry,
 } from "../../../models/schemaRegistry";
 import { KafkaTopic } from "../../../models/topic";
 import * as quickPicksSchemas from "../../../quickpicks/schemas";
-import { SidecarHandle } from "../../../sidecar";
+import type { SidecarHandle } from "../../../sidecar";
 import { getSchemasViewProvider } from "../../../viewProviders/schemas";
 import {
   chooseSubject,

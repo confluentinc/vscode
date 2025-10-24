@@ -1,12 +1,13 @@
 import { graphql } from "gql.tada";
 import { commands } from "vscode";
-import { ConnectedState, Connection, ConnectionStatus, ConnectionType } from "../clients/sidecar";
+import type { Connection, ConnectionStatus } from "../clients/sidecar";
+import { ConnectedState, ConnectionType } from "../clients/sidecar";
 import { hasCCloudDomain } from "../directConnections/utils";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, EnvironmentId } from "../models/resource";
+import type { ConnectionId, EnvironmentId } from "../models/resource";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
 import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
@@ -15,9 +16,10 @@ import {
 } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
-import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
+import type { CustomConnectionSpec } from "../storage/resourceManager";
+import { getResourceManager } from "../storage/resourceManager";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { ConnectionEventBody } from "../ws/messageTypes";
+import type { ConnectionEventBody } from "../ws/messageTypes";
 
 const logger = new Logger("graphql.direct");
 

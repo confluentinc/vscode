@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
+import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
+import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_SCHEMA,
@@ -10,9 +11,13 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { EnvironmentChangeEvent, SchemaVersionChangeEvent, SubjectChangeEvent } from "../emitters";
-import { CCloudResourceLoader } from "../loaders";
-import { EnvironmentId } from "../models/resource";
+import type {
+  EnvironmentChangeEvent,
+  SchemaVersionChangeEvent,
+  SubjectChangeEvent,
+} from "../emitters";
+import type { CCloudResourceLoader } from "../loaders";
+import type { EnvironmentId } from "../models/resource";
 import { Schema, SchemaTreeItem, SchemaType, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemasViewProvider } from "./schemas";
 

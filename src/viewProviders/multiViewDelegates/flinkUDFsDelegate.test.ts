@@ -3,13 +3,19 @@ import * as sinon from "sinon";
 import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
 import { createFlinkUDF } from "../../../tests/unit/testResources/flinkUDF";
-import { CCloudResourceLoader } from "../../loaders";
-import { FlinkUdf } from "../../models/flinkUDF";
+import { getTestExtensionContext } from "../../../tests/unit/testUtils";
+import { setExtensionContext } from "../../context/extension";
+import type { CCloudResourceLoader } from "../../loaders";
+import type { FlinkUdf } from "../../models/flinkUDF";
 import { FlinkDatabaseViewProvider } from "../flinkDatabase";
 import { FlinkUDFsDelegate } from "./flinkUDFsDelegate";
 
 describe("viewProviders/multiViewDelegates/flinkUDFsDelegate.ts", () => {
   let sandbox: sinon.SinonSandbox;
+
+  before(async () => {
+    setExtensionContext(await getTestExtensionContext());
+  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

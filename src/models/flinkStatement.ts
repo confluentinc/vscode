@@ -1,5 +1,5 @@
 import { ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
-import {
+import type {
   CreateSqlv1Statement201Response,
   GetSqlv1Statement200Response,
   SqlV1StatementListDataInner,
@@ -9,8 +9,9 @@ import {
 } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, IconNames, UTM_SOURCE_VSCODE } from "../constants";
-import { CustomMarkdownString, IdItem } from "./main";
-import {
+import type { IdItem } from "./main";
+import { CustomMarkdownString } from "./main";
+import type {
   ConnectionId,
   EnvironmentId,
   IEnvProviderRegion,
@@ -43,12 +44,7 @@ export const FAILED_PHASES = [Phase.FAILED, Phase.FAILING];
 /**  List of terminal phases. Statements in terminal phase won't ever change on their own. */
 export const TERMINAL_PHASES = [Phase.COMPLETED, Phase.STOPPED, Phase.FAILED];
 
-const EXECUTION_STARTED_PHASES = [
-  Phase.PENDING,
-  Phase.RUNNING,
-  Phase.COMPLETED,
-  // Phase.DEGRADED,??
-];
+const EXECUTION_STARTED_PHASES = [Phase.PENDING, Phase.RUNNING, Phase.COMPLETED, Phase.DEGRADED];
 
 /** Phases which cannot be stopped. */
 export const UNSTOPPABLE_PHASES = [
@@ -408,7 +404,15 @@ export function createFlinkStatementTooltip(resource: FlinkStatement) {
   const tooltip = new CustomMarkdownString()
     .addHeader("Flink Statement", getFlinkStatementThemeIcon(resource.phase).id as IconNames)
     .addField("Kind", resource.sqlKindDisplay)
-    .addField("Status", resource.phase)
+    .addField("Status", resource.phase);
+
+  if (resource.phase === Phase.DEGRADED) {
+    tooltip.appendMarkdown(
+      "[(Learn more)](https://docs.confluent.io/cloud/current/flink/how-to-guides/resolve-common-query-problems.html#statement-enters-degraded-state)\n\n",
+    );
+  }
+
+  tooltip
     .addField(
       "Created At",
       resource.createdAt?.toLocaleString(undefined, { timeZoneName: "short" }),

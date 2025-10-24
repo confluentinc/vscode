@@ -3,7 +3,7 @@ import { LOCAL_CONNECTION_ID } from "../constants";
 import { logError } from "../errors";
 import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId } from "../models/resource";
+import type { EnvironmentId } from "../models/resource";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";

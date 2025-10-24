@@ -31,6 +31,7 @@ import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
 import { registerFlinkArtifactCommands } from "./commands/flinkArtifacts";
 import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
+import { registerFlinkDatabaseViewCommands } from "./commands/flinkDatabaseView";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerFlinkUDFCommands } from "./commands/flinkUDFs";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
@@ -73,6 +74,7 @@ import {
   checkForExtensionDisabledReason,
   showExtensionDisabledNotification,
 } from "./featureFlags/evaluation";
+import { FLINK_SQL_LANGUAGE_ID } from "./flinkSql/constants";
 import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageClientManager";
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
@@ -91,8 +93,7 @@ import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { UriEventHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
-import { inspectJarClasses } from "./utils/jarInspector";
-import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
+import type { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
 import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
@@ -209,7 +210,7 @@ async function _activateExtension(
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
-  const artifactsViewProvider = FlinkDatabaseViewProvider.getInstance();
+  const flinkDatabaseViewProvider = FlinkDatabaseViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
 
   // ...and any panel view providers
@@ -221,7 +222,7 @@ async function _activateExtension(
     schemasViewProvider,
     supportViewProvider,
     statementsViewProvider,
-    artifactsViewProvider,
+    flinkDatabaseViewProvider,
     flinkStatementResultsPanelProvider,
   ];
   logger.info("View providers initialized");
@@ -262,13 +263,13 @@ async function _activateExtension(
     ...registerProjectGenerationCommands(),
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
+    ...registerFlinkDatabaseViewCommands(),
     ...registerFlinkUDFCommands(),
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
     ...registerFlinkArtifactCommands(),
     ...registerNewResourceViewCommands(),
     ...registerUriCommands(),
-    registerCommandWithLogging("confluent.testInspectJar", inspectJarClasses), // TEMP DO NOT MERGE
   ];
   logger.info("Commands registered");
 
@@ -345,7 +346,7 @@ async function _activateExtension(
 
   const provider = FlinkSqlCodelensProvider.getInstance();
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider("flinksql", provider),
+    vscode.languages.registerCodeLensProvider(FLINK_SQL_LANGUAGE_ID, provider),
     provider,
   );
 
@@ -441,10 +442,10 @@ async function setupContextValues() {
     SCHEMA_URI_SCHEME,
     MESSAGE_URI_SCHEME,
   ]);
-  // set the initial Flink artifacts view mode to "Artifacts" so the UDF mode toggle is visible
+  // set the initial Flink database view mode to "Relations"
   const flinkViewMode = setContextValue(
     ContextValues.flinkDatabaseViewMode,
-    FlinkDatabaseViewProviderMode.Artifacts,
+    FlinkDatabaseViewProviderMode.Relations,
   );
 
   // Default to Docker daemon not being available until proven otherwise

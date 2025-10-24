@@ -1,9 +1,10 @@
+import type { SecretStorage } from "vscode";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ExtensionContext, SecretStorage } from "vscode";
+import { ExtensionContext } from "vscode";
 import { Logger } from "../logging";
 import { DURABLE_STORAGE_VERSION_KEY, MigrationStorageType } from "./constants";
 import { executeMigrations } from "./migrations/utils";
-import { GlobalState, WorkspaceState } from "./types";
+import type { GlobalState, WorkspaceState } from "./types";
 import { clearWorkspaceState, getGlobalState, getSecretStorage, getWorkspaceState } from "./utils";
 
 /**

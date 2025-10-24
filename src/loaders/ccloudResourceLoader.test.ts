@@ -2,7 +2,8 @@ import assert from "assert";
 import * as sinon from "sinon";
 
 import { loadFixtureFromFile } from "../../tests/fixtures/utils";
-import { StubbedEventEmitters, eventEmitterStubs } from "../../tests/stubs/emitters";
+import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
+import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedResourceManager } from "../../tests/stubs/extensionStorage";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
@@ -16,29 +17,32 @@ import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { makeUdfFunctionRow } from "../../tests/unit/testResources/makeUdfRow";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
-import {
+import type {
   ArtifactV1FlinkArtifactList,
-  ArtifactV1FlinkArtifactListApiVersionEnum,
   ArtifactV1FlinkArtifactListDataInner,
+} from "../clients/flinkArtifacts";
+import {
+  ArtifactV1FlinkArtifactListApiVersionEnum,
   ArtifactV1FlinkArtifactListDataInnerApiVersionEnum,
   ArtifactV1FlinkArtifactListDataInnerKindEnum,
   ArtifactV1FlinkArtifactListKindEnum,
   FlinkArtifactsArtifactV1Api,
 } from "../clients/flinkArtifacts";
+import type { FcpmV2RegionList, FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
 import {
-  FcpmV2RegionList,
   FcpmV2RegionListApiVersionEnum,
-  FcpmV2RegionListDataInner,
   FcpmV2RegionListDataInnerApiVersionEnum,
   FcpmV2RegionListDataInnerKindEnum,
   FcpmV2RegionListKindEnum,
   RegionsFcpmV2Api,
 } from "../clients/flinkComputePool";
-import {
+import type {
   GetSqlv1Statement200Response,
   SqlV1StatementList,
-  SqlV1StatementListApiVersionEnum,
   SqlV1StatementListDataInner,
+} from "../clients/flinkSql";
+import {
+  SqlV1StatementListApiVersionEnum,
   SqlV1StatementListDataInnerApiVersionEnum,
   SqlV1StatementListDataInnerKindEnum,
   SqlV1StatementListKindEnum,
@@ -50,20 +54,24 @@ import * as graphqlCCloud from "../graphql/ccloud";
 import * as graphqlOrgs from "../graphql/organizations";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
-import { FlinkUdf } from "../models/flinkUDF";
-import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId } from "../models/resource";
-import * as sidecar from "../sidecar";
-import { SidecarHandle } from "../sidecar";
-import { ResourceManager } from "../storage/resourceManager";
+import type { FlinkStatement } from "../models/flinkStatement";
+import { Phase, restFlinkStatementToModel } from "../models/flinkStatement";
+import type { FlinkUdf } from "../models/flinkUDF";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import type { EnvironmentId } from "../models/resource";
+import type * as sidecar from "../sidecar";
+import type { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
+import * as relationsUtils from "./utils/relationsAndColumnsSystemCatalogQuery";
+
+import { TEST_FLINK_RELATION } from "../../tests/unit/testResources/flinkRelation";
 import {
   CCloudResourceLoader,
   loadArtifactsForProviderRegion,
   loadProviderRegions,
 } from "./ccloudResourceLoader";
-import { RawUdfSystemCatalogRow } from "./ccloudResourceLoaderUtils";
+import type { RawUdfSystemCatalogRow } from "./utils/udfSystemCatalogQuery";
 
 describe("CCloudResourceLoader", () => {
   let sandbox: sinon.SinonSandbox;
@@ -452,7 +460,8 @@ describe("CCloudResourceLoader", () => {
 
     beforeEach(() => {
       // stub the sidecar getFlinkSqlStatementsApi API
-      const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
+      const stubbedSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+        getSidecarStub(sandbox);
       flinkStatementsApiStub = sandbox.createStubInstance(StatementsSqlV1Api);
       stubbedSidecar.getFlinkSqlStatementsApi.returns(flinkStatementsApiStub);
 
@@ -598,7 +607,8 @@ describe("CCloudResourceLoader", () => {
 
     beforeEach(() => {
       // stub the sidecar getFlinkSqlStatementsApi API
-      const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
+      const stubbedSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+        getSidecarStub(sandbox);
       flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
       stubbedSidecar.getFlinkSqlStatementsApi.returns(flinkSqlStatementsApi);
     });
@@ -854,6 +864,39 @@ describe("CCloudResourceLoader", () => {
         TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
         udfs,
       );
+    });
+  });
+
+  describe("getFlinkRelations", () => {
+    let executeBackgroundFlinkStatementStub: sinon.SinonStub;
+    let getRelationsAndColumnsSystemCatalogQueryStub: sinon.SinonStub;
+    let parseRelationsAndColumnsSystemCatalogQueryResponseStub: sinon.SinonStub;
+    beforeEach(() => {
+      executeBackgroundFlinkStatementStub = sandbox.stub(loader, "executeBackgroundFlinkStatement");
+      getRelationsAndColumnsSystemCatalogQueryStub = sandbox.stub(
+        relationsUtils,
+        "getRelationsAndColumnsSystemCatalogQuery",
+      );
+      parseRelationsAndColumnsSystemCatalogQueryResponseStub = sandbox.stub(
+        relationsUtils,
+        "parseRelationsAndColumnsSystemCatalogQueryResponse",
+      );
+    });
+
+    it("should call parseRelationsAndColumnsSystemCatalogQueryResponse with result from catalog statement", async () => {
+      parseRelationsAndColumnsSystemCatalogQueryResponseStub.returns([TEST_FLINK_RELATION]);
+
+      const results = await loader.getFlinkRelations(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+
+      assert.deepStrictEqual(
+        results,
+        [TEST_FLINK_RELATION],
+        "Expected relations to match parsed results",
+      );
+
+      sinon.assert.calledOnce(getRelationsAndColumnsSystemCatalogQueryStub);
+      sinon.assert.calledOnce(executeBackgroundFlinkStatementStub);
+      sinon.assert.calledOnce(parseRelationsAndColumnsSystemCatalogQueryResponseStub);
     });
   });
 

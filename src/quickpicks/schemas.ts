@@ -4,11 +4,12 @@ import { SubjectNameStrategy } from "../diagnostics/produceMessage";
 import { ResourceLoader } from "../loaders/";
 import { Logger } from "../logging";
 import { getConnectionLabel } from "../models/resource";
-import { getSubjectIcon, Schema, SchemaType, Subject } from "../models/schema";
-import { SchemaRegistry } from "../models/schemaRegistry";
-import { KafkaTopic } from "../models/topic";
+import type { Schema, Subject } from "../models/schema";
+import { getSubjectIcon, SchemaType } from "../models/schema";
+import type { SchemaRegistry } from "../models/schemaRegistry";
+import type { KafkaTopic } from "../models/topic";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { QuickPickItemWithValue } from "./types";
+import type { QuickPickItemWithValue } from "./types";
 
 const logger = new Logger("quickpicks.schemas");
 

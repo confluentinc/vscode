@@ -1,12 +1,12 @@
+import type { LanguageModelTextPart } from "vscode";
 import {
   ChatRequestTurn,
   ChatResponseMarkdownPart,
   ChatResponseTurn,
-  LanguageModelTextPart,
   MarkdownString,
 } from "vscode";
 import { PARTICIPANT_ID } from "../constants";
-import { ToolCallMetadata } from "../tools/types";
+import type { ToolCallMetadata } from "../tools/types";
 
 export function summarizeChatHistory(
   history: readonly (ChatRequestTurn | ChatResponseTurn)[],

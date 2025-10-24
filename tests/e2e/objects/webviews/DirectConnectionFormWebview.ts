@@ -1,5 +1,5 @@
-import { Locator, Page } from "@playwright/test";
-import { FormConnectionType, SupportedAuthType } from "../../connectionTypes";
+import type { Locator, Page } from "@playwright/test";
+import type { FormConnectionType, SupportedAuthType } from "../../connectionTypes";
 import { Webview } from "./Webview";
 
 /**

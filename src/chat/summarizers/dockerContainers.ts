@@ -1,5 +1,5 @@
 import { MarkdownString } from "vscode";
-import { ContainerInspectResponse } from "../../clients/docker";
+import type { ContainerInspectResponse } from "../../clients/docker";
 import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../../extensionSettings/constants";
 
 function appendPortMappings(summary: MarkdownString, container: ContainerInspectResponse): void {

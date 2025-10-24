@@ -1,8 +1,9 @@
 import * as assert from "assert";
+import type { SinonStubbedInstance } from "sinon";
 import * as sinon from "sinon";
-import { SinonStubbedInstance } from "sinon";
 import { TreeItemCollapsibleState, window } from "vscode";
-import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
+import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
+import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -19,12 +20,12 @@ import {
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
-import { EventChangeType, SubjectChangeEvent } from "../emitters";
+import type { EventChangeType, SubjectChangeEvent } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
-import { TopicFetchError } from "../loaders/loaderUtils";
-import { CCloudEnvironment } from "../models/environment";
+import { TopicFetchError } from "../loaders/utils/loaderUtils";
+import type { CCloudEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId } from "../models/resource";
+import type { EnvironmentId } from "../models/resource";
 import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import * as telemetryEvents from "../telemetry/events";
