@@ -51,7 +51,7 @@ export async function uploadArtifactCommand(
   const params = await artifactUploadQuickPickForm(item);
   if (!params) return; // User cancelled the prompt
 
-  // Determine if we should show the "View Artifacts" button based on item type
+  // Determine if we should show the "View Artifact" button based on item type
   const isFromJarFile = item instanceof vscode.Uri;
   const viewArtifactButton = "View Artifact";
 
@@ -79,7 +79,7 @@ export async function uploadArtifactCommand(
             },
           };
 
-          // Only show "View Artifacts" button when not uploading from a file directly
+          // Only show "View Artifact" button when not uploading from a file directly
           if (!isFromJarFile) {
             notificationButtons[viewArtifactButton] = async () => {
               await focusArtifactsInView();
