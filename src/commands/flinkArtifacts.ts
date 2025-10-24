@@ -54,7 +54,7 @@ export async function uploadArtifactCommand(
   const params = await artifactUploadQuickPickForm(item);
   if (!params) return; // User cancelled the prompt
 
-  const viewArtifactsButton = "View Artifacts";
+  const viewArtifactButton = "View Artifact";
   try {
     await vscode.window.withProgress(
       {
@@ -78,7 +78,7 @@ export async function uploadArtifactCommand(
               "Register UDFs": async () => {
                 await detectClassesAndRegisterUDFs(params.selectedFile, response.id);
               },
-              [viewArtifactsButton]: async () => {
+              [viewArtifactButton]: async () => {
                 await focusArtifactsInView();
               },
             },
