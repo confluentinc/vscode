@@ -453,3 +453,10 @@ export function makeMenuItems(
     },
   ];
 }
+
+export async function focusArtifactsInView(): Promise<void> {
+  // Ensure the Confluent extension is open
+  vscode.commands.executeCommand("workbench.extensions.action.showExtensionsWithIds", [
+    "confluentinc.vscode-confluent",
+  ]);
+}
