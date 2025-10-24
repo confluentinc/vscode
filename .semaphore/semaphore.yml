@@ -253,8 +253,8 @@ blocks:
               echo "Coverage files found:"
               ls -la coverage/ || echo "No coverage directory found"
             # Run SonarQube scan with all available coverage data
-            - sem-version java 21
-            - emit-sonarqube-data --run_only_sonar_scan
+            - sem-version java 17
+            - emit-sonarqube-data --run_only_sonar_scan --enable_sonarqube_enterprise
 
   # --- End SonarQube Analysis ---
 
