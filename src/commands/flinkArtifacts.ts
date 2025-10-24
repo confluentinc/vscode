@@ -24,6 +24,7 @@ import { detectClassesAndRegisterUDFs } from "./utils/udfRegistration";
 import type { ArtifactUploadParams } from "./utils/uploadArtifactOrUDF";
 import {
   buildUploadErrorMessage,
+  focusArtifactsInView,
   getArtifactPatchParams,
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
@@ -50,6 +51,10 @@ export async function uploadArtifactCommand(
   const params = await artifactUploadQuickPickForm(item);
   if (!params) return; // User cancelled the prompt
 
+  // Determine if we should show the "View Artifact" button based on item type
+  const isFromJarFile = item instanceof vscode.Uri;
+  const viewArtifactButton = "View Artifact";
+
   try {
     await vscode.window.withProgress(
       {
@@ -67,13 +72,23 @@ export async function uploadArtifactCommand(
             region: params.region,
             artifactId: response.id,
           });
+
+          const notificationButtons: Record<string, () => Promise<void>> = {
+            "Register UDFs": async () => {
+              await detectClassesAndRegisterUDFs(params.selectedFile, response.id);
+            },
+          };
+
+          // Only show "View Artifact" button when not uploading from a file directly
+          if (!isFromJarFile) {
+            notificationButtons[viewArtifactButton] = async () => {
+              await focusArtifactsInView();
+            };
+          }
+
           void showInfoNotificationWithButtons(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
-            {
-              "Register UDFs": async () => {
-                await detectClassesAndRegisterUDFs(params.selectedFile, response.id);
-              },
-            },
+            notificationButtons,
           );
         }
       },
