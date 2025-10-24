@@ -10,12 +10,12 @@ import {
 describe("relationsAndColumnsSystemCatalogQuery.ts", () => {
   describe("getRelationsAndColumnsSystemCatalogQuery()", () => {
     // This function is trivial, just returns a constant string with the cluster ID filled in twice.
-    // Ensure is mentioned twice. Only E2E / clicktesting can prove that the query is otherwise sound.
-    it("should return string with cluster's id mixed in 2x", () => {
+    // Ensure is mentioned thrice. Only E2E / clicktesting can prove that the query is otherwise sound.
+    it("should return string with cluster's id mixed in 3x", () => {
       const query = getRelationsAndColumnsSystemCatalogQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
       const occurrences = query.match(new RegExp(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id, "g"));
       assert.ok(occurrences);
-      assert.strictEqual(occurrences.length, 2);
+      assert.strictEqual(occurrences.length, 3);
     });
   });
 

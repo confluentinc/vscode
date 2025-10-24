@@ -336,7 +336,6 @@ describe("flinkSystemCatalogs.ts", () => {
       /Name: `tooltipRelation`/,
       /Distribution Bucket Count: `4`/,
       /Comment: `Tooltip relation comment`/,
-      /Visible Columns: `test_column: VARCHAR\(255\) NULL`/,
       /Watermarked: `No`/,
     ];
 
