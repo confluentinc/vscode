@@ -45,6 +45,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
 
   parentResourceChangedEmitter = flinkDatabaseViewResourceChanged;
   parentResourceChangedContextValue = ContextValues.flinkDatabaseSelected;
+  delegateContextValue = ContextValues.flinkDatabaseViewMode;
 
   searchChangedEmitter = flinkDatabaseViewSearchSet;
   searchContextValue = ContextValues.flinkDatabaseSearchApplied;
@@ -151,6 +152,11 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
 
     // either show the empty state or the current delegate's children
     this._onDidChangeTreeData.fire();
+  }
+
+  /** Does the current view mode have any children? */
+  hasChildren(): boolean {
+    return this.children.length > 0;
   }
 
   get loggerName() {

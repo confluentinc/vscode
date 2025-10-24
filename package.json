@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "2.1.0-7",
+  "version": "2.1.0-11",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -441,6 +441,12 @@
         "command": "confluent.flink.statements.search.clear",
         "title": "Clear Search",
         "category": "Confluent: Flink Statements View"
+      },
+      {
+        "command": "confluent.flinkdatabase.createTopic",
+        "icon": "$(plus)",
+        "title": "Create Flink Database Topic",
+        "category": "Confluent: Flink Database View"
       },
       {
         "command": "confluent.flinkdatabase.kafka-cluster.select",
@@ -1287,6 +1293,11 @@
       },
       {
         "view": "confluent-flink-database",
+        "contents": "No Flink relations found.\n[Create Topic](command:confluent.flinkdatabase.createTopic)",
+        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'relations' && !confluent.flinkDatabaseSearchApplied"
+      },
+      {
+        "view": "confluent-flink-database",
         "contents": "No Flink database contents matches search string. [Clear search](command:confluent.flink.database.search.clear) or [try a new search](command:confluent.flink.database.search).",
         "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied"
       }
@@ -1412,6 +1423,10 @@
         {
           "command": "confluent.flink.statements.search.clear",
           "when": "confluent.flinkStatementsSearchApplied"
+        },
+        {
+          "command": "confluent.flinkdatabase.createTopic",
+          "when": "false"
         },
         {
           "command": "confluent.flinkdatabase.kafka-cluster.select",
