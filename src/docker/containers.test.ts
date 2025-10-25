@@ -6,10 +6,13 @@ import {
   createContainer,
   getContainer,
   getContainersForImage,
+  getFirstExternalPort,
   startContainer,
   stopContainer,
+  waitForServiceHealthCheck,
 } from "./containers";
 import * as dockerImages from "./images";
+import * as dockerWrappers from "./wrappers";
 
 describe("docker/containers.ts ContainerApi wrappers", () => {
   let sandbox: sinon.SinonSandbox;
@@ -166,5 +169,123 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
 
     await assert.rejects(getContainer("1"), fakeError);
     sinon.assert.calledOnce(containerInspectStub);
+  });
+});
+
+describe("docker/containers.ts getFirstExternalPort", () => {
+  it("should return the first external port when container has valid port bindings", () => {
+    const mockContainer: dockerClients.ContainerInspectResponse = {
+      Id: "test-container-id",
+      HostConfig: {
+        PortBindings: {
+          "8080/tcp": [{ HostPort: "9090" }],
+          "8081/tcp": [{ HostPort: "9091" }],
+        },
+      },
+    };
+
+    const result = getFirstExternalPort(mockContainer);
+
+    assert.strictEqual(result, "9090");
+  });
+
+  it("should return empty string when container has no external ports", () => {
+    const mockContainer: dockerClients.ContainerInspectResponse = {
+      Id: "test-container-id",
+      HostConfig: {
+        PortBindings: {},
+      },
+    };
+
+    const result = getFirstExternalPort(mockContainer);
+
+    assert.strictEqual(result, "");
+  });
+
+  it("should return empty string when port bindings exist but have no valid HostPort", () => {
+    const mockContainer: dockerClients.ContainerInspectResponse = {
+      Id: "test-container-id",
+      HostConfig: {
+        PortBindings: {
+          "8080/tcp": [{}], // No HostPort specified
+          "8081/tcp": [], // Empty array
+        },
+      },
+    };
+
+    const result = getFirstExternalPort(mockContainer);
+
+    assert.strictEqual(result, "");
+  });
+});
+
+describe("docker/containers.ts waitForServiceHealthCheck", () => {
+  let sandbox: sinon.SinonSandbox;
+  let clock: sinon.SinonFakeTimers;
+  let containerFetchStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    clock = sandbox.useFakeTimers();
+    containerFetchStub = sandbox.stub(dockerWrappers, "containerFetch");
+  });
+
+  afterEach(() => {
+    clock.restore();
+    sandbox.restore();
+  });
+
+  it("should return true when service health check succeeds", async () => {
+    containerFetchStub.resolves({ ok: true, status: 200 });
+
+    const result = await waitForServiceHealthCheck("9090", "/health", "TestService");
+
+    assert.strictEqual(result, true);
+    sinon.assert.calledOnce(containerFetchStub);
+    sinon.assert.calledWith(containerFetchStub, "http://localhost:9090/health");
+  });
+
+  it("should return false when health check fails consistently", async () => {
+    containerFetchStub.rejects(new Error("Connection refused"));
+
+    const waitPromise = waitForServiceHealthCheck("9090", "/health", "TestService", 3);
+
+    // Advance time to exceed maxWaitTimeSec
+    for (let i = 0; i < 4; i++) {
+      await clock.tickAsync(1000); // wait 1 second between retries
+    }
+    const result = await waitPromise;
+
+    assert.strictEqual(result, false);
+    sinon.assert.called(containerFetchStub);
+  });
+
+  it("should return false when service returns non-ok status", async () => {
+    containerFetchStub.resolves({ ok: false, status: 503 });
+
+    const waitPromise = waitForServiceHealthCheck("9090", "/health", "TestService", 3);
+    // Advance time to exceed maxWaitTimeSec
+    for (let i = 0; i < 4; i++) {
+      await clock.tickAsync(1000); // wait 1 second between retries
+    }
+    const result = await waitPromise;
+    assert.strictEqual(result, false);
+    sinon.assert.called(containerFetchStub);
+  });
+
+  it("should retry failed requests and eventually succeed", async () => {
+    // First call fails, second call succeeds
+    containerFetchStub.onFirstCall().rejects(new Error("Connection refused"));
+    containerFetchStub.onSecondCall().resolves({ ok: true, status: 200 });
+
+    const waitPromise = waitForServiceHealthCheck("9090", "/health", "TestService", 5);
+    // Advance time to allow for retries
+    await clock.tickAsync(1000); // after first failure
+    await clock.tickAsync(1000); // after second attempt
+
+    const result = await waitPromise;
+
+    assert.strictEqual(result, true, "Health check should eventually succeed");
+    sinon.assert.calledTwice(containerFetchStub);
   });
 });

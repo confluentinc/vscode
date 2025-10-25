@@ -43,6 +43,7 @@ export const directConnectionCreated = new vscode.EventEmitter<ConnectionId>();
 export const dockerServiceAvailable = new vscode.EventEmitter<boolean>();
 export const localKafkaConnected = new vscode.EventEmitter<boolean>();
 export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
+export const localMedusaConnected = new vscode.EventEmitter<boolean>();
 
 /** Fired when a FlinkStatementManager-monitored non-terminal statement has been observed to have changed. */
 export const flinkStatementUpdated = new vscode.EventEmitter<FlinkStatement>();

@@ -47,6 +47,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
   let createContainerStub: sinon.SinonStub;
   let getContainersForImageStub: sinon.SinonStub;
   let getContainerStub: sinon.SinonStub;
+  let waitForServiceHealthCheckStub: sinon.SinonStub;
 
   let workflow: ConfluentPlatformSchemaRegistryWorkflow;
   // base class stubs
@@ -82,6 +83,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
       .stub(dockerContainers, "getContainersForImage")
       .resolves([]);
     getContainerStub = sandbox.stub(dockerContainers, "getContainer");
+    waitForServiceHealthCheckStub = sandbox.stub(dockerContainers, "waitForServiceHealthCheck");
 
     workflow = ConfluentPlatformSchemaRegistryWorkflow.getInstance();
 
@@ -393,6 +395,48 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
       workflow.imageTag,
       createBody,
     );
+  });
+
+  describe("waitForReadiness()", () => {
+    it("should return true when health check succeeds", async () => {
+      const mockContainer: ContainerInspectResponse = {
+        Id: "test-container-id",
+        HostConfig: {
+          PortBindings: {
+            "8081/tcp": [{ HostPort: "8081" }],
+          },
+        },
+      };
+      getContainerStub.resolves(mockContainer);
+      waitForServiceHealthCheckStub.resolves(true);
+
+      const result = await workflow.waitForReadiness("test-container-id");
+
+      assert.strictEqual(result, true);
+      assert.ok(getContainerStub.calledOnceWith("test-container-id"));
+      assert.ok(waitForServiceHealthCheckStub.calledOnce);
+      assert.ok(waitForServiceHealthCheckStub.calledWith("8081", "/config", "Schema Registry"));
+    });
+
+    it("should return false when health check fails", async () => {
+      const mockContainer: ContainerInspectResponse = {
+        Id: "test-container-id",
+        HostConfig: {
+          PortBindings: {
+            "8081/tcp": [{ HostPort: "8081" }],
+          },
+        },
+      };
+      getContainerStub.resolves(mockContainer);
+      waitForServiceHealthCheckStub.resolves(false);
+
+      const result = await workflow.waitForReadiness("test-container-id");
+
+      assert.strictEqual(result, false);
+      assert.ok(getContainerStub.calledOnceWith("test-container-id"));
+      assert.ok(waitForServiceHealthCheckStub.calledOnce);
+      assert.ok(waitForServiceHealthCheckStub.calledWith("8081", "/config", "Schema Registry"));
+    });
   });
 });
 

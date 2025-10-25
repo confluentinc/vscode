@@ -34,6 +34,7 @@ export const TEST_LOCAL_ENVIRONMENT: LocalEnvironment = new LocalEnvironment({
   id: TEST_LOCAL_ENVIRONMENT_ID,
   kafkaClusters: [],
   schemaRegistry: undefined,
+  medusa: undefined,
 });
 
 // not tied to the CCloud Environment specifically, but used by CCloud Kafka clusters and Schema Registry

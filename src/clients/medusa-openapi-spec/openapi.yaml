@@ -1,0 +1,2147 @@
+openapi: 3.0.1
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:8082
+  description: Generated server url
+tags:
+- name: Value Generators
+  description: APIs for retrieving value generator information
+- name: Example Datasets
+  description: APIs for retrieving example datasets
+- name: Stream Management
+  description: APIs for managing data streams
+- name: Schema Management
+  description: APIs for managing Avro schemas
+- name: Batch Management
+  description: APIs for managing batch data generation
+- name: Event Throttlers
+  description: APIs for retrieving event throttler information
+paths:
+  /v1/streams/{streamId}/start:
+    put:
+      tags:
+      - Stream Management
+      summary: Start a stream
+      description: Initiates data streaming for the specified stream
+      operationId: startDatasetStream
+      parameters:
+      - name: streamId
+        in: path
+        description: Stream identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        "200":
+          description: Stream started successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/StreamDetails"
+  /v1/streams:
+    post:
+      tags:
+      - Stream Management
+      summary: Build a new stream
+      operationId: buildStream
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DatasetDTO"
+            examples:
+              Minimal:
+                description: Example shows a Dataset with minimal configuration
+                value:
+                  events:
+                  - event_name: my_event
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                  tables: []
+              Field to field relationships:
+                description: "Example shows the relationships between fields, where\
+                  \ a field can reference other fields values"
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: name
+                      generation:
+                        generator: Person.full-name
+                        arguments: []
+                    - name: email
+                      generation:
+                        generator: Internet.custom-email-address
+                        arguments:
+                        - $name
+                    - name: membership
+                      generation:
+                        generator: String.select-weighted-text
+                        arguments:
+                        - "GOLD,SILVER,BRONZE"
+                        - "0.2,0.3,0.5"
+                        - ""
+                    - name: discount
+                      generation:
+                        generator: Reference.expression
+                        arguments:
+                        - "SWITCH($membership, \"GOLD\", \"15%\", \"SILVER\", \"10%\"\
+                          , \"5%\")"
+                        - STRING
+                  tables: []
+              Event to event relationships:
+                description: "Example shows the relationships between events, where\
+                  \ one event (payment) can reference another (customer)"
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                  - event_name: Payment
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: customer_id
+                      generation:
+                        generator: Reference.cache
+                        arguments:
+                        - customer.id
+                        - generator: Reference.expression
+                          arguments:
+                          - "1"
+                          - INTEGER
+                    - name: amount
+                      generation:
+                        generator: Number.number-between
+                        arguments:
+                        - "1"
+                        - "100"
+                        - DOUBLE
+                  tables: []
+              Event throttlers:
+                description: Example shows how the graph throttler can be used to
+                  control the velocity and pattern of your data
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - false
+                      - STEP_AFTER
+                      - - 97
+                        - 100
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                  - event_name: Payment
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: customer_id
+                      generation:
+                        generator: Reference.cache
+                        arguments:
+                        - customer.id
+                        - generator: Reference.expression
+                          arguments:
+                          - "1"
+                          - INTEGER
+                    - name: amount
+                      generation:
+                        generator: Number.number-between
+                        arguments:
+                        - "1"
+                        - "100"
+                        - DOUBLE
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - true
+                      - MONOTONE_X
+                      - - 5
+                        - 32
+                        - 53
+                        - 5
+                        - 100
+                        - 30
+                        - 75
+                        - 5
+                        - 77
+                        - 5
+                        - 5
+                  tables: []
+              Tables:
+                description: Example shows how to use tables. The 'Airport' event
+                  is linked to the 'airports' table via a table link. The 'plane'
+                  event directly looks up a table cell value without a table link.
+                value:
+                  events:
+                  - event_name: plane
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: name
+                      generation:
+                        generator: Person.full-name
+                        arguments: []
+                    - name: current_airport
+                      generation:
+                        generator: String.select-text
+                        arguments:
+                        - "ATL,PEK,DXB,HND,LHR"
+                        - ""
+                    - name: timezone
+                      generation:
+                        generator: Reference.table-cell
+                        arguments:
+                        - airports.timezone
+                        - $current_airport
+                        - '"ATL"'
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - false
+                      - STEP_AFTER
+                      - - 97
+                        - 100
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                  - event_name: Airport
+                    key_field_name: iata_code
+                    fields: []
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - true
+                      - MONOTONE_X
+                      - - 5
+                        - 32
+                        - 53
+                        - 5
+                        - 100
+                        - 30
+                        - 75
+                        - 5
+                        - 77
+                        - 5
+                        - 5
+                    table_link:
+                      table_name: airports
+                      link_type: sequential
+                  tables:
+                  - table_name: airports
+                    key_column_name: iata_code
+                    columns:
+                    - name: iata_code
+                      type: STRING
+                    - name: name
+                      type: STRING
+                    - name: location
+                      type: STRING
+                    - name: timezone
+                      type: STRING
+                    rows:
+                    - values:
+                        iata_code: ATL
+                        location: "Atlanta, USA"
+                        name: Hartsfield–Jackson Atlanta Intl Airport
+                        timezone: "UTC−5 (EST), UTC−4 (EDT)"
+                    - values:
+                        iata_code: PEK
+                        location: "Beijing, China"
+                        name: Beijing Capital International Airport
+                        timezone: UTC+8
+                    - values:
+                        iata_code: DXB
+                        location: "Dubai, UAE"
+                        name: Dubai International Airport
+                        timezone: UTC+4
+                    - values:
+                        iata_code: HND
+                        location: "Tokyo, Japan"
+                        name: Tokyo Haneda Airport
+                        timezone: UTC+9
+                    - values:
+                        iata_code: LHR
+                        location: "London, UK"
+                        name: London Heathrow Airport
+                        timezone: "UTC+0 (GMT), UTC+1 (BST)"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/StreamDetails"
+  /v1/streams/{streamId}:
+    get:
+      tags:
+      - Stream Management
+      summary: Subscribe to stream events
+      description: |-
+        Returns a Server-Sent Events (SSE) connection for real-time data.
+
+        **Note:** This endpoint cannot be tested in Swagger UI as it uses Server-Sent Events.
+
+        **Example usage with curl:**
+        ```bash
+        curl http://localhost:8082/stream/{streamId}
+        ```
+      operationId: getDatasetStream
+      parameters:
+      - name: streamId
+        in: path
+        description: Stream identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 123e4567-e89b-12d3-a456-426614174000
+      - name: event_name
+        in: query
+        description: Optional event name filter
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: SSE connection established. Returns a stream of events in text/event-stream
+            format.
+          content:
+            text/event-stream: {}
+    post:
+      tags:
+      - Stream Management
+      summary: Build a stream with specific ID
+      description: Creates a new stream with a provided ID
+      operationId: buildStreamWithId
+      parameters:
+      - name: streamId
+        in: path
+        description: Stream identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 123e4567-e89b-12d3-a456-426614174000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DatasetDTO"
+            examples:
+              Minimal:
+                description: Example shows a Dataset with minimal configuration
+                value:
+                  events:
+                  - event_name: my_event
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                  tables: []
+              Field to field relationships:
+                description: "Example shows the relationships between fields, where\
+                  \ a field can reference other fields values"
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: name
+                      generation:
+                        generator: Person.full-name
+                        arguments: []
+                    - name: email
+                      generation:
+                        generator: Internet.custom-email-address
+                        arguments:
+                        - $name
+                    - name: membership
+                      generation:
+                        generator: String.select-weighted-text
+                        arguments:
+                        - "GOLD,SILVER,BRONZE"
+                        - "0.2,0.3,0.5"
+                        - ""
+                    - name: discount
+                      generation:
+                        generator: Reference.expression
+                        arguments:
+                        - "SWITCH($membership, \"GOLD\", \"15%\", \"SILVER\", \"10%\"\
+                          , \"5%\")"
+                        - STRING
+                  tables: []
+              Event to event relationships:
+                description: "Example shows the relationships between events, where\
+                  \ one event (payment) can reference another (customer)"
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                  - event_name: Payment
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: customer_id
+                      generation:
+                        generator: Reference.cache
+                        arguments:
+                        - customer.id
+                        - generator: Reference.expression
+                          arguments:
+                          - "1"
+                          - INTEGER
+                    - name: amount
+                      generation:
+                        generator: Number.number-between
+                        arguments:
+                        - "1"
+                        - "100"
+                        - DOUBLE
+                  tables: []
+              Event throttlers:
+                description: Example shows how the graph throttler can be used to
+                  control the velocity and pattern of your data
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - false
+                      - STEP_AFTER
+                      - - 97
+                        - 100
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                  - event_name: Payment
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: customer_id
+                      generation:
+                        generator: Reference.cache
+                        arguments:
+                        - customer.id
+                        - generator: Reference.expression
+                          arguments:
+                          - "1"
+                          - INTEGER
+                    - name: amount
+                      generation:
+                        generator: Number.number-between
+                        arguments:
+                        - "1"
+                        - "100"
+                        - DOUBLE
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - true
+                      - MONOTONE_X
+                      - - 5
+                        - 32
+                        - 53
+                        - 5
+                        - 100
+                        - 30
+                        - 75
+                        - 5
+                        - 77
+                        - 5
+                        - 5
+                  tables: []
+              Tables:
+                description: Example shows how to use tables. The 'Airport' event
+                  is linked to the 'airports' table via a table link. The 'plane'
+                  event directly looks up a table cell value without a table link.
+                value:
+                  events:
+                  - event_name: plane
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: name
+                      generation:
+                        generator: Person.full-name
+                        arguments: []
+                    - name: current_airport
+                      generation:
+                        generator: String.select-text
+                        arguments:
+                        - "ATL,PEK,DXB,HND,LHR"
+                        - ""
+                    - name: timezone
+                      generation:
+                        generator: Reference.table-cell
+                        arguments:
+                        - airports.timezone
+                        - $current_airport
+                        - '"ATL"'
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - false
+                      - STEP_AFTER
+                      - - 97
+                        - 100
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                  - event_name: Airport
+                    key_field_name: iata_code
+                    fields: []
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - true
+                      - MONOTONE_X
+                      - - 5
+                        - 32
+                        - 53
+                        - 5
+                        - 100
+                        - 30
+                        - 75
+                        - 5
+                        - 77
+                        - 5
+                        - 5
+                    table_link:
+                      table_name: airports
+                      link_type: sequential
+                  tables:
+                  - table_name: airports
+                    key_column_name: iata_code
+                    columns:
+                    - name: iata_code
+                      type: STRING
+                    - name: name
+                      type: STRING
+                    - name: location
+                      type: STRING
+                    - name: timezone
+                      type: STRING
+                    rows:
+                    - values:
+                        iata_code: ATL
+                        location: "Atlanta, USA"
+                        name: Hartsfield–Jackson Atlanta Intl Airport
+                        timezone: "UTC−5 (EST), UTC−4 (EDT)"
+                    - values:
+                        iata_code: PEK
+                        location: "Beijing, China"
+                        name: Beijing Capital International Airport
+                        timezone: UTC+8
+                    - values:
+                        iata_code: DXB
+                        location: "Dubai, UAE"
+                        name: Dubai International Airport
+                        timezone: UTC+4
+                    - values:
+                        iata_code: HND
+                        location: "Tokyo, Japan"
+                        name: Tokyo Haneda Airport
+                        timezone: UTC+9
+                    - values:
+                        iata_code: LHR
+                        location: "London, UK"
+                        name: London Heathrow Airport
+                        timezone: "UTC+0 (GMT), UTC+1 (BST)"
+        required: true
+      responses:
+        "200":
+          description: Stream created successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/StreamDetails"
+  /v1/schemas/avro:
+    post:
+      tags:
+      - Schema Management
+      summary: Get Avro schemas for a Dataset
+      description: Returns Avro schemas for a Dataset
+      operationId: getAvroSchema
+      parameters:
+      - name: event_name
+        in: query
+        description: Optional event name filter
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DatasetDTO"
+            examples:
+              Minimal:
+                description: Example shows a Dataset with minimal configuration
+                value:
+                  events:
+                  - event_name: my_event
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                  tables: []
+              Field to field relationships:
+                description: "Example shows the relationships between fields, where\
+                  \ a field can reference other fields values"
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: name
+                      generation:
+                        generator: Person.full-name
+                        arguments: []
+                    - name: email
+                      generation:
+                        generator: Internet.custom-email-address
+                        arguments:
+                        - $name
+                    - name: membership
+                      generation:
+                        generator: String.select-weighted-text
+                        arguments:
+                        - "GOLD,SILVER,BRONZE"
+                        - "0.2,0.3,0.5"
+                        - ""
+                    - name: discount
+                      generation:
+                        generator: Reference.expression
+                        arguments:
+                        - "SWITCH($membership, \"GOLD\", \"15%\", \"SILVER\", \"10%\"\
+                          , \"5%\")"
+                        - STRING
+                  tables: []
+              Event to event relationships:
+                description: "Example shows the relationships between events, where\
+                  \ one event (payment) can reference another (customer)"
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                  - event_name: Payment
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: customer_id
+                      generation:
+                        generator: Reference.cache
+                        arguments:
+                        - customer.id
+                        - generator: Reference.expression
+                          arguments:
+                          - "1"
+                          - INTEGER
+                    - name: amount
+                      generation:
+                        generator: Number.number-between
+                        arguments:
+                        - "1"
+                        - "100"
+                        - DOUBLE
+                  tables: []
+              Event throttlers:
+                description: Example shows how the graph throttler can be used to
+                  control the velocity and pattern of your data
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - false
+                      - STEP_AFTER
+                      - - 97
+                        - 100
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                  - event_name: Payment
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: customer_id
+                      generation:
+                        generator: Reference.cache
+                        arguments:
+                        - customer.id
+                        - generator: Reference.expression
+                          arguments:
+                          - "1"
+                          - INTEGER
+                    - name: amount
+                      generation:
+                        generator: Number.number-between
+                        arguments:
+                        - "1"
+                        - "100"
+                        - DOUBLE
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - true
+                      - MONOTONE_X
+                      - - 5
+                        - 32
+                        - 53
+                        - 5
+                        - 100
+                        - 30
+                        - 75
+                        - 5
+                        - 77
+                        - 5
+                        - 5
+                  tables: []
+              Tables:
+                description: Example shows how to use tables. The 'Airport' event
+                  is linked to the 'airports' table via a table link. The 'plane'
+                  event directly looks up a table cell value without a table link.
+                value:
+                  events:
+                  - event_name: plane
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: name
+                      generation:
+                        generator: Person.full-name
+                        arguments: []
+                    - name: current_airport
+                      generation:
+                        generator: String.select-text
+                        arguments:
+                        - "ATL,PEK,DXB,HND,LHR"
+                        - ""
+                    - name: timezone
+                      generation:
+                        generator: Reference.table-cell
+                        arguments:
+                        - airports.timezone
+                        - $current_airport
+                        - '"ATL"'
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - false
+                      - STEP_AFTER
+                      - - 97
+                        - 100
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                  - event_name: Airport
+                    key_field_name: iata_code
+                    fields: []
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - true
+                      - MONOTONE_X
+                      - - 5
+                        - 32
+                        - 53
+                        - 5
+                        - 100
+                        - 30
+                        - 75
+                        - 5
+                        - 77
+                        - 5
+                        - 5
+                    table_link:
+                      table_name: airports
+                      link_type: sequential
+                  tables:
+                  - table_name: airports
+                    key_column_name: iata_code
+                    columns:
+                    - name: iata_code
+                      type: STRING
+                    - name: name
+                      type: STRING
+                    - name: location
+                      type: STRING
+                    - name: timezone
+                      type: STRING
+                    rows:
+                    - values:
+                        iata_code: ATL
+                        location: "Atlanta, USA"
+                        name: Hartsfield–Jackson Atlanta Intl Airport
+                        timezone: "UTC−5 (EST), UTC−4 (EDT)"
+                    - values:
+                        iata_code: PEK
+                        location: "Beijing, China"
+                        name: Beijing Capital International Airport
+                        timezone: UTC+8
+                    - values:
+                        iata_code: DXB
+                        location: "Dubai, UAE"
+                        name: Dubai International Airport
+                        timezone: UTC+4
+                    - values:
+                        iata_code: HND
+                        location: "Tokyo, Japan"
+                        name: Tokyo Haneda Airport
+                        timezone: UTC+9
+                    - values:
+                        iata_code: LHR
+                        location: "London, UK"
+                        name: London Heathrow Airport
+                        timezone: "UTC+0 (GMT), UTC+1 (BST)"
+        required: true
+      responses:
+        "200":
+          description: Schemas retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvroSchemaResponseList"
+  /v1/schemas/avro/convert:
+    post:
+      tags:
+      - Schema Management
+      summary: Convert Avro schema to dataset
+      description: Converts an Avro schema into a streaming dataset configuration
+      operationId: convertAvroSchemaToDataset
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+        required: true
+      responses:
+        "200":
+          description: Schema converted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DatasetDTO"
+  /v1/batch:
+    post:
+      tags:
+      - Batch Management
+      summary: Generate batch events
+      description: Generates a batch of event messages based on the provided configuration
+      operationId: generateEventMessageBatch
+      parameters:
+      - name: event_name
+        in: query
+        description: Optional event name filter
+        required: false
+        schema:
+          type: string
+      - name: count
+        in: query
+        description: Number of events to generate
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 15
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DatasetDTO"
+            examples:
+              Minimal:
+                description: Example shows a Dataset with minimal configuration
+                value:
+                  events:
+                  - event_name: my_event
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                  tables: []
+              Field to field relationships:
+                description: "Example shows the relationships between fields, where\
+                  \ a field can reference other fields values"
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: name
+                      generation:
+                        generator: Person.full-name
+                        arguments: []
+                    - name: email
+                      generation:
+                        generator: Internet.custom-email-address
+                        arguments:
+                        - $name
+                    - name: membership
+                      generation:
+                        generator: String.select-weighted-text
+                        arguments:
+                        - "GOLD,SILVER,BRONZE"
+                        - "0.2,0.3,0.5"
+                        - ""
+                    - name: discount
+                      generation:
+                        generator: Reference.expression
+                        arguments:
+                        - "SWITCH($membership, \"GOLD\", \"15%\", \"SILVER\", \"10%\"\
+                          , \"5%\")"
+                        - STRING
+                  tables: []
+              Event to event relationships:
+                description: "Example shows the relationships between events, where\
+                  \ one event (payment) can reference another (customer)"
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                  - event_name: Payment
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: customer_id
+                      generation:
+                        generator: Reference.cache
+                        arguments:
+                        - customer.id
+                        - generator: Reference.expression
+                          arguments:
+                          - "1"
+                          - INTEGER
+                    - name: amount
+                      generation:
+                        generator: Number.number-between
+                        arguments:
+                        - "1"
+                        - "100"
+                        - DOUBLE
+                  tables: []
+              Event throttlers:
+                description: Example shows how the graph throttler can be used to
+                  control the velocity and pattern of your data
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - false
+                      - STEP_AFTER
+                      - - 97
+                        - 100
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                  - event_name: Payment
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: customer_id
+                      generation:
+                        generator: Reference.cache
+                        arguments:
+                        - customer.id
+                        - generator: Reference.expression
+                          arguments:
+                          - "1"
+                          - INTEGER
+                    - name: amount
+                      generation:
+                        generator: Number.number-between
+                        arguments:
+                        - "1"
+                        - "100"
+                        - DOUBLE
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - true
+                      - MONOTONE_X
+                      - - 5
+                        - 32
+                        - 53
+                        - 5
+                        - 100
+                        - 30
+                        - 75
+                        - 5
+                        - 77
+                        - 5
+                        - 5
+                  tables: []
+              Tables:
+                description: Example shows how to use tables. The 'Airport' event
+                  is linked to the 'airports' table via a table link. The 'plane'
+                  event directly looks up a table cell value without a table link.
+                value:
+                  events:
+                  - event_name: plane
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: name
+                      generation:
+                        generator: Person.full-name
+                        arguments: []
+                    - name: current_airport
+                      generation:
+                        generator: String.select-text
+                        arguments:
+                        - "ATL,PEK,DXB,HND,LHR"
+                        - ""
+                    - name: timezone
+                      generation:
+                        generator: Reference.table-cell
+                        arguments:
+                        - airports.timezone
+                        - $current_airport
+                        - '"ATL"'
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - false
+                      - STEP_AFTER
+                      - - 97
+                        - 100
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                  - event_name: Airport
+                    key_field_name: iata_code
+                    fields: []
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - true
+                      - MONOTONE_X
+                      - - 5
+                        - 32
+                        - 53
+                        - 5
+                        - 100
+                        - 30
+                        - 75
+                        - 5
+                        - 77
+                        - 5
+                        - 5
+                    table_link:
+                      table_name: airports
+                      link_type: sequential
+                  tables:
+                  - table_name: airports
+                    key_column_name: iata_code
+                    columns:
+                    - name: iata_code
+                      type: STRING
+                    - name: name
+                      type: STRING
+                    - name: location
+                      type: STRING
+                    - name: timezone
+                      type: STRING
+                    rows:
+                    - values:
+                        iata_code: ATL
+                        location: "Atlanta, USA"
+                        name: Hartsfield–Jackson Atlanta Intl Airport
+                        timezone: "UTC−5 (EST), UTC−4 (EDT)"
+                    - values:
+                        iata_code: PEK
+                        location: "Beijing, China"
+                        name: Beijing Capital International Airport
+                        timezone: UTC+8
+                    - values:
+                        iata_code: DXB
+                        location: "Dubai, UAE"
+                        name: Dubai International Airport
+                        timezone: UTC+4
+                    - values:
+                        iata_code: HND
+                        location: "Tokyo, Japan"
+                        name: Tokyo Haneda Airport
+                        timezone: UTC+9
+                    - values:
+                        iata_code: LHR
+                        location: "London, UK"
+                        name: London Heathrow Airport
+                        timezone: "UTC+0 (GMT), UTC+1 (BST)"
+        required: true
+      responses:
+        "200":
+          description: Batch generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventMessageList"
+  /v1/batch/stream-simulation:
+    post:
+      tags:
+      - Batch Management
+      summary: Simulate stream
+      description: Simulates stream behavior over a specified time period
+      operationId: streamSimulation
+      parameters:
+      - name: event_name
+        in: query
+        description: Optional event name filter
+        required: false
+        schema:
+          type: string
+      - name: simulation_length_minutes
+        in: query
+        description: Simulation duration in minutes
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 5
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DatasetDTO"
+            examples:
+              Minimal:
+                description: Example shows a Dataset with minimal configuration
+                value:
+                  events:
+                  - event_name: my_event
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                  tables: []
+              Field to field relationships:
+                description: "Example shows the relationships between fields, where\
+                  \ a field can reference other fields values"
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: name
+                      generation:
+                        generator: Person.full-name
+                        arguments: []
+                    - name: email
+                      generation:
+                        generator: Internet.custom-email-address
+                        arguments:
+                        - $name
+                    - name: membership
+                      generation:
+                        generator: String.select-weighted-text
+                        arguments:
+                        - "GOLD,SILVER,BRONZE"
+                        - "0.2,0.3,0.5"
+                        - ""
+                    - name: discount
+                      generation:
+                        generator: Reference.expression
+                        arguments:
+                        - "SWITCH($membership, \"GOLD\", \"15%\", \"SILVER\", \"10%\"\
+                          , \"5%\")"
+                        - STRING
+                  tables: []
+              Event to event relationships:
+                description: "Example shows the relationships between events, where\
+                  \ one event (payment) can reference another (customer)"
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                  - event_name: Payment
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: customer_id
+                      generation:
+                        generator: Reference.cache
+                        arguments:
+                        - customer.id
+                        - generator: Reference.expression
+                          arguments:
+                          - "1"
+                          - INTEGER
+                    - name: amount
+                      generation:
+                        generator: Number.number-between
+                        arguments:
+                        - "1"
+                        - "100"
+                        - DOUBLE
+                  tables: []
+              Event throttlers:
+                description: Example shows how the graph throttler can be used to
+                  control the velocity and pattern of your data
+                value:
+                  events:
+                  - event_name: customer
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - false
+                      - STEP_AFTER
+                      - - 97
+                        - 100
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                  - event_name: Payment
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: customer_id
+                      generation:
+                        generator: Reference.cache
+                        arguments:
+                        - customer.id
+                        - generator: Reference.expression
+                          arguments:
+                          - "1"
+                          - INTEGER
+                    - name: amount
+                      generation:
+                        generator: Number.number-between
+                        arguments:
+                        - "1"
+                        - "100"
+                        - DOUBLE
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - true
+                      - MONOTONE_X
+                      - - 5
+                        - 32
+                        - 53
+                        - 5
+                        - 100
+                        - 30
+                        - 75
+                        - 5
+                        - 77
+                        - 5
+                        - 5
+                  tables: []
+              Tables:
+                description: Example shows how to use tables. The 'Airport' event
+                  is linked to the 'airports' table via a table link. The 'plane'
+                  event directly looks up a table cell value without a table link.
+                value:
+                  events:
+                  - event_name: plane
+                    key_field_name: id
+                    fields:
+                    - name: id
+                      generation:
+                        generator: Number.iterating-integer
+                        arguments:
+                        - 1
+                        - 1
+                    - name: name
+                      generation:
+                        generator: Person.full-name
+                        arguments: []
+                    - name: current_airport
+                      generation:
+                        generator: String.select-text
+                        arguments:
+                        - "ATL,PEK,DXB,HND,LHR"
+                        - ""
+                    - name: timezone
+                      generation:
+                        generator: Reference.table-cell
+                        arguments:
+                        - airports.timezone
+                        - $current_airport
+                        - '"ATL"'
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - false
+                      - STEP_AFTER
+                      - - 97
+                        - 100
+                        - 0
+                        - 0
+                        - 0
+                        - 0
+                  - event_name: Airport
+                    key_field_name: iata_code
+                    fields: []
+                    event_throttler:
+                      throttle_type: graph
+                      arguments:
+                      - true
+                      - MONOTONE_X
+                      - - 5
+                        - 32
+                        - 53
+                        - 5
+                        - 100
+                        - 30
+                        - 75
+                        - 5
+                        - 77
+                        - 5
+                        - 5
+                    table_link:
+                      table_name: airports
+                      link_type: sequential
+                  tables:
+                  - table_name: airports
+                    key_column_name: iata_code
+                    columns:
+                    - name: iata_code
+                      type: STRING
+                    - name: name
+                      type: STRING
+                    - name: location
+                      type: STRING
+                    - name: timezone
+                      type: STRING
+                    rows:
+                    - values:
+                        iata_code: ATL
+                        location: "Atlanta, USA"
+                        name: Hartsfield–Jackson Atlanta Intl Airport
+                        timezone: "UTC−5 (EST), UTC−4 (EDT)"
+                    - values:
+                        iata_code: PEK
+                        location: "Beijing, China"
+                        name: Beijing Capital International Airport
+                        timezone: UTC+8
+                    - values:
+                        iata_code: DXB
+                        location: "Dubai, UAE"
+                        name: Dubai International Airport
+                        timezone: UTC+4
+                    - values:
+                        iata_code: HND
+                        location: "Tokyo, Japan"
+                        name: Tokyo Haneda Airport
+                        timezone: UTC+9
+                    - values:
+                        iata_code: LHR
+                        location: "London, UK"
+                        name: London Heathrow Airport
+                        timezone: "UTC+0 (GMT), UTC+1 (BST)"
+        required: true
+      responses:
+        "200":
+          description: Stream simulation completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventStreamSimulationList"
+  /v1/schemas/avro/stream/{streamId}:
+    get:
+      tags:
+      - Schema Management
+      summary: Get Avro schemas for existing stream
+      description: Returns Avro schemas for an existing stream
+      operationId: getAvroSchemasForStream
+      parameters:
+      - name: streamId
+        in: path
+        description: Stream identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 123e4567-e89b-12d3-a456-426614174000
+      - name: event_name
+        in: query
+        description: Optional event name filter
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Schemas retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvroSchemaResponseList"
+  /v1/generators:
+    get:
+      tags:
+      - Value Generators
+      summary: Get all value generators
+      description: Returns a list of all available value generators and their details
+      operationId: getAllValueGeneratorDetails
+      responses:
+        "200":
+          description: Value generators retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValueGeneratorDetailsList"
+  /v1/generators/{valueGeneratorName}:
+    get:
+      tags:
+      - Value Generators
+      summary: Get value generator by name
+      description: Returns details for a specific value generator
+      operationId: getValueGeneratorDetails
+      parameters:
+      - name: valueGeneratorName
+        in: path
+        description: Name of the value generator
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Value generator details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValueGeneratorDetails"
+  /v1/generators/categories:
+    get:
+      tags:
+      - Value Generators
+      summary: Get all generator categories
+      description: Returns a list of all available value generator categories
+      operationId: getValueGeneratorCategories
+      responses:
+        "200":
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryList"
+  /v1/generators/categories/{category}:
+    get:
+      tags:
+      - Value Generators
+      summary: Get generators by category
+      description: Returns all value generators for a specific category
+      operationId: getValueGeneratorsByCategory
+      parameters:
+      - name: category
+        in: path
+        description: Category name
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Value generators retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValueGeneratorDetailsList"
+  /v1/examples/datasets:
+    get:
+      tags:
+      - Example Datasets
+      summary: Get all example datasets
+      description: Returns a list of pre-configured example datasets that demonstrate
+        various data generation scenarios
+      operationId: getAllExampleDatasets
+      responses:
+        "200":
+          description: Example datasets retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExampleDatasetList"
+  /v1/event-throttlers:
+    get:
+      tags:
+      - Event Throttlers
+      summary: Get all event throttlers
+      description: Returns a list of all available event throttlers and their details
+      operationId: getAllEventThrottlerDetails
+      responses:
+        "200":
+          description: Event throttlers retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventThrottlerDetailsList"
+  /v1/confluent-producer/health:
+    get:
+      tags:
+      - confluent-producer-controller
+      operationId: producersStarted
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProducerHealth"
+components:
+  schemas:
+    StreamDetails:
+      type: object
+      properties:
+        stream_id:
+          type: string
+          format: uuid
+    ColumnDTO:
+      required:
+      - name
+      - type
+      type: object
+      properties:
+        name:
+          pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          type: string
+        type:
+          type: string
+          enum:
+          - STRING
+          - INTEGER
+          - LONG
+          - DOUBLE
+          - FLOAT
+          - BOOLEAN
+    DatasetDTO:
+      required:
+      - events
+      type: object
+      properties:
+        events:
+          maxItems: 10
+          minItems: 1
+          type: array
+          items:
+            $ref: "#/components/schemas/EventDTO"
+        tables:
+          maxItems: 10
+          minItems: 0
+          type: array
+          items:
+            $ref: "#/components/schemas/TableDTO"
+    EventDTO:
+      required:
+      - event_name
+      - fields
+      - key_field_name
+      type: object
+      properties:
+        event_throttler:
+          $ref: "#/components/schemas/EventThrottlerDTO"
+        table_link:
+          $ref: "#/components/schemas/TableLinkDTO"
+        key_field_name:
+          pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          type: string
+        event_name:
+          pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          type: string
+        fields:
+          maxItems: 30
+          minItems: 0
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldDTO"
+    EventThrottlerDTO:
+      required:
+      - throttle_type
+      type: object
+      properties:
+        arguments:
+          type: array
+          items:
+            type: object
+        throttle_type:
+          type: string
+          enum:
+          - graph
+    FieldDTO:
+      required:
+      - generation
+      - name
+      type: object
+      properties:
+        name:
+          pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          type: string
+        generation:
+          $ref: "#/components/schemas/GenerationDTO"
+        ignored:
+          type: boolean
+    GenerationDTO:
+      required:
+      - generator
+      type: object
+      properties:
+        generator:
+          type: string
+          enum:
+          - Location.state
+          - Location.country
+          - Location.postcode
+          - Location.city
+          - Location.street-address
+          - Location.full-address
+          - Location.longitude
+          - Location.latitude
+          - Date.past
+          - Date.timestamp-utc
+          - Date.now
+          - Date.future
+          - Number.digits
+          - Number.iterating-integer
+          - Number.iterating-long
+          - Number.number-select
+          - Number.number-between
+          - Number.cast-number
+          - Person.first-name
+          - Person.last-name
+          - Person.full-name
+          - Person.ssn
+          - Internet.email-address
+          - Internet.custom-email-address
+          - Internet.ipv4-address
+          - Internet.mac-address
+          - Internet.password
+          - Internet.web-domain
+          - Internet.user-agent
+          - Internet.username
+          - Vehicle.vin
+          - Vehicle.manufacturer
+          - Vehicle.license-plate
+          - Device.manufacturer
+          - Device.model-name
+          - Device.platform
+          - Commerce.barcode-ean8
+          - Commerce.product-name
+          - Commerce.brand
+          - Commerce.vendor
+          - Commerce.material
+          - Company.name
+          - Company.industry
+          - Company.profession
+          - Phone.extension
+          - Phone.number
+          - Finance.credit-card
+          - Finance.iban
+          - Finance.stock-ticker
+          - Finance.currency-code
+          - Finance.currency-name
+          - Finance.bic
+          - Healthcare.medication
+          - Healthcare.disease
+          - Healthcare.diagnosis-code
+          - Healthcare.symptom
+          - Healthcare.hospital
+          - Healthcare.profession
+          - Struct.array
+          - Struct.nested-record
+          - Reference.expression
+          - Reference.cache
+          - Reference.cache-by-key
+          - Reference.previous-state-by-key
+          - Reference.linked-table-column
+          - Reference.table-cell
+          - String.select
+          - String.uuid
+          - String.to-string
+          - String.select-text
+          - String.select-weighted-text
+          - Boolean.percent-true
+          - Boolean.regex
+          - Conditional.expression-if-else
+          - Conditional.generator-if-else
+          - Util.custom-variable
+        arguments:
+          type: array
+          items:
+            type: object
+    RowDTO:
+      required:
+      - values
+      type: object
+      properties:
+        values:
+          type: object
+          additionalProperties:
+            type: object
+    TableDTO:
+      required:
+      - columns
+      - key_column_name
+      - rows
+      - table_name
+      type: object
+      properties:
+        table_name:
+          pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          type: string
+        columns:
+          maxItems: 50
+          minItems: 1
+          type: array
+          items:
+            $ref: "#/components/schemas/ColumnDTO"
+        rows:
+          maxItems: 300
+          minItems: 1
+          type: array
+          items:
+            $ref: "#/components/schemas/RowDTO"
+        key_column_name:
+          type: string
+    TableLinkDTO:
+      required:
+      - link_type
+      - table_name
+      type: object
+      properties:
+        table_name:
+          pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          type: string
+        link_type:
+          type: string
+          enum:
+          - random
+          - sequential
+          - custom
+    AvroSchemaResponse:
+      type: object
+      properties:
+        schema:
+          type: object
+    AvroSchemaResponseList:
+      type: object
+      properties:
+        metadata:
+          $ref: "#/components/schemas/CollectionMetadata"
+        api_version:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AvroSchemaResponse"
+        kind:
+          type: string
+    CollectionMetadata:
+      type: object
+      properties:
+        total_size:
+          type: integer
+          format: int32
+        self:
+          type: string
+    EventMessage:
+      type: object
+      properties:
+        event_name:
+          type: string
+        data:
+          type: object
+          additionalProperties:
+            type: object
+    EventMessageList:
+      type: object
+      properties:
+        metadata:
+          $ref: "#/components/schemas/CollectionMetadata"
+        api_version:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventMessage"
+        kind:
+          type: string
+    EventStreamSimulation:
+      type: object
+      properties:
+        event_name:
+          type: string
+        simulation_minutes_length:
+          type: integer
+          format: int32
+        sleep_intervals:
+          type: array
+          items:
+            type: integer
+            format: int64
+    EventStreamSimulationList:
+      type: object
+      properties:
+        metadata:
+          $ref: "#/components/schemas/CollectionMetadata"
+        api_version:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventStreamSimulation"
+        kind:
+          type: string
+    ExpectedArgumentDetails:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+        options:
+          type: array
+          items:
+            type: object
+    ValueGeneratorDetails:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+          enum:
+          - Location
+          - Boolean
+          - Commerce
+          - Company
+          - Conditional
+          - Date
+          - Device
+          - Finance
+          - Healthcare
+          - Internet
+          - Number
+          - Person
+          - Phone
+          - String
+          - Struct
+          - Reference
+          - Util
+          - Table
+          - Vehicle
+        description:
+          type: string
+        return_type:
+          type: string
+        arguments:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpectedArgumentDetails"
+    ValueGeneratorDetailsList:
+      type: object
+      properties:
+        metadata:
+          $ref: "#/components/schemas/CollectionMetadata"
+        api_version:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValueGeneratorDetails"
+        kind:
+          type: string
+    CategoryList:
+      type: object
+      properties:
+        metadata:
+          $ref: "#/components/schemas/CollectionMetadata"
+        api_version:
+          type: string
+        data:
+          type: array
+          items:
+            type: string
+            enum:
+            - Location
+            - Boolean
+            - Commerce
+            - Company
+            - Conditional
+            - Date
+            - Device
+            - Finance
+            - Healthcare
+            - Internet
+            - Number
+            - Person
+            - Phone
+            - String
+            - Struct
+            - Reference
+            - Util
+            - Table
+            - Vehicle
+        kind:
+          type: string
+    ExampleDataset:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        dataset:
+          $ref: "#/components/schemas/DatasetDTO"
+    ExampleDatasetList:
+      type: object
+      properties:
+        metadata:
+          $ref: "#/components/schemas/CollectionMetadata"
+        api_version:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExampleDataset"
+        kind:
+          type: string
+    EventThrottlerDetails:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        arguments:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpectedArgumentDetails"
+    EventThrottlerDetailsList:
+      type: object
+      properties:
+        metadata:
+          $ref: "#/components/schemas/CollectionMetadata"
+        api_version:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventThrottlerDetails"
+        kind:
+          type: string
+    ProducerHealth:
+      type: object
+      properties:
+        started:
+          type: boolean

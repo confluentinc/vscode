@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
+import type { ConfigurationChangeEvent } from "vscode";
 import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
@@ -12,6 +13,7 @@ import {
   TEST_DIRECT_SCHEMA_REGISTRY,
   TEST_LOCAL_ENVIRONMENT,
   TEST_LOCAL_KAFKA_CLUSTER,
+  TEST_LOCAL_MEDUSA,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
@@ -20,6 +22,7 @@ import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import * as contextValues from "../context/values";
+import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import {
   CCloudResourceLoader,
   DirectResourceLoader,
@@ -34,10 +37,11 @@ import {
   LocalEnvironment,
 } from "../models/environment";
 import { FlinkComputePoolTreeItem } from "../models/flinkComputePool";
-import { KafkaClusterTreeItem } from "../models/kafkaCluster";
+import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster";
 import { CustomMarkdownString } from "../models/main";
+import { LocalMedusa, MedusaTreeItem } from "../models/medusa";
 import type { ConnectionId } from "../models/resource";
-import { SchemaRegistryTreeItem } from "../models/schemaRegistry";
+import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
 import * as notifications from "../notifications";
 import * as ccloudConnections from "../sidecar/connections/ccloud";
 import * as sidecarLocalConnections from "../sidecar/connections/local";
@@ -421,6 +425,14 @@ describe("viewProviders/resources.ts", () => {
         schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
       });
 
+      // Test environment with only Medusa for Medusa-specific scenarios
+      const TEST_LOCAL_ENVIRONMENT_WITH_MEDUSA_ONLY = new LocalEnvironment({
+        ...TEST_LOCAL_ENVIRONMENT,
+        kafkaClusters: [],
+        schemaRegistry: undefined,
+        medusa: TEST_LOCAL_MEDUSA,
+      });
+
       beforeEach(() => {
         localConnectionRow = new LocalConnectionRow();
       });
@@ -461,7 +473,7 @@ describe("viewProviders/resources.ts", () => {
 
         for (const [label, dockerAvailable, connectedness, expectedStatus] of [
           ["No docker service", false, false, "(Docker Unavailable)"],
-          ["Docker service but no kafka container", true, false, "(Local Kafka not running)"],
+          ["Docker service but no kafka container", true, false, "(No connection)"],
           [
             "Docker and local kafka running",
             true,
@@ -479,6 +491,82 @@ describe("viewProviders/resources.ts", () => {
             assert.strictEqual(localConnectionRow.status, expectedStatus);
           });
         }
+
+        it("status getter should return 'Only Medusa available' when only Medusa is running", () => {
+          getContextValueStub.returns(true); // docker available
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_MEDUSA_ONLY);
+          assert.strictEqual(localConnectionRow.status, "Only Medusa available");
+        });
+      });
+
+      describe("medusa getter", () => {
+        it("should return undefined when no environments loaded", () => {
+          assert.strictEqual(localConnectionRow.medusa, undefined);
+        });
+
+        it("should return undefined when environment has no medusa", () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT);
+          assert.strictEqual(localConnectionRow.medusa, undefined);
+        });
+
+        it("should return medusa when environment has medusa", () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_MEDUSA_ONLY);
+          const medusa = localConnectionRow.medusa;
+          assert.ok(medusa instanceof LocalMedusa);
+          assert.strictEqual(medusa.name, "Medusa");
+        });
+      });
+
+      describe("connected getter", () => {
+        it("should return false when no environments", () => {
+          assert.strictEqual(localConnectionRow.connected, false);
+        });
+
+        it("should return false when environment has no resources", () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT);
+          assert.strictEqual(localConnectionRow.connected, false);
+        });
+
+        it("should return true when only Kafka cluster is available", () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
+          assert.strictEqual(localConnectionRow.connected, true);
+        });
+
+        it("should return true when only Medusa is available", () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_MEDUSA_ONLY);
+          assert.strictEqual(localConnectionRow.connected, true);
+        });
+      });
+
+      describe("children getter with Medusa support", () => {
+        it("should return empty array when no environments", () => {
+          assert.deepStrictEqual(localConnectionRow.children, []);
+        });
+
+        it("should return empty array when environment has no resources", () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT);
+          assert.deepStrictEqual(localConnectionRow.children, []);
+        });
+
+        it("should include Medusa in children when available", () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_MEDUSA_ONLY);
+          const children = localConnectionRow.children;
+          assert.strictEqual(children.length, 1);
+          assert.ok(children[0] instanceof LocalMedusa);
+        });
+
+        it("should include all resources when Kafka, Schema Registry, and Medusa are available", () => {
+          const envWithAll = new LocalEnvironment({
+            ...TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR,
+            medusa: TEST_LOCAL_MEDUSA,
+          });
+          localConnectionRow.environments.push(envWithAll);
+          const children = localConnectionRow.children;
+          assert.strictEqual(children.length, 3); // Kafka + Schema Registry + Medusa
+          assert.ok(children.some((child) => child instanceof LocalKafkaCluster));
+          assert.ok(children.some((child) => child instanceof LocalSchemaRegistry));
+          assert.ok(children.some((child) => child instanceof LocalMedusa));
+        });
       });
 
       describe("ConnectionRow methods via LocalConnectionRow", () => {
@@ -730,6 +818,7 @@ describe("viewProviders/resources.ts", () => {
         ["ccloudConnected", "ccloudConnectedEventHandler"],
         ["localKafkaConnected", "localConnectedEventHandler"],
         ["localSchemaRegistryConnected", "localConnectedEventHandler"],
+        ["localMedusaConnected", "localConnectedEventHandler"],
         ["dockerServiceAvailable", "localConnectedEventHandler"],
         // @ts-expect-error references private method.
         ["directConnectionsChanged", "reconcileDirectConnections"],
@@ -741,7 +830,12 @@ describe("viewProviders/resources.ts", () => {
       it("setEventListeners() + setCustomEventListeners() should return the expected number of listeners", () => {
         // @ts-expect-error protected method
         const listeners = provider.setEventListeners();
-        assert.strictEqual(listeners.length, handlerEmitterPairs.length);
+
+        // Sigh, workspace.onDidChangeConfiguration event registration
+        // is a different beast not represented in our emitterStubs.
+        const extras = 1;
+
+        assert.strictEqual(listeners.length, handlerEmitterPairs.length + extras);
       });
 
       handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
@@ -883,6 +977,32 @@ describe("viewProviders/resources.ts", () => {
         await provider.localConnectedEventHandler();
         sinon.assert.calledOnce(refreshConnectionStub);
         sinon.assert.calledWith(refreshConnectionStub, LOCAL_CONNECTION_ID, true);
+      });
+    });
+
+    describe("changedSettingsEventHandler()", () => {
+      let refreshConnectionStub: sinon.SinonStub;
+      beforeEach(() => {
+        refreshConnectionStub = sandbox.stub(provider, "refreshConnection");
+      });
+
+      it("Refreshes local connection when ENABLE_MEDUSA_CONTAINER setting is changed", async () => {
+        const event: ConfigurationChangeEvent = {
+          affectsConfiguration: (settingId: string) => settingId === ENABLE_MEDUSA_CONTAINER.id,
+        };
+
+        await provider.changedSettingsEventHandler(event);
+        sinon.assert.calledOnce(refreshConnectionStub);
+        sinon.assert.calledWith(refreshConnectionStub, LOCAL_CONNECTION_ID, true);
+      });
+
+      it("Does not refresh any connection when unrelated setting is changed", async () => {
+        const event: ConfigurationChangeEvent = {
+          affectsConfiguration: (settingId: string) => settingId === "some.unrelated.setting",
+        };
+
+        await provider.changedSettingsEventHandler(event);
+        sinon.assert.notCalled(refreshConnectionStub);
       });
     });
 
@@ -1046,6 +1166,29 @@ describe("viewProviders/resources.ts", () => {
             setContextValueStub,
             contextValues.ContextValues.directSchemaRegistryAvailable,
             withSchemaRegistry,
+          );
+        });
+      }
+
+      // Test localMedusaAvailable context value
+      for (const withLocalMedusa of [true, false]) {
+        it(`sets localMedusaAvailable to ${withLocalMedusa} when local connection has${withLocalMedusa ? "" : " no"} Medusa`, async () => {
+          const localConnectionRow = new LocalConnectionRow();
+          localConnectionRow.environments.push(
+            new LocalEnvironment({
+              ...TEST_LOCAL_ENVIRONMENT,
+              kafkaClusters: [],
+              schemaRegistry: undefined,
+              medusa: withLocalMedusa ? TEST_LOCAL_MEDUSA : undefined,
+            }),
+          );
+          storeConnectionRow(localConnectionRow);
+
+          await provider.updateEnvironmentContextValues();
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localMedusaAvailable,
+            withLocalMedusa,
           );
         });
       }
@@ -1347,6 +1490,11 @@ describe("viewProviders/resources.ts", () => {
             label: "FlinkComputePool",
             element: TEST_CCLOUD_FLINK_COMPUTE_POOL,
             expectedType: FlinkComputePoolTreeItem,
+          },
+          {
+            label: "LocalMedusa",
+            element: TEST_LOCAL_MEDUSA,
+            expectedType: MedusaTreeItem,
           },
         ]) {
           it(`returns TreeItem for ${testCase.label}, search case variant ${shouldMatchSearch}`, () => {
