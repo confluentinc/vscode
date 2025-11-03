@@ -1,6 +1,8 @@
 import { normalize } from "path";
-import { Agent, RequestInit as UndiciRequestInit } from "undici";
-import { commands, env, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
+import type { RequestInit as UndiciRequestInit } from "undici";
+import { Agent } from "undici";
+import type { WorkspaceConfiguration } from "vscode";
+import { commands, env, Uri, window, workspace } from "vscode";
 import { ResponseError, SystemApi } from "../clients/docker";
 import { logError } from "../errors";
 import { LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";

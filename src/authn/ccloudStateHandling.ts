@@ -1,10 +1,5 @@
-import {
-  AuthError,
-  AuthErrors,
-  CCloudStatus,
-  ConnectedState,
-  Connection,
-} from "../clients/sidecar";
+import type { AuthError, AuthErrors, CCloudStatus, Connection } from "../clients/sidecar";
+import { ConnectedState } from "../clients/sidecar";
 import { observabilityContext } from "../context/observability";
 import { ccloudAuthSessionInvalidated, stableCCloudConnectedState } from "../emitters";
 import { Logger } from "../logging";

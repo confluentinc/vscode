@@ -1,15 +1,5 @@
-import {
-  QuickPickItem,
-  QuickPickItemKind,
-  Tab,
-  TabGroup,
-  TabInputText,
-  TextDocument,
-  ThemeIcon,
-  Uri,
-  window,
-  workspace,
-} from "vscode";
+import type { QuickPickItem, Tab, TabGroup, TextDocument, Uri } from "vscode";
+import { QuickPickItemKind, TabInputText, ThemeIcon, window, workspace } from "vscode";
 
 /** Create a quickpick to list all open editors, as well as an item to select a file from the open
  * dialog. */

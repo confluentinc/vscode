@@ -1,6 +1,8 @@
-import { match, SinonSandbox, SinonStub } from "sinon";
-import { workspace, WorkspaceConfiguration } from "vscode";
-import { ExtensionSetting } from "../../src/extensionSettings/base";
+import type { SinonSandbox, SinonStub } from "sinon";
+import { match } from "sinon";
+import type { WorkspaceConfiguration } from "vscode";
+import { workspace } from "vscode";
+import type { ExtensionSetting } from "../../src/extensionSettings/base";
 
 /**
  * The {@link WorkspaceConfiguration} interface, where all methods are replaced with {@link SinonStub stubs}.

@@ -1,15 +1,9 @@
 import { Mutex } from "async-mutex";
-import {
-  Disposable,
-  TextDocument,
-  TextDocumentChangeEvent,
-  TextEditor,
-  Uri,
-  window,
-  workspace,
-} from "vscode";
-import { LanguageClient } from "vscode-languageclient/node";
-import { CloseEvent, ErrorEvent, MessageEvent, WebSocket } from "ws";
+import type { Disposable, TextDocument, TextDocumentChangeEvent, TextEditor, Uri } from "vscode";
+import { window, workspace } from "vscode";
+import type { LanguageClient } from "vscode-languageclient/node";
+import type { CloseEvent, ErrorEvent, MessageEvent } from "ws";
+import { WebSocket } from "ws";
 import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
@@ -18,16 +12,17 @@ import { logError } from "../errors";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger, RotatingLogOutputChannel } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import type { CCloudEnvironment } from "../models/environment";
+import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
 import { SecretStorageKeys, UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-import { UriMetadata } from "../storage/types";
+import type { UriMetadata } from "../storage/types";
 import { getSecretStorage } from "../storage/utils";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { DisposableCollection } from "../utils/disposables";
+import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import { createLanguageClientFromWebsocket } from "./languageClient";
 
 const logger = new Logger("flinkSql.languageClient.FlinkLanguageClientManager");
@@ -48,8 +43,6 @@ export interface ComputePoolInfo {
   region: string;
   provider: string;
 }
-
-export const FLINKSQL_LANGUAGE_ID = "flinksql";
 
 /**
  * Singleton class that handles Flink configuration settings and language client management.
@@ -109,7 +102,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
    * Yes if language id is flinksql and the URI scheme is not flinkstatement (the readonly statements)
    */
   isAppropriateDocument(document: TextDocument): boolean {
-    return document.languageId === FLINKSQL_LANGUAGE_ID && this.isAppropriateUri(document.uri);
+    return document.languageId === FLINK_SQL_LANGUAGE_ID && this.isAppropriateUri(document.uri);
   }
 
   /** Should we consider language serving for this sort of document URI? */

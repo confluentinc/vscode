@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { ResourceDocumentProvider } from ".";
-import { SchemaString, SchemasV1Api } from "../clients/schemaRegistryRest";
+import type { SchemaString, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { Logger } from "../logging";
 import { getLanguageTypes, Schema, SchemaType } from "../models/schema";
 import { getSidecar } from "../sidecar";

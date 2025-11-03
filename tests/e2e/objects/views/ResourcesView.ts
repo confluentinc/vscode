@@ -1,4 +1,5 @@
-import { expect, Locator, Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { ConnectionType } from "../../connectionTypes";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { DirectConnectionForm } from "../webviews/DirectConnectionFormWebview";
@@ -93,6 +94,18 @@ export class ResourcesView extends View {
         has: this.page.locator(".codicon-confluent-flink-compute-pool"),
       }),
     });
+  }
+
+  /**
+   * Locator for Flinkable CCloud Kafka cluster tree items.
+   * Only visible when a {@link ccloudEnvironments CCloud environment item} is expanded.
+   */
+  get ccloudFlinkableKafkaClusters(): Locator {
+    return this.kafkaClusters.and(
+      this.page.locator(
+        "[aria-level='3'][aria-label^='CCLOUD connection: Kafka Cluster (Flink available)']",
+      ),
+    );
   }
 
   /**

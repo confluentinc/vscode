@@ -24,6 +24,12 @@
               <div class="info-item">
                 <label>Status:</label>
                 <span data-testid="statement-status" data-text="this.statementMeta().status"></span>
+                <template data-if="this.statementMeta().status === 'DEGRADED'">
+                  <a
+                    href="https://docs.confluent.io/cloud/current/flink/how-to-guides/resolve-common-query-problems.html#statement-enters-degraded-state"
+                    >(diagnose and resolve)</a
+                  >
+                </template>
               </div>
               <vscode-button
                 data-testid="view-statement-source-button"

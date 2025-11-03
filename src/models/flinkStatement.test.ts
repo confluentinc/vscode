@@ -1,11 +1,11 @@
 import * as assert from "assert";
 
-import { ThemeIcon } from "vscode";
+import type { ThemeIcon } from "vscode";
 import {
   createFlinkStatement,
   TEST_CCLOUD_FLINK_STATEMENT,
 } from "../../tests/unit/testResources/flinkStatement";
-import { SqlV1StatementStatus } from "../clients/flinkSql";
+import type { SqlV1StatementStatus } from "../clients/flinkSql";
 import { CCLOUD_BASE_PATH, IconNames } from "../constants";
 import {
   FlinkStatement,
@@ -18,8 +18,8 @@ import {
   STATUS_YELLOW,
   TERMINAL_PHASES,
 } from "./flinkStatement";
-import { CustomMarkdownString, KeyValuePairArray } from "./main";
-import { EnvironmentId } from "./resource";
+import type { CustomMarkdownString, KeyValuePairArray } from "./main";
+import type { EnvironmentId } from "./resource";
 
 describe("FlinkStatement", () => {
   it("uses env+name as id", () => {
@@ -273,13 +273,13 @@ describe("FlinkStatement", () => {
         expected: false,
       },
       {
-        name: "should not be viewable when statement is DEGRADED",
+        name: "should be viewable when statement is DEGRADED",
         statement: {
           phase: Phase.DEGRADED,
           sqlKind: "SELECT",
           createdAt: today,
         },
-        expected: false,
+        expected: true,
       },
     ];
 
@@ -406,6 +406,27 @@ describe("FlinkStatementTreeItem", () => {
     const treeItem = new FlinkStatementTreeItem(oldStatement);
     // ensure 'viewable' is not in the context value
     assert.ok(!treeItem.contextValue!.includes("viewable"));
+  });
+
+  it("tooltip when DEGRADED phase includes diagnose link", () => {
+    const statement = createFlinkStatement({
+      name: "statement0",
+      phase: Phase.DEGRADED,
+      detail: "Statement is degraded",
+      sqlKind: "SELECT",
+      environmentId: "env0" as EnvironmentId,
+      computePoolId: "pool0",
+    });
+
+    const treeItem = new FlinkStatementTreeItem(statement);
+    const tooltip = treeItem.tooltip as CustomMarkdownString;
+
+    assert.ok(
+      tooltip.value.includes(
+        "(Learn more)](https://docs.confluent.io/cloud/current/flink/how-to-guides/resolve-common-query-problems.html#statement-enters-degraded-state)",
+      ),
+      `Expected tooltip to include diagnose link for DEGRADED phase\n${tooltip.value}`,
+    );
   });
 
   it("tooltip hits the major properties", () => {

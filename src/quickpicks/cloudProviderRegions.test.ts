@@ -7,21 +7,22 @@ import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, // reuse base fixture
 } from "../../tests/unit/testResources/kafkaCluster";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import type { FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
 import {
-  FcpmV2RegionListDataInner,
   FcpmV2RegionListDataInnerApiVersionEnum,
   FcpmV2RegionListDataInnerKindEnum,
 } from "../clients/flinkComputePool";
 import * as ccloudResourceLoader from "../loaders/ccloudResourceLoader";
-import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId, IProviderRegion } from "../models/resource";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import type { EnvironmentId, IProviderRegion } from "../models/resource";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
+import type { regionFilter } from "./cloudProviderRegions";
 import {
   cloudProviderRegionQuickPick,
   flinkDatabaseRegionsQuickPick,
-  regionFilter,
 } from "./cloudProviderRegions";
-import { QuickPickItemWithValue } from "./types";
+import type { QuickPickItemWithValue } from "./types";
 
 describe("quickpicks/cloudProviderRegions.ts", () => {
   let sandbox: sinon.SinonSandbox;

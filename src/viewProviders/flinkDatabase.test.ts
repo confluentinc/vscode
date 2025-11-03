@@ -1,22 +1,29 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { CancellationToken, Progress, window } from "vscode";
+import type { CancellationToken, Progress } from "vscode";
+import { window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as errors from "../errors";
-import { CCloudResourceLoader } from "../loaders";
-import { CCloudEnvironment } from "../models/environment";
-import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId } from "../models/resource";
+import type { CCloudResourceLoader } from "../loaders";
+import type { CCloudEnvironment } from "../models/environment";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import type { EnvironmentId } from "../models/resource";
 import * as notifications from "../notifications";
 import { FlinkDatabaseViewProvider } from "./flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 
 describe("viewProviders/flinkDatabase.ts", () => {
   let sandbox: sinon.SinonSandbox;
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -29,14 +36,28 @@ describe("viewProviders/flinkDatabase.ts", () => {
   describe("FlinkDatabaseViewProvider", () => {
     let viewProvider: FlinkDatabaseViewProvider;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       viewProvider = FlinkDatabaseViewProvider.getInstance();
+      // Start in a test-suite known state.
+      await viewProvider.switchMode(FlinkDatabaseViewProviderMode.UDFs);
     });
 
     afterEach(() => {
       viewProvider.dispose();
       // reset singleton instances between tests
       FlinkDatabaseViewProvider["instanceMap"].clear();
+    });
+
+    describe("hasChildren()", () => {
+      it("returns false when there are no children", () => {
+        viewProvider["children"] = [];
+        assert.strictEqual(viewProvider.hasChildren(), false);
+      });
+
+      it("returns true when there are children", () => {
+        viewProvider["children"] = [{ id: "child-1" } as any];
+        assert.strictEqual(viewProvider.hasChildren(), true);
+      });
     });
 
     describe("refresh()", () => {
@@ -101,6 +122,8 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should show an error notification when the delegate's fetchChildren() fails", async () => {
         viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+        assert.ok(viewProvider.database);
+
         const fakeError = new Error("uh oh");
         delegateFetchStub.rejects(fakeError);
 
@@ -108,9 +131,9 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         sinon.assert.calledOnce(windowWithProgressStub);
         sinon.assert.calledOnce(logErrorStub);
-        sinon.assert.calledWith(logErrorStub, fakeError, "Failed to load Flink artifacts.");
+        sinon.assert.calledWith(logErrorStub, fakeError, "Failed to load Flink UDFs");
         sinon.assert.calledOnce(showErrorNotificationStub);
-        sinon.assert.calledWith(showErrorNotificationStub, "Failed to load Flink artifacts.");
+        sinon.assert.calledWith(showErrorNotificationStub, "Failed to load Flink UDFs");
       });
 
       it("should use the current delegate's loading message in progress indicator", async () => {

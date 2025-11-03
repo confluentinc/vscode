@@ -1,4 +1,4 @@
-import {
+import type {
   CancellationToken,
   ChatContext,
   ChatRequest,
@@ -7,11 +7,13 @@ import {
   ChatResponseTurn,
   LanguageModelChat,
   LanguageModelChatMessage,
-  LanguageModelChatMessageRole,
   LanguageModelChatRequestOptions,
   LanguageModelChatResponse,
   LanguageModelChatSelector,
   LanguageModelChatTool,
+} from "vscode";
+import {
+  LanguageModelChatMessageRole,
   LanguageModelChatToolMode,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
@@ -27,10 +29,11 @@ import { ModelNotSupportedError } from "./errors";
 import { participantMessage, systemMessage, toolMessage, userMessage } from "./messageTypes";
 import { parseReferences } from "./references";
 import { summarizeChatHistory } from "./summarizers/chatHistory";
-import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./tools/base";
+import type { BaseLanguageModelTool } from "./tools/base";
+import { TextOnlyToolResultPart } from "./tools/base";
 import { getToolMap } from "./tools/toolMap";
-import { ToolCallMetadata } from "./tools/types";
-import { CustomChatResult } from "./types";
+import type { ToolCallMetadata } from "./tools/types";
+import type { CustomChatResult } from "./types";
 
 const logger = new Logger("chat.participant");
 

@@ -1,4 +1,4 @@
-import * as sinon from "sinon";
+import type * as sinon from "sinon";
 import * as vscode from "vscode";
 import * as emitters from "../../src/emitters";
 

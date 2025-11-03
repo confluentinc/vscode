@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { ApiResponse, ImageApi, ImageSummary } from "../clients/docker";
+import type { ApiResponse, ImageSummary } from "../clients/docker";
+import { ImageApi } from "../clients/docker";
 import { imageExists, pullImage } from "./images";
 
 const fakeImageRepo = "repo";

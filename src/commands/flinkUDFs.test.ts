@@ -12,20 +12,20 @@ import {
 } from "../../tests/unit/testResources";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { createResponseError, ResponseErrorSource } from "../../tests/unit/testUtils";
-import { ResponseError as FlinkArtifactsResponseError } from "../clients/flinkArtifacts";
+import type { ResponseError as FlinkArtifactsResponseError } from "../clients/flinkArtifacts";
+import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
-import { CCloudEnvironment } from "../models/environment";
-import { FlinkArtifact } from "../models/flinkArtifact";
-import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import type { CCloudEnvironment } from "../models/environment";
+import type { FlinkArtifact } from "../models/flinkArtifact";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import * as notifications from "../notifications";
 import { UriMetadataKeys } from "../storage/constants";
-import { ResourceManager } from "../storage/resourceManager";
+import type { ResourceManager } from "../storage/resourceManager";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import {
   createUdfRegistrationDocumentCommand,
   deleteFlinkUDFCommand,
   registerFlinkUDFCommands,
-  setFlinkUDFViewModeCommand,
   startGuidedUdfCreationCommand,
 } from "./flinkUDFs";
 import * as commands from "./index";
@@ -186,7 +186,7 @@ describe("commands/flinkUDFs.ts", () => {
 
       registerFlinkUDFCommands();
 
-      sinon.assert.callCount(registerCommandWithLoggingStub, 4);
+      sinon.assert.callCount(registerCommandWithLoggingStub, 3);
 
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub.getCall(0),
@@ -195,16 +195,11 @@ describe("commands/flinkUDFs.ts", () => {
       );
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub.getCall(1),
-        "confluent.flinkdatabase.setUDFsViewMode",
-        setFlinkUDFViewModeCommand,
-      );
-      sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub.getCall(2),
         "confluent.artifacts.createUdfRegistrationDocument",
         createUdfRegistrationDocumentCommand,
       );
       sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub.getCall(3),
+        registerCommandWithLoggingStub.getCall(2),
         "confluent.artifacts.startGuidedUdfCreation",
         startGuidedUdfCreationCommand,
       );
@@ -242,7 +237,7 @@ describe("commands/flinkUDFs.ts", () => {
       sinon.assert.calledOnce(openTextDocStub);
       const callArgs = openTextDocStub.getCall(0).args[0];
       assert.ok(callArgs, "openTextDocStub was not called with any arguments");
-      assert.strictEqual(callArgs.language, "flinksql");
+      assert.strictEqual(callArgs.language, FLINK_SQL_LANGUAGE_ID);
       sinon.assert.calledOnce(showTextDocStub);
       sinon.assert.calledOnce(insertSnippetStub);
       const snippetArg = insertSnippetStub.getCall(0).args[0];

@@ -8,8 +8,8 @@ import {
 import { udfsChanged } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
+import type { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
 import {
-  IFlinkStatementSubmitParameters,
   determineFlinkStatementName,
   submitFlinkStatement,
   waitForResultsFetchable,
@@ -19,14 +19,16 @@ import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
-import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { uriQuickpick } from "../quickpicks/uris";
+import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-import { UriMetadata } from "../storage/types";
+import type { UriMetadata } from "../storage/types";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
@@ -81,9 +83,10 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   await rm.setUriMetadata(uri, updatedMetadata);
 
   const doc = await vscode.workspace.openTextDocument(uri);
-  vscode.languages.setTextDocumentLanguage(doc, "flinksql");
+  vscode.languages.setTextDocumentLanguage(doc, FLINK_SQL_LANGUAGE_ID);
   await vscode.window.showTextDocument(doc, { preview: false });
 }
+
 /**
  * Submit a Flink statement to a Flink cluster.
  *
@@ -376,6 +379,42 @@ export async function stopFlinkStatementCommand(statement: FlinkStatement): Prom
   void vscode.window.showInformationMessage(`Stopped statement ${statement.name}`);
 }
 
+/** Open a new `flinksql` document and optionally set its compute pool ID metadata. */
+export async function openNewSqlDocumentCommand(
+  item?: CCloudFlinkComputePool | FlinkStatement,
+): Promise<void> {
+  let computePool: CCloudFlinkComputePool | undefined;
+  if (item instanceof CCloudFlinkComputePool) {
+    // user right-clicked a compute pool from the Resources view
+    computePool = item;
+  } else if (item instanceof FlinkStatement) {
+    // statement was selected when user clicked the nav action in the Flink Statements view
+    const loader = CCloudResourceLoader.getInstance();
+    computePool = await loader.getFlinkComputePool(item.computePoolId!);
+  } else if (hasCCloudAuthSession()) {
+    // invoked from the Flink Statements view nav action (and nothing was selected) or from the
+    // command palette
+    const statementsProvider = FlinkStatementsViewProvider.getInstance();
+    computePool = statementsProvider.computePool ?? (await flinkComputePoolQuickPick());
+  }
+
+  const document: vscode.TextDocument = await vscode.workspace.openTextDocument({
+    language: FLINK_SQL_LANGUAGE_ID,
+    content:
+      "-- Add your Flink SQL below\n-- (see https://docs.confluent.io/cloud/current/flink/reference/sql-syntax.html#flink-sql-syntax)",
+  });
+  if (computePool) {
+    // only set the pool ID metadata and leave catalog/database selection to the user or their
+    // default settings
+    await ResourceManager.getInstance().setUriMetadata(document.uri, {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: computePool.id,
+    });
+  }
+  await vscode.window.showTextDocument(document, {
+    preview: false,
+  });
+}
+
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
@@ -384,5 +423,6 @@ export function registerFlinkStatementCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.flinkStatementResults", openFlinkStatementResultsView),
     registerCommandWithLogging("confluent.statements.delete", deleteFlinkStatementCommand),
     registerCommandWithLogging("confluent.statements.stop", stopFlinkStatementCommand),
+    registerCommandWithLogging("confluent.statements.openNewDocument", openNewSqlDocumentCommand),
   ];
 }

@@ -1,28 +1,17 @@
-import {
-  _electron as electron,
-  ElectronApplication,
-  expect,
-  Page,
-  test as testBase,
-  TestInfo,
-} from "@playwright/test";
+import type { ElectronApplication, Page, TestInfo } from "@playwright/test";
+import { _electron as electron, expect, test as testBase } from "@playwright/test";
 import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
 import { existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
-import {
-  ConnectionType,
-  DirectConnectionOptions,
-  FormConnectionType,
-  LocalConnectionOptions,
-  SupportedAuthType,
-} from "./connectionTypes";
+import type { DirectConnectionOptions, LocalConnectionOptions } from "./connectionTypes";
+import { ConnectionType, FormConnectionType, SupportedAuthType } from "./connectionTypes";
 import { Notification } from "./objects/notifications/Notification";
 import { NotificationArea } from "./objects/notifications/NotificationArea";
 import { Quickpick } from "./objects/quickInputs/Quickpick";
-import { CCloudConnectionItem } from "./objects/views/viewItems/CCloudConnectionItem";
-import { DirectConnectionItem } from "./objects/views/viewItems/DirectConnectionItem";
-import { LocalConnectionItem } from "./objects/views/viewItems/LocalConnectionItem";
+import type { CCloudConnectionItem } from "./objects/views/viewItems/CCloudConnectionItem";
+import type { DirectConnectionItem } from "./objects/views/viewItems/DirectConnectionItem";
+import type { LocalConnectionItem } from "./objects/views/viewItems/LocalConnectionItem";
 import { executeVSCodeCommand } from "./utils/commands";
 import {
   setupCCloudConnection,
@@ -301,6 +290,16 @@ async function globalBeforeEach(page: Page, electronApp: ElectronApplication): P
   await expect(infoNotifications).not.toHaveCount(0);
   const notification = new Notification(page, infoNotifications.first());
   await notification.dismiss();
+
+  // collapse the secondary sidebar if it's expanded since it isn't used for anything
+  try {
+    await expect(page.locator(`[id="workbench.parts.auxiliarybar"]`)).toBeVisible({
+      timeout: 1000,
+    });
+    await executeVSCodeCommand(page, "View: Toggle Secondary Side Bar Visibility");
+  } catch (error) {
+    console.warn("Error locating/toggling secondary sidebar:", error);
+  }
 }
 
 async function globalAfterEach(
@@ -338,14 +337,21 @@ async function globalAfterEach(
   const formatQuickPick = new Quickpick(page);
   await expect(formatQuickPick.locator).toBeVisible({ timeout: 5000 });
   await formatQuickPick.selectItemByText("Human-readable format");
-  // wait for info notification indicating sidecar log file was saved
-  const sidecarLogSuccess = notificationArea.infoNotifications.filter({
-    hasText: "Confluent extension sidecar log file saved successfully.",
-  });
-  await expect(sidecarLogSuccess).toHaveCount(1, { timeout: 5000 });
-  // attach the sidecar log to the test results
-  await testInfo.attach("vscode-confluent-sidecar.log", {
-    path: sidecarLogPath,
-    contentType: "text/plain",
-  });
+  // NOTE: this occasionally times out on macOS or Windows for unknown reasons even after clearing
+  // any existing sidecar log file, but we don't want this to count as a test failure and these logs
+  // are more nice-to-have
+  try {
+    // wait for info notification indicating sidecar log file was saved
+    const sidecarLogSuccess = notificationArea.infoNotifications.filter({
+      hasText: "Confluent extension sidecar log file saved successfully.",
+    });
+    await expect(sidecarLogSuccess).toHaveCount(1, { timeout: 5000 });
+    // attach the sidecar log to the test results
+    await testInfo.attach("vscode-confluent-sidecar.log", {
+      path: sidecarLogPath,
+      contentType: "text/plain",
+    });
+  } catch (error) {
+    console.warn("Error saving sidecar logs:", error);
+  }
 }

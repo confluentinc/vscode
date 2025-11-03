@@ -41,6 +41,7 @@ clusters within VS Code.
 npx gulp build          # Build for development
 npx gulp build -w       # Watch mode
 npx gulp test          # Unit tests (Mocha/Sinon)
+npx gulp test -t "test name here" # Run specific test(s) by name
 npx gulp e2e           # End-to-end tests (Playwright)
 npx gulp check         # TypeScript type checking
 npx gulp lint          # ESLint with auto-fix: gulp lint -f
@@ -145,6 +146,13 @@ When reviewing pull requests for this VS Code extension:
 - Comments provide valuable context about business logic, architectural decisions, and edge cases
 - If code appears self-explanatory, comments may explain _why_ rather than _what_
 - When suggesting improvements, enhance comments rather than removing them
+
+### Style Preferences (Avoid Nitpicking)
+
+- **Import statements**: Don't require `import type { }` vs `import { }` changes - both are valid
+  and TypeScript handles them correctly
+- Focus reviews on substantive issues: logic, architecture, testing, and critical requirements
+- Let automated tooling (ESLint, Prettier) handle formatting and style consistency
 
 ### Review Checklist
 

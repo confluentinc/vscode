@@ -1,8 +1,9 @@
-import { TreeItem } from "vscode";
+import type { TreeItem } from "vscode";
 import { extractResponseBody, isResponseError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
-import { FlinkArtifact, FlinkArtifactTreeItem } from "../../models/flinkArtifact";
-import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
+import type { FlinkArtifact } from "../../models/flinkArtifact";
+import { FlinkArtifactTreeItem } from "../../models/flinkArtifact";
+import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";
 

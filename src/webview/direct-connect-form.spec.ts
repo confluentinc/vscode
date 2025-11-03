@@ -3,18 +3,18 @@ import alias from "@rollup/plugin-alias";
 import virtual from "@rollup/plugin-virtual";
 import { createFilter } from "@rollup/pluginutils";
 import { readFileSync } from "node:fs";
-import { Plugin } from "rollup";
+import type { Plugin } from "rollup";
 import esbuild from "rollup-plugin-esbuild";
 import sanitize from "sanitize-html";
-import { SinonStub } from "sinon";
-import {
+import type { SinonStub } from "sinon";
+import type {
   ConnectionSpec,
   ConnectionType,
-  HashAlgorithm,
   KerberosCredentials,
   OAuthCredentials,
   ScramCredentials,
 } from "../clients/sidecar";
+import { HashAlgorithm } from "../clients/sidecar";
 import { test } from "./baseTest";
 
 const template = readFileSync(new URL("direct-connect-form.html", import.meta.url), "utf8");

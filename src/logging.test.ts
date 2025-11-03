@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { RotatingFileStream } from "rotating-file-stream";
 import * as sinon from "sinon";
-import { LogOutputChannel, Uri } from "vscode";
+import type { LogOutputChannel, Uri } from "vscode";
 import {
   BASEFILE_PREFIX,
   EXTENSION_OUTPUT_CHANNEL,

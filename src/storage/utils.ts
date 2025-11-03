@@ -1,7 +1,8 @@
+import type { ExtensionContext, SecretStorage } from "vscode";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ExtensionContext, Memento, SecretStorage } from "vscode";
+import { Memento } from "vscode";
 import { getExtensionContext } from "../context/extension";
-import { GlobalState, WorkspaceState } from "./types";
+import type { GlobalState, WorkspaceState } from "./types";
 
 /**
  * Minimal wrapper around the {@link ExtensionContext}'s

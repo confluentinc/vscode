@@ -1,5 +1,5 @@
-import { MigrationStorageType } from "../constants";
-import { BaseMigration } from "./base";
+import type { MigrationStorageType } from "../constants";
+import type { BaseMigration } from "./base";
 import { migrations, migrationVersions } from "./registry";
 
 /**
