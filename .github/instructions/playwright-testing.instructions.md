@@ -19,7 +19,12 @@ E2E tests should be run with `npx gulp e2e`. Functional webview tests should be 
 
 - Use the Page Object Model (POM) pattern to encapsulate UI interactions:
   - All POM classes go in `tests/e2e/objects/`
-  - POMs should only handle UI interactions and should not include `expect`s or assertions
+  - POMs may include `await expect` calls using Playwright's auto-retry pattern when waiting for UI
+    state changes or preconditions required for subsequent interactions (e.g.,
+    `await expect(button).toBeVisible()` before clicking). This is preferred over manual timeouts or
+    retry loops for stability.
+  - POMs should focus on UI interactions and element access, keeping `expect` assertions in test
+    files to validate test-specific behavior and outcomes
   - Properly type all UI element selectors and interaction methods
 
 ## Test Structure
