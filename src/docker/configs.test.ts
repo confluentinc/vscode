@@ -1,7 +1,8 @@
 import * as assert from "assert";
 import { normalize } from "path";
 import sinon from "sinon";
-import { Agent, RequestInit as UndiciRequestInit } from "undici";
+import type { RequestInit as UndiciRequestInit } from "undici";
+import { Agent } from "undici";
 import { window } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { ResponseError, SystemApi } from "../clients/docker";

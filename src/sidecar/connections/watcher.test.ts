@@ -11,9 +11,9 @@ import {
   TEST_LOCAL_CONNECTION,
 } from "../../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
+import type { Connection } from "../../clients/sidecar";
 import {
   ConnectedState,
-  Connection,
   ConnectionFromJSON,
   ConnectionType,
   instanceOfConnection,
@@ -21,19 +21,14 @@ import {
 import { CCLOUD_CONNECTION_ID } from "../../constants";
 import { connectionStable } from "../../emitters";
 import * as errors from "../../errors";
-import { ConnectionId } from "../../models/resource";
+import type { ConnectionId } from "../../models/resource";
 import * as notifications from "../../notifications";
 import { getResourceManager } from "../../storage/resourceManager";
-import {
-  ConnectionEventAction,
-  ConnectionEventBody,
-  Message,
-  MessageType,
-  newMessageHeaders,
-} from "../../ws/messageTypes";
+import type { ConnectionEventBody, Message } from "../../ws/messageTypes";
+import { ConnectionEventAction, MessageType, newMessageHeaders } from "../../ws/messageTypes";
+import type { ConnectionSummary } from "./watcher";
 import {
   ConnectionStateWatcher,
-  ConnectionSummary,
   getConnectionSummaries,
   reportUsableState,
   SingleConnectionEntry,

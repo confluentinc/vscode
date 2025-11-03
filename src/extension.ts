@@ -31,6 +31,7 @@ import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
 import { registerFlinkArtifactCommands } from "./commands/flinkArtifacts";
 import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
+import { registerFlinkDatabaseViewCommands } from "./commands/flinkDatabaseView";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerFlinkUDFCommands } from "./commands/flinkUDFs";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
@@ -73,10 +74,12 @@ import {
   checkForExtensionDisabledReason,
   showExtensionDisabledNotification,
 } from "./featureFlags/evaluation";
+import { FLINK_SQL_LANGUAGE_ID } from "./flinkSql/constants";
 import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageClientManager";
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
+import { FlinkStatementResultsPanelProvider } from "./panelProviders/flinkStatementResults";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { createLocalConnection, getLocalConnection } from "./sidecar/connections/local";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
@@ -90,7 +93,7 @@ import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { UriEventHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
-import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
+import type { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
 import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
@@ -203,20 +206,24 @@ async function _activateExtension(
   context.subscriptions.push(settingsListener);
 
   // set up the different view providers
-
   const resourceViewProvider = ResourceViewProvider.getInstance();
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
-  const artifactsViewProvider = FlinkDatabaseViewProvider.getInstance();
+  const flinkDatabaseViewProvider = FlinkDatabaseViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
+
+  // ...and any panel view providers
+  const flinkStatementResultsPanelProvider = FlinkStatementResultsPanelProvider.getInstance();
+
   const viewProviderDisposables: vscode.Disposable[] = [
     resourceViewProvider,
     topicViewProvider,
     schemasViewProvider,
     supportViewProvider,
     statementsViewProvider,
-    artifactsViewProvider,
+    flinkDatabaseViewProvider,
+    flinkStatementResultsPanelProvider,
   ];
   logger.info("View providers initialized");
   // explicitly "reset" the Topics & Schemas views so no resources linger during reactivation/update
@@ -256,6 +263,7 @@ async function _activateExtension(
     ...registerProjectGenerationCommands(),
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
+    ...registerFlinkDatabaseViewCommands(),
     ...registerFlinkUDFCommands(),
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
@@ -338,7 +346,7 @@ async function _activateExtension(
 
   const provider = FlinkSqlCodelensProvider.getInstance();
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider("flinksql", provider),
+    vscode.languages.registerCodeLensProvider(FLINK_SQL_LANGUAGE_ID, provider),
     provider,
   );
 
@@ -434,10 +442,10 @@ async function setupContextValues() {
     SCHEMA_URI_SCHEME,
     MESSAGE_URI_SCHEME,
   ]);
-  // set the initial Flink artifacts view mode to "Artifacts" so the UDF mode toggle is visible
+  // set the initial Flink database view mode to "Relations"
   const flinkViewMode = setContextValue(
     ContextValues.flinkDatabaseViewMode,
-    FlinkDatabaseViewProviderMode.Artifacts,
+    FlinkDatabaseViewProviderMode.Relations,
   );
 
   // Default to Docker daemon not being available until proven otherwise

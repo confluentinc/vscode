@@ -1,19 +1,23 @@
-import { DeleteSchemaVersionRequest, DeleteSubjectRequest } from "../clients/schemaRegistryRest";
+import type {
+  DeleteSchemaVersionRequest,
+  DeleteSubjectRequest,
+} from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
 import { isResponseError, logError } from "../errors";
 import { Logger } from "../logging";
-import { Environment } from "../models/environment";
-import { KafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
-import { Schema, Subject, subjectMatchesTopicName } from "../models/schema";
-import { SchemaRegistry } from "../models/schemaRegistry";
-import { KafkaTopic } from "../models/topic";
+import type { Environment } from "../models/environment";
+import type { KafkaCluster } from "../models/kafkaCluster";
+import type { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
+import type { Schema } from "../models/schema";
+import { Subject, subjectMatchesTopicName } from "../models/schema";
+import type { SchemaRegistry } from "../models/schemaRegistry";
+import type { KafkaTopic } from "../models/topic";
 import { showWarningNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import { DisposableCollection } from "../utils/disposables";
-import { DirectResourceLoader } from "./directResourceLoader";
-import { fetchSchemasForSubject, fetchSubjects } from "./loaderUtils";
+import type { DirectResourceLoader } from "./directResourceLoader";
+import { fetchSchemasForSubject, fetchSubjects } from "./utils/loaderUtils";
 
 const logger = new Logger("resourceLoader");
 

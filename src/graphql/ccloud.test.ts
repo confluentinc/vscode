@@ -4,7 +4,7 @@ import * as sinon from "sinon";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 
-import { SidecarHandle } from "../sidecar";
+import type { SidecarHandle } from "../sidecar";
 import { getCCloudResources } from "./ccloud";
 
 describe("ccloud.ts getCCloudResources()", () => {
@@ -176,6 +176,116 @@ describe("ccloud.ts getCCloudResources()", () => {
     assert.strictEqual(result[0].flinkComputePools.length, 1);
     assert.strictEqual(result[0].flinkComputePools[0].id, "flink1");
     assert.strictEqual(result[0].flinkComputePools[0].environmentId, "env1");
+
+    sinon.assert.notCalled(showErrorNotificationStub);
+  });
+
+  it("Correlates Flink compute pools with Kafka clusters by matching provider/region, ACROSS environments", async () => {
+    // Two environments, each with one Kafka cluster and one Flink pool
+    // The Flink pool in env1 matches the Kafka cluster in env2 by provider/region
+    // The Flink pool in env2 matches the Kafka cluster in env1 by provider/region
+    // This tests that Flink pools are associated across environments, not just within the same environment
+    // (This is a somewhat contrived example, but it tests the logic thoroughly)
+
+    const kafkaOneProviderRegion = { provider: "gcp", region: "us-central1" };
+    const kafkaTwoProviderRegion = { provider: "aws", region: "us-west-2" };
+
+    const mockEnvironments = {
+      ccloudConnectionById: {
+        environments: [
+          {
+            id: "env1",
+            name: "Environment 1",
+            governancePackage: "package1",
+            kafkaClusters: [
+              {
+                id: "kafka1",
+                name: "Kafka Cluster 1",
+                ...kafkaOneProviderRegion,
+                bootstrapServers: "kafka1.example.com",
+                uri: "kafka1-uri",
+              },
+            ],
+            flinkComputePools: [
+              {
+                id: "flink1",
+                display_name: "Flink Pool 1",
+                // Yes, this pool matches the *other* environment's Kafka cluster.
+                ...kafkaTwoProviderRegion,
+                max_cfu: 10,
+              },
+            ],
+            schemaRegistry: null,
+          },
+          {
+            id: "env2",
+            name: "Environment 2",
+            governancePackage: "package2",
+            kafkaClusters: [
+              {
+                id: "kafka2",
+                name: "Kafka Cluster 2",
+                ...kafkaTwoProviderRegion,
+                bootstrapServers: "kafka2.example.com",
+                uri: "kafka2-uri",
+              },
+            ],
+            flinkComputePools: [
+              {
+                id: "flink2",
+                display_name: "Flink Pool 2",
+                ...kafkaOneProviderRegion,
+                max_cfu: 15,
+              },
+            ],
+            schemaRegistry: null,
+          },
+        ],
+      },
+    };
+    sidecarStub.query.resolves(mockEnvironments);
+
+    const result = await getCCloudResources();
+
+    assert.strictEqual(result.length, 2);
+
+    const env1 = result.find((e) => e.id === "env1")!;
+    const env2 = result.find((e) => e.id === "env2")!;
+    assert.ok(env1, "Environment 1 should exist");
+    assert.ok(env2, "Environment 2 should exist");
+
+    // Each environment has one Kafka cluster and one Flink pool
+    assert.strictEqual(env1.kafkaClusters.length, 1);
+    assert.strictEqual(env1.flinkComputePools.length, 1);
+    // the flink pool in env1 should be flink1
+    assert.strictEqual(env1.flinkComputePools[0].id, "flink1");
+    assert.strictEqual(env1.flinkComputePools[0].name, "Flink Pool 1");
+    assert.strictEqual(env1.flinkComputePools[0].environmentId, "env1");
+
+    assert.strictEqual(env2.kafkaClusters.length, 1);
+    assert.strictEqual(env2.flinkComputePools.length, 1);
+    // the flink pool in env2 should be flink2
+    assert.strictEqual(env2.flinkComputePools[0].id, "flink2");
+    assert.strictEqual(env2.flinkComputePools[0].name, "Flink Pool 2");
+    assert.strictEqual(env2.flinkComputePools[0].environmentId, "env2");
+
+    const kafka1 = env1.kafkaClusters[0];
+    const kafka2 = env2.kafkaClusters[0];
+
+    // Check that the Kafka clusters have the correct Flink pools associated
+    // Kafka cluster 1 (gcp/us-central1) should have Flink pool 2 associated (from env2)
+    assert.ok(kafka1.isFlinkable());
+    assert.strictEqual(kafka1.flinkPools?.length, 1);
+    assert.strictEqual(kafka1.flinkPools?.[0].id, "flink2");
+    assert.strictEqual(kafka1.flinkPools?.[0].name, "Flink Pool 2");
+    assert.strictEqual(kafka1.flinkPools?.[0].environmentId, "env2");
+
+    // Kafka cluster 2 (aws/us-west-2) should have Flink pool 1 associated (from env1)
+    assert.ok(kafka2.isFlinkable());
+    assert.strictEqual(kafka2.flinkPools?.length, 1);
+    assert.strictEqual(kafka2.flinkPools?.[0].id, "flink1");
+    assert.strictEqual(kafka2.flinkPools?.[0].name, "Flink Pool 1");
+    assert.strictEqual(kafka2.flinkPools?.[0].environmentId, "env1");
 
     sinon.assert.notCalled(showErrorNotificationStub);
   });

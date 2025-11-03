@@ -1,16 +1,18 @@
-import {
+import type {
   ApiKeyAndSecret,
-  ApiKeyAndSecretFromJSON,
   BasicCredentials,
-  BasicCredentialsFromJSON,
   KerberosCredentials,
-  KerberosCredentialsFromJSON,
   OAuthCredentials,
-  OAuthCredentialsFromJSON,
   ScramCredentials,
+} from "../../../src/clients/sidecar";
+import {
+  ApiKeyAndSecretFromJSON,
+  BasicCredentialsFromJSON,
+  KerberosCredentialsFromJSON,
+  OAuthCredentialsFromJSON,
   ScramCredentialsFromJSON,
 } from "../../../src/clients/sidecar";
-import { SupportedAuthTypes } from "../../../src/directConnections/types";
+import type { SupportedAuthTypes } from "../../../src/directConnections/types";
 
 type TEST_CRED_TYPES =
   | ApiKeyAndSecret

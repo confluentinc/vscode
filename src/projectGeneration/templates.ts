@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { ScaffoldV1Template, ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
-import { QuickPickItemWithValue } from "../quickpicks/types";
+import type { ScaffoldV1Template, ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
+import type { QuickPickItemWithValue } from "../quickpicks/types";
 import { getSidecar } from "../sidecar";
 
 export function filterSensitiveKeys<T>(obj: Record<string, T>): Record<string, T> {

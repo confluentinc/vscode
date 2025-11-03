@@ -1,13 +1,14 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { InputBoxValidationMessage, InputBoxValidationSeverity, window } from "vscode";
+import type { InputBoxValidationMessage } from "vscode";
+import { InputBoxValidationSeverity, window } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceConfiguration";
 import {
   TEST_BROKER_CONFIGS,
   TEST_CANCELLATION_TOKEN,
 } from "../../../tests/unit/testResources/docker";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
-import {
+import type {
   ContainerCreateResponse,
   ContainerInspectResponse,
   ContainerSummary,
@@ -19,7 +20,7 @@ import * as notifications from "../../notifications";
 import { DEFAULT_UNIX_SOCKET_PATH } from "../configs";
 import * as dockerContainers from "../containers";
 import * as dockerNetworks from "../networks";
-import { LocalResourceContainer } from "./base";
+import type { LocalResourceContainer } from "./base";
 import {
   brokerConfigsToControllerQuorumVoters,
   brokerConfigsToRestBootstrapServers,

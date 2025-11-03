@@ -86,6 +86,9 @@ export enum ContextValues {
   /** The user applied a search string to the Flink Database view. */
   flinkDatabaseSearchApplied = "confluent.flinkDatabaseSearchApplied",
 
+  /** The Flink Statement Results panel is visible in the bottom panel area. */
+  flinkStatementResultsPanelActive = "confluent.flinkStatementResults.panelActive",
+
   /**
    * EXPERIMENTAL: Is the chat participant enabled?
    * (This should go away once the `confluent.experimental.enableChatParticipant` setting is removed.)

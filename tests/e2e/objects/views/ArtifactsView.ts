@@ -1,4 +1,5 @@
-import { expect, Locator, Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { ConnectionType } from "../../connectionTypes";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
@@ -42,7 +43,7 @@ export class ArtifactsView extends View {
         const resourcesView = new ResourcesView(this.page);
         await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
 
-        const flinkableClusters = resourcesView.flinkableCcloudKafkaClusters;
+        const flinkableClusters = resourcesView.ccloudFlinkableKafkaClusters;
         await expect(flinkableClusters).not.toHaveCount(0);
         const clusterItem = new KafkaClusterItem(this.page, flinkableClusters.first());
         await clusterItem.selectAsFlinkDatabase();

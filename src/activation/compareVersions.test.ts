@@ -1,5 +1,6 @@
 import * as sinon from "sinon";
-import { getStubbedGlobalState, StubbedGlobalState } from "../../tests/stubs/extensionStorage";
+import type { StubbedGlobalState } from "../../tests/stubs/extensionStorage";
+import { getStubbedGlobalState } from "../../tests/stubs/extensionStorage";
 import * as constants from "../constants";
 import { GlobalStorageKeys } from "../storage/constants";
 import { handleNewOrUpdatedExtensionInstallation } from "./compareVersions";

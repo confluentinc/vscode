@@ -1,29 +1,37 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
-import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
-import { ContextValues, setContextValue } from "../context/values";
-import { artifactsChanged, flinkDatabaseViewMode } from "../emitters";
-import { extractResponseBody, isResponseError, logError } from "../errors";
-import { FlinkArtifact } from "../models/flinkArtifact";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import type {
+  DeleteArtifactV1FlinkArtifactRequest,
+  UpdateArtifactV1FlinkArtifactRequest,
+} from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
+import type {
+  CreateArtifactV1FlinkArtifact201Response,
+  PresignedUploadUrlArtifactV1PresignedUrlRequest,
+} from "../clients/flinkArtifacts/models";
+import { artifactsChanged } from "../emitters";
+import { logError } from "../errors";
+import type { FlinkArtifact } from "../models/flinkArtifact";
+import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import type { CCloudKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
-  showWarningNotificationWithButtons,
+  showInfoNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
+import { detectClassesAndRegisterUDFs } from "./utils/udfRegistration";
+import type { ArtifactUploadParams } from "./utils/uploadArtifactOrUDF";
 import {
+  buildUploadErrorMessage,
+  getArtifactPatchParams,
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
   uploadArtifactToCCloud,
 } from "./utils/uploadArtifactOrUDF";
 
 /**
- * Orchestrates the sub-functions from uploadArtifact.ts to complete the artifact upload process.
+ * Orchestrates the sub-functions to complete the artifact upload process.
  * Logs error and shows a user notification if sub-functions fail.
  * Steps are:
  * 1. Gathering request parameters from the user or a provided item.
@@ -33,87 +41,105 @@ import {
  *
  * @param item Optional. If command is invoked from a Flink Compute Pool, CCloud Kafka Cluster, or `.jar` file we use that to pre-fill upload options.
  * If not provided, the user will be prompted for all necessary information.
- * In the near future this will become a webview form with more inputs. See: https://github.com/confluentinc/vscode/issues/2539
  */
 
 export async function uploadArtifactCommand(
   item?: CCloudFlinkComputePool | CCloudKafkaCluster | vscode.Uri,
 ): Promise<void> {
+  // 1. Gather the request parameters from user or item (before showing progress)
+  const params = await artifactUploadQuickPickForm(item);
+  if (!params) return; // User cancelled the prompt
+
   try {
-    // 1. Gather the request parameters from user or item
-    const params = await artifactUploadQuickPickForm(item);
-    if (!params) return; // User cancelled the prompt
-
-    logUsage(UserEvent.FlinkArtifactAction, {
-      action: "upload",
-      status: "started",
-      kind: "CloudProviderUpload",
-      cloud: params.cloud,
-      region: params.region,
-    });
-
-    const request: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
-      environment: params.environment,
-      cloud: params.cloud,
-      region: params.region,
-      id: params.artifactName,
-      content_format: params.fileFormat,
-    };
-
-    // 2. Get presigned URL from Confluent Cloud via Sidecar
-    const uploadUrl = await getPresignedUploadUrl(request);
-
-    if (!uploadUrl) {
-      throw new Error("Upload ID is missing from the presigned URL response.");
-    }
-
-    // 3. Upload the artifact to the presigned URL (either AWS or Azure)
-    await handleUploadToCloudProvider(params, uploadUrl);
-
-    // 4/Last. Show our progress while creating the Artifact in Confluent Cloud (TODO should this wrap all the steps?)
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Uploading artifact "${params.artifactName}" to Confluent Cloud`,
+        title: `Creating artifact`,
         cancellable: false,
       },
-      async () => {
-        const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
+      async (progress) => {
+        const response = await executeArtifactUpload(params, progress);
         if (response) {
-          void vscode.window.showInformationMessage(
+          logUsage(UserEvent.FlinkArtifactAction, {
+            action: "upload",
+            step: "succeeded",
+            cloud: params.cloud,
+            region: params.region,
+            artifactId: response.id,
+          });
+          void showInfoNotificationWithButtons(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
-          );
-        } else {
-          void showWarningNotificationWithButtons(
-            `Artifact upload completed, but no response was returned from Confluent Cloud.`,
+            {
+              "Register UDFs": async () => {
+                await detectClassesAndRegisterUDFs(params.selectedFile, response.id);
+              },
+            },
           );
         }
       },
     );
   } catch (err) {
+    const errorMessage = await buildUploadErrorMessage(err, "Failed to upload artifact:");
     logUsage(UserEvent.FlinkArtifactAction, {
       action: "upload",
-      status: "failed",
+      step: "failed",
+      cloud: params.cloud,
+      region: params.region,
+      message: errorMessage,
     });
-    let errorMessage = "Failed to upload artifact:";
-    if (isResponseError(err)) {
-      if (err.response.status === 500) {
-        // Temporary fix to clarify generic error message from invalid JAR files until validation of JAR files is implemented
-        errorMessage = `${errorMessage} Please make sure that you provided a valid JAR file`;
-      } else {
-        const resp = await extractResponseBody(err);
-        try {
-          errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
-        } catch {
-          errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
-        }
-      }
-    } else if (err instanceof Error) {
-      errorMessage = `${errorMessage} ${err.message}`;
-    }
     logError(err, errorMessage);
     void showErrorNotificationWithButtons(errorMessage);
   }
+}
+
+/**
+ * Performs the multi-step artifact upload, reporting progress along the way.
+ * Throws on failure so the caller (upload command) can handle error telemetry + notification.
+ */
+async function executeArtifactUpload(
+  params: ArtifactUploadParams,
+  progress: vscode.Progress<{ message?: string; increment?: number }>,
+): Promise<CreateArtifactV1FlinkArtifact201Response | undefined> {
+  if (!params) return;
+
+  logUsage(UserEvent.FlinkArtifactAction, {
+    action: "upload",
+    step: "upload to cloud started",
+    cloud: params.cloud,
+    region: params.region,
+  });
+
+  const stepPortion = 100 / 3; // 3 internal steps
+
+  // Step 1: Request presigned URL
+  progress.report({ message: "Requesting presigned upload URL...", increment: stepPortion });
+  const request: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
+    environment: params.environment,
+    cloud: params.cloud,
+    region: params.region,
+    id: params.artifactName,
+    content_format: params.fileFormat,
+  };
+  const uploadUrl = await getPresignedUploadUrl(request);
+  if (!uploadUrl) {
+    throw new Error("Upload ID is missing from the presigned URL response.");
+  }
+
+  // Step 2: Upload binary to cloud storage (AWS/Azure)
+  progress.report({
+    message: "Uploading artifact binary to cloud storage...",
+    increment: stepPortion,
+  });
+
+  await handleUploadToCloudProvider(params, uploadUrl);
+
+  // Step 3: Create artifact in Confluent Cloud
+  progress.report({
+    message: "Adding artifact to Confluent Cloud...",
+    increment: stepPortion,
+  });
+  const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
+  return response;
 }
 
 export async function deleteArtifactCommand(
@@ -161,13 +187,78 @@ export async function deleteArtifactCommand(
   );
 }
 
-/** Set the Flink Database view to Artifacts mode */
-export async function setFlinkArtifactsViewModeCommand() {
-  flinkDatabaseViewMode.fire(FlinkDatabaseViewProviderMode.Artifacts);
-  await setContextValue(
-    ContextValues.flinkDatabaseViewMode,
-    FlinkDatabaseViewProviderMode.Artifacts,
-  );
+/** Update an artifact's editable fields */
+export async function updateArtifactCommand(
+  selectedArtifact: FlinkArtifact | undefined,
+): Promise<void> {
+  if (!selectedArtifact) {
+    void showErrorNotificationWithButtons("No Flink artifact selected for update.");
+    return;
+  }
+
+  const patchPayload = await getArtifactPatchParams(selectedArtifact);
+  if (!patchPayload) {
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "update",
+      status: "exited early with no changes",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
+    void vscode.window.showInformationMessage("Update cancelled. No changes were made.");
+    return;
+  }
+  const request: UpdateArtifactV1FlinkArtifactRequest = {
+    cloud: selectedArtifact.provider,
+    region: selectedArtifact.region,
+    environment: selectedArtifact.environmentId,
+    id: selectedArtifact.id,
+    ArtifactV1FlinkArtifact: patchPayload,
+  };
+
+  try {
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "update",
+      status: "request started",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
+    const sidecarHandle = await getSidecar();
+    const artifactsClient = sidecarHandle.getFlinkArtifactsApi({
+      region: selectedArtifact.region,
+      environmentId: selectedArtifact.environmentId,
+      provider: selectedArtifact.provider,
+    });
+
+    await artifactsClient.updateArtifactV1FlinkArtifact(request);
+
+    artifactsChanged.fire(selectedArtifact);
+
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "update",
+      status: "succeeded",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
+
+    void vscode.window.showInformationMessage(
+      `Artifact "${selectedArtifact.name}" updated successfully in Confluent Cloud.`,
+    );
+  } catch (err) {
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "update",
+      status: "failed",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
+    logError(err, "Failed to update Flink artifact in Confluent Cloud", {
+      extra: {
+        artifactId: selectedArtifact.id,
+        cloud: selectedArtifact.provider,
+        region: selectedArtifact.region,
+      },
+    });
+    void showErrorNotificationWithButtons(`Failed to update artifact "${selectedArtifact.name}".`);
+  }
 }
 
 /**
@@ -177,9 +268,6 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.uploadArtifact", uploadArtifactCommand),
     registerCommandWithLogging("confluent.deleteArtifact", deleteArtifactCommand),
-    registerCommandWithLogging(
-      "confluent.flinkdatabase.setArtifactsViewMode",
-      setFlinkArtifactsViewModeCommand,
-    ),
+    registerCommandWithLogging("confluent.updateArtifact", updateArtifactCommand),
   ];
 }

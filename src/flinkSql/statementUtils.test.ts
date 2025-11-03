@@ -8,22 +8,21 @@ import {
 } from "../../tests/unit/testResources/flinkStatement";
 import { TEST_CCLOUD_ORGANIZATION_ID } from "../../tests/unit/testResources/organization";
 import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
-import {
+import type {
   GetSqlv1Statement200Response,
   GetSqlv1StatementResult200Response,
-  StatementResultsSqlV1Api,
-  StatementsSqlV1Api,
 } from "../clients/flinkSql";
+import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "../clients/flinkSql";
 import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
 import * as flinkStatementModels from "../models/flinkStatement";
 import { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
-import * as sidecar from "../sidecar";
+import type * as sidecar from "../sidecar";
 import { localTimezoneOffset } from "../utils/timezone";
 import { Operation } from "./flinkStatementResults";
+import type { IFlinkStatementSubmitParameters } from "./statementUtils";
 import {
   determineFlinkStatementName,
   FlinkStatementWebviewPanelCache,
-  IFlinkStatementSubmitParameters,
   MAX_WAIT_TIME_MS,
   parseAllFlinkStatementResults,
   REFRESH_STATEMENT_MAX_WAIT_MS,

@@ -1,22 +1,12 @@
-import {
-  Diagnostic,
-  DiagnosticSeverity,
-  Disposable,
-  Position,
-  Range,
-  TextDocument,
-  TextDocumentChangeEvent,
-  Uri,
-  workspace,
-} from "vscode";
-import {
+import type { Disposable, TextDocument, TextDocumentChangeEvent, Uri } from "vscode";
+import { Diagnostic, DiagnosticSeverity, Position, Range, workspace } from "vscode";
+import type {
   JSONDocument,
   JSONSchema,
   Diagnostic as JsonDiagnostic,
-  TextDocument as JsonTextDocument,
   LanguageService,
-  getLanguageService,
 } from "vscode-json-languageservice";
+import { TextDocument as JsonTextDocument, getLanguageService } from "vscode-json-languageservice";
 import { Logger } from "../logging";
 import { getEditorOrFileContents } from "../utils/file";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./constants";

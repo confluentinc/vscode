@@ -1,25 +1,26 @@
-import { commands, Disposable, Uri } from "vscode";
+import type { Disposable } from "vscode";
+import { commands, Uri } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { uriMetadataSet } from "../emitters";
+import type { NeverAskAlways } from "../extensionSettings/constants";
 import {
   FLINK_CONFIG_COMPUTE_POOL,
   FLINK_CONFIG_DATABASE,
-  NeverAskAlways,
   UPDATE_DEFAULT_DATABASE_FROM_LENS,
   UPDATE_DEFAULT_POOL_ID_FROM_LENS,
 } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { CCloudEnvironment, Environment } from "../models/environment";
+import type { CCloudEnvironment, Environment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import type { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { showInfoNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
-import { UriMetadata } from "../storage/types";
+import type { UriMetadata } from "../storage/types";
 
 const logger = new Logger("commands.documents");
 

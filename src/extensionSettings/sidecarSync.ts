@@ -1,11 +1,11 @@
 import { commands } from "vscode";
-import {
+import type {
   Preferences,
   PreferencesResourceApi,
   PreferencesSpec,
-  ResponseError,
   SidecarError,
 } from "../clients/sidecar";
+import { ResponseError } from "../clients/sidecar";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import {

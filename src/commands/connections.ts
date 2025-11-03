@@ -1,4 +1,5 @@
-import { Disposable, Uri, window } from "vscode";
+import type { Disposable } from "vscode";
+import { Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { getCCloudAuthSession } from "../authn/utils";
 import { EXTENSION_VERSION } from "../constants";
@@ -8,15 +9,12 @@ import { ccloudAuthSessionInvalidated } from "../emitters";
 import { KRB5_CONFIG_PATH, SSL_PEM_PATHS } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
-import { ConnectionId } from "../models/resource";
+import type { ConnectionId } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { deleteCCloudConnection } from "../sidecar/connections/ccloud";
 import { SecretStorageKeys } from "../storage/constants";
-import {
-  CustomConnectionSpec,
-  CustomConnectionSpecFromJSON,
-  getResourceManager,
-} from "../storage/resourceManager";
+import type { CustomConnectionSpec } from "../storage/resourceManager";
+import { CustomConnectionSpecFromJSON, getResourceManager } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
 import { readFileString, writeFile } from "../utils/fsWrappers";
 import { DirectConnectionRow, ResourceViewProvider } from "../viewProviders/resources";

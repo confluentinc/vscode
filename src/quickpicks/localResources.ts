@@ -1,4 +1,5 @@
-import { commands, QuickPickItem, ThemeIcon, window } from "vscode";
+import type { QuickPickItem } from "vscode";
+import { commands, ThemeIcon, window } from "vscode";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { LocalResourceKind } from "../docker/constants";

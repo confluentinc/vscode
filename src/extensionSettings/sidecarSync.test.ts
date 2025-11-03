@@ -2,17 +2,11 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
-import {
-  JsonNode,
-  Preferences,
-  PreferencesResourceApi,
-  PreferencesSpec,
-  ResponseError,
-  SidecarError,
-} from "../clients/sidecar";
+import type { JsonNode, Preferences, PreferencesSpec, SidecarError } from "../clients/sidecar";
+import { PreferencesResourceApi, ResponseError } from "../clients/sidecar";
 import * as errors from "../errors";
 import * as notifications from "../notifications";
-import * as sidecar from "../sidecar";
+import type * as sidecar from "../sidecar";
 import {
   CCLOUD_PRIVATE_NETWORK_ENDPOINTS,
   KRB5_CONFIG_PATH,

@@ -1,7 +1,7 @@
 import { ObservableScope } from "inertial";
-import { ConnectedState } from "../clients/sidecar";
-import { FormConnectionType, SupportedAuthTypes } from "../directConnections/types";
-import { CustomConnectionSpec } from "../storage/resourceManager";
+import type { ConnectedState } from "../clients/sidecar";
+import type { FormConnectionType, SupportedAuthTypes } from "../directConnections/types";
+import type { CustomConnectionSpec } from "../storage/resourceManager";
 import { AuthCredentials } from "./auth-credentials";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";

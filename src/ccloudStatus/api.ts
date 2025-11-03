@@ -1,5 +1,6 @@
 import { logError } from "../errors";
-import { CCloudStatusSummary, CCloudStatusSummaryFromJSON } from "./types";
+import type { CCloudStatusSummary } from "./types";
+import { CCloudStatusSummaryFromJSON } from "./types";
 
 const CCLOUD_STATUS_API_URL = "https://status.confluent.cloud/api/v2/summary.json";
 

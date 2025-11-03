@@ -13,7 +13,7 @@ import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Schema, type SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
-import { KafkaTopic } from "../models/topic";
+import type { KafkaTopic } from "../models/topic";
 import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   showErrorNotificationWithButtons,
@@ -21,7 +21,8 @@ import {
 import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { uriQuickpick } from "../quickpicks/uris";
 import { hashed, logUsage, UserEvent } from "../telemetry/events";
-import { getEditorOrFileContents, LoadedDocumentContent } from "../utils/file";
+import type { LoadedDocumentContent } from "../utils/file";
+import { getEditorOrFileContents } from "../utils/file";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import {
   confirmSchemaSubjectDeletion,

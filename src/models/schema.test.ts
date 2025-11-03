@@ -10,7 +10,7 @@ import {
   TEST_LOCAL_SUBJECT,
 } from "../../tests/unit/testResources";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, IconNames, UTM_SOURCE_VSCODE } from "../constants";
-import { EnvironmentId } from "./resource";
+import type { EnvironmentId } from "./resource";
 import {
   Schema,
   SchemaTreeItem,

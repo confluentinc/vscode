@@ -1,9 +1,9 @@
 import { ConnectionType } from "../clients/sidecar";
 import { LOCAL_CONNECTION_ID } from "../constants";
 import { getLocalResources } from "../graphql/local";
-import { LocalEnvironment } from "../models/environment";
-import { LocalKafkaCluster } from "../models/kafkaCluster";
-import { LocalSchemaRegistry } from "../models/schemaRegistry";
+import type { LocalEnvironment } from "../models/environment";
+import type { LocalKafkaCluster } from "../models/kafkaCluster";
+import type { LocalSchemaRegistry } from "../models/schemaRegistry";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 
 /**

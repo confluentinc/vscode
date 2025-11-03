@@ -6,7 +6,7 @@ import {
   type OAuthCredentials,
   type ScramCredentials,
 } from "../clients/sidecar";
-import { FormConnectionType, SupportedAuthTypes } from "../directConnections/types";
+import type { FormConnectionType, SupportedAuthTypes } from "../directConnections/types";
 import { applyBindings, html } from "./bindings/bindings";
 
 type SupportedCredentialTypes =

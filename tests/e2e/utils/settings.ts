@@ -1,4 +1,4 @@
-import { ElectronApplication, Page } from "@playwright/test";
+import type { ElectronApplication, Page } from "@playwright/test";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { executeVSCodeCommand } from "./commands";
 

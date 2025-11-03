@@ -4,13 +4,9 @@ import {
   tryToGetConnection,
   tryToUpdateConnection,
 } from ".";
-import {
-  ContainerListRequest,
-  ContainerStateStatusEnum,
-  ContainerSummary,
-  Port,
-} from "../../clients/docker";
-import { Connection, ConnectionSpec } from "../../clients/sidecar";
+import type { ContainerListRequest, ContainerSummary, Port } from "../../clients/docker";
+import { ContainerStateStatusEnum } from "../../clients/docker";
+import type { Connection, ConnectionSpec } from "../../clients/sidecar";
 import { LOCAL_CONNECTION_ID, LOCAL_CONNECTION_SPEC } from "../../constants";
 import { isDockerAvailable } from "../../docker/configs";
 import { MANAGED_CONTAINER_LABEL } from "../../docker/constants";

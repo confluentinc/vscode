@@ -1,16 +1,14 @@
 import * as vscode from "vscode";
-import {
-  CloseAction,
-  ErrorAction,
+import type {
   ErrorHandlerResult,
-  LanguageClient,
   LanguageClientOptions,
   Message,
-  Trace,
 } from "vscode-languageclient/node";
-import { WebSocket } from "ws";
+import { CloseAction, ErrorAction, LanguageClient, Trace } from "vscode-languageclient/node";
+import type { WebSocket } from "ws";
 import { logError } from "../errors";
 import { Logger } from "../logging";
+import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import { WebsocketTransport } from "./websocketTransport";
 
 const logger = new Logger("flinkSql.languageClient.Client");
@@ -36,8 +34,8 @@ export async function createLanguageClientFromWebsocket(
   };
   const clientOptions: LanguageClientOptions = {
     documentSelector: [
-      { language: "flinksql" },
-      { scheme: "untitled", language: "flinksql" },
+      { language: FLINK_SQL_LANGUAGE_ID },
+      { scheme: "untitled", language: FLINK_SQL_LANGUAGE_ID },
       { pattern: "**/*.flink.sql" },
     ],
     outputChannel: outputChannel,

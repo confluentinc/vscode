@@ -1,8 +1,8 @@
 import { execSync } from "child_process";
 import { homedir } from "os";
 import { join } from "path";
-import { SecretStorage } from "vscode";
-import { AuthConfig } from "../clients/docker";
+import type { SecretStorage } from "vscode";
+import type { AuthConfig } from "../clients/docker";
 import { Logger } from "../logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getSecretStorage } from "../storage/utils";

@@ -2,7 +2,16 @@
 
 All notable changes to this extension will be documented in this file.
 
+## 2.1 Pre Unreleased
+
+### Added
+
+- New "Relations" mode for the Flink Database view, now the default mode. Displays tables, views,
+  and their columns.
+
 ## Unreleased
+
+## 2.0.0
 
 ### Added
 
@@ -10,6 +19,16 @@ All notable changes to this extension will be documented in this file.
   statements not currently executing.
 - New "Stop Statement Execution" context menu command in the Flink Statements view, only offerred
   for currently executing statements.
+- New setting
+  [`confluent.flink.statementResults.defaultLocation`](vscode://settings/confluent.flink.statementResults.defaultLocation)
+  to control where Flink statement results are shown after being submitted:
+  - "editor" (default): opens results in new editor tabs, allowing multiple result sets to be open
+    simultaneously
+  - "panel": opens results in the panel area, allowing only one result set to be visible at a time,
+    but less intrusive than opening a new editor tab
+- "Open New Flink SQL Document" command to open a new untitled Flink SQL document for writing Flink
+  SQL statements locally, available through the command palette, the Resources view context menu on
+  Flink compute pools, and in the Flink Statements view.
 
 ### Changed
 
@@ -22,10 +41,17 @@ All notable changes to this extension will be documented in this file.
 - Submitted Flink statements now allow you to choose your own statement name prefix (or to leave
   generic). Set your prefix using preference:
   [`confluent.flink.statementPrefix`](vscode://settings/confluent.flink.statementPrefix).
+- The `confluent.flink.artifacts` preview setting is now enabled by default for all users.
 
 ### Fixed
 
 - Issue with sometimes reporting the wrong number of "matching elements" when searching some views.
+- Issue with not offering 'Query with Flink SQL' on topics whose possible Flink compute pool is in a
+  separate environment (they should be matched by cloud/region and not also CCloud environment).
+- The Flink artifact upload command is no longer shown for non-CCloud Kafka clusters.
+  ([#2925](https://github.com/confluentinc/vscode/issues/2925))
+- Virtual topics will no longer be shown in the Topics view.
+  ([#2940](https://github.com/confluentinc/vscode/issues/2940))
 
 ## 1.7.0
 

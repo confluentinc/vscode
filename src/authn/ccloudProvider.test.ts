@@ -2,10 +2,10 @@ import { chromium } from "@playwright/test";
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import type { StubbedSecretStorage } from "../../tests/stubs/extensionStorage";
 import {
   getStubbedResourceManager,
   getStubbedSecretStorage,
-  StubbedSecretStorage,
 } from "../../tests/stubs/extensionStorage";
 import { TEST_CCLOUD_AUTH_SESSION } from "../../tests/unit/testResources/ccloudAuth";
 import {
@@ -13,7 +13,8 @@ import {
   TEST_CCLOUD_CONNECTION,
 } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { ConnectedState, Connection, ConnectionFromJSON } from "../clients/sidecar";
+import type { Connection } from "../clients/sidecar";
+import { ConnectedState, ConnectionFromJSON } from "../clients/sidecar";
 import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthCallback, ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
 import * as errors from "../errors";
@@ -23,12 +24,12 @@ import * as ccloud from "../sidecar/connections/ccloud";
 import * as watcher from "../sidecar/connections/watcher";
 import * as sidecarLogging from "../sidecar/logging";
 import { SecretStorageKeys } from "../storage/constants";
-import { ResourceManager } from "../storage/resourceManager";
+import type { ResourceManager } from "../storage/resourceManager";
 import { clearWorkspaceState } from "../storage/utils";
 import { ConfluentCloudAuthProvider, convertToAuthSession } from "./ccloudProvider";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
 import { CCloudSignInError } from "./errors";
-import { AuthCallbackEvent } from "./types";
+import type { AuthCallbackEvent } from "./types";
 
 describe("authn/ccloudProvider.ts", () => {
   let sandbox: sinon.SinonSandbox;

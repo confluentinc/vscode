@@ -1,7 +1,9 @@
 import { readdirSync, statSync, unlinkSync } from "fs";
 import { join, normalize } from "path";
-import { createStream, RotatingFileStream } from "rotating-file-stream";
-import { Event, LogLevel, LogOutputChannel, Uri, window } from "vscode";
+import type { RotatingFileStream } from "rotating-file-stream";
+import { createStream } from "rotating-file-stream";
+import type { Event, LogLevel, LogOutputChannel } from "vscode";
+import { Uri, window } from "vscode";
 import { SIDECAR_LOGFILE_NAME } from "./sidecar/constants";
 import { WriteableTmpDir } from "./utils/file";
 import { existsSync } from "./utils/fsWrappers";

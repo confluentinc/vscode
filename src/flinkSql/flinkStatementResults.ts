@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { v4 as uuidv4, validate, version } from "uuid";
-import { ColumnDetails } from "../clients/flinkSql";
+import type { ColumnDetails } from "../clients/flinkSql";
 
 export enum Operation {
   Insert = 0,

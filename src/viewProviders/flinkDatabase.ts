@@ -1,4 +1,4 @@
-import { Disposable } from "vscode";
+import type { Disposable } from "vscode";
 import { ContextValues } from "../context/values";
 import {
   artifactsChanged,
@@ -9,21 +9,24 @@ import {
 } from "../emitters";
 import { logError } from "../errors";
 import { ResourceLoader } from "../loaders";
-import { FlinkArtifact } from "../models/flinkArtifact";
+import type { FlinkArtifact } from "../models/flinkArtifact";
+import type { FlinkRelation, FlinkRelationColumn } from "../models/flinkRelation";
 import { FlinkUdf } from "../models/flinkUDF";
-import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
-import { IEnvProviderRegion } from "../models/resource";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import type { IEnvProviderRegion } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
-import { MultiModeViewProvider, ViewProviderDelegate } from "./baseModels/multiViewBase";
+import type { ViewProviderDelegate } from "./baseModels/multiViewBase";
+import { MultiModeViewProvider } from "./baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 import {
   FlinkArtifactsDelegate,
   getFlinkArtifactsErrorMessage,
 } from "./multiViewDelegates/flinkArtifactsDelegate";
+import { FlinkRelationsDelegate } from "./multiViewDelegates/flinkRelationsDelegate";
 import { FlinkUDFsDelegate } from "./multiViewDelegates/flinkUDFsDelegate";
 
 /** The row models used as view children */
-export type ArtifactOrUdf = FlinkArtifact | FlinkUdf;
+export type DatabaseChildrenType = FlinkArtifact | FlinkUdf | FlinkRelation | FlinkRelationColumn;
 
 /**
  * Multi-mode view provider for Flink artifacts and UDFs.
@@ -35,35 +38,42 @@ export type ArtifactOrUdf = FlinkArtifact | FlinkUdf;
 export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   FlinkDatabaseViewProviderMode,
   CCloudFlinkDbKafkaCluster,
-  ArtifactOrUdf
+  DatabaseChildrenType
 > {
   viewId = "confluent-flink-database";
   kind = "flinkdatabase";
 
   parentResourceChangedEmitter = flinkDatabaseViewResourceChanged;
   parentResourceChangedContextValue = ContextValues.flinkDatabaseSelected;
+  delegateContextValue = ContextValues.flinkDatabaseViewMode;
 
   searchChangedEmitter = flinkDatabaseViewSearchSet;
   searchContextValue = ContextValues.flinkDatabaseSearchApplied;
 
-  children: ArtifactOrUdf[] = [];
+  children: DatabaseChildrenType[] = [];
 
   private readonly artifactsDelegate = new FlinkArtifactsDelegate();
   private readonly udfsDelegate = new FlinkUDFsDelegate();
+  private readonly relationsDelegate = new FlinkRelationsDelegate();
 
   treeViewDelegates = new Map<
     FlinkDatabaseViewProviderMode,
-    ViewProviderDelegate<FlinkDatabaseViewProviderMode, CCloudFlinkDbKafkaCluster, ArtifactOrUdf>
+    ViewProviderDelegate<
+      FlinkDatabaseViewProviderMode,
+      CCloudFlinkDbKafkaCluster,
+      DatabaseChildrenType
+    >
   >([
     [FlinkDatabaseViewProviderMode.Artifacts, this.artifactsDelegate],
     [FlinkDatabaseViewProviderMode.UDFs, this.udfsDelegate],
+    [FlinkDatabaseViewProviderMode.Relations, this.relationsDelegate],
   ]);
 
   constructor() {
     super();
 
-    // Start in artifacts mode by default.
-    this.defaultDelegate = this.artifactsDelegate;
+    // Start in relations mode by default.
+    this.defaultDelegate = this.relationsDelegate;
     this.currentDelegate = this.defaultDelegate;
   }
 
@@ -89,7 +99,6 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
         // Not viewing artifacts right this second, but we're the entity responsible for cache busting
         // in response to this event.
         // Tell the artifacts delegate to preemptively refresh its cache for next time we switch to it
-
         await this.artifactsDelegate.fetchChildren(this.database, true);
       }
     }
@@ -143,6 +152,11 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
 
     // either show the empty state or the current delegate's children
     this._onDidChangeTreeData.fire();
+  }
+
+  /** Does the current view mode have any children? */
+  hasChildren(): boolean {
+    return this.children.length > 0;
   }
 
   get loggerName() {

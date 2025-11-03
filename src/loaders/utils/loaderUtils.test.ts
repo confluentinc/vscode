@@ -1,28 +1,28 @@
 import assert from "assert";
 import * as sinon from "sinon";
-import { getSidecarStub } from "../../tests/stubs/sidecar";
+import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA_REGISTRY,
-} from "../../tests/unit/testResources";
-import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { TEST_CCLOUD_ORGANIZATION_ID } from "../../tests/unit/testResources/organization";
-import { createResponseError, createTestTopicData } from "../../tests/unit/testUtils";
-import { TopicV3Api } from "../clients/kafkaRest";
-import { TopicData } from "../clients/kafkaRest/models";
-import {
+} from "../../../tests/unit/testResources";
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
+import { TEST_CCLOUD_ORGANIZATION_ID } from "../../../tests/unit/testResources/organization";
+import { createResponseError, createTestTopicData } from "../../../tests/unit/testUtils";
+import { TopicV3Api } from "../../clients/kafkaRest";
+import type { TopicData } from "../../clients/kafkaRest/models";
+import type {
   GetSchemaByVersionRequest,
   Schema as ResponseSchema,
-  SubjectsV1Api,
-} from "../clients/schemaRegistryRest";
-import { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
-import * as loaderUtils from "../loaders/loaderUtils";
-import { Schema, SchemaType, Subject } from "../models/schema";
-import * as sidecar from "../sidecar";
-import { SidecarHandle } from "../sidecar";
-import * as privateNetworking from "../utils/privateNetworking";
+} from "../../clients/schemaRegistryRest";
+import { SubjectsV1Api } from "../../clients/schemaRegistryRest";
+import type { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";
+import type { Schema } from "../../models/schema";
+import { SchemaType, Subject } from "../../models/schema";
+import type * as sidecar from "../../sidecar";
+import * as privateNetworking from "../../utils/privateNetworking";
+import * as loaderUtils from "./loaderUtils";
 
 // as from fetchTopics() result.
 export const topicsResponseData: TopicData[] = [
@@ -68,6 +68,45 @@ describe("loaderUtils.ts", () => {
       assert.ok(results[1].hasSchema);
       assert.ok(results[2].hasSchema);
       assert.ok(!results[3].hasSchema);
+
+      // None should be flinkable, as this is not a CCloud cluster.
+      results.forEach((t) => assert.ok(!t.isFlinkable));
+    });
+
+    it("should assign isFlinkable based on whether or not the cluster is a Flinkable CCloud cluster", () => {
+      // no subjects, just looking to see if isFlinkable is set correctly.
+      const subjects: Subject[] = [];
+
+      const ccloudFlinkableResults = loaderUtils.correlateTopicsWithSchemaSubjects(
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        topicsResponseData,
+        subjects,
+      );
+      ccloudFlinkableResults.forEach((t) =>
+        assert.ok(t.isFlinkable, "CCloud Flinkable cluster should have flinkable topics"),
+      );
+
+      assert.ok(
+        TEST_CCLOUD_KAFKA_CLUSTER.isFlinkable() === false,
+        "Expected TEST_CCLOUD_KAFKA_CLUSTER to not be Flinkable",
+      );
+      const ccloudNonFlinkableResults = loaderUtils.correlateTopicsWithSchemaSubjects(
+        TEST_CCLOUD_KAFKA_CLUSTER, // Not Flinkable
+        topicsResponseData,
+        subjects,
+      );
+      ccloudNonFlinkableResults.forEach((t) =>
+        assert.ok(!t.isFlinkable, "CCloud non-Flinkable cluster should not have flinkable topics"),
+      );
+
+      const localResults = loaderUtils.correlateTopicsWithSchemaSubjects(
+        TEST_LOCAL_KAFKA_CLUSTER,
+        topicsResponseData,
+        subjects,
+      );
+      localResults.forEach((t) =>
+        assert.ok(!t.isFlinkable, "Local cluster should not have flinkable topics"),
+      );
     });
   });
 
@@ -76,7 +115,8 @@ describe("loaderUtils.ts", () => {
     let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
 
     beforeEach(() => {
-      const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
+      const stubbedSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+        getSidecarStub(sandbox);
       stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
       stubbedSidecar.getSubjectsV1Api.returns(stubbedSubjectsV1Api);
     });
@@ -211,6 +251,27 @@ describe("loaderUtils.ts", () => {
       // Check that the topics are sorted by name.
       const topicNames = topics.map((t) => t.topic_name);
       assert.deepStrictEqual(topicNames, ["topic1", "topic2", "topic3", "topic4"]);
+    });
+
+    it("fetchTopics should exclude virtual topics with 0 replication factor", async () => {
+      const topicsResponseData: TopicData[] = [
+        createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic1", ["READ", "WRITE"], 1),
+        createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic2", ["READ", "WRITE"], 0), // virtual topic
+        createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic3", ["READ", "WRITE"], 3),
+        createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic4", ["READ", "WRITE"], 0), // virtual topic
+      ];
+
+      mockClient.listKafkaTopics.resolves({
+        kind: "kind",
+        metadata: {} as any,
+        data: topicsResponseData,
+      });
+
+      const topics = await loaderUtils.fetchTopics(TEST_LOCAL_KAFKA_CLUSTER);
+
+      // Check that the topics with replication_factor 0 are excluded.
+      const topicNames = topics.map((t) => t.topic_name);
+      assert.deepStrictEqual(topicNames, ["topic1", "topic3"]);
     });
 
     describe("fetchTopics error handling", () => {

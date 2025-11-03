@@ -1,4 +1,5 @@
-import { ConfigurationChangeEvent, Disposable, workspace } from "vscode";
+import type { ConfigurationChangeEvent, Disposable } from "vscode";
+import { workspace } from "vscode";
 import { ContextValues, setContextValue } from "../context/values";
 import { FlinkLanguageClientManager } from "../flinkSql/flinkLanguageClientManager";
 import { Logger } from "../logging";

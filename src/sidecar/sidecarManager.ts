@@ -1,10 +1,11 @@
 // sidecar manager module
 
-import { ChildProcess } from "child_process";
+import type { ChildProcess } from "child_process";
 
 import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sidecar";
 
-import { Configuration, HandshakeResourceApi, SidecarVersionResponse } from "../clients/sidecar";
+import type { SidecarVersionResponse } from "../clients/sidecar";
+import { Configuration, HandshakeResourceApi } from "../clients/sidecar";
 import { Logger } from "../logging";
 import {
   MOMENTARY_PAUSE_MS,
@@ -16,7 +17,7 @@ import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
 import { WebsocketManager, WebsocketStateEvent } from "./websocketManager";
 
-import { Tail } from "tail";
+import type { Tail } from "tail";
 import { observabilityContext } from "../context/observability";
 import { logError } from "../errors";
 import { SecretStorageKeys } from "../storage/constants";
@@ -29,7 +30,8 @@ import {
   getSidecarLogfilePath,
   getSidecarLogTail,
 } from "./logging";
-import { SidecarOutputs, SidecarStartupFailureReason } from "./types";
+import type { SidecarOutputs } from "./types";
+import { SidecarStartupFailureReason } from "./types";
 import {
   checkSidecarFile,
   constructSidecarEnv,

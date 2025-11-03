@@ -1,38 +1,34 @@
-import {
-  Disposable,
-  Event,
-  EventEmitter,
-  TreeDataProvider,
-  TreeItem,
-  TreeView,
-  Uri,
-  window,
-} from "vscode";
+import type { Disposable, Event, TreeDataProvider, TreeItem, TreeView } from "vscode";
+import { EventEmitter, Uri, window } from "vscode";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
+import type {
+  EnvironmentChangeEvent,
+  SchemaVersionChangeEvent,
+  SubjectChangeEvent,
+} from "../emitters";
 import {
   ccloudConnected,
   environmentChanged,
-  EnvironmentChangeEvent,
   localKafkaConnected,
   schemaSubjectChanged,
-  SchemaVersionChangeEvent,
   schemaVersionsChanged,
-  SubjectChangeEvent,
   topicSearchSet,
   topicsViewResourceChanged,
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { ResourceLoader } from "../loaders";
-import { TopicFetchError } from "../loaders/loaderUtils";
+import { TopicFetchError } from "../loaders/utils/loaderUtils";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { isCCloud, ISearchable, isLocal } from "../models/resource";
-import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
+import type { ISearchable } from "../models/resource";
+import { isCCloud, isLocal } from "../models/resource";
+import type { Schema } from "../models/schema";
+import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { DisposableCollection } from "../utils/disposables";
-import { RefreshableTreeViewProvider } from "./baseModels/base";
+import type { RefreshableTreeViewProvider } from "./baseModels/base";
 import { updateCollapsibleStateFromSearch } from "./utils/collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 
