@@ -36,14 +36,11 @@ export class ArtifactsView extends View {
 
   /** Click the "Switch to Flink Artifacts" nav action in the view title area. */
   async clickSwitchToFlinkArtifacts(): Promise<void> {
-    // Use a more specific selector that targets the switch view mode icon
-    // Look for the codicon with the specific title or aria-label for view switching
     const expandToggle = this.locator.locator(
       '[title="Switch View Mode"], [aria-label="Switch View Mode"]',
     );
     await expandToggle.click();
 
-    // Then click directly on the "Switch to Flink Artifacts" option
     const flinkArtifactsOption = this.locator.locator(
       '[title="Switch to Flink Artifacts"], [aria-label="Switch to Flink Artifacts"]',
     );
@@ -61,6 +58,7 @@ export class ArtifactsView extends View {
 
         const flinkableClusters = resourcesView.ccloudFlinkableKafkaClusters;
         await expect(flinkableClusters).not.toHaveCount(0);
+
         const clusterItem = new KafkaClusterItem(this.page, flinkableClusters.first());
         await clusterItem.selectAsFlinkDatabase();
         await this.clickSwitchToFlinkArtifacts();
@@ -68,6 +66,7 @@ export class ArtifactsView extends View {
       }
       case SelectFlinkDatabase.FromArtifactsViewButton: {
         await this.clickSelectKafkaClusterAsFlinkDatabase();
+
         const kafkaClusterQuickpick = new Quickpick(this.page);
         await expect(kafkaClusterQuickpick.locator).toBeVisible();
         await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
@@ -75,6 +74,7 @@ export class ArtifactsView extends View {
           ? kafkaClusterQuickpick.items.filter({ hasText: clusterLabel }).first()
           : kafkaClusterQuickpick.items.first();
         await clusterItem.click();
+
         await this.clickSwitchToFlinkArtifacts();
         break;
       }
