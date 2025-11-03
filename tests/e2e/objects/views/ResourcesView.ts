@@ -86,17 +86,6 @@ export class ResourcesView extends View {
   }
 
   /**
-   */
-  get flinkableCcloudKafkaClusters(): Locator {
-    // Find CCloud Kafka clusters that have sibling Flink compute pool elements
-    return this.ccloudKafkaClusters.filter({
-      has: this.page.locator("xpath=..//*").filter({
-        has: this.page.locator(".codicon-confluent-flink-compute-pool"),
-      }),
-    });
-  }
-
-  /**
    * Locator for Flinkable CCloud Kafka cluster tree items.
    * Only visible when a {@link ccloudEnvironments CCloud environment item} is expanded.
    */
