@@ -1,5 +1,6 @@
 import { expect, Locator, Page } from "@playwright/test";
 import { ConnectionType } from "../../connectionTypes";
+import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
 import { View } from "./View";
 import { KafkaClusterItem } from "./viewItems/KafkaClusterItem";
@@ -24,60 +25,38 @@ export class ArtifactsView extends View {
     return this.treeItems;
   }
 
-  async clickArtifactsView(): Promise<void> {
-    // Note: eventually might want to switch on entrypoints
-    const artifactsView = new ArtifactsView(this.page);
-    await artifactsView.header.click();
-
-    await expect(this.header).toHaveAttribute("aria-expanded", "true");
-    await expect(this.body).toBeVisible();
+  /**
+   * Click the "Select Kafka Cluster" nav action in the view title area, which will show a
+   * quickpick with a list of Kafka cluster items.
+   */
+  async clickSelectKafkaClusterAsFlinkDatabase(): Promise<void> {
+    await this.clickNavAction("Select Kafka Cluster as Flink Database");
   }
-  // this func is WAY too long
-  async loadArtifacts(entrypoint: SelectFlinkDatabase): Promise<void> {
+
+  async loadArtifacts(
+    entrypoint: SelectFlinkDatabase,
+    clusterLabel?: string | RegExp,
+  ): Promise<void> {
     switch (entrypoint) {
       case SelectFlinkDatabase.FromResourcesView: {
         const resourcesView = new ResourcesView(this.page);
-
-        // First, ensure the connection environment is expanded to see environments
         await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
 
-        // Get all environments and expand them to find one with flinkable clusters
-        const environments = resourcesView.ccloudEnvironments;
-        const envCount = await environments.count();
-
-        let foundFlinkableEnvironment = false;
-        // EWWwwww
-        // Expand environments one by one until we find one with flinkable clusters
-        for (let i = 0; i < envCount && !foundFlinkableEnvironment; i++) {
-          const env = environments.nth(i);
-          const isExpanded = await env.getAttribute("aria-expanded");
-
-          if (isExpanded !== "true") {
-            await env.click();
-            // Wait for expansion to complete
-            await expect(env).toHaveAttribute("aria-expanded", "true");
-          }
-
-          // Check if this environment has flinkable Kafka clusters
-          const kafkaClusters = resourcesView.flinkableCcloudKafkaClusters;
-          const clusterCount = await kafkaClusters.count();
-
-          if (clusterCount > 0) {
-            foundFlinkableEnvironment = true;
-
-            // Now we can proceed with the first flinkable cluster
-            const kafkaClusterItem = kafkaClusters.first();
-            await expect(kafkaClusterItem).toBeVisible();
-
-            const clusterItem = new KafkaClusterItem(this.page, kafkaClusterItem);
-            await clusterItem.selectAsFlinkDatabase();
-          }
-        }
-
-        if (!foundFlinkableEnvironment) {
-          throw new Error("No environment found with flinkable Kafka clusters");
-        }
-
+        const flinkableClusters = resourcesView.flinkableCcloudKafkaClusters;
+        await expect(flinkableClusters).not.toHaveCount(0);
+        const clusterItem = new KafkaClusterItem(this.page, flinkableClusters.first());
+        await clusterItem.selectAsFlinkDatabase();
+        break;
+      }
+      case SelectFlinkDatabase.FromArtifactsViewButton: {
+        await this.clickSelectKafkaClusterAsFlinkDatabase();
+        const kafkaClusterQuickpick = new Quickpick(this.page);
+        await expect(kafkaClusterQuickpick.locator).toBeVisible();
+        await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
+        const clusterItem = clusterLabel
+          ? kafkaClusterQuickpick.items.filter({ hasText: clusterLabel }).first()
+          : kafkaClusterQuickpick.items.first();
+        await clusterItem.click();
         break;
       }
       default:
