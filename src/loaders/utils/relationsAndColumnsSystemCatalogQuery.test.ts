@@ -1,7 +1,11 @@
 import * as assert from "assert";
 
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
-import { makeColumnRow, makeRelationRow } from "../../../tests/unit/testResources/makeRelationRow";
+import {
+  makeColumnRow,
+  makeRelationRow,
+  makeViewDefinitionRow,
+} from "../../../tests/unit/testResources/makeRelationRow";
 import {
   getRelationsAndColumnsSystemCatalogQuery,
   parseRelationsAndColumnsSystemCatalogQueryResponse,
@@ -10,12 +14,12 @@ import {
 describe("relationsAndColumnsSystemCatalogQuery.ts", () => {
   describe("getRelationsAndColumnsSystemCatalogQuery()", () => {
     // This function is trivial, just returns a constant string with the cluster ID filled in twice.
-    // Ensure is mentioned twice. Only E2E / clicktesting can prove that the query is otherwise sound.
-    it("should return string with cluster's id mixed in 2x", () => {
+    // Ensure is mentioned thrice. Only E2E / clicktesting can prove that the query is otherwise sound.
+    it("should return string with cluster's id mixed in 3x", () => {
       const query = getRelationsAndColumnsSystemCatalogQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
       const occurrences = query.match(new RegExp(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id, "g"));
       assert.ok(occurrences);
-      assert.strictEqual(occurrences.length, 2);
+      assert.strictEqual(occurrences.length, 3);
     });
   });
 
@@ -122,6 +126,37 @@ describe("relationsAndColumnsSystemCatalogQuery.ts", () => {
       assert.strictEqual(relation2ColA.name, "colA");
       assert.strictEqual(relation2ColA.fullDataType, "TIMESTAMP");
       assert.strictEqual(relation2ColA.isNullable, true);
+    });
+
+    describe("view support", () => {
+      it("handles view definitions correctly", () => {
+        const rows = [
+          makeRelationRow("my_view", {
+            type: "VIEW",
+          }),
+          makeViewDefinitionRow("my_view", "SELECT * FROM some_table WHERE col1 > 100"),
+          makeColumnRow("my_view", "view_col1", 1, {
+            fullDataType: "INT",
+            isNullable: "NO",
+          }),
+        ];
+
+        const relations = parseRelationsAndColumnsSystemCatalogQueryResponse(rows);
+        assert.strictEqual(relations.length, 1);
+
+        const view = relations[0];
+        assert.strictEqual(view.name, "my_view");
+        assert.strictEqual(view.type, "VIEW");
+        assert.strictEqual(view.viewDefinition, "SELECT * FROM some_table WHERE col1 > 100");
+        assert.strictEqual(view.columns.length, 1);
+      });
+
+      it("raises exception if no relation row for a view definition", () => {
+        const rows = [makeViewDefinitionRow("orphan_view", "SELECT 1")];
+        assert.throws(() => {
+          parseRelationsAndColumnsSystemCatalogQueryResponse(rows);
+        }, /does not match current relation/);
+      });
     });
   });
 });
