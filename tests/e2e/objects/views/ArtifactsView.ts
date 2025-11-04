@@ -44,6 +44,7 @@ export class ArtifactsView extends View {
     const flinkArtifactsOption = this.locator.locator(
       '[title="Switch to Flink Artifacts"], [aria-label="Switch to Flink Artifacts"]',
     );
+    await expect(flinkArtifactsOption).toBeVisible();
     await flinkArtifactsOption.click();
   }
 
@@ -81,5 +82,12 @@ export class ArtifactsView extends View {
       default:
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);
     }
+  }
+
+  async uploadFlinkArtifact(filePath: string): Promise<void> {
+    const uploadButton = this.locator.locator(
+      '[title="Upload Flink Artifact"], [aria-label="Upload Flink Artifact"]',
+    );
+    await uploadButton.setInputFiles(filePath);
   }
 }
