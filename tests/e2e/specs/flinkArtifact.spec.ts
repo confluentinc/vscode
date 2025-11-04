@@ -14,7 +14,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   test("should show Artifacts view when cluster selected from Resources view", async ({ page }) => {
     const artifactsView = new ArtifactsView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.FromResourcesView);
-    await expect(artifactsView.header).toHaveAttribute("aria-expanded", "true");
+    expect(artifactsView.ensureExpanded).toBeTruthy();
   });
 
   test("should show Artifacts view when cluster selected from Artifacts view button", async ({
@@ -22,6 +22,6 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   }) => {
     const artifactsView = new ArtifactsView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.FromArtifactsViewButton);
-    await expect(artifactsView.header).toHaveAttribute("aria-expanded", "true");
+    expect(artifactsView.ensureExpanded).toBeTruthy();
   });
 });

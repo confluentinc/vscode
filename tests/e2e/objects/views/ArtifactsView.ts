@@ -44,6 +44,7 @@ export class ArtifactsView extends View {
     const flinkArtifactsOption = this.locator.locator(
       '[title="Switch to Flink Artifacts"], [aria-label="Switch to Flink Artifacts"]',
     );
+    await expect(flinkArtifactsOption).toBeVisible();
     await flinkArtifactsOption.click();
   }
 
