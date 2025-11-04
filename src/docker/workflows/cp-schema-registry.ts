@@ -26,12 +26,15 @@ import {
   getContainerEnvVars,
   getContainerPorts,
   getContainersForImage,
+  getFirstExternalPort,
+  waitForServiceHealthCheck,
 } from "../containers";
 import { findFreePort } from "../ports";
 import type { LocalResourceContainer } from "./base";
 import { LocalResourceWorkflow } from "./base";
 
 export const CONTAINER_NAME = "vscode-confluent-schema-registry";
+const HEALTHCHECK_ENDPOINT = "/config";
 
 export const START_KAFKA_BUTTON = "Start Kafka";
 export const IMAGE_SETTINGS_BUTTON = "Configure Image Settings";
@@ -288,6 +291,12 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     this.logger.debug("Kafka container ports:", kafkaPorts);
 
     return kafkaContainers;
+  }
+
+  async waitForReadiness(containerId: string): Promise<boolean> {
+    const container = await getContainer(containerId);
+    const firstExternalPort = getFirstExternalPort(container);
+    return waitForServiceHealthCheck(firstExternalPort, HEALTHCHECK_ENDPOINT, this.resourceKind);
   }
 
   async createSchemaRegistryContainer(

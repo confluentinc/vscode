@@ -1,4 +1,4 @@
-import type { Disposable, TreeDataProvider } from "vscode";
+import type { ConfigurationChangeEvent, Disposable, TreeDataProvider } from "vscode";
 import {
   MarkdownString,
   ThemeColor,
@@ -6,6 +6,7 @@ import {
   TreeItem,
   TreeItemCollapsibleState,
   Uri,
+  workspace,
 } from "vscode";
 import type { ConnectionStatus, ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
@@ -17,10 +18,12 @@ import {
   directConnectionsChanged,
   dockerServiceAvailable,
   localKafkaConnected,
+  localMedusaConnected,
   localSchemaRegistryConnected,
   resourceSearchSet,
 } from "../emitters";
 import { logError } from "../errors";
+import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import type { DirectResourceLoader } from "../loaders";
 import { CCloudResourceLoader, LocalResourceLoader, ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
@@ -39,6 +42,7 @@ import type {
 } from "../models/kafkaCluster";
 import { KafkaCluster, KafkaClusterTreeItem } from "../models/kafkaCluster";
 import type { IdItem } from "../models/main";
+import { LocalMedusa, MedusaTreeItem } from "../models/medusa";
 import type { CCloudOrganization } from "../models/organization";
 import type {
   ConnectionId,
@@ -69,6 +73,7 @@ type ConnectionRowChildren =
   | ConcreteEnvironment
   | ConcreteKafkaCluster
   | ConcreteSchemaRegistry
+  | LocalMedusa
   | CCloudFlinkComputePool;
 
 export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends ResourceLoader>
@@ -227,7 +232,7 @@ export abstract class SingleEnvironmentConnectionRow<
     );
   }
 
-  get children(): (KCT | SRT)[] {
+  get children(): ConnectionRowChildren[] {
     if (this.environments.length === 0) {
       return [];
     }
@@ -419,6 +424,27 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
     }
   }
 
+  get medusa(): LocalMedusa | undefined {
+    if (this.environments.length === 0) {
+      return undefined;
+    }
+    return this.environments[0].medusa;
+  }
+
+  override get connected(): boolean {
+    // connected if we have at least one environment AND that env
+    // has either Kafka cluster, Schema Registry, or Medusa visible.
+    return super.connected || this.medusa !== undefined;
+  }
+
+  override get children(): ConnectionRowChildren[] {
+    const children: ConnectionRowChildren[] = super.children;
+    if (this.medusa) {
+      children.push(this.medusa);
+    }
+    return children;
+  }
+
   override async refresh(deepRefresh: boolean): Promise<void> {
     this.logger.debug("Refreshing LocalConnectionRow", { deepRefresh });
 
@@ -428,10 +454,16 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   }
 
   get status(): string {
-    const isDockerAvailable = getContextValue(ContextValues.dockerServiceAvailable) === true;
+    const isDockerAvailable =
+      getContextValue<boolean>(ContextValues.dockerServiceAvailable) === true;
 
     if (isDockerAvailable) {
-      return this.connected ? this.kafkaCluster!.uri! : "(Local Kafka not running)";
+      if (this.kafkaCluster) {
+        return this.kafkaCluster.uri!;
+      } else if (this.medusa) {
+        return "Only Medusa available";
+      }
+      return "(No connection)";
     } else {
       return "(Docker Unavailable)";
     }
@@ -443,6 +475,7 @@ type ResourceViewProviderData =
   | ConcreteEnvironment
   | ConcreteKafkaCluster
   | ConcreteSchemaRegistry
+  | LocalMedusa
   | CCloudFlinkComputePool;
 
 export type AnyConnectionRow = ConnectionRow<ConcreteEnvironment, ResourceLoader>;
@@ -482,6 +515,8 @@ export class ResourceViewProvider
       ccloudConnected.event(this.ccloudConnectedEventHandler.bind(this)),
       localKafkaConnected.event(this.localConnectedEventHandler.bind(this)),
       localSchemaRegistryConnected.event(this.localConnectedEventHandler.bind(this)),
+      localMedusaConnected.event(this.localConnectedEventHandler.bind(this)),
+      workspace.onDidChangeConfiguration(this.changedSettingsEventHandler.bind(this)),
       dockerServiceAvailable.event(this.localConnectedEventHandler.bind(this)),
       directConnectionsChanged.event(this.reconcileDirectConnections.bind(this)),
       connectionStable.event(this.refreshConnection.bind(this)),
@@ -507,6 +542,22 @@ export class ResourceViewProvider
     // or entire Docker subsystem connection state changes.
     // connection state changes.
     await this.refreshConnection(LOCAL_CONNECTION_ID, true);
+  }
+
+  /**
+   * Handle changed settings that may impact the resources view.
+   */
+  async changedSettingsEventHandler(event: ConfigurationChangeEvent): Promise<void> {
+    // If the user changed the Medusa integration setting, refresh local connection row.
+    if (event.affectsConfiguration(ENABLE_MEDUSA_CONTAINER.id)) {
+      this.logger.debug(
+        "Enable Medusa Container setting changed, refreshing local connection row.",
+      );
+
+      await this.refreshConnection(LOCAL_CONNECTION_ID, true);
+    }
+
+    // TODO handle LOCAL_DOCKER_SOCKET_PATH changes, etc.
   }
 
   /**
@@ -630,6 +681,7 @@ export class ResourceViewProvider
         Array.isArray(localEnv?.kafkaClusters) && localEnv.kafkaClusters.length !== 0,
       ),
       setContextValue(ContextValues.localSchemaRegistryAvailable, !!localEnv?.schemaRegistry),
+      setContextValue(ContextValues.localMedusaAvailable, !!localEnv?.medusa),
     ]);
   }
 
@@ -708,6 +760,8 @@ export class ResourceViewProvider
       treeItem = new KafkaClusterTreeItem(element);
     } else if (element instanceof SchemaRegistry) {
       treeItem = new SchemaRegistryTreeItem(element);
+    } else if (element instanceof LocalMedusa) {
+      treeItem = new MedusaTreeItem(element);
     } else if (element instanceof CCloudFlinkComputePool) {
       treeItem = new FlinkComputePoolTreeItem(element);
     } else {

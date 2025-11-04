@@ -35,6 +35,7 @@ import { registerFlinkDatabaseViewCommands } from "./commands/flinkDatabaseView"
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerFlinkUDFCommands } from "./commands/flinkUDFs";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
+import { registerMedusaCodeLensCommands } from "./commands/medusaCodeLens";
 import { registerOrganizationCommands } from "./commands/organizations";
 import { registerNewResourceViewCommands } from "./commands/resources";
 import { registerProjectGenerationCommands } from "./commands/scaffold";
@@ -266,6 +267,7 @@ async function _activateExtension(
     ...registerFlinkDatabaseViewCommands(),
     ...registerFlinkUDFCommands(),
     ...registerDocumentCommands(),
+    ...registerMedusaCodeLensCommands(),
     ...registerSearchCommands(),
     ...registerFlinkArtifactCommands(),
     ...registerNewResourceViewCommands(),
@@ -344,10 +346,10 @@ async function _activateExtension(
   const docManager = DocumentMetadataManager.getInstance();
   context.subscriptions.push(docManager);
 
-  const provider = FlinkSqlCodelensProvider.getInstance();
+  const flinkProvider = FlinkSqlCodelensProvider.getInstance();
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider(FLINK_SQL_LANGUAGE_ID, provider),
-    provider,
+    vscode.languages.registerCodeLensProvider(FLINK_SQL_LANGUAGE_ID, flinkProvider),
+    flinkProvider,
   );
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
