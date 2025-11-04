@@ -83,11 +83,4 @@ export class ArtifactsView extends View {
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);
     }
   }
-
-  async uploadFlinkArtifact(filePath: string): Promise<void> {
-    const uploadButton = this.locator.locator(
-      '[title="Upload Flink Artifact"], [aria-label="Upload Flink Artifact"]',
-    );
-    await uploadButton.setInputFiles(filePath);
-  }
 }
