@@ -83,4 +83,37 @@ export class ArtifactsView extends View {
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);
     }
   }
+
+  async uploadFlinkArtifact(filePath: string): Promise<void> {
+    const uploadButton = this.locator.locator(
+      '[title="Upload Flink Artifact"], [aria-label="Upload Flink Artifact"]',
+    );
+    await uploadButton.setInputFiles(filePath);
+  }
+
+  async deleteFlinkArtifact(artifactName: string): Promise<void> {
+    const artifactItem = this.artifacts.filter({ hasText: artifactName }).first();
+
+    // Right-click on the artifact item to open context menu
+    await artifactItem.click({ button: "right" });
+
+    // Wait for context menu to appear and click delete option
+    const contextMenu = this.page.locator(".monaco-menu, .context-menu");
+    await expect(contextMenu).toBeVisible();
+
+    const deleteAction = contextMenu.locator(
+      '[aria-label*="Delete"], [title*="Delete"], text="Delete Flink Artifact"',
+    );
+    await expect(deleteAction).toBeVisible();
+    await deleteAction.click();
+
+    // Handle any confirmation dialog if it appears
+    const confirmDialog = this.page.locator(".monaco-dialog, .confirm-dialog");
+    if (await confirmDialog.isVisible()) {
+      const confirmButton = confirmDialog.locator(
+        'button:has-text("Delete"), button:has-text("OK"), button:has-text("Yes")',
+      );
+      await confirmButton.click();
+    }
+  }
 }
