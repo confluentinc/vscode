@@ -25,4 +25,6 @@ export enum Tag {
   FlinkStatements = "@flink-statements",
   /** Tests that create, edit, export, delete, and import direct connections. */
   DirectConnectionCRUD = "@direct-connection-crud",
+  /** Tests that upload and delete Flink artifacts. */
+  FlinkArtifacts = "@flink-artifacts",
 }
