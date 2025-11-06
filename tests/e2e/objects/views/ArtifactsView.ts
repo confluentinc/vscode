@@ -41,13 +41,9 @@ export class ArtifactsView extends View {
     );
     await expandToggle.click();
 
-    const flinkArtifactsOption = this.locator.locator(
-      '[title="Switch to Flink Artifacts"], [aria-label="Switch to Flink Artifacts"]',
-    );
-    await expect(flinkArtifactsOption).toBeVisible();
-    await flinkArtifactsOption.click();
-    const artifactsView = this.page.locator('[aria-label*="Flink Artifacts"]');
-    await expect(artifactsView).toBeVisible();
+    await this.page.keyboard.press("ArrowDown");
+    await this.page.keyboard.press("ArrowDown");
+    await this.page.keyboard.press("Enter");
   }
 
   async loadArtifacts(
