@@ -95,18 +95,30 @@ export class ArtifactsView extends View {
     );
 
     await uploadButton.click();
+    const quickpick = new Quickpick(this.page);
+    await expect(quickpick.locator).toBeVisible();
+    await expect(quickpick.items).not.toHaveCount(0);
 
-    // Wait for the quickpick to appear and find the "3. Select JAR File" step
-    const quickpickItem = this.page.locator(".quick-input-list-row").filter({
-      has: this.page.locator(".monaco-highlighted-label", { hasText: "3. Select JAR File" }),
-    });
-    await expect(quickpickItem).toBeVisible();
+    // Select the first environment (or you can add a parameter to specify which one)
+    await quickpick.items.first().click();
 
-    // Click the codicon within that quickpick item to open the file picker
-    const codicon = quickpickItem.locator(".quick-input-list-icon.codicon");
-    await codicon.click();
+    // Step 2: Select Compute Pool
+    await expect(quickpick.locator).toBeVisible();
+    await expect(quickpick.items).not.toHaveCount(0);
 
-    // Handle the file selection
+    // Select the first compute pool (or you can add a parameter to specify which one)
+    await quickpick.items.first().click();
+
+    // Step 3: Select JAR File
+    await expect(quickpick.locator).toBeVisible();
+    const jarFileOption = quickpick.items
+      .filter({
+        hasText: "Select JAR File",
+      })
+      .first();
+    await jarFileOption.click();
+
+    // Now the file picker should appear
     const fileInput = this.page.locator('input[type="file"]');
     await fileInput.setInputFiles(filePath);
   }
