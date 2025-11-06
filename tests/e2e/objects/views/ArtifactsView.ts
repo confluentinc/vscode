@@ -46,6 +46,8 @@ export class ArtifactsView extends View {
     );
     await expect(flinkArtifactsOption).toBeVisible();
     await flinkArtifactsOption.click();
+    const artifactsView = this.page.locator('[aria-label*="Flink Artifacts"]');
+    await expect(artifactsView).toBeVisible();
   }
 
   async loadArtifacts(
