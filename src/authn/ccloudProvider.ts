@@ -29,7 +29,7 @@ import { logUsage, UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { DisposableCollection } from "../utils/disposables";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
-import { CCloudSignInError } from "./errors";
+import { CCloudConnectionError } from "./errors";
 import type { AuthCallbackEvent } from "./types";
 
 const logger = new Logger("authn.ccloudProvider");
@@ -129,12 +129,12 @@ export class ConfluentCloudAuthProvider
     }
 
     // NOTE: for any of the branches below, if there's an error scenario we need to gather more info
-    // about for internal debugging/troubleshooting, we need to create a CCloudSignInError with
+    // about for internal debugging/troubleshooting, we need to create a CCloudConnectionError with
     // `signInError()`. This also captures the last few lines of sidecar logs to send to Sentry
     // along with the error.
     // If we need to escape this flow without creating an AuthenticationSession, we still need to
     // throw an error but don't necessarily need to gather sidecar logs, so we can throw a
-    // CCloudSignInError directly if we don't want it to appear as an error notification.
+    // CCloudConnectionError directly if we don't want it to appear as an error notification.
 
     const signInUri: string | undefined = connection.metadata?.sign_in_uri;
     if (!signInUri) {
@@ -162,7 +162,7 @@ export class ConfluentCloudAuthProvider
     if (authCallback === undefined) {
       // user cancelled the "Signing in ..." progress notification
       logger.debug("createSession() user cancelled the operation");
-      throw new CCloudSignInError("User cancelled the authentication flow.");
+      throw new CCloudConnectionError("User cancelled the authentication flow.");
     }
 
     if (authCallback.resetPassword) {
@@ -173,7 +173,7 @@ export class ConfluentCloudAuthProvider
         { [CCLOUD_SIGN_IN_BUTTON_LABEL]: async () => await this.createSession() },
       );
       // no sidecar logs needed here, just exit early
-      throw new CCloudSignInError("User reset their password.");
+      throw new CCloudConnectionError("User reset their password.");
     }
 
     if (!authCallback.success) {

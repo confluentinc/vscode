@@ -8,7 +8,7 @@ import { TEST_DIRECT_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_AUTH_SESSION } from "../../tests/unit/testResources/ccloudAuth";
 import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { CCloudSignInError } from "../authn/errors";
+import { CCloudConnectionError } from "../authn/errors";
 import * as authnUtils from "../authn/utils";
 import { EXTENSION_VERSION } from "../constants";
 import * as directConnect from "../directConnect";
@@ -64,8 +64,8 @@ describe("commands/connections.ts", function () {
       sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, { createIfNone: true });
     });
 
-    it("should not re-throw CCloudSignInErrors", async function () {
-      getCCloudAuthSessionStub.rejects(new CCloudSignInError("oh no"));
+    it("should not re-throw CCloudConnectionErrors", async function () {
+      getCCloudAuthSessionStub.rejects(new CCloudConnectionError("oh no"));
 
       await connections.ccloudSignInCommand();
 

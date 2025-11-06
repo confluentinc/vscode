@@ -32,7 +32,7 @@ export async function ccloudSignInCommand() {
     // - the auth provider handles a sign-in failure (which shows its own error notification)
     if (
       error instanceof Error &&
-      (error.message === "User did not consent to login." || error.name === "CCloudSignInError")
+      (error.message === "User did not consent to login." || error.name === "CCloudConnectionError")
     ) {
       return;
     }
