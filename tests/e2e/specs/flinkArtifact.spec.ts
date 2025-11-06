@@ -28,11 +28,13 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     await artifactsView.loadArtifacts(SelectFlinkDatabase.FromArtifactsViewButton);
     expect(artifactsView.ensureExpanded).toBeTruthy();
   });
+
   test("should upload Flink Artifact", async ({ page }) => {
     const artifactsView = new ArtifactsView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.FromArtifactsViewButton);
     const artifactName = "udfs-simple.jar";
     const artifactPath = path.join(__dirname, "..", "..", "fixtures/flink-artifacts", artifactName);
+
     await artifactsView.uploadFlinkArtifact(artifactPath);
     const artifactCountBeforeUpload = await artifactsView.artifacts.count();
 
@@ -42,7 +44,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
     expect(await uploadedArtifact.count()).toBe(artifactCountBeforeUpload + 1);
 
-    // Clean up - delete the uploaded artifact
+    // Clean up: delete the uploaded artifact
     await artifactsView.deleteFlinkArtifact(artifactName);
     const artifactCountAfterDeletion = await artifactsView.artifacts.count();
     expect(artifactCountAfterDeletion).toBe(artifactCountBeforeUpload);

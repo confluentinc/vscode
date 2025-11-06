@@ -40,9 +40,13 @@ export class ArtifactsView extends View {
       '[title="Switch View Mode"], [aria-label="Switch View Mode"]',
     );
     await expandToggle.click();
-
-    await this.page.keyboard.press("ArrowDown");
-    await this.page.keyboard.press("ArrowDown");
+    const menuItem = this.page
+      .locator(".context-view .monaco-menu .monaco-action-bar .action-item")
+      .filter({
+        hasText: "Switch to Flink Artifacts",
+      });
+    await menuItem.first().hover();
+    // clicking doesn't work here, so use keyboard navigation instead:
     await this.page.keyboard.press("Enter");
   }
 
@@ -73,7 +77,6 @@ export class ArtifactsView extends View {
           ? kafkaClusterQuickpick.items.filter({ hasText: clusterLabel }).first()
           : kafkaClusterQuickpick.items.first();
         await clusterItem.click();
-
         await this.clickSwitchToFlinkArtifacts();
         break;
       }
@@ -81,14 +84,32 @@ export class ArtifactsView extends View {
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);
     }
   }
-
+  /**
+   * Upload a Flink artifact JAR file to Confluent Cloud.
+   * Clicks the upload button in the view title area, navigates through the quickpick steps,
+   * and selects the specified JAR file.
+   */
   async uploadFlinkArtifact(filePath: string): Promise<void> {
-    const uploadButton = this.locator.locator(
-      '[title="Upload Flink Artifact"], [aria-label="Upload Flink Artifact"]',
+    const uploadButton = this.page.locator(
+      'a.action-label.codicon.codicon-cloud-upload[aria-label="Upload Flink Artifact to Confluent Cloud"]',
     );
-    await uploadButton.setInputFiles(filePath);
-  }
 
+    await uploadButton.click();
+
+    // Wait for the quickpick to appear and find the "3. Select JAR File" step
+    const quickpickItem = this.page.locator(".quick-input-list-row").filter({
+      has: this.page.locator(".monaco-highlighted-label", { hasText: "3. Select JAR File" }),
+    });
+    await expect(quickpickItem).toBeVisible();
+
+    // Click the codicon within that quickpick item to open the file picker
+    const codicon = quickpickItem.locator(".quick-input-list-icon.codicon");
+    await codicon.click();
+
+    // Handle the file selection
+    const fileInput = this.page.locator('input[type="file"]');
+    await fileInput.setInputFiles(filePath);
+  }
   async deleteFlinkArtifact(artifactName: string): Promise<void> {
     const artifactItem = this.artifacts.filter({ hasText: artifactName }).first();
 
