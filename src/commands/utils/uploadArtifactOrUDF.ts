@@ -453,3 +453,8 @@ export function makeMenuItems(
     },
   ];
 }
+
+export async function focusArtifactsInView(): Promise<void> {
+  // Focus on the artifacts view specifically
+  await vscode.commands.executeCommand("confluent.flinkdatabase.setArtifactsViewMode");
+}
