@@ -33,6 +33,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
     await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
 
+    // Clean up: delete the uploaded artifact using the correct name
     await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
 
     await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(0);
@@ -59,7 +60,6 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     // Clean up: delete the uploaded artifact using the correct name
     await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
 
-    // Verify the artifact is removed from the tree view
     await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(0);
   });
 });

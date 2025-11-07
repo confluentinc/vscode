@@ -16,9 +16,10 @@ export enum SelectFlinkDatabase {
 }
 
 /**
- * Object representing the "Artifacts tree view"
+ * Object representing the "Flink Database tree view"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
+ * Provides access to Flink artifact items and actions within the view.
  */
 export class ArtifactsView extends View {
   constructor(page: Page) {
@@ -59,7 +60,8 @@ export class ArtifactsView extends View {
     // clicking doesn't work here, so use keyboard navigation instead:
     await this.page.keyboard.press("Enter");
   }
-  /*
+
+  /**
    * Load the Flink Artifacts view by selecting a Kafka cluster as the Flink database,
    * using the specified entrypoint.
    * @param entrypoint - The method to select the Kafka cluster
