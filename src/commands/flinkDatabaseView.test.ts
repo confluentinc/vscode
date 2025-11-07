@@ -6,6 +6,7 @@ import * as kafkaClusterCommandsModule from "./kafkaClusters";
 import {
   createTopicInFlinkDatabaseViewCommand,
   registerFlinkDatabaseViewCommands,
+  setFlinkAIViewModeCommand,
   setFlinkArtifactsViewModeCommand,
   setFlinkRelationsViewModeCommand,
   setFlinkUDFViewModeCommand,
@@ -44,6 +45,7 @@ describe("commands/flinkDatabaseView.ts", () => {
         ["confluent.flinkdatabase.setRelationsViewMode", setFlinkRelationsViewModeCommand],
         ["confluent.flinkdatabase.setUDFsViewMode", setFlinkUDFViewModeCommand],
         ["confluent.flinkdatabase.setArtifactsViewMode", setFlinkArtifactsViewModeCommand],
+        ["confluent.flinkdatabase.setAIViewMode", setFlinkAIViewModeCommand],
         ["confluent.flinkdatabase.createTopic", createTopicInFlinkDatabaseViewCommand],
       ];
 
@@ -90,6 +92,11 @@ describe("commands/flinkDatabaseView.ts", () => {
           name: "setFlinkArtifactsViewModeCommand",
           execute: setFlinkArtifactsViewModeCommand,
           expectedMode: FlinkDatabaseViewProviderMode.Artifacts,
+        },
+        {
+          name: "setFlinkAIViewModeCommand",
+          execute: setFlinkAIViewModeCommand,
+          expectedMode: FlinkDatabaseViewProviderMode.AI,
         },
       ];
 
