@@ -104,8 +104,8 @@ export class ArtifactsView extends View {
     const uploadButton = this.page.locator(
       'a.action-label.codicon.codicon-cloud-upload[aria-label="Upload Flink Artifact to Confluent Cloud"]',
     );
-
     await uploadButton.click();
+
     const quickpick = new Quickpick(this.page);
     await expect(quickpick.locator).toBeVisible();
     await expect(quickpick.items).not.toHaveCount(0);
@@ -122,16 +122,19 @@ export class ArtifactsView extends View {
     const artifactItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
     await expect(artifactItem).toBeVisible();
     await artifactItem.click();
+
+    // Although this resource may be cleaned up, we append a random string to avoid name conflicts during development
     const randomSuffix = Math.random().toString(36).substring(2, 8);
     const baseFileName = path.basename(filePath, ".jar");
     const fullArtifactName = `${baseFileName}-${randomSuffix}`;
-    await this.page.keyboard.type(fullArtifactName); // Append random string to avoid name conflicts
+
+    await this.page.keyboard.type(fullArtifactName);
     await this.page.keyboard.press("Enter");
 
     const uploadAction = quickpick.items.filter({ hasText: "Upload Artifact" }).first();
     await expect(uploadAction).toBeVisible();
     await uploadAction.click();
-    // Wait for upload completion notification or error
+
     const notificationArea = new NotificationArea(this.page);
     const successNotifications = notificationArea.infoNotifications.filter({
       hasText: "uploaded successfully",
@@ -156,7 +159,6 @@ export class ArtifactsView extends View {
     // The rightClickContextMenuAction uses Enter key which auto-confirms the modal
     await artifactItem.rightClickContextMenuAction("Delete Artifact");
 
-    // Wait for deletion notification to confirm the operation completed
     const notificationArea = new NotificationArea(this.page);
     const successNotifications = notificationArea.infoNotifications.filter({
       hasText: "deleted successfully",

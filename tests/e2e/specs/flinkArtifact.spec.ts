@@ -29,7 +29,10 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     expect(artifactsView.ensureExpanded).toBeTruthy();
   });
 
-  test("should upload Flink Artifact", async ({ page, electronApp }) => {
+  test("should upload Flink Artifact when cluster selected from Artifacts view button", async ({
+    page,
+    electronApp,
+  }) => {
     const artifactsView = new ArtifactsView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.FromArtifactsViewButton);
     const artifactPath = path.join(
@@ -40,10 +43,31 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       "udfs-simple.jar",
     );
 
-    // Upload the artifact and get the generated name with random suffix
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
 
-    // Verify the specific artifact appears in the tree view
+    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
+
+    await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
+
+    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(0);
+  });
+
+  test("should upload Flink Artifact when cluster selected from the Resources view", async ({
+    page,
+    electronApp,
+  }) => {
+    const artifactsView = new ArtifactsView(page);
+    await artifactsView.loadArtifacts(SelectFlinkDatabase.FromResourcesView);
+    const artifactPath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "fixtures/flink-artifacts",
+      "udfs-simple.jar",
+    );
+
+    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
+
     await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
 
     // Clean up: delete the uploaded artifact using the correct name
