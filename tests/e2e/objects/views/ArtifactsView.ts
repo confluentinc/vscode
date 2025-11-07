@@ -25,7 +25,6 @@ export class ArtifactsView extends View {
     super(page, /Flink Database.*Section/);
   }
 
-  /** Get all (root-level) artifact items in the view. */
   /** Get all (root-level) artifact items in the Flink Artifacts section. */
   get artifacts(): Locator {
     // Target the Flink Artifacts section specifically, not the Flink Database section
