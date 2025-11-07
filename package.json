@@ -462,6 +462,13 @@
         "category": "Confluent: Flink Database View"
       },
       {
+        "command": "confluent.flinkdatabase.setAIViewMode",
+        "title": "Switch to Flink AI",
+        "icon": "$(sparkles)",
+        "category": "Confluent: Flink Database View",
+        "enablement": "confluent.flinkDatabaseViewMode != 'AI'"
+      },
+      {
         "command": "confluent.flinkdatabase.setArtifactsViewMode",
         "title": "Switch to Flink Artifacts",
         "icon": "$(confluent-code)",
@@ -1329,6 +1336,11 @@
       },
       {
         "view": "confluent-flink-database",
+        "contents": "No Flink AI resources found.",
+        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'AI' && !confluent.flinkDatabaseSearchApplied"
+      },
+      {
+        "view": "confluent-flink-database",
         "contents": "No Flink database contents matches search string. [Clear search](command:confluent.flink.database.search.clear) or [try a new search](command:confluent.flink.database.search).",
         "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied"
       }
@@ -1466,6 +1478,10 @@
         {
           "command": "confluent.flinkdatabase.refresh",
           "when": "true"
+        },
+        {
+          "command": "confluent.flinkdatabase.setAIViewMode",
+          "when": "false"
         },
         {
           "command": "confluent.flinkdatabase.setArtifactsViewMode",
@@ -2228,6 +2244,10 @@
         {
           "command": "confluent.flinkdatabase.setArtifactsViewMode",
           "group": "viewMode@3"
+        },
+        {
+          "command": "confluent.flinkdatabase.setAIViewMode",
+          "group": "viewMode@4"
         }
       ]
     },

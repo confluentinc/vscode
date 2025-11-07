@@ -11,13 +11,14 @@ import { logError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import type { FlinkArtifact } from "../models/flinkArtifact";
 import type { FlinkRelation, FlinkRelationColumn } from "../models/flinkRelation";
-import { FlinkUdf } from "../models/flinkUDF";
+import type { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import type { IEnvProviderRegion } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
 import type { ViewProviderDelegate } from "./baseModels/multiViewBase";
 import { MultiModeViewProvider } from "./baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
+import { FlinkAIDelegate } from "./multiViewDelegates/flinkAiDelegate";
 import {
   FlinkArtifactsDelegate,
   getFlinkArtifactsErrorMessage,
@@ -55,6 +56,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   private readonly artifactsDelegate = new FlinkArtifactsDelegate();
   private readonly udfsDelegate = new FlinkUDFsDelegate();
   private readonly relationsDelegate = new FlinkRelationsDelegate();
+  private readonly aiDelegate = new FlinkAIDelegate();
 
   treeViewDelegates = new Map<
     FlinkDatabaseViewProviderMode,
@@ -67,6 +69,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
     [FlinkDatabaseViewProviderMode.Artifacts, this.artifactsDelegate],
     [FlinkDatabaseViewProviderMode.UDFs, this.udfsDelegate],
     [FlinkDatabaseViewProviderMode.Relations, this.relationsDelegate],
+    [FlinkDatabaseViewProviderMode.AI, this.aiDelegate],
   ]);
 
   constructor() {
