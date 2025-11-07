@@ -40,17 +40,16 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       "udfs-simple.jar",
     );
 
-    const artifactCountBeforeUpload = await artifactsView.artifacts.count();
-
-    // Get the actual artifact name that was created (includes random suffix)
+    // Upload the artifact and get the generated name with random suffix
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
 
-    const artifactsCountAfterUpload = await artifactsView.artifacts.count();
-    expect(artifactsCountAfterUpload).toBe(artifactCountBeforeUpload + 1);
+    // Verify the specific artifact appears in the tree view
+    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
 
     // Clean up: delete the uploaded artifact using the correct name
     await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
-    const artifactCountAfterDeletion = await artifactsView.artifacts.count();
-    expect(artifactCountAfterDeletion).toBe(artifactCountBeforeUpload);
+
+    // Verify the artifact is removed from the tree view
+    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(0);
   });
 });

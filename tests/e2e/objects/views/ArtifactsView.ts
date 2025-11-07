@@ -25,8 +25,15 @@ export class ArtifactsView extends View {
   }
 
   /** Get all (root-level) artifact items in the view. */
+  /** Get all (root-level) artifact items in the Flink Artifacts section. */
   get artifacts(): Locator {
-    return this.treeItems;
+    // Target the Flink Artifacts section specifically, not the Flink Database section
+    return this.page
+      .locator(".pane")
+      .filter({ has: this.page.getByRole("button", { name: /Flink Artifacts.*Section/ }) })
+      .first()
+      .locator(".pane-body")
+      .locator('[role="treeitem"]');
   }
 
   /**
