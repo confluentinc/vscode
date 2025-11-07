@@ -15,19 +15,20 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
   });
 
+  const artifactPath = path.join(
+    __dirname,
+    "..",
+    "..",
+    "fixtures/flink-artifacts",
+    "udfs-simple.jar",
+  );
+
   test("should upload Flink Artifact when cluster selected from Artifacts view button", async ({
     page,
     electronApp,
   }) => {
     const artifactsView = new ArtifactsView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.FromArtifactsViewButton);
-    const artifactPath = path.join(
-      __dirname,
-      "..",
-      "..",
-      "fixtures/flink-artifacts",
-      "udfs-simple.jar",
-    );
 
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
 
@@ -45,13 +46,6 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   }) => {
     const artifactsView = new ArtifactsView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.FromResourcesView);
-    const artifactPath = path.join(
-      __dirname,
-      "..",
-      "..",
-      "fixtures/flink-artifacts",
-      "udfs-simple.jar",
-    );
 
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
 
