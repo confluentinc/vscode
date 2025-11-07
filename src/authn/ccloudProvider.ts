@@ -29,7 +29,7 @@ import { logUsage, UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { DisposableCollection } from "../utils/disposables";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
-import { CCloudSignInError } from "./errors";
+import { CCloudConnectionError } from "./errors";
 import type { AuthCallbackEvent } from "./types";
 
 const logger = new Logger("authn.ccloudProvider");
@@ -129,19 +129,22 @@ export class ConfluentCloudAuthProvider
     }
 
     // NOTE: for any of the branches below, if there's an error scenario we need to gather more info
-    // about for internal debugging/troubleshooting, we need to create a CCloudSignInError with
+    // about for internal debugging/troubleshooting, we need to create a CCloudConnectionError with
     // `signInError()`. This also captures the last few lines of sidecar logs to send to Sentry
     // along with the error.
     // If we need to escape this flow without creating an AuthenticationSession, we still need to
     // throw an error but don't necessarily need to gather sidecar logs, so we can throw a
-    // CCloudSignInError directly if we don't want it to appear as an error notification.
+    // CCloudConnectionError directly if we don't want it to appear as an error notification.
 
     const signInUri: string | undefined = connection.metadata?.sign_in_uri;
     if (!signInUri) {
       logger.error(
         "createSession() no sign-in URI found in connection metadata; this should not happen",
       );
-      throw await this.signInError("Failed to create new connection. Please try again.");
+      throw await this.createAndLogConnectionError(
+        "Failed to create new connection. Please try again.",
+        connection,
+      );
     }
 
     if (process.env.CONFLUENT_VSCODE_E2E_TESTING) {
@@ -162,7 +165,7 @@ export class ConfluentCloudAuthProvider
     if (authCallback === undefined) {
       // user cancelled the "Signing in ..." progress notification
       logger.debug("createSession() user cancelled the operation");
-      throw new CCloudSignInError("User cancelled the authentication flow.");
+      throw new CCloudConnectionError("User cancelled the authentication flow.");
     }
 
     if (authCallback.resetPassword) {
@@ -173,7 +176,7 @@ export class ConfluentCloudAuthProvider
         { [CCLOUD_SIGN_IN_BUTTON_LABEL]: async () => await this.createSession() },
       );
       // no sidecar logs needed here, just exit early
-      throw new CCloudSignInError("User reset their password.");
+      throw new CCloudConnectionError("User reset their password.");
     }
 
     if (!authCallback.success) {
@@ -184,7 +187,10 @@ export class ConfluentCloudAuthProvider
       logUsage(UserEvent.CCloudAuthentication, {
         status: "authentication failed",
       });
-      throw await this.signInError(authFailedMsg);
+      throw await this.createAndLogConnectionError(
+        authFailedMsg,
+        // no need to include the connection here since it likely has no useful info for this scenario
+      );
     }
 
     logUsage(UserEvent.CCloudAuthentication, {
@@ -198,17 +204,24 @@ export class ConfluentCloudAuthProvider
     // these three are all odd edge-cases that shouldn't happen if authentication completed,
     // but if they do, we need to gather sidecar logs to help debug
     if (!authenticatedConnection) {
-      throw await this.signInError(
+      throw await this.createAndLogConnectionError(
         "CCloud connection failed to become usable after authentication.",
+        // no connection, so nothing to include here
       );
     }
     const ccloudStatus: CCloudStatus | undefined = authenticatedConnection.status.ccloud;
     if (!ccloudStatus) {
-      throw await this.signInError("Authenticated connection has no status information.");
+      throw await this.createAndLogConnectionError(
+        "Authenticated connection has no status information.",
+        authenticatedConnection,
+      );
     }
     const userInfo: UserInfo | undefined = ccloudStatus.user;
     if (!userInfo) {
-      throw await this.signInError("Authenticated connection has no CCloud user.");
+      throw await this.createAndLogConnectionError(
+        "Authenticated connection has no CCloud user.",
+        authenticatedConnection,
+      );
     }
 
     // User signed in successfully so we send an identify event to Segment and LaunchDarkly
@@ -230,7 +243,7 @@ export class ConfluentCloudAuthProvider
     // update the connected state in the secret store so other workspaces can be notified of the
     // change and the middleware doesn't get an outdated state before the handler can update it
     await getResourceManager().setCCloudState(ccloudStatus.state);
-    const session = convertToAuthSession(authenticatedConnection);
+    const session = this.convertToAuthSession(authenticatedConnection);
     await this.handleSessionCreated(session, true);
     ccloudConnected.fire(true);
 
@@ -337,7 +350,21 @@ export class ConfluentCloudAuthProvider
       return [];
     }
 
-    const session = convertToAuthSession(connection);
+    let session: vscode.AuthenticationSession;
+    try {
+      session = this.convertToAuthSession(connection);
+    } catch (error) {
+      // If we fail to convert the connection to an auth session, we have some bad connection state
+      // that somehow passed the `NONE`/`FAILED` check above, so we need to treat it as invalid and
+      // clear internal state. This means the user will be prompted to sign in to CCloud again and
+      // (hopefully) get a valid auth state.
+      await this.handleSessionRemoved(true);
+      await this.createAndLogConnectionError(
+        `Failed to convert existing CCloud connection to auth session: ${error}`,
+        connection,
+      );
+      return [];
+    }
 
     if (changedToConnected) {
       // This transition is either very rare or impossible to get into altogether, because changes
@@ -661,44 +688,56 @@ export class ConfluentCloudAuthProvider
   }
 
   /**
-   * Create a {@link CCloudSignInError} and gather sidecar logs to send to Sentry, for when a sign-in
-   * error occurs during {@linkcode ConfluentCloudAuthProvider.createSession `createSession()`}.
-   * @param message The error message to include in the {@link CCloudSignInError}.
-   * @returns A {@link CCloudSignInError} for the caller to throw and escape `createSession()`
+   * Create a {@link CCloudConnectionError} and gather sidecar logs to send to Sentry, for either:
+   * - when a sign-in error occurs during {@linkcode ConfluentCloudAuthProvider.createSession `createSession()`}
+   * - converting an existing {@link Connection} to an auth session fails in {@linkcode ConfluentCloudAuthProvider.getSessions `getSessions()`}
+   * @param message The error message to include in the {@link CCloudConnectionError}.
+   * @param connection Optional {@link Connection} to include in the error context.
+   * @returns A {@link CCloudConnectionError} for the caller to throw and escape `createSession()`
    */
-  async signInError(message: string): Promise<CCloudSignInError> {
-    const error = new CCloudSignInError(message);
+  async createAndLogConnectionError(
+    message: string,
+    connection?: Connection,
+  ): Promise<CCloudConnectionError> {
+    const error = new CCloudConnectionError(message);
     const { logLines } = await gatherSidecarOutputs();
-    await logError(error, message, { extra: { sidecarLogs: logLines } });
+    // we're including the connection here because it's missing information that we would otherwise
+    // expect to have after a successful sign-in, so we need a closer look at what the rest of the
+    // state looks like for debugging purposes
+    logError(error, message, { extra: { sidecarLogs: logLines, connection } });
     return error;
   }
-}
 
-/** Converts a {@link Connection} to a {@link vscode.AuthenticationSession}. */
-export function convertToAuthSession(connection: Connection): vscode.AuthenticationSession {
-  logger.debug("convertToAuthSession()", connection.status.ccloud?.state);
-  // NOTE: accessToken is just the connection ID; the sidecar manages the actual access token.
-  // we don't want to store the token status or anything that might change, because we may end up
-  // seeing "Grant ____ permissions" in the Accounts action, which would be confusing to the user
-  const ccloudUser: UserInfo | undefined = connection.status.ccloud?.user;
-  if (!ccloudUser) {
-    logger.error("convertToAuthSession() connection has no CCloud user, which should never happen");
-    throw new Error("Connection has no CCloud user.");
+  /** Converts a {@link Connection} to a {@link vscode.AuthenticationSession}. */
+  convertToAuthSession(connection: Connection): vscode.AuthenticationSession {
+    logger.debug("convertToAuthSession()", connection.status.ccloud?.state);
+
+    const ccloudUser: UserInfo | undefined = connection.status.ccloud?.user;
+    if (!ccloudUser) {
+      logger.error(
+        "convertToAuthSession() connection has no CCloud user, which should never happen",
+      );
+      throw new Error("Connection has no CCloud user.");
+    }
+    if (!ccloudUser.id || !ccloudUser.username) {
+      logger.error(
+        "convertToAuthSession() connection has CCloud user with no id or username, which should never happen",
+      );
+      throw new Error("Connection has CCloud user with no id or username.");
+    }
+
+    // NOTE: accessToken is just the connection ID; the sidecar manages the actual access token.
+    // we don't want to store the token status or anything that might change, because we may end up
+    // seeing "Grant ____ permissions" in the Accounts action, which would be confusing to the user
+    const session: vscode.AuthenticationSession = {
+      id: CCLOUD_CONNECTION_ID,
+      accessToken: CCLOUD_CONNECTION_ID,
+      account: {
+        id: ccloudUser.id,
+        label: ccloudUser.username,
+      },
+      scopes: AUTH_SCOPES,
+    };
+    return session;
   }
-  if (!ccloudUser.id || !ccloudUser.username) {
-    logger.error(
-      "convertToAuthSession() connection has CCloud user with no id or username, which should never happen",
-    );
-    throw new Error("Connection has CCloud user with no id or username.");
-  }
-  const session: vscode.AuthenticationSession = {
-    id: CCLOUD_CONNECTION_ID,
-    accessToken: CCLOUD_CONNECTION_ID,
-    account: {
-      id: ccloudUser.id,
-      label: ccloudUser.username,
-    },
-    scopes: AUTH_SCOPES,
-  };
-  return session;
 }

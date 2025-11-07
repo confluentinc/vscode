@@ -26,9 +26,9 @@ import * as sidecarLogging from "../sidecar/logging";
 import { SecretStorageKeys } from "../storage/constants";
 import type { ResourceManager } from "../storage/resourceManager";
 import { clearWorkspaceState } from "../storage/utils";
-import { ConfluentCloudAuthProvider, convertToAuthSession } from "./ccloudProvider";
+import { ConfluentCloudAuthProvider } from "./ccloudProvider";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
-import { CCloudSignInError } from "./errors";
+import { CCloudConnectionError } from "./errors";
 import type { AuthCallbackEvent } from "./types";
 
 describe("authn/ccloudProvider.ts", () => {
@@ -50,9 +50,9 @@ describe("authn/ccloudProvider.ts", () => {
     let authProvider: ConfluentCloudAuthProvider;
     let stubbedResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
 
-    // used by createSession, getSessions, and deleteSession tests
+    // used by createSession, getSessions, and/or deleteSession tests
     let getCCloudConnectionStub: sinon.SinonStub;
-
+    let createAndLogConnectionErrorStub: sinon.SinonStub;
     let clearCurrentCCloudResourcesStub: sinon.SinonStub;
     let ccloudConnectedFireStub: sinon.SinonStub;
 
@@ -66,6 +66,9 @@ describe("authn/ccloudProvider.ts", () => {
         .resolves();
 
       authProvider = ConfluentCloudAuthProvider.getInstance();
+      createAndLogConnectionErrorStub = sandbox
+        .stub(authProvider, "createAndLogConnectionError")
+        .resolves();
 
       // ensure any firing of this event doesn't affect other parts of the codebase unrelated to the
       // auth provider tests
@@ -81,7 +84,6 @@ describe("authn/ccloudProvider.ts", () => {
     describe("createSession()", () => {
       let createCCloudConnectionStub: sinon.SinonStub;
       let browserAuthFlowStub: sinon.SinonStub;
-      let signInErrorStub: sinon.SinonStub;
       let deleteCCloudConnectionStub: sinon.SinonStub;
       let waitForConnectionToBeStableStub: sinon.SinonStub;
       let showErrorMessageStub: sinon.SinonStub;
@@ -92,7 +94,6 @@ describe("authn/ccloudProvider.ts", () => {
 
         // don't handle the progress notification, openExternal, etc in this test suite
         browserAuthFlowStub = sandbox.stub(authProvider, "browserAuthFlow").resolves();
-        signInErrorStub = sandbox.stub(authProvider, "signInError").resolves();
         deleteCCloudConnectionStub = sandbox.stub(ccloud, "deleteCCloudConnection").resolves();
 
         // assume the connection is immediately usable for most tests
@@ -144,20 +145,25 @@ describe("authn/ccloudProvider.ts", () => {
         );
       });
 
-      it("should throw a CCloudSignInError if no sign-in URI is available", async () => {
-        getCCloudConnectionStub.resolves({
+      it("should throw a CCloudConnectionError if no sign-in URI is available", async () => {
+        const missingSignInUriConnection = ConnectionFromJSON({
           ...TEST_CCLOUD_CONNECTION,
           metadata: { ...TEST_CCLOUD_CONNECTION.metadata, sign_in_uri: undefined },
-        });
-        const noSignInUriError = new CCloudSignInError(
+        } satisfies Connection);
+        getCCloudConnectionStub.resolves(missingSignInUriConnection);
+        const noSignInUriError = new CCloudConnectionError(
           "Failed to create new connection. Please try again.",
         );
-        signInErrorStub.resolves(noSignInUriError);
+        createAndLogConnectionErrorStub.resolves(noSignInUriError);
 
         await assert.rejects(authProvider.createSession(), noSignInUriError);
 
         sinon.assert.notCalled(createCCloudConnectionStub);
-        sinon.assert.calledOnceWithExactly(signInErrorStub, noSignInUriError.message);
+        sinon.assert.calledOnceWithExactly(
+          createAndLogConnectionErrorStub,
+          noSignInUriError.message,
+          missingSignInUriConnection,
+        );
         sinon.assert.notCalled(browserAuthFlowStub);
       });
 
@@ -166,7 +172,9 @@ describe("authn/ccloudProvider.ts", () => {
         // user cancels the operation
         browserAuthFlowStub.resolves(undefined);
         // not returned from signInError() for this scenario
-        const cancellationError = new CCloudSignInError("User cancelled the authentication flow.");
+        const cancellationError = new CCloudConnectionError(
+          "User cancelled the authentication flow.",
+        );
 
         await assert.rejects(authProvider.createSession(), cancellationError);
 
@@ -180,7 +188,7 @@ describe("authn/ccloudProvider.ts", () => {
         // password reset occurred
         browserAuthFlowStub.resolves({ success: false, resetPassword: true });
         // not returned from signInError() for this scenario
-        const passwordResetError = new CCloudSignInError("User reset their password.");
+        const passwordResetError = new CCloudConnectionError("User reset their password.");
 
         await assert.rejects(authProvider.createSession(), passwordResetError);
 
@@ -197,33 +205,36 @@ describe("authn/ccloudProvider.ts", () => {
         browserAuthFlowStub.resolves({ success: false, resetPassword: false });
         const authFailedMsg = "Confluent Cloud authentication failed. See browser for details.";
         // this does not throw, only returns the error to be thrown by createSession()
-        const signInError = new CCloudSignInError(authFailedMsg);
-        signInErrorStub.resolves(signInError);
+        const signInError = new CCloudConnectionError(authFailedMsg);
+        createAndLogConnectionErrorStub.resolves(signInError);
 
         await assert.rejects(authProvider.createSession(), signInError);
 
         sinon.assert.calledWith(showErrorMessageStub, authFailedMsg);
-        sinon.assert.calledOnceWithExactly(signInErrorStub, authFailedMsg);
+        sinon.assert.calledOnceWithExactly(createAndLogConnectionErrorStub, authFailedMsg);
       });
 
-      it("should throw a CCloudSignInError if no connection is returned from waitForConnectionToBeStable()", async () => {
+      it("should throw a CCloudConnectionError if no connection is returned from waitForConnectionToBeStable()", async () => {
         getCCloudConnectionStub.resolves(TEST_CCLOUD_CONNECTION);
         waitForConnectionToBeStableStub.resolves(null);
         // authentication completes successfully
         browserAuthFlowStub.resolves({ success: true, resetPassword: false });
-        const noConnectionError = new CCloudSignInError(
+        const noConnectionError = new CCloudConnectionError(
           "CCloud connection failed to become usable after authentication.",
         );
-        signInErrorStub.resolves(noConnectionError);
+        createAndLogConnectionErrorStub.resolves(noConnectionError);
 
         await assert.rejects(authProvider.createSession(), noConnectionError);
 
         sinon.assert.notCalled(createCCloudConnectionStub);
-        sinon.assert.calledOnceWithExactly(signInErrorStub, noConnectionError.message);
+        sinon.assert.calledOnceWithExactly(
+          createAndLogConnectionErrorStub,
+          noConnectionError.message,
+        );
         sinon.assert.calledOnce(browserAuthFlowStub);
       });
 
-      it("should throw a CCloudSignInError if no status.ccloud is available after authentication", async () => {
+      it("should throw a CCloudConnectionError if no status.ccloud is available after authentication", async () => {
         const missingStatusConnection = ConnectionFromJSON({
           ...TEST_AUTHENTICATED_CCLOUD_CONNECTION,
           status: {
@@ -235,19 +246,23 @@ describe("authn/ccloudProvider.ts", () => {
         waitForConnectionToBeStableStub.resolves(missingStatusConnection);
         // authentication completes successfully
         browserAuthFlowStub.resolves({ success: true, resetPassword: false });
-        const noStatusError = new CCloudSignInError(
+        const noStatusError = new CCloudConnectionError(
           "Authenticated connection has no status information.",
         );
-        signInErrorStub.resolves(noStatusError);
+        createAndLogConnectionErrorStub.resolves(noStatusError);
 
         await assert.rejects(authProvider.createSession(), noStatusError);
 
         sinon.assert.notCalled(createCCloudConnectionStub);
-        sinon.assert.calledOnceWithExactly(signInErrorStub, noStatusError.message);
+        sinon.assert.calledOnceWithExactly(
+          createAndLogConnectionErrorStub,
+          noStatusError.message,
+          missingStatusConnection,
+        );
         sinon.assert.calledOnce(browserAuthFlowStub);
       });
 
-      it("should throw a CCloudSignInError when no UserInfo is available after authentication", async () => {
+      it("should throw a CCloudConnectionError when no UserInfo is available after authentication", async () => {
         const missingUserInfoConnection = ConnectionFromJSON({
           ...TEST_AUTHENTICATED_CCLOUD_CONNECTION,
           status: {
@@ -262,15 +277,19 @@ describe("authn/ccloudProvider.ts", () => {
         waitForConnectionToBeStableStub.resolves(missingUserInfoConnection);
         // authentication completes successfully
         browserAuthFlowStub.resolves({ success: true, resetPassword: false });
-        const noUserInfoError = new CCloudSignInError(
+        const noUserInfoError = new CCloudConnectionError(
           "Authenticated connection has no CCloud user.",
         );
-        signInErrorStub.resolves(noUserInfoError);
+        createAndLogConnectionErrorStub.resolves(noUserInfoError);
 
         await assert.rejects(authProvider.createSession(), noUserInfoError);
 
         sinon.assert.notCalled(createCCloudConnectionStub);
-        sinon.assert.calledOnceWithExactly(signInErrorStub, noUserInfoError.message);
+        sinon.assert.calledOnceWithExactly(
+          createAndLogConnectionErrorStub,
+          noUserInfoError.message,
+          missingUserInfoConnection,
+        );
         sinon.assert.calledOnce(browserAuthFlowStub);
       });
 
@@ -292,6 +311,19 @@ describe("authn/ccloudProvider.ts", () => {
     });
 
     describe("getSessions()", () => {
+      let handleSessionRemovedStub: sinon.SinonStub;
+      let convertToAuthSessionStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        handleSessionRemovedStub = sandbox.stub().resolves();
+        authProvider["handleSessionRemoved"] = handleSessionRemovedStub;
+
+        // return a valid auth session by default
+        convertToAuthSessionStub = sandbox
+          .stub(authProvider, "convertToAuthSession")
+          .returns(TEST_CCLOUD_AUTH_SESSION);
+      });
+
       it(`should treat connections with a ${ConnectedState.None}/${ConnectedState.Failed} state as nonexistent`, async () => {
         getCCloudConnectionStub.resolves(TEST_CCLOUD_CONNECTION);
 
@@ -315,6 +347,61 @@ describe("authn/ccloudProvider.ts", () => {
 
         assert.strictEqual(sessions.length, 1);
         assert.deepStrictEqual(sessions[0], TEST_CCLOUD_AUTH_SESSION);
+      });
+
+      it("should handle missing 'user' info when trying to convert an authenticated Connection to a VS Code AuthenticationSession", async () => {
+        const badConnection = ConnectionFromJSON({
+          ...TEST_AUTHENTICATED_CCLOUD_CONNECTION,
+          status: {
+            ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status,
+            ccloud: {
+              ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!,
+              user: undefined,
+            },
+          },
+        } satisfies Connection);
+        getCCloudConnectionStub.resolves(badConnection);
+        const conversionError = new Error("Connection has no CCloud user.");
+        convertToAuthSessionStub.throws(conversionError);
+
+        const sessions = await authProvider.getSessions();
+
+        assert.deepStrictEqual(sessions, []);
+        sinon.assert.calledOnceWithExactly(handleSessionRemovedStub, true);
+        sinon.assert.calledOnceWithExactly(
+          createAndLogConnectionErrorStub,
+          `Failed to convert existing CCloud connection to auth session: ${conversionError}`,
+          badConnection,
+        );
+      });
+
+      it("should handle missing user ID/username when trying to convert an authenticated Connection to a VS Code AuthenticationSession", async () => {
+        const badConnection = ConnectionFromJSON({
+          ...TEST_AUTHENTICATED_CCLOUD_CONNECTION,
+          status: {
+            ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status,
+            ccloud: {
+              ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!,
+              user: {
+                id: undefined,
+                username: undefined,
+              },
+            },
+          },
+        } satisfies Connection);
+        getCCloudConnectionStub.resolves(badConnection);
+        const conversionError = new Error("Connection has CCloud user with no id or username.");
+        convertToAuthSessionStub.throws(conversionError);
+
+        const sessions = await authProvider.getSessions();
+
+        assert.deepStrictEqual(sessions, []);
+        sinon.assert.calledOnceWithExactly(handleSessionRemovedStub, true);
+        sinon.assert.calledOnceWithExactly(
+          createAndLogConnectionErrorStub,
+          `Failed to convert existing CCloud connection to auth session: ${conversionError}`,
+          badConnection,
+        );
       });
     });
 
@@ -529,13 +616,16 @@ describe("authn/ccloudProvider.ts", () => {
       });
     });
 
-    describe("signInError()", () => {
+    describe("createAndLogConnectionError()", () => {
       let gatherSidecarOutputsStub: sinon.SinonStub;
       let logErrorStub: sinon.SinonStub;
 
       const fakeErrorMsg = "uh oh, something went wrong";
 
       beforeEach(() => {
+        // revert to the original method for these tests
+        createAndLogConnectionErrorStub.restore();
+
         gatherSidecarOutputsStub = sandbox.stub(sidecarLogging, "gatherSidecarOutputs").resolves({
           logLines: [],
           parsedLogLines: [],
@@ -544,10 +634,11 @@ describe("authn/ccloudProvider.ts", () => {
         logErrorStub = sandbox.stub(errors, "logError").resolves();
       });
 
-      it("should return a CCloudSignInError", async () => {
-        const signInError: CCloudSignInError = await authProvider.signInError(fakeErrorMsg);
+      it("should return a CCloudConnectionError", async () => {
+        const signInError: CCloudConnectionError =
+          await authProvider.createAndLogConnectionError(fakeErrorMsg);
 
-        assert.ok(signInError instanceof CCloudSignInError);
+        assert.ok(signInError instanceof CCloudConnectionError);
         assert.strictEqual(signInError.message, fakeErrorMsg);
       });
 
@@ -559,63 +650,64 @@ describe("authn/ccloudProvider.ts", () => {
           stderrLines: [],
         });
 
-        await authProvider.signInError(fakeErrorMsg);
+        await authProvider.createAndLogConnectionError(fakeErrorMsg);
 
         sinon.assert.calledOnce(gatherSidecarOutputsStub);
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledOnceWithExactly(
           logErrorStub,
           sinon.match(
-            (error: Error) => error.name === "CCloudSignInError" && error.message === fakeErrorMsg,
+            (error: Error) =>
+              error.name === "CCloudConnectionError" && error.message === fakeErrorMsg,
           ),
           fakeErrorMsg,
-          { extra: { sidecarLogs } },
+          { extra: { sidecarLogs, connection: undefined } },
         );
       });
     });
-  });
 
-  describe("convertToAuthSession()", () => {
-    it("should throw if the Connection is missing .user", () => {
-      // has status.ccloud, but no status.ccloud.user
-      const connection = TEST_CCLOUD_CONNECTION;
-
-      assert.throws(
-        () => convertToAuthSession(connection),
-        Error("Connection has no CCloud user."),
-      );
-    });
-
-    for (const missingField of ["id", "username"]) {
-      it(`should throw if the Connection's UserInfo is missing '${missingField}'`, () => {
-        const connection = ConnectionFromJSON({
-          ...TEST_AUTHENTICATED_CCLOUD_CONNECTION,
-          status: {
-            ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status,
-            ccloud: {
-              ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!,
-              user: {
-                ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.user!,
-                [missingField]: undefined,
-              },
-            },
-          },
-        } satisfies Connection);
+    describe("convertToAuthSession()", () => {
+      it("should throw if the Connection is missing .user", () => {
+        // has status.ccloud, but no status.ccloud.user
+        const connection = TEST_CCLOUD_CONNECTION;
 
         assert.throws(
-          () => convertToAuthSession(connection),
-          Error("Connection has CCloud user with no id or username."),
+          () => authProvider.convertToAuthSession(connection),
+          Error("Connection has no CCloud user."),
         );
       });
-    }
 
-    it("should convert a Connection to an AuthenticationSession", () => {
-      // has valid status.ccloud.user data
-      const connection = TEST_AUTHENTICATED_CCLOUD_CONNECTION;
+      for (const missingField of ["id", "username"]) {
+        it(`should throw if the Connection's UserInfo is missing '${missingField}'`, () => {
+          const connection = ConnectionFromJSON({
+            ...TEST_AUTHENTICATED_CCLOUD_CONNECTION,
+            status: {
+              ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status,
+              ccloud: {
+                ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!,
+                user: {
+                  ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.user!,
+                  [missingField]: undefined,
+                },
+              },
+            },
+          } satisfies Connection);
 
-      const session: vscode.AuthenticationSession = convertToAuthSession(connection);
+          assert.throws(
+            () => authProvider.convertToAuthSession(connection),
+            Error("Connection has CCloud user with no id or username."),
+          );
+        });
+      }
 
-      assert.deepStrictEqual(session, TEST_CCLOUD_AUTH_SESSION);
+      it("should convert a Connection to an AuthenticationSession", () => {
+        // has valid status.ccloud.user data
+        const connection = TEST_AUTHENTICATED_CCLOUD_CONNECTION;
+
+        const session: vscode.AuthenticationSession = authProvider.convertToAuthSession(connection);
+
+        assert.deepStrictEqual(session, TEST_CCLOUD_AUTH_SESSION);
+      });
     });
   });
 });
