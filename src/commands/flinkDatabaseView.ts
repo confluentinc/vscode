@@ -10,6 +10,7 @@ const logger = new Logger("FlinkDatabaseViewCommands");
 
 export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {
   return [
+    // view mode toggling commands:
     registerCommandWithLogging(
       "confluent.flinkdatabase.setRelationsViewMode",
       setFlinkRelationsViewModeCommand,
@@ -22,11 +23,12 @@ export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {
       "confluent.flinkdatabase.setArtifactsViewMode",
       setFlinkArtifactsViewModeCommand,
     ),
+    registerCommandWithLogging("confluent.flinkdatabase.setAIViewMode", setFlinkAIViewModeCommand),
+    // create table/topic command for empty state in Relations mode:
     registerCommandWithLogging(
       "confluent.flinkdatabase.createTopic",
       createTopicInFlinkDatabaseViewCommand,
     ),
-    registerCommandWithLogging("confluent.flinkdatabase.setAIViewMode", setFlinkAIViewModeCommand),
   ];
 }
 /** Set the Flink Database view to Relations mode */
