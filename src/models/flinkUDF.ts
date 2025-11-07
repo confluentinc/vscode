@@ -160,7 +160,6 @@ export class FlinkUdfTreeItem extends TreeItem {
 export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString {
   const tooltip = new CustomMarkdownString()
     .addHeader("Flink UDF", IconNames.FLINK_FUNCTION)
-    .addField("ID", resource.id)
     .addField("Description", resource.description)
     .addField("Return Type", formatSqlType(resource.returnType));
 
