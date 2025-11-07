@@ -8,6 +8,7 @@ import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
 import { View } from "./View";
 import { KafkaClusterItem } from "./viewItems/KafkaClusterItem";
+import { ViewItem } from "./viewItems/ViewItem";
 
 export enum SelectFlinkDatabase {
   FromResourcesView = "Flink database action from the Resources view",
@@ -138,29 +139,28 @@ export class ArtifactsView extends View {
     await expect(successNotifications.first()).toBeVisible();
     return fullArtifactName;
   }
+
+  /**
+   * Delete a Flink artifact from Confluent Cloud.
+   * Right-clicks on the artifact item and confirms deletion via the VS Code warning dialog.
+   * @param artifactName - The name of the artifact to delete
+   */
   async deleteFlinkArtifact(artifactName: string): Promise<void> {
-    const artifactItem = this.artifacts.filter({ hasText: artifactName }).first();
+    const artifactLocator = this.artifacts.filter({ hasText: artifactName });
+    await expect(artifactLocator).toHaveCount(1);
+    const artifactItem = new ViewItem(this.page, artifactLocator.first());
+    await artifactItem.locator.scrollIntoViewIfNeeded();
+    await expect(artifactItem.locator).toBeVisible();
 
-    // Right-click on the artifact item to open context menu
-    await artifactItem.click({ button: "right" });
+    // Trigger the context menu delete action
+    // The rightClickContextMenuAction uses Enter key which auto-confirms the modal
+    await artifactItem.rightClickContextMenuAction("Delete Artifact");
 
-    // Wait for context menu to appear and click delete option
-    const contextMenu = this.page.locator(".monaco-menu, .context-menu");
-    await expect(contextMenu).toBeVisible();
-
-    const deleteAction = contextMenu.locator(
-      '[aria-label*="Delete"], [title*="Delete"], text="Delete Flink Artifact"',
-    );
-    await expect(deleteAction).toBeVisible();
-    await deleteAction.click();
-
-    // Handle any confirmation dialog if it appears
-    const confirmDialog = this.page.locator(".monaco-dialog, .confirm-dialog");
-    if (await confirmDialog.isVisible()) {
-      const confirmButton = confirmDialog.locator(
-        'button:has-text("Delete"), button:has-text("OK"), button:has-text("Yes")',
-      );
-      await confirmButton.click();
-    }
+    // Wait for deletion notification to confirm the operation completed
+    const notificationArea = new NotificationArea(this.page);
+    const successNotifications = notificationArea.infoNotifications.filter({
+      hasText: "deleted successfully",
+    });
+    await expect(successNotifications).not.toHaveCount(0);
   }
 }
