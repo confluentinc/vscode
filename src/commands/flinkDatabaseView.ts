@@ -14,21 +14,19 @@ export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {
       "confluent.flinkdatabase.setRelationsViewMode",
       setFlinkRelationsViewModeCommand,
     ),
-
     registerCommandWithLogging(
       "confluent.flinkdatabase.setUDFsViewMode",
       setFlinkUDFViewModeCommand,
     ),
-
     registerCommandWithLogging(
       "confluent.flinkdatabase.setArtifactsViewMode",
       setFlinkArtifactsViewModeCommand,
     ),
-
     registerCommandWithLogging(
       "confluent.flinkdatabase.createTopic",
       createTopicInFlinkDatabaseViewCommand,
     ),
+    registerCommandWithLogging("confluent.flinkdatabase.setAIViewMode", setFlinkAIViewModeCommand),
   ];
 }
 /** Set the Flink Database view to Relations mode */
@@ -44,6 +42,11 @@ export async function setFlinkUDFViewModeCommand() {
 /** Set the Flink Database view to Artifacts mode */
 export async function setFlinkArtifactsViewModeCommand() {
   await FlinkDatabaseViewProvider.getInstance().switchMode(FlinkDatabaseViewProviderMode.Artifacts);
+}
+
+/** Set the Flink Database view to AI mode */
+export async function setFlinkAIViewModeCommand() {
+  await FlinkDatabaseViewProvider.getInstance().switchMode(FlinkDatabaseViewProviderMode.AI);
 }
 
 /**
