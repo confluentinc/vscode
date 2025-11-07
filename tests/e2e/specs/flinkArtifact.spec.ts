@@ -29,23 +29,27 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     expect(artifactsView.ensureExpanded).toBeTruthy();
   });
 
-  test("should upload Flink Artifact", async ({ page }) => {
+  test("should upload Flink Artifact", async ({ page, electronApp }) => {
     const artifactsView = new ArtifactsView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.FromArtifactsViewButton);
-    const artifactName = "udfs-simple.jar";
-    const artifactPath = path.join(__dirname, "..", "..", "fixtures/flink-artifacts", artifactName);
+    const artifactPath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "fixtures/flink-artifacts",
+      "udfs-simple.jar",
+    );
 
-    await artifactsView.uploadFlinkArtifact(artifactPath);
     const artifactCountBeforeUpload = await artifactsView.artifacts.count();
 
-    const uploadedArtifact = artifactsView.artifacts.filter({
-      hasText: artifactName,
-    });
+    // Get the actual artifact name that was created (includes random suffix)
+    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
 
-    expect(await uploadedArtifact.count()).toBe(artifactCountBeforeUpload + 1);
+    const artifactsCountAfterUpload = await artifactsView.artifacts.count();
+    expect(artifactsCountAfterUpload).toBe(artifactCountBeforeUpload + 1);
 
-    // Clean up: delete the uploaded artifact
-    await artifactsView.deleteFlinkArtifact(artifactName);
+    // Clean up: delete the uploaded artifact using the correct name
+    await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
     const artifactCountAfterDeletion = await artifactsView.artifacts.count();
     expect(artifactCountAfterDeletion).toBe(artifactCountBeforeUpload);
   });

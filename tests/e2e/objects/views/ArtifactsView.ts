@@ -1,6 +1,9 @@
-import type { Locator, Page } from "@playwright/test";
+import type { ElectronApplication, Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
+import { stubDialog } from "electron-playwright-helpers";
+import path from "path";
 import { ConnectionType } from "../../connectionTypes";
+import { NotificationArea } from "../notifications/NotificationArea";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
 import { View } from "./View";
@@ -89,7 +92,7 @@ export class ArtifactsView extends View {
    * Clicks the upload button in the view title area, navigates through the quickpick steps,
    * and selects the specified JAR file.
    */
-  async uploadFlinkArtifact(filePath: string): Promise<void> {
+  async uploadFlinkArtifact(electronApp: ElectronApplication, filePath: string): Promise<string> {
     const uploadButton = this.page.locator(
       'a.action-label.codicon.codicon-cloud-upload[aria-label="Upload Flink Artifact to Confluent Cloud"]',
     );
@@ -99,28 +102,34 @@ export class ArtifactsView extends View {
     await expect(quickpick.locator).toBeVisible();
     await expect(quickpick.items).not.toHaveCount(0);
 
-    // Select the first environment (or you can add a parameter to specify which one)
-    await quickpick.items.first().click();
+    const selectedJarFileItem = quickpick.items.filter({ hasText: "3. Select JAR File" }).first();
+    await expect(selectedJarFileItem).toBeVisible();
 
-    // Step 2: Select Compute Pool
-    await expect(quickpick.locator).toBeVisible();
-    await expect(quickpick.items).not.toHaveCount(0);
+    await stubDialog(electronApp, "showOpenDialog", {
+      filePaths: [filePath],
+    });
 
-    // Select the first compute pool (or you can add a parameter to specify which one)
-    await quickpick.items.first().click();
+    await selectedJarFileItem.click();
 
-    // Step 3: Select JAR File
-    await expect(quickpick.locator).toBeVisible();
-    const jarFileOption = quickpick.items
-      .filter({
-        hasText: "Select JAR File",
-      })
-      .first();
-    await jarFileOption.click();
+    const artifactItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
+    await expect(artifactItem).toBeVisible();
+    await artifactItem.click();
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    const baseFileName = path.basename(filePath, ".jar");
+    const fullArtifactName = `${baseFileName}-${randomSuffix}`;
+    await this.page.keyboard.type(fullArtifactName); // Append random string to avoid name conflicts
+    await this.page.keyboard.press("Enter");
 
-    // Now the file picker should appear
-    const fileInput = this.page.locator('input[type="file"]');
-    await fileInput.setInputFiles(filePath);
+    const uploadAction = quickpick.items.filter({ hasText: "Upload Artifact" }).first();
+    await expect(uploadAction).toBeVisible();
+    await uploadAction.click();
+    // Wait for upload completion notification or error
+    const notificationArea = new NotificationArea(this.page);
+    const successNotifications = notificationArea.infoNotifications.filter({
+      hasText: "uploaded successfully",
+    });
+    await expect(successNotifications.first()).toBeVisible();
+    return fullArtifactName;
   }
   async deleteFlinkArtifact(artifactName: string): Promise<void> {
     const artifactItem = this.artifacts.filter({ hasText: artifactName }).first();
