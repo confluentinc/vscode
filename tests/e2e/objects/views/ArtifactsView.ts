@@ -59,7 +59,12 @@ export class ArtifactsView extends View {
     // clicking doesn't work here, so use keyboard navigation instead:
     await this.page.keyboard.press("Enter");
   }
-
+  /*
+   * Load the Flink Artifacts view by selecting a Kafka cluster as the Flink database,
+   * using the specified entrypoint.
+   * @param entrypoint - The method to select the Kafka cluster
+   * @param clusterLabel - Optional label or regex to identify the Kafka cluster in the quickpick
+   */
   async loadArtifacts(
     entrypoint: SelectFlinkDatabase,
     clusterLabel?: string | RegExp,
@@ -94,10 +99,14 @@ export class ArtifactsView extends View {
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);
     }
   }
+
   /**
    * Upload a Flink artifact JAR file to Confluent Cloud.
    * Clicks the upload button in the view title area, navigates through the quickpick steps,
    * and selects the specified JAR file.
+   * @param electronApp - The Electron application instance
+   * @param filePath - The path to the JAR file to upload
+   * @returns The name of the uploaded artifact
    */
   async uploadFlinkArtifact(electronApp: ElectronApplication, filePath: string): Promise<string> {
     const uploadButton = this.page.locator(
