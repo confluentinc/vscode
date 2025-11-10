@@ -38,30 +38,6 @@ export class ArtifactsView extends View {
   }
 
   /**
-   * Click the "Select Kafka Cluster" nav action in the view title area, which will show a
-   * quickpick with a list of Kafka cluster items.
-   */
-  async clickSelectKafkaClusterAsFlinkDatabase(): Promise<void> {
-    await this.clickNavAction("Select Kafka Cluster as Flink Database");
-  }
-
-  /** Click the "Switch to Flink Artifacts" nav action in the view title area. */
-  async clickSwitchToFlinkArtifacts(): Promise<void> {
-    const expandToggle = this.locator.locator(
-      '[title="Switch View Mode"], [aria-label="Switch View Mode"]',
-    );
-    await expandToggle.click();
-    const menuItem = this.page
-      .locator(".context-view .monaco-menu .monaco-action-bar .action-item")
-      .filter({
-        hasText: "Switch to Flink Artifacts",
-      });
-    await menuItem.first().hover();
-    // clicking doesn't work here, so use keyboard navigation instead:
-    await this.page.keyboard.press("Enter");
-  }
-
-  /**
    * Load the Flink Artifacts view by selecting a Kafka cluster as the Flink database,
    * using the specified entrypoint.
    * @param entrypoint - The method to select the Kafka cluster
@@ -131,6 +107,30 @@ export class ArtifactsView extends View {
     await this.confirmUpload();
     await this.waitForUploadSuccess();
     return artifactName;
+  }
+
+  /**
+   * Click the "Select Kafka Cluster" nav action in the view title area, which will show a
+   * quickpick with a list of Kafka cluster items.
+   */
+  async clickSelectKafkaClusterAsFlinkDatabase(): Promise<void> {
+    await this.clickNavAction("Select Kafka Cluster as Flink Database");
+  }
+
+  /** Click the "Switch to Flink Artifacts" nav action in the view title area. */
+  async clickSwitchToFlinkArtifacts(): Promise<void> {
+    const expandToggle = this.locator.locator(
+      '[title="Switch View Mode"], [aria-label="Switch View Mode"]',
+    );
+    await expandToggle.click();
+    const menuItem = this.page
+      .locator(".context-view .monaco-menu .monaco-action-bar .action-item")
+      .filter({
+        hasText: "Switch to Flink Artifacts",
+      });
+    await menuItem.first().hover();
+    // clicking doesn't work here, so use keyboard navigation instead:
+    await this.page.keyboard.press("Enter");
   }
 
   /**
