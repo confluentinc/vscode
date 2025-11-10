@@ -6,11 +6,7 @@ import type { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { SchemasView, SchemaType, SelectSchemaRegistry } from "../objects/views/SchemasView";
-import {
-  DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
-  SelectKafkaCluster,
-  TopicsView,
-} from "../objects/views/TopicsView";
+import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { Tag } from "../tags";
 import { openNewUntitledDocument } from "../utils/documents";
@@ -35,8 +31,7 @@ import { openNewUntitledDocument } from "../utils/documents";
  */
 
 test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] }, () => {
-  let topic: TopicItem;
-  let topicName: string;
+  let topicItem: TopicItem;
   let subjectName: string;
 
   // tests here will only ever create one schema version
@@ -47,10 +42,10 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
   });
 
   // test dimensions:
-  const connectionTypes: Array<[ConnectionType, Tag, number]> = [
-    [ConnectionType.Ccloud, Tag.CCloud, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
-    [ConnectionType.Direct, Tag.Direct, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
-    [ConnectionType.Local, Tag.Local, 1],
+  const connectionTypes: Array<[ConnectionType, Tag]> = [
+    [ConnectionType.Ccloud, Tag.CCloud],
+    [ConnectionType.Direct, Tag.Direct],
+    [ConnectionType.Local, Tag.Local],
   ];
   const schemaTypes: Array<[SchemaType | null, string | null]> = [
     [null, null],
@@ -59,24 +54,26 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
     [SchemaType.Protobuf, "proto"],
   ];
 
-  for (const [connectionType, connectionTag, replicationFactor] of connectionTypes) {
+  for (const [connectionType, connectionTag] of connectionTypes) {
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
-      // tell the `connectionItem` fixture which connection type to set up
-      test.use({ connectionType });
-
       for (const [schemaType, fileExtension] of schemaTypes) {
         test.describe(schemaType ? `${schemaType} schema` : "(no schema)", () => {
-          test.beforeEach(async ({ page, connectionItem }) => {
+          const schemaSuffix = schemaType ? schemaType.toLowerCase() : "no-schema";
+
+          // specify the connection type to use with the `connectionItem` fixture, and the topic to
+          // create with the `topic` fixture
+          test.use({
+            connectionType,
+            topicConfig: { name: `e2e-produce-message-${schemaSuffix}` },
+          });
+
+          test.beforeEach(async ({ page, connectionItem, topic: topicName }) => {
             // ensure connection tree item has resources available to work with
             await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
 
             const topicsView = new TopicsView(page);
             // click a Kafka cluster from the Resources view to open and populate the Topics view
             await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
-            // make sure we have a topic to produce messages to first
-            const schemaSuffix = schemaType ? schemaType.toLowerCase() : "no-schema";
-            topicName = `e2e-produce-message-${schemaSuffix}`;
-            await topicsView.createTopic(topicName, 1, replicationFactor);
             let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
 
             // if we want to use a schema, create a new subject with an initial schema version to match
@@ -107,14 +104,11 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
             // until we can delete topics, we may have too many to show at once in the view, so
             // scroll the target topic into view before trying to click it
             await targetTopic.scrollIntoViewIfNeeded();
-            topic = new TopicItem(page, targetTopic.first());
-            await expect(topic.locator).toBeVisible();
+            topicItem = new TopicItem(page, targetTopic.first());
+            await expect(topicItem.locator).toBeVisible();
           });
 
           test.afterEach(async ({ page, electronApp }) => {
-            const topicsView = new TopicsView(page);
-            await topicsView.deleteTopic(topicName);
-
             // delete the subject if it was created during the test
             if (subjectName) {
               const schemasView = new SchemasView(page);
@@ -133,7 +127,7 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
             const messageContent: string = loadFixtureFromFile("produceMessages/good.json");
             await document.insertContent(messageContent);
 
-            await topic.clickSendMessages();
+            await topicItem.clickSendMessages();
             // click the currently open document item in the document/URI quickpick
             const documentQuickpick = new Quickpick(page);
             await expect(documentQuickpick.locator).toBeVisible();
@@ -167,7 +161,7 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
             );
             await document.insertContent(badMessageContent);
 
-            await topic.clickSendMessages();
+            await topicItem.clickSendMessages();
             // click the currently open document item in the document/URI quickpick
             const documentQuickpick = new Quickpick(page);
             await expect(documentQuickpick.locator).toBeVisible();
@@ -199,7 +193,7 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
               );
               await document.insertContent(uglyMessageContent);
 
-              await topic.clickSendMessages();
+              await topicItem.clickSendMessages();
               // click the currently open document item in the document/URI quickpick
               const documentQuickpick = new Quickpick(page);
               await expect(documentQuickpick.locator).toBeVisible();

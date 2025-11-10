@@ -12,6 +12,14 @@ export enum SelectKafkaCluster {
   FromTopicsViewButton = "Topics view nav action",
 }
 
+/** Configuration options for creating a topic. */
+export interface TopicConfig {
+  name: string;
+  numPartitions?: number;
+  replicationFactor?: number;
+  clusterLabel?: string | RegExp;
+}
+
 export const DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR = 3;
 
 /**
