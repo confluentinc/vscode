@@ -1,0 +1,2 @@
+env:
+  HUSKY: 0  # Disable Git hooks in CI
