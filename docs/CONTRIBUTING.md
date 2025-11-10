@@ -333,6 +333,46 @@ You can also install the
 which will format `typescript` documents **on save** based on the `.prettierrc` and
 `.vscode/settings.json` files in the project.
 
+### Pre-commit hooks
+
+This project uses [Husky](https://typicode.github.io/husky/) to run automated checks before each
+commit. The pre-commit hook runs the linter (`gulp lint`) to ensure code quality standards are met
+before changes are committed.
+
+#### How it works
+
+When you attempt to commit changes, Husky automatically runs:
+
+```bash
+npx gulp lint
+```
+
+If the linter finds any issues, the commit will be blocked until they are resolved. You can fix
+linting issues automatically by running:
+
+```bash
+gulp lint -f
+```
+
+#### Disabling pre-commit hooks
+
+In rare cases where you need to commit without running the pre-commit hook (not recommended), you
+can use:
+
+```bash
+git commit --no-verify -m "your commit message"
+```
+
+<!-- prettier-ignore -->
+> [!WARNING]
+> Using `--no-verify` should be avoided as it bypasses important code quality checks. Only use this in exceptional circumstances.
+
+#### CI environment
+
+Pre-commit hooks are automatically disabled in CI/CD environments through the `HUSKY=0` environment
+variable in the workflow files (see `.github/workflows/*.yml`). This prevents duplicate checks since
+the CI pipeline runs its own linting and validation steps.
+
 ### Testing
 
 This project uses unit, integration, functional (webview), and end-to-end (E2E) tests to verify
