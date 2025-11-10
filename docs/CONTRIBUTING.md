@@ -83,6 +83,28 @@ PR onto the appropriate branch.
 > improve with each PR. A member of the Confluent team will need to comment "/sem-approve" on the PR
 > to approve external PRs for merging.
 
+#### Git Hooks
+
+The extension uses [Husky](https://typicode.github.io/husky/) to enforce code quality through git
+hooks:
+
+**Pre-commit Hook**: Automatically runs `npx gulp lint` before every commit to catch linting issues
+early.
+
+- **Location**: `.husky/pre-commit`
+- **Behavior**: Commits are blocked if linting fails
+- **Fix linting issues**: Run `npx gulp lint -f` to auto-fix most issues
+- **Bypass** (not recommended): Use `git commit --no-verify` to skip the hook
+
+If you need to update the hook command:
+
+```bash
+# The hook file uses modern Husky format (v9+)
+# Just edit .husky/pre-commit directly - no shebang or sourcing needed
+echo "npx gulp lint" > .husky/pre-commit
+chmod +x .husky/pre-commit
+```
+
 To create a PR, you must create a fork of this repository and set up your machine with the tools
 needed for development. These steps are outlined below.
 

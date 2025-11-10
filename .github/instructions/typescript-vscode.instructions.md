@@ -13,6 +13,7 @@ When writing TypeScript code for this VS Code extension:
 - **PREFER** `enum` over string union types for constants
 - **REQUIRE** JSDoc comments on all exported functions and public class methods
 - TypeScript strict mode is enforced - code must compile without type errors
+- **Pre-commit hook**: Linting is automatically enforced via Husky before every commit
 
 ## Asynchronous Programming
 

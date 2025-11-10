@@ -2602,6 +2602,7 @@
     "eslint-plugin-prettier": "^5.1.3",
     "globals": "^15.4.0",
     "gulp": "^5.0.0",
+    "husky": "^9.1.7",
     "lightningcss": "^1.26.0",
     "mocha-junit-reporter": "^2.2.1",
     "mocha-multi-reporters": "^1.5.1",
@@ -2644,5 +2645,8 @@
     "vscode-languageserver": "^9.0.1",
     "yauzl": "^2.10.0",
     "ws": "^8.18.0"
+  },
+  "scripts": {
+    "prepare": "husky install"
   }
 }

@@ -47,6 +47,18 @@ npx gulp check         # TypeScript type checking
 npx gulp lint          # ESLint with auto-fix: gulp lint -f
 ```
 
+### Pre-commit Hooks (Husky)
+
+The extension uses [Husky](https://typicode.github.io/husky/) to automatically run the linter before
+every commit, preventing linting issues from being committed.
+
+- **Setup**: Run `npm install` to automatically install Husky hooks via the `prepare` script
+- **Hook location**: `.husky/pre-commit` contains the command `npx gulp lint`
+- **Behavior**: Commits are blocked if linting fails
+- **Bypass**: Use `git commit --no-verify` to skip the hook (not recommended)
+- **Modern format**: The hook uses Husky v9+ format (just the command, no shebang or husky.sh
+  sourcing)
+
 ### Testing Strategy
 
 - **Unit**: Co-located `.test.ts` files, Mocha + Sinon + assert, focus on isolated behavior
