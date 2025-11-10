@@ -271,6 +271,14 @@ To install frontend-related dependencies, use NPM:
 We recommend using `npm ci` over `npm install` so you'd get reproducible state of dependencies
 defined by `package-lock.json`.
 
+After installing dependencies, initialize Husky Git hooks:
+
+```bash
+    gulp prepareHusky
+```
+
+This sets up the pre-commit hooks that run linting checks before each commit.
+
 #### Building locally
 
 Now that you have the source code and installed all the tools, you can build the project locally.
@@ -332,6 +340,40 @@ You can also install the
 [Prettier extension for VS Code](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
 which will format `typescript` documents **on save** based on the `.prettierrc` and
 `.vscode/settings.json` files in the project.
+
+### Pre-commit hooks
+
+This project uses [Husky](https://typicode.github.io/husky/) to run automated checks before each
+commit. The pre-commit hook runs the linter (`gulp lint`) to ensure code quality standards are met
+before changes are committed.
+
+#### How it works
+
+When you attempt to commit changes, Husky automatically runs:
+
+```bash
+npx gulp lint
+```
+
+If the linter finds any issues, the commit will be blocked until they are resolved. You can fix
+linting issues automatically by running:
+
+```bash
+gulp lint -f
+```
+
+#### Disabling pre-commit hooks
+
+In rare cases where you need to commit without running the pre-commit hook (not recommended), you
+can use:
+
+```bash
+git commit --no-verify -m "your commit message"
+```
+
+<!-- prettier-ignore -->
+> [!WARNING]
+> Using `--no-verify` should be avoided as it bypasses important code quality checks. Only use this in exceptional circumstances.
 
 ### Testing
 
