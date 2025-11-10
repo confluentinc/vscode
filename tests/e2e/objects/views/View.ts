@@ -8,7 +8,7 @@ import { expect } from "@playwright/test";
 export class View {
   constructor(
     public page: Page,
-    private label: string | RegExp,
+    protected label: string | RegExp,
   ) {}
 
   /** The main `pane` locator for this view. */
