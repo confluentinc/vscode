@@ -2587,8 +2587,8 @@
     "@types/sinon": "^17.0.3",
     "@types/tail": "^2.2.3",
     "@types/vscode": "^1.96.0",
-    "@types/ws": "^8.5.13",
     "@types/yauzl": "^2.10.3",
+    "@types/ws": "^8.5.13",
     "@types/yazl": "^3.3.0",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",
@@ -2643,10 +2643,10 @@
     "vscode-json-languageservice": "^5.4.2",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
-    "ws": "^8.18.0",
-    "yauzl": "^2.10.0"
+    "yauzl": "^2.10.0",
+    "ws": "^8.18.0"
   },
-    "scripts": {
+  "scripts": {
     "prepare": "husky install"
   }
 }
