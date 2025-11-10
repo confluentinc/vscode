@@ -338,7 +338,6 @@ which will format `typescript` documents **on save** based on the `.prettierrc` 
 This project uses Husky to run automated checks before commits:
 
 - Linting is automatically run before each commit
-- Hooks are initialized automatically after `npm install`
 - To bypass (not recommended): `git commit --no-verify`
 - To fix issues before committing: `npx gulp lint -f`
 
@@ -353,7 +352,7 @@ npx gulp lint
 If the linter finds any issues, the commit will be blocked until they are resolved. You can fix
 linting issues automatically by running:
 
-````bash
+```bash
 npx gulp lint -f
 ```
 
