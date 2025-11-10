@@ -21,4 +21,8 @@ export class KafkaClusterItem extends ViewItem {
     const notification = new Notification(this.page, copyNotifications.first());
     await notification.dismiss();
   }
+
+  async selectAsFlinkDatabase(): Promise<void> {
+    await this.rightClickContextMenuAction("Select Kafka Cluster as Flink Database");
+  }
 }
