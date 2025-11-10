@@ -51,6 +51,7 @@ npx gulp lint          # ESLint with auto-fix: gulp lint -f
 
 - **Automated checks**: Husky runs `gulp lint` before every commit to enforce code quality
 - **Location**: Hook script in `.husky/pre-commit`
+- **Setup**: Run `gulp prepareHusky` after `npm ci` to initialize Git hooks
 - **Bypass**: Use `git commit --no-verify` only in exceptional cases (not recommended)
 - **Auto-fix**: Run `gulp lint -f` to automatically fix linting issues before committing
 

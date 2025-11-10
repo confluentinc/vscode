@@ -2645,8 +2645,5 @@
     "vscode-languageserver": "^9.0.1",
     "yauzl": "^2.10.0",
     "ws": "^8.18.0"
-  },
-  "scripts": {
-    "prepare": "husky"
   }
 }

@@ -1175,3 +1175,13 @@ export function downloadSidecar() {
 
   return result;
 }
+
+prepareHusky.description = "Initialize Husky Git hooks for pre-commit linting.";
+export function prepareHusky(done) {
+  const result = spawnSync("npx", ["husky"], {
+    stdio: "inherit",
+    shell: IS_WINDOWS,
+  });
+  if (result.error) throw result.error;
+  return done(result.status);
+}
