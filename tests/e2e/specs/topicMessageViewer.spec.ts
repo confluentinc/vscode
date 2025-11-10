@@ -43,27 +43,28 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
       });
 
       for (const entrypoint of entrypoints) {
-        test(`should select a Kafka cluster from the ${entrypoint}, list topics, and open message viewer`, async ({
-          page,
-          topic: topicName,
-        }) => {
-          const topicsView = new TopicsView(page);
-          await topicsView.loadTopics(connectionType, entrypoint);
+        test(
+          `should select a Kafka cluster from the ${entrypoint}, list topics, and open message viewer`,
+          { tag: [Tag.RequiresTopic] },
+          async ({ page, topic: topicName }) => {
+            const topicsView = new TopicsView(page);
+            await topicsView.loadTopics(connectionType, entrypoint);
 
-          // verify it shows up in the Topics view
-          let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
-          await targetTopic.scrollIntoViewIfNeeded();
-          await expect(targetTopic).toBeVisible();
+            // verify it shows up in the Topics view
+            let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
+            await targetTopic.scrollIntoViewIfNeeded();
+            await expect(targetTopic).toBeVisible();
 
-          // open the message viewer for the topic
-          const topicItem = new TopicItem(page, targetTopic);
-          const messageViewer: MessageViewerWebview = await topicItem.clickViewMessages();
+            // open the message viewer for the topic
+            const topicItem = new TopicItem(page, targetTopic);
+            const messageViewer: MessageViewerWebview = await topicItem.clickViewMessages();
 
-          // the message viewer webview should now be visible in the editor area
-          await expect(messageViewer.messageViewerSettings).toBeVisible();
-          await expect(messageViewer.content).toBeVisible();
-          await expect(messageViewer.paginationControls).toBeVisible();
-        });
+            // the message viewer webview should now be visible in the editor area
+            await expect(messageViewer.messageViewerSettings).toBeVisible();
+            await expect(messageViewer.content).toBeVisible();
+            await expect(messageViewer.paginationControls).toBeVisible();
+          },
+        );
       }
     });
   }
