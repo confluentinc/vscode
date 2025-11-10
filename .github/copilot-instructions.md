@@ -47,6 +47,13 @@ npx gulp check         # TypeScript type checking
 npx gulp lint          # ESLint with auto-fix: gulp lint -f
 ```
 
+### Pre-commit Hooks (Husky)
+
+- **Automated checks**: Husky runs `gulp lint` before every commit to enforce code quality
+- **Location**: Hook script in `.husky/pre-commit`
+- **Bypass**: Use `git commit --no-verify` only in exceptional cases (not recommended)
+- **Auto-fix**: Run `gulp lint -f` to automatically fix linting issues before committing
+
 ### Testing Strategy
 
 - **Unit**: Co-located `.test.ts` files, Mocha + Sinon + assert, focus on isolated behavior
