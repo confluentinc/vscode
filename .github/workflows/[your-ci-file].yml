@@ -1,2 +1,0 @@
-env:
-  HUSKY: 0 # Disable Git hooks in CI to prevent duplicate linting/validation checks (CI pipeline runs its own checks)

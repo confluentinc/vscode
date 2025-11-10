@@ -367,12 +367,6 @@ git commit --no-verify -m "your commit message"
 > [!WARNING]
 > Using `--no-verify` should be avoided as it bypasses important code quality checks. Only use this in exceptional circumstances.
 
-#### CI environment
-
-Pre-commit hooks are automatically disabled in CI/CD environments through the `HUSKY=0` environment
-variable in the workflow files (see `.github/workflows/*.yml`). This prevents duplicate checks since
-the CI pipeline runs its own linting and validation steps.
-
 ### Testing
 
 This project uses unit, integration, functional (webview), and end-to-end (E2E) tests to verify
