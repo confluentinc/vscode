@@ -364,7 +364,6 @@ export class ResourcesView extends View {
       default:
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }
-    test - precommit;
     await expect(schemaRegistries).not.toHaveCount(0);
 
     const schemaRegistry: Locator = registryHasText
