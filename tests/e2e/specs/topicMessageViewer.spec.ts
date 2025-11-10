@@ -1,11 +1,7 @@
 import { expect } from "@playwright/test";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
-import {
-  DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
-  SelectKafkaCluster,
-  TopicsView,
-} from "../objects/views/TopicsView";
+import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import type { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { Tag } from "../tags";
@@ -26,41 +22,33 @@ import { Tag } from "../tags";
  */
 
 test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer] }, () => {
-  let topicName: string = "e2e-topic-message-viewer";
-
-  test.afterEach(async ({ page }) => {
-    const topicView = new TopicsView(page);
-    await topicView.deleteTopic(topicName);
-  });
-
   // test dimensions:
-  const connectionTypes: Array<[ConnectionType, Tag, number]> = [
-    [ConnectionType.Ccloud, Tag.CCloud, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
-    [ConnectionType.Direct, Tag.Direct, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
-    [ConnectionType.Local, Tag.Local, 1],
+  const connectionTypes: Array<[ConnectionType, Tag]> = [
+    [ConnectionType.Ccloud, Tag.CCloud],
+    [ConnectionType.Direct, Tag.Direct],
+    [ConnectionType.Local, Tag.Local],
   ];
   const entrypoints = [
     SelectKafkaCluster.FromResourcesView,
     SelectKafkaCluster.FromTopicsViewButton,
   ];
 
-  for (const [connectionType, connectionTag, replicationFactor] of connectionTypes) {
+  for (const [connectionType, connectionTag] of connectionTypes) {
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
-      // tell the `connectionItem` fixture which connection type to set up
-      test.use({ connectionType });
+      // specify the connection type to use with the `connectionItem` fixture, and the topic to
+      // create with the `topic` fixture
+      test.use({
+        connectionType,
+        topicConfig: { name: "e2e-topic-message-viewer" },
+      });
 
       for (const entrypoint of entrypoints) {
         test(`should select a Kafka cluster from the ${entrypoint}, list topics, and open message viewer`, async ({
           page,
-          connectionItem,
+          topic: topicName,
         }) => {
-          // ensure connection has resources available to work with
-          await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
-
-          // create a new topic
           const topicsView = new TopicsView(page);
           await topicsView.loadTopics(connectionType, entrypoint);
-          await topicsView.createTopic(topicName, 1, replicationFactor);
 
           // verify it shows up in the Topics view
           let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
@@ -68,8 +56,8 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
           await expect(targetTopic).toBeVisible();
 
           // open the message viewer for the topic
-          const topic = new TopicItem(page, targetTopic);
-          const messageViewer: MessageViewerWebview = await topic.clickViewMessages();
+          const topicItem = new TopicItem(page, targetTopic);
+          const messageViewer: MessageViewerWebview = await topicItem.clickViewMessages();
 
           // the message viewer webview should now be visible in the editor area
           await expect(messageViewer.messageViewerSettings).toBeVisible();
