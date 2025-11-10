@@ -23,6 +23,7 @@ import { Tag } from "../tags";
  *    b. Invalid/incompatible schema update
  * 5. Clean up by deleting the subject
  */
+
 test.describe("Schema Management", { tag: [Tag.EvolveSchema] }, () => {
   let subjectName: string;
   // most tests only create one schema version, but the "should evolve schema to second version" test
