@@ -29,12 +29,7 @@ export class ArtifactsView extends View {
   /** Get all (root-level) artifact items in the Flink Artifacts section. */
   get artifacts(): Locator {
     // Target the Flink Artifacts section specifically, not the Flink Database section
-    return this.page
-      .locator(".pane")
-      .filter({ has: this.page.getByRole("button", { name: /Flink Artifacts.*Section/ }) })
-      .first()
-      .locator(".pane-body")
-      .locator('[role="treeitem"]');
+    return this.treeItems;
   }
 
   /**
@@ -131,16 +126,14 @@ export class ArtifactsView extends View {
     await menuItem.first().hover();
     // clicking doesn't work here, so use keyboard navigation instead:
     await this.page.keyboard.press("Enter");
+    this.label = /Flink Artifacts.*Section/;
   }
 
   /**
    * Click the upload button to initiate the artifact upload flow.
    */
   private async initiateUpload(): Promise<void> {
-    const uploadButton = this.page.locator(
-      'a.action-label.codicon.codicon-cloud-upload[aria-label="Upload Flink Artifact to Confluent Cloud"]',
-    );
-    await uploadButton.click();
+    await this.clickNavAction("Upload Flink Artifact to Confluent Cloud");
 
     const quickpick = new Quickpick(this.page);
     await expect(quickpick.locator).toBeVisible();
