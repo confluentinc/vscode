@@ -271,14 +271,6 @@ To install frontend-related dependencies, use NPM:
 We recommend using `npm ci` over `npm install` so you'd get reproducible state of dependencies
 defined by `package-lock.json`.
 
-After installing dependencies, initialize Husky Git hooks:
-
-```bash
-    gulp prepareHusky
-```
-
-This sets up the pre-commit hooks that run linting checks before each commit.
-
 #### Building locally
 
 Now that you have the source code and installed all the tools, you can build the project locally.
@@ -341,11 +333,14 @@ You can also install the
 which will format `typescript` documents **on save** based on the `.prettierrc` and
 `.vscode/settings.json` files in the project.
 
-### Pre-commit hooks
+## Pre-commit Hooks
 
-This project uses [Husky](https://typicode.github.io/husky/) to run automated checks before each
-commit. The pre-commit hook runs the linter (`gulp lint`) to ensure code quality standards are met
-before changes are committed.
+This project uses Husky to run automated checks before commits:
+
+- Linting is automatically run before each commit
+- Hooks are initialized automatically after `npm install`
+- To bypass (not recommended): `git commit --no-verify`
+- To fix issues before committing: `npx gulp lint -f`
 
 #### How it works
 
@@ -358,8 +353,8 @@ npx gulp lint
 If the linter finds any issues, the commit will be blocked until they are resolved. You can fix
 linting issues automatically by running:
 
-```bash
-gulp lint -f
+````bash
+npx gulp lint -f
 ```
 
 #### Disabling pre-commit hooks
@@ -660,3 +655,4 @@ following targets:
 
 The PR raised must be summarily reviewed and merged by a maintainer. The PR title will be suffixed
 with `[ci skip]` to avoid triggering the pipeline again.
+````
