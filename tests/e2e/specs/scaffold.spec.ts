@@ -168,34 +168,35 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
           await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
         });
 
-        test(`should apply ${templateDisplayName} template from Kafka topic in Topics view`, async ({
-          page,
-          topic: topicName,
-        }) => {
-          // Given we navigate to a topic in the Topics view
-          const topicsView = new TopicsView(page);
-          await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
-          const targetTopic = topicsView.topics.filter({ hasText: topicName });
-          await expect(targetTopic).not.toHaveCount(0);
-          const topicItem = new TopicItem(page, targetTopic.first());
-          await expect(topicItem.locator).toBeVisible();
-          // and we start the generate project flow from the right-click context menu
-          await topicItem.generateProject();
-          // and we choose a project template from the quickpick
-          const projectQuickpick = new Quickpick(page);
-          await projectQuickpick.selectItemByText(templateDisplayName);
-          // and we submit the form using the pre-filled configuration
-          const scaffoldForm = new ProjectScaffoldWebview(page);
-          await expect(scaffoldForm.bootstrapServersField).not.toBeEmpty();
-          const bootstrapServers = await scaffoldForm.bootstrapServersField.inputValue();
-          await expect(scaffoldForm.topicField).not.toBeEmpty();
-          const topicFieldValue = await scaffoldForm.topicField.inputValue();
-          await scaffoldForm.submitForm();
+        test(
+          `should apply ${templateDisplayName} template from Kafka topic in Topics view`,
+          { tag: [Tag.RequiresTopic] },
+          async ({ page, topic: topicName }) => {
+            // Given we navigate to a topic in the Topics view
+            const topicsView = new TopicsView(page);
+            await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
+            const targetTopic = topicsView.topics.filter({ hasText: topicName });
+            await expect(targetTopic).not.toHaveCount(0);
+            const topicItem = new TopicItem(page, targetTopic.first());
+            await expect(topicItem.locator).toBeVisible();
+            // and we start the generate project flow from the right-click context menu
+            await topicItem.generateProject();
+            // and we choose a project template from the quickpick
+            const projectQuickpick = new Quickpick(page);
+            await projectQuickpick.selectItemByText(templateDisplayName);
+            // and we submit the form using the pre-filled configuration
+            const scaffoldForm = new ProjectScaffoldWebview(page);
+            await expect(scaffoldForm.bootstrapServersField).not.toBeEmpty();
+            const bootstrapServers = await scaffoldForm.bootstrapServersField.inputValue();
+            await expect(scaffoldForm.topicField).not.toBeEmpty();
+            const topicFieldValue = await scaffoldForm.topicField.inputValue();
+            await scaffoldForm.submitForm();
 
-          // Then we should see that the project was generated successfully
-          // and that the configuration holds the correct bootstrapServers and topic values
-          await verifyGeneratedProject(page, templateName, bootstrapServers, topicFieldValue);
-        });
+            // Then we should see that the project was generated successfully
+            // and that the configuration holds the correct bootstrapServers and topic values
+            await verifyGeneratedProject(page, templateName, bootstrapServers, topicFieldValue);
+          },
+        );
 
         test(`should apply ${templateDisplayName} template from Kafka cluster in Resource view`, async ({
           page,
