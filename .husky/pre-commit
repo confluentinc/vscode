@@ -1,0 +1,5 @@
+# Run linter before commit
+npx gulp lint
+
+# If lint fails, prevent the commit
+exit $?
