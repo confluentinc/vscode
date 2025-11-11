@@ -1,10 +1,10 @@
 import { expect } from "@playwright/test";
 import { test } from "../baseTest";
-import { ConnectionType } from "../connectionTypes";
 import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import type { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { Tag } from "../tags";
+import { ConnectionType } from "../types/connection";
 
 /**
  * E2E test suite for testing the Topics view and Message Viewer functionality.

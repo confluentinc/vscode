@@ -4,8 +4,6 @@ import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
 import { existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
-import type { DirectConnectionOptions, LocalConnectionOptions } from "./connectionTypes";
-import { ConnectionType, FormConnectionType, SupportedAuthType } from "./connectionTypes";
 import { Notification } from "./objects/notifications/Notification";
 import { NotificationArea } from "./objects/notifications/NotificationArea";
 import { Quickpick } from "./objects/quickInputs/Quickpick";

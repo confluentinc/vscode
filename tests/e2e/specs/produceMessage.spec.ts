@@ -1,7 +1,6 @@
 import { expect } from "@playwright/test";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
-import { ConnectionType } from "../connectionTypes";
 import type { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
@@ -9,6 +8,7 @@ import { SchemasView, SchemaType, SelectSchemaRegistry } from "../objects/views/
 import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { Tag } from "../tags";
+import { ConnectionType } from "../types/connection";
 import { openNewUntitledDocument } from "../utils/documents";
 
 /**
