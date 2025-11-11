@@ -5,6 +5,7 @@ import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import type { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { Tag } from "../tags";
 import { ConnectionType } from "../types/connection";
+import { CompressionType } from "../types/topic";
 
 /**
  * E2E test suite for testing the Topics view and Message Viewer functionality.
@@ -32,39 +33,55 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
     SelectKafkaCluster.FromResourcesView,
     SelectKafkaCluster.FromTopicsViewButton,
   ];
+  const compressionTypes: (CompressionType | undefined)[] = [
+    undefined,
+    CompressionType.Gzip,
+    CompressionType.Snappy,
+    CompressionType.Lz4,
+    CompressionType.Zstd,
+  ];
 
   for (const [connectionType, connectionTag] of connectionTypes) {
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
-      // specify the connection type to use with the `connectionItem` fixture, and the topic to
-      // create with the `topic` fixture
-      test.use({
-        connectionType,
-        topicConfig: { name: "e2e-topic-message-viewer" },
-      });
+      for (const compressionType of compressionTypes) {
+        test.describe(compressionType ? `${compressionType} compression` : "no compression", () => {
+          // specify the connection type to use with the `connectionItem` fixture, and the topic to
+          // create with the `topic` fixture
+          test.use({
+            connectionType,
+            topicConfig: {
+              name: compressionType
+                ? `e2e-topic-message-viewer-${compressionType}`
+                : "e2e-topic-message-viewer",
+              produce: { compressionType },
+            },
+          });
 
-      for (const entrypoint of entrypoints) {
-        test(
-          `should select a Kafka cluster from the ${entrypoint}, list topics, and open message viewer`,
-          { tag: [Tag.RequiresTopic] },
-          async ({ page, topic: topicName }) => {
-            const topicsView = new TopicsView(page);
-            await topicsView.loadTopics(connectionType, entrypoint);
+          for (const entrypoint of entrypoints) {
+            test(
+              `should select a Kafka cluster from the ${entrypoint}, list topics, and open message viewer`,
+              { tag: [Tag.RequiresTopic] },
+              async ({ page, topic: topicName }) => {
+                const topicsView = new TopicsView(page);
+                await topicsView.loadTopics(connectionType, entrypoint);
 
-            // verify it shows up in the Topics view
-            let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
-            await targetTopic.scrollIntoViewIfNeeded();
-            await expect(targetTopic).toBeVisible();
+                // verify it shows up in the Topics view
+                let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
+                await targetTopic.scrollIntoViewIfNeeded();
+                await expect(targetTopic).toBeVisible();
 
-            // open the message viewer for the topic
-            const topicItem = new TopicItem(page, targetTopic);
-            const messageViewer: MessageViewerWebview = await topicItem.clickViewMessages();
+                // open the message viewer for the topic
+                const topicItem = new TopicItem(page, targetTopic);
+                const messageViewer: MessageViewerWebview = await topicItem.clickViewMessages();
 
-            // the message viewer webview should now be visible in the editor area
-            await expect(messageViewer.messageViewerSettings).toBeVisible();
-            await expect(messageViewer.content).toBeVisible();
-            await expect(messageViewer.paginationControls).toBeVisible();
-          },
-        );
+                // the message viewer webview should now be visible in the editor area
+                await expect(messageViewer.messageViewerSettings).toBeVisible();
+                await expect(messageViewer.content).toBeVisible();
+                await expect(messageViewer.paginationControls).toBeVisible();
+              },
+            );
+          }
+        });
       }
     });
   }
