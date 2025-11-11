@@ -2,7 +2,7 @@ import type { ElectronApplication, Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { stubDialog } from "electron-playwright-helpers";
 import path from "path";
-import { ConnectionType } from "../../connectionTypes";
+import { ConnectionType } from "../../types/connection";
 import { randomHexString } from "../../utils/strings";
 import { NotificationArea } from "../notifications/NotificationArea";
 import { InputBox } from "../quickInputs/InputBox";
