@@ -4,12 +4,9 @@ import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
 import { existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
-import type { DirectConnectionOptions, LocalConnectionOptions } from "./connectionTypes";
-import { ConnectionType, FormConnectionType, SupportedAuthType } from "./connectionTypes";
 import { Notification } from "./objects/notifications/Notification";
 import { NotificationArea } from "./objects/notifications/NotificationArea";
 import { Quickpick } from "./objects/quickInputs/Quickpick";
-import type { TopicConfig } from "./objects/views/TopicsView";
 import {
   DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
   SelectKafkaCluster,
@@ -18,6 +15,9 @@ import {
 import type { CCloudConnectionItem } from "./objects/views/viewItems/CCloudConnectionItem";
 import type { DirectConnectionItem } from "./objects/views/viewItems/DirectConnectionItem";
 import type { LocalConnectionItem } from "./objects/views/viewItems/LocalConnectionItem";
+import type { DirectConnectionOptions, LocalConnectionOptions } from "./types/connection";
+import { ConnectionType, FormConnectionType, SupportedAuthType } from "./types/connection";
+import type { TopicConfig } from "./types/topic";
 import { executeVSCodeCommand } from "./utils/commands";
 import {
   setupCCloudConnection,
@@ -25,6 +25,7 @@ import {
   setupLocalConnection,
   teardownLocalConnection,
 } from "./utils/connections";
+import { produceMessages } from "./utils/producer";
 import { configureVSCodeSettings } from "./utils/settings";
 import { openConfluentSidebar } from "./utils/sidebarNavigation";
 
@@ -288,7 +289,10 @@ export const test = testBase.extend<VSCodeFixtures>({
   // no default value, must be provided by test
   topicConfig: undefined as any,
 
-  topic: async ({ page, connectionType, connectionItem, topicConfig }, use) => {
+  topic: async (
+    { page, connectionType, connectionItem, topicConfig, directConnectionConfig },
+    use,
+  ) => {
     if (!connectionType) {
       throw new Error(
         "connectionType must be set, like `test.use({ connectionType: ConnectionType.Ccloud })`",
@@ -310,14 +314,30 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     const numPartitions = topicConfig.numPartitions ?? 1;
 
+    // if we need to produce messages, we likely have an API key/secret we need to match to a
+    // specific cluster, so we can't just use the first one that shows up in the resources view
+    const clusterLabel =
+      topicConfig.produce &&
+      (connectionType === ConnectionType.Ccloud ||
+        directConnectionConfig.kafkaConfig?.authType !== SupportedAuthType.None)
+        ? process.env.E2E_KAFKA_CLUSTER_NAME!
+        : topicConfig.clusterLabel;
+
     // setup: create the topic
     const topicsView = new TopicsView(page);
-    await topicsView.loadTopics(
-      connectionType,
-      SelectKafkaCluster.FromResourcesView,
-      topicConfig.clusterLabel,
-    );
+    await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView, clusterLabel);
     await topicsView.createTopic(topicConfig.name, numPartitions, replicationFactor);
+
+    // produce messages to the topic if specified
+    if (topicConfig.produce) {
+      await produceMessages(
+        page,
+        connectionType,
+        topicConfig.name,
+        topicConfig.produce,
+        directConnectionConfig,
+      );
+    }
 
     await use(topicConfig.name);
 

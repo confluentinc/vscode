@@ -4,7 +4,6 @@ import { mkdtempSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
 import { test } from "../baseTest";
-import { ConnectionType } from "../connectionTypes";
 import { URI_SCHEME } from "../constants";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { InputBox } from "../objects/quickInputs/InputBox";
@@ -18,6 +17,7 @@ import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebview";
 import { Tag } from "../tags";
+import { ConnectionType } from "../types/connection";
 import { executeVSCodeCommand } from "../utils/commands";
 import { openGeneratedProjectInCurrentWindow, verifyGeneratedProject } from "../utils/scaffold";
 

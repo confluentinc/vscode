@@ -4,11 +4,6 @@ import { mkdtempSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { test } from "../baseTest";
-import type {
-  DirectConnectionKafkaConfig,
-  DirectConnectionSchemaRegistryConfig,
-} from "../connectionTypes";
-import { ConnectionType, FormConnectionType, SupportedAuthType } from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { Notification } from "../objects/notifications/Notification";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
@@ -20,6 +15,11 @@ import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
 import { SchemaRegistryItem } from "../objects/views/viewItems/SchemaRegistryItem";
 import type { DirectConnectionForm } from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
+import type {
+  DirectConnectionKafkaConfig,
+  DirectConnectionSchemaRegistryConfig,
+} from "../types/connection";
+import { ConnectionType, FormConnectionType, SupportedAuthType } from "../types/connection";
 import { setupDirectConnection } from "../utils/connections";
 
 /**
