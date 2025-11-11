@@ -150,6 +150,8 @@ blocks:
             Add-Content -Path .env -Value "E2E_SR_URL=$E2E_SR_URL"
             $E2E_KAFKA_BOOTSTRAP_SERVERS = $(vault kv get -field=E2E_KAFKA_BOOTSTRAP_SERVERS v1/ci/kv/vscodeextension/testing)
             Add-Content -Path .env -Value "E2E_KAFKA_BOOTSTRAP_SERVERS=$E2E_KAFKA_BOOTSTRAP_SERVERS"
+            $E2E_KAFKA_CLUSTER_NAME = $(vault kv get -field=E2E_KAFKA_CLUSTER_NAME v1/ci/kv/vscodeextension/testing)
+            Add-Content -Path .env -Value "E2E_KAFKA_CLUSTER_NAME=$E2E_KAFKA_CLUSTER_NAME"
       jobs:
         - name: "Playwright: E2E Tests (VS Code ${{parameters.VSCODE_VERSION}})"
           commands:
