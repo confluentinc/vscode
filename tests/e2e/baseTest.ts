@@ -316,13 +316,18 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     const numPartitions = topicConfig.numPartitions ?? 1;
 
+    // if we need to produce messages, we likely have an API key/secret we need to match to a
+    // specific cluster, so we can't just use the first one that shows up in the resources view
+    const clusterLabel =
+      topicConfig.produce &&
+      (connectionType === ConnectionType.Ccloud ||
+        directConnectionConfig.kafkaConfig?.authType !== SupportedAuthType.None)
+        ? process.env.E2E_KAFKA_CLUSTER_NAME!
+        : topicConfig.clusterLabel;
+
     // setup: create the topic
     const topicsView = new TopicsView(page);
-    await topicsView.loadTopics(
-      connectionType,
-      SelectKafkaCluster.FromResourcesView,
-      topicConfig.clusterLabel,
-    );
+    await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView, clusterLabel);
     const topicName = `${topicConfig.name}-${randomUUID()}`;
     await topicsView.createTopic(topicName, numPartitions, replicationFactor);
 
