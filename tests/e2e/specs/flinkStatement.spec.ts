@@ -3,8 +3,8 @@ import { expect } from "@playwright/test";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { test } from "../baseTest";
-import { ConnectionType } from "../connectionTypes";
 import { Tag } from "../tags";
+import { ConnectionType } from "../types/connection";
 import { stopStatement, submitFlinkStatement } from "../utils/flinkStatement";
 
 const __filename = fileURLToPath(import.meta.url);

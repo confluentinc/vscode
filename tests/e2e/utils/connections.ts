@@ -4,7 +4,6 @@ import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { readFile, unlink } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
-import type { DirectConnectionOptions, LocalConnectionOptions } from "../connectionTypes";
 import { URI_SCHEME } from "../constants";
 import { Notification } from "../objects/notifications/Notification";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
@@ -15,6 +14,7 @@ import { CCloudConnectionItem } from "../objects/views/viewItems/CCloudConnectio
 import { DirectConnectionItem } from "../objects/views/viewItems/DirectConnectionItem";
 import { LocalConnectionItem } from "../objects/views/viewItems/LocalConnectionItem";
 import type { DirectConnectionForm } from "../objects/webviews/DirectConnectionFormWebview";
+import type { DirectConnectionOptions, LocalConnectionOptions } from "../types/connection";
 import { executeVSCodeCommand } from "./commands";
 import { openConfluentSidebar } from "./sidebarNavigation";
 
