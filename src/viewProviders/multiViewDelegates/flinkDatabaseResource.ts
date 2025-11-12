@@ -13,6 +13,8 @@ export class FlinkDatabaseResourceContainer<T extends IResourceBase & IdItem & I
   readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
   readonly connectionType: ConnectionType = ConnectionType.Ccloud;
 
+  // `id` is string|undefined in TreeItem, but only string in IdItem so we need to specify it here
+  id: string;
   children: T[];
 
   constructor(label: string, collapsibleState: TreeItemCollapsibleState, children: T[]) {

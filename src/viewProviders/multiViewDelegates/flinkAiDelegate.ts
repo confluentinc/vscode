@@ -15,7 +15,7 @@ type FlinkAIViewModeData = FlinkDatabaseResourceContainer<FlinkAIResource> | Fli
 export class FlinkAIDelegate extends ViewProviderDelegate<
   FlinkDatabaseViewProviderMode,
   CCloudFlinkDbKafkaCluster,
-  FlinkAIResource
+  FlinkAIViewModeData
 > {
   readonly mode = FlinkDatabaseViewProviderMode.AI;
   readonly viewTitle = "Flink AI";
