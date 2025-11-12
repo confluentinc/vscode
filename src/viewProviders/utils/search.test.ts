@@ -1,15 +1,19 @@
 import * as assert from "assert";
-import { TreeItemCollapsibleState } from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_LOCAL_ENVIRONMENT,
 } from "../../../tests/unit/testResources/environments";
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../../tests/unit/testResources/kafkaCluster";
+import {
+  TEST_CCLOUD_SCHEMA,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMA,
+} from "../../../tests/unit/testResources/schema";
 import { TEST_CCLOUD_SCHEMA_REGISTRY } from "../../../tests/unit/testResources/schemaRegistry";
+import { TEST_CCLOUD_KAFKA_TOPIC } from "../../../tests/unit/testResources/topic";
 import { CCloudEnvironment } from "../../models/environment";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
-import { ContainerTreeItem } from "../../models/main";
 import type { ISearchable } from "../../models/resource";
+import { KafkaTopic } from "../../models/topic";
 import {
   countMatchingElements,
   filterItems,
@@ -66,16 +70,16 @@ describe("viewProviders/utils/search.ts", () => {
       assert.deepStrictEqual(filtered, [env]);
     });
 
-    it("should return container item when its children match", () => {
-      const container = new ContainerTreeItem(
-        "Test Container",
-        TreeItemCollapsibleState.Collapsed,
-        [TEST_LOCAL_ENVIRONMENT, TEST_CCLOUD_ENVIRONMENT],
-      );
+    it("should return topic when its subject children match", () => {
+      const topic = KafkaTopic.create({
+        ...TEST_CCLOUD_KAFKA_TOPIC,
+        hasSchema: true,
+        children: [TEST_CCLOUD_SUBJECT_WITH_SCHEMA],
+      });
 
-      const filtered = filterItems([container], TEST_LOCAL_ENVIRONMENT.name);
+      const filtered = filterItems([topic], TEST_CCLOUD_SUBJECT_WITH_SCHEMA.name);
 
-      assert.deepStrictEqual(filtered, [container]);
+      assert.deepStrictEqual(filtered, [topic]);
     });
 
     it("should perform case-insensitive search", () => {
@@ -129,16 +133,15 @@ describe("viewProviders/utils/search.ts", () => {
     });
 
     it("should return true when a nested child matches", () => {
-      // Container -> CCloudEnvironment -> KafkaCluster
-      const container = new ContainerTreeItem("Container", TreeItemCollapsibleState.Collapsed, [
-        new CCloudEnvironment({
-          ...TEST_CCLOUD_ENVIRONMENT,
-          kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
-        }),
-      ]);
+      // KafkaTopic -> Subject -> Schema
+      const topic = KafkaTopic.create({
+        ...TEST_CCLOUD_KAFKA_TOPIC,
+        hasSchema: true,
+        children: [TEST_CCLOUD_SUBJECT_WITH_SCHEMA],
+      });
 
       assert.strictEqual(
-        matchesOrHasMatchingChild(container, TEST_CCLOUD_KAFKA_CLUSTER.name),
+        matchesOrHasMatchingChild(topic, TEST_CCLOUD_SUBJECT_WITH_SCHEMA.name),
         true,
       );
     });
@@ -189,20 +192,20 @@ describe("viewProviders/utils/search.ts", () => {
     });
 
     it("should traverse deeply nested matches", () => {
-      const container = new ContainerTreeItem("Container", TreeItemCollapsibleState.Collapsed, [
-        new CCloudEnvironment({
-          ...TEST_CCLOUD_ENVIRONMENT,
-          kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
-        }),
-      ]);
-      const searchStr = TEST_CCLOUD_KAFKA_CLUSTER.name;
+      // KafkaTopic -> Subject -> Schema
+      const topic = KafkaTopic.create({
+        ...TEST_CCLOUD_KAFKA_TOPIC,
+        hasSchema: true,
+        children: [TEST_CCLOUD_SUBJECT_WITH_SCHEMA],
+      });
+      const searchStr = TEST_CCLOUD_SCHEMA.subject;
       const matches: ISearchable[] = [];
       const callback = (item: ISearchable) => matches.push(item);
 
-      traverseMatches(container, searchStr, callback);
+      traverseMatches(topic, searchStr, callback);
 
       assert.strictEqual(matches.length, 1);
-      assert.deepStrictEqual(matches[0], TEST_CCLOUD_KAFKA_CLUSTER);
+      assert.deepStrictEqual(matches[0], TEST_CCLOUD_SUBJECT_WITH_SCHEMA);
     });
 
     it("should handle empty search string", () => {
