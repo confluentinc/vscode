@@ -1,9 +1,10 @@
 import * as assert from "assert";
 import { TreeItemCollapsibleState } from "vscode";
+import { TEST_CCLOUD_SCHEMA } from "../../../tests/unit/testResources";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../../tests/unit/testResources/environments";
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../../tests/unit/testResources/kafkaCluster";
 import { CCloudEnvironment, EnvironmentTreeItem } from "../../models/environment";
-import { ContainerTreeItem } from "../../models/main";
+import { SchemaTreeItem } from "../../models/schema";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 
 describe("viewProviders/utils/collapsing.ts", () => {
@@ -42,21 +43,33 @@ describe("viewProviders/utils/collapsing.ts", () => {
       assert.strictEqual(result.id, origId + "-search");
     });
 
-    it("should set leaf items' collapsibleState to None", () => {
-      const container = new ContainerTreeItem(
-        "Test Container",
-        TreeItemCollapsibleState.Collapsed,
-        [],
-      );
-      const origId = "original-id";
-      container.id = origId;
+    it("should preserve 'None' collapsible state for leaf items", () => {
+      const testResource = TEST_CCLOUD_SCHEMA;
+      const testTreeItem = new SchemaTreeItem(testResource);
+      // SchemaTreeItem starts out as a leaf item with collapsible state None by default
+      const origId = testTreeItem.id;
 
-      // this looks weird because the ContainerTreeItem is already a TreeItem and doesn't go through
-      // any conversion in getTreeItem()
-      const result = updateCollapsibleStateFromSearch(container, container, "search");
+      const result = updateCollapsibleStateFromSearch(testResource, testTreeItem, "search");
 
       assert.strictEqual(result.collapsibleState, TreeItemCollapsibleState.None);
-      assert.strictEqual(result.id, origId + "-search");
+      // state didn't change, so `id` shouldn't either
+      assert.strictEqual(result.id, origId);
+    });
+
+    it("should preserve 'Collapsed' collapsible state when children don't match and state is already Collapsed", () => {
+      const env = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+      });
+      const treeItem = new EnvironmentTreeItem(env);
+      // EnvironmentTreeItem starts out Collapsed by default
+      const origId = treeItem.id;
+
+      const result = updateCollapsibleStateFromSearch(env, treeItem, "non-matching");
+
+      assert.strictEqual(result.collapsibleState, TreeItemCollapsibleState.Collapsed);
+      // state didn't change, so `id` shouldn't either
+      assert.strictEqual(result.id, origId);
     });
 
     it("should preserve state when children match but state is already correct", () => {
