@@ -338,7 +338,7 @@ which will format `typescript` documents **on save** based on the `.prettierrc` 
 This project uses [Husky](https://typicode.github.io/husky/) to run automated checks before commits:
 
 - Linting is automatically run before each commit through
-  [`.husky/pre-commit`](https://github.com/confluentinc/vscode/blob/main/.husky/pre-commit)
+  [`.husky/pre-commit`](../.husky/pre-commit)
 - To fix issues before committing: `npx gulp lint -f`
 - To bypass (not recommended): `git commit --no-verify`
 
