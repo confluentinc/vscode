@@ -115,9 +115,7 @@ export class FlinkDatabaseView extends View {
   }
 
   /** Click the "Switch to Flink Artifacts" nav action in the view title area. */
-  async clickSwitchToFlinkResource(
-    targetLabel: string = "Switch to Flink Artifacts",
-  ): Promise<void> {
+  async clickSwitchToFlinkResource(targetLabel: string): Promise<void> {
     const expandToggle = this.locator.locator(
       '[title="Switch View Mode"], [aria-label="Switch View Mode"]',
     );
