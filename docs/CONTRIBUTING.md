@@ -339,7 +339,7 @@ This project uses [Husky](https://typicode.github.io/husky/) to run automated ch
 
 - Linting is automatically run before each commit through
   [`.husky/pre-commit`](../.husky/pre-commit)
-- To fix issues before committing: `npx gulp lint -f`
+- To fix issues before committing: `npx gulp lint --fix`
 - To bypass (not recommended): `git commit --no-verify`
 
 ### Testing
