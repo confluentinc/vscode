@@ -11,7 +11,7 @@ import { KafkaClusterItem } from "./viewItems/KafkaClusterItem";
 import { ViewItem } from "./viewItems/ViewItem";
 
 export enum SelectFlinkDatabase {
-  FromResourcesView = "Flink database action from the Resources view",
+  DatabaseFromResourcesView = "Flink database action from the Resources view",
   FromArtifactsViewButton = "Artifacts view nav action",
 }
 
@@ -21,7 +21,7 @@ export enum SelectFlinkDatabase {
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  * Provides access to Flink artifact items and actions within the view.
  */
-export class ArtifactsView extends View {
+export class FlinkDatabaseView extends View {
   constructor(page: Page) {
     super(page, /Flink Database.*Section/);
   }
@@ -43,7 +43,7 @@ export class ArtifactsView extends View {
     clusterLabel?: string | RegExp,
   ): Promise<void> {
     switch (entrypoint) {
-      case SelectFlinkDatabase.FromResourcesView:
+      case SelectFlinkDatabase.DatabaseFromResourcesView:
         await this.loadArtifactsFromResourcesView();
         break;
       case SelectFlinkDatabase.FromArtifactsViewButton:
