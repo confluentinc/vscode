@@ -44,7 +44,7 @@ export class FlinkDatabaseView extends View {
   ): Promise<void> {
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
-        await this.loadArtifactsFromResourcesView();
+        await this.loadArtifactsFromResourcesView(clusterLabel);
         break;
       case SelectFlinkDatabase.FromArtifactsViewButton:
         await this.loadArtifactsFromButton(clusterLabel);
@@ -56,17 +56,20 @@ export class FlinkDatabaseView extends View {
 
   /**
    * Load artifacts by selecting a Kafka cluster from the Resources view.
+   * @param clusterLabel - Optional label or regex to identify the Kafka cluster
    */
-  private async loadArtifactsFromResourcesView(): Promise<void> {
+  private async loadArtifactsFromResourcesView(clusterLabel?: string | RegExp): Promise<void> {
     const resourcesView = new ResourcesView(this.page);
     await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
 
     const flinkableClusters = resourcesView.ccloudFlinkableKafkaClusters;
     await expect(flinkableClusters).not.toHaveCount(0);
 
-    const clusterItem = new KafkaClusterItem(this.page, flinkableClusters.first());
+    const clusterLocator = clusterLabel
+      ? flinkableClusters.filter({ hasText: clusterLabel }).first()
+      : flinkableClusters.first();
+    const clusterItem = new KafkaClusterItem(this.page, clusterLocator);
     await clusterItem.selectAsFlinkDatabase();
-    await this.clickSwitchToFlinkArtifacts();
   }
 
   /**
@@ -84,7 +87,6 @@ export class FlinkDatabaseView extends View {
       ? kafkaClusterQuickpick.items.filter({ hasText: clusterLabel }).first()
       : kafkaClusterQuickpick.items.first();
     await clusterItem.click();
-    await this.clickSwitchToFlinkArtifacts();
   }
 
   /**
@@ -113,7 +115,7 @@ export class FlinkDatabaseView extends View {
   }
 
   /** Click the "Switch to Flink Artifacts" nav action in the view title area. */
-  async clickSwitchToFlinkArtifacts(): Promise<void> {
+  async clickSwitchToFlinkResource(targetLabel: string): Promise<void> {
     const expandToggle = this.locator.locator(
       '[title="Switch View Mode"], [aria-label="Switch View Mode"]',
     );
@@ -121,12 +123,18 @@ export class FlinkDatabaseView extends View {
     const menuItem = this.page
       .locator(".context-view .monaco-menu .monaco-action-bar .action-item")
       .filter({
-        hasText: "Switch to Flink Artifacts",
+        hasText: targetLabel,
       });
     await menuItem.first().hover();
     // clicking doesn't work here, so use keyboard navigation instead:
     await this.page.keyboard.press("Enter");
-    this.label = /Flink Artifacts.*Section/;
+
+    // Update the label based on the target view mode
+    if (targetLabel === "Switch to Flink Artifacts") {
+      this.label = /Flink Artifacts.*Section/;
+    } else if (targetLabel === "Switch to Flink Database") {
+      this.label = /Flink Database.*Section/;
+    }
   }
 
   /**
