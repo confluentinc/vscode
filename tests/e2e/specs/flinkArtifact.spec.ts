@@ -3,7 +3,7 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
-import { ArtifactsView, SelectFlinkDatabase } from "../objects/views/ArtifactsView";
+import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/ArtifactsView";
 import { Tag } from "../tags";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,7 +27,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     page,
     electronApp,
   }) => {
-    const artifactsView = new ArtifactsView(page);
+    const artifactsView = new FlinkDatabaseView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.FromArtifactsViewButton);
 
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
@@ -44,8 +44,8 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     page,
     electronApp,
   }) => {
-    const artifactsView = new ArtifactsView(page);
-    await artifactsView.loadArtifacts(SelectFlinkDatabase.FromResourcesView);
+    const artifactsView = new FlinkDatabaseView(page);
+    await artifactsView.loadArtifacts(SelectFlinkDatabase.DatabaseFromResourcesView);
 
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
 
