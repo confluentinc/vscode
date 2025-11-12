@@ -47,6 +47,7 @@ npx gulp check         # TypeScript type checking
 npx gulp lint          # ESLint with auto-fix: gulp lint -f
 ```
 
+
 ### Testing Strategy
 
 - **Unit**: Co-located `.test.ts` files, Mocha + Sinon + assert, focus on isolated behavior
