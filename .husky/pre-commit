@@ -1,0 +1,3 @@
+# Run linter before commit
+
+npx gulp lint
