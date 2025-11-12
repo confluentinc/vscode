@@ -29,7 +29,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   }) => {
     const artifactsView = new FlinkDatabaseView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.FromArtifactsViewButton);
-
+    await artifactsView.clickSwitchToFlinkResource("Switch to Flink Artifacts");
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
 
     await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
@@ -46,7 +46,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   }) => {
     const artifactsView = new FlinkDatabaseView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.DatabaseFromResourcesView);
-
+    await artifactsView.clickSwitchToFlinkResource("Switch to Flink Artifacts");
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
 
     await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
