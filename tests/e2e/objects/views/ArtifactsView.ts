@@ -10,6 +10,11 @@ import { View } from "./View";
 import { KafkaClusterItem } from "./viewItems/KafkaClusterItem";
 import { ViewItem } from "./viewItems/ViewItem";
 
+export enum FlinkViewMode {
+  Artifacts = "Switch to Flink Artifacts",
+  Database = "Switch to Flink Database",
+}
+
 export enum SelectFlinkDatabase {
   DatabaseFromResourcesView = "Flink database action from the Resources view",
   FromArtifactsViewButton = "Artifacts view nav action",
@@ -114,8 +119,17 @@ export class FlinkDatabaseView extends View {
     await this.clickNavAction("Select Kafka Cluster as Flink Database");
   }
 
-  /** Click the "Switch to Flink Artifacts" nav action in the view title area. */
-  async clickSwitchToFlinkResource(targetLabel: string): Promise<void> {
+  /**
+   * Switches the view mode in the Artifacts view to the specified Flink resource.
+   *
+   * Clicks the "Switch View Mode" nav action in the view title area, opens the context menu,
+   * and selects the menu item matching the provided view mode. Updates the internal `label`
+   * property to match the selected view mode.
+   *
+   * @param viewMode - The Flink resource view mode to switch to.
+   * @returns A promise that resolves when the view has been switched.
+   */
+  async clickSwitchToFlinkResource(viewMode: FlinkViewMode): Promise<void> {
     const expandToggle = this.locator.locator(
       '[title="Switch View Mode"], [aria-label="Switch View Mode"]',
     );
@@ -123,20 +137,22 @@ export class FlinkDatabaseView extends View {
     const menuItem = this.page
       .locator(".context-view .monaco-menu .monaco-action-bar .action-item")
       .filter({
-        hasText: targetLabel,
+        hasText: viewMode,
       });
     await menuItem.first().hover();
     // clicking doesn't work here, so use keyboard navigation instead:
     await this.page.keyboard.press("Enter");
 
     // Update the label based on the target view mode
-    if (targetLabel === "Switch to Flink Artifacts") {
-      this.label = /Flink Artifacts.*Section/;
-    } else if (targetLabel === "Switch to Flink Database") {
-      this.label = /Flink Database.*Section/;
+    switch (viewMode) {
+      case FlinkViewMode.Artifacts:
+        this.label = /Flink Artifacts.*Section/;
+        break;
+      case FlinkViewMode.Database:
+        this.label = /Flink Database.*Section/;
+        break;
     }
   }
-
   /**
    * Click the upload button to initiate the artifact upload flow.
    */
