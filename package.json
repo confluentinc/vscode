@@ -477,7 +477,7 @@
       },
       {
         "command": "confluent.flinkdatabase.setRelationsViewMode",
-        "title": "Switch to Flink Relations",
+        "title": "Switch to Flink Database Relations",
         "icon": "$(confluent-code)",
         "category": "Confluent: Flink Database View",
         "enablement": "confluent.flinkDatabaseViewMode != 'relations'"
@@ -1331,7 +1331,7 @@
       },
       {
         "view": "confluent-flink-database",
-        "contents": "No Flink relations found.\n[Create Topic](command:confluent.flinkdatabase.createTopic)",
+        "contents": "No Flink database relations found.\n[Create Topic](command:confluent.flinkdatabase.createTopic)",
         "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'relations' && !confluent.flinkDatabaseSearchApplied"
       },
       {
