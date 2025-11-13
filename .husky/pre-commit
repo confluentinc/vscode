@@ -1,3 +1,8 @@
-# Run linter before commit
+# Run linter on staged files before commit
 
-npx gulp lint
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|js)$' | sed 's| |\\ |g')
+
+if [ -n "$STAGED_FILES" ]; then
+  npx eslint --fix $STAGED_FILES
+  git update-index --again
+fi
