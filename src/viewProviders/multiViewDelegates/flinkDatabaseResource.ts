@@ -21,8 +21,11 @@ export class FlinkDatabaseResourceContainer<T extends IResourceBase & IdItem & I
       ? TreeItemCollapsibleState.Collapsed
       : TreeItemCollapsibleState.None;
     super(label, collapsibleState);
+
     this.children = children;
     this.id = `${this.connectionId}-${label}`;
+
+    this.description = `(${children.length})`;
   }
 
   searchableText(): string {

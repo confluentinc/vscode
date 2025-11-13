@@ -38,6 +38,18 @@ describe("viewProviders/multiViewDelegates/flinkDatabaseResource", () => {
         const withoutChildren = new FlinkDatabaseResourceContainer(label, []);
         assert.strictEqual(withoutChildren.collapsibleState, TreeItemCollapsibleState.None);
       });
+
+      it("should set description to number of children", () => {
+        const label = "Test Database";
+
+        const resources = [fakeResource, { ...fakeResource, id: "Resource2" }];
+        const withChildren = new FlinkDatabaseResourceContainer(label, resources);
+        assert.strictEqual(withChildren.description, `(${resources.length})`);
+
+        const emptyResources: (IResourceBase & IdItem & ISearchable)[] = [];
+        const withoutChildren = new FlinkDatabaseResourceContainer(label, emptyResources);
+        assert.strictEqual(withoutChildren.description, `(${emptyResources.length})`);
+      });
     });
 
     describe("searchableText", () => {
