@@ -333,6 +333,15 @@ You can also install the
 which will format `typescript` documents **on save** based on the `.prettierrc` and
 `.vscode/settings.json` files in the project.
 
+## Pre-commit Hooks
+
+This project uses [Husky](https://typicode.github.io/husky/) to run automated checks before commits:
+
+- Linting is automatically run before each commit through
+  [`.husky/pre-commit`](../.husky/pre-commit)
+- To fix issues before committing: `npx gulp lint --fix <pattern>`
+- To bypass (not recommended): `git commit --no-verify`
+
 ### Testing
 
 This project uses unit, integration, functional (webview), and end-to-end (E2E) tests to verify
