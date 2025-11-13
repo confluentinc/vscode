@@ -1,5 +1,4 @@
-import type { TreeItemCollapsibleState } from "vscode";
-import { TreeItem } from "vscode";
+import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../constants";
 import type { IdItem } from "../../models/main";
@@ -17,7 +16,10 @@ export class FlinkDatabaseResourceContainer<T extends IResourceBase & IdItem & I
   id: string;
   children: T[];
 
-  constructor(label: string, collapsibleState: TreeItemCollapsibleState, children: T[]) {
+  constructor(label: string, children: T[]) {
+    const collapsibleState = children.length
+      ? TreeItemCollapsibleState.Collapsed
+      : TreeItemCollapsibleState.None;
     super(label, collapsibleState);
     this.children = children;
     this.id = `${this.connectionId}-${label}`;
