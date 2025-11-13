@@ -4,9 +4,9 @@
 
 -
 
-### Optional: Click-testing instructions
+### Click-testing instructions
 
-<!-- Include any special instructions to help reviewers test your changes, if applicable -->
+<!-- Include any special instructions to help reviewers test your changes, if applicable. Delete this section if clicktesting is not applicable, for example, changes to docs or CI -->
 
 1.
 
