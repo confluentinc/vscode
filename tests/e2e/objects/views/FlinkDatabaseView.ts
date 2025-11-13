@@ -4,6 +4,7 @@ import { stubDialog } from "electron-playwright-helpers";
 import path from "path";
 import { ConnectionType } from "../../connectionTypes";
 import { NotificationArea } from "../notifications/NotificationArea";
+import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
 import { View } from "./View";
@@ -11,8 +12,8 @@ import { KafkaClusterItem } from "./viewItems/KafkaClusterItem";
 import { ViewItem } from "./viewItems/ViewItem";
 
 export enum FlinkViewMode {
-  Artifacts = "Switch to Flink Artifacts",
-  Database = "Switch to Flink Database",
+  Artifacts = "Flink Artifacts",
+  Database = "Flink Database",
 }
 
 export enum SelectFlinkDatabase {
@@ -137,21 +138,14 @@ export class FlinkDatabaseView extends View {
     const menuItem = this.page
       .locator(".context-view .monaco-menu .monaco-action-bar .action-item")
       .filter({
-        hasText: viewMode,
+        hasText: `Switch to ${viewMode}`,
       });
     await menuItem.first().hover();
     // clicking doesn't work here, so use keyboard navigation instead:
     await this.page.keyboard.press("Enter");
 
     // Update the label based on the target view mode
-    switch (viewMode) {
-      case FlinkViewMode.Artifacts:
-        this.label = /Flink Artifacts.*Section/;
-        break;
-      case FlinkViewMode.Database:
-        this.label = /Flink Database.*Section/;
-        break;
-    }
+    this.label = new RegExp(`${viewMode}.*Section`);
   }
   /**
    * Click the upload button to initiate the artifact upload flow.
@@ -191,14 +185,15 @@ export class FlinkDatabaseView extends View {
     const artifactItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
     await expect(artifactItem).toBeVisible();
     await artifactItem.click();
-
     // Although this resource may be cleaned up, we append a random string to avoid name conflicts during development
     const randomSuffix = Math.random().toString(36).substring(2, 8);
     const baseFileName = path.basename(filePath, ".jar");
     const fullArtifactName = `${baseFileName}-${randomSuffix}`;
 
-    await this.page.keyboard.type(fullArtifactName);
-    await this.page.keyboard.press("Enter");
+    const inputBox = new InputBox(this.page);
+    await expect(inputBox.locator).toBeVisible();
+    await inputBox.input.fill(fullArtifactName);
+    await inputBox.confirm();
 
     return fullArtifactName;
   }
