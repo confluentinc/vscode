@@ -1,4 +1,4 @@
-import { TreeItem, TreeItemCollapsibleState } from "vscode";
+import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import { formatSqlType } from "../utils/flinkTypes";
@@ -123,7 +123,7 @@ export class FlinkRelationColumn {
 
   getTreeItem(): TreeItem {
     const item = new TreeItem(this.name, TreeItemCollapsibleState.None);
-    // item.iconPath = new ThemeIcon(IconNames.FLINK_FUNCTION); // TODO replace with column specific icon when available
+    item.iconPath = new ThemeIcon("symbol-constant"); // TODO replace with column specific icon when available
     item.id = this.id;
     item.contextValue = "ccloud-flink-column";
     item.tooltip = this.getToolTip();
@@ -324,7 +324,7 @@ export class FlinkRelation {
 
   getTreeItem(): TreeItem {
     const item = new TreeItem(this.name, TreeItemCollapsibleState.Collapsed);
-    // item.iconPath = new ThemeIcon(IconNames.FLINK_FUNCTION); // TODO replace with table/view specific icons when available
+    item.iconPath = new ThemeIcon(IconNames.TOPIC); // topic = table
     item.id = this.name;
 
     const typeSnippet = this.type.toLowerCase().replace(" ", "-");
