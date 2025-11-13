@@ -1,4 +1,4 @@
-import { TreeItem, TreeItemCollapsibleState } from "vscode";
+import { TreeItem } from "vscode";
 import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";
@@ -21,12 +21,34 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
   readonly viewTitle = "Flink AI";
   readonly loadingMessage = "Loading Flink AI resources...";
 
+  // update these for specific types instead of the union once available:
+  // - FlinkAIConnection[] https://github.com/confluentinc/vscode/issues/2982
+  private connections: FlinkAIResource[] = [];
+  // - FlinkAITool[] https://github.com/confluentinc/vscode/issues/2995
+  private tools: FlinkAIResource[] = [];
+  // - FlinkAIModel[] https://github.com/confluentinc/vscode/issues/2987
+  private models: FlinkAIResource[] = [];
+  // - FlinkAIAgent[] https://github.com/confluentinc/vscode/issues/2999
+  private agents: FlinkAIResource[] = [];
+
   getChildren(element?: FlinkAIViewModeData): FlinkAIViewModeData[] {
     if (element instanceof FlinkDatabaseResourceContainer) {
       // expanding a Connection/Tool/Model/Agent container to list actual resources
       return element.children;
     }
-    return this.children;
+
+    // create containers fresh each time to avoid stale tree item properties (e.g. from search
+    // decoration) since we don't need to worry about caching them since they aren't connected to
+    // any specific data source
+    const connectionsContainer = new FlinkDatabaseResourceContainer(
+      "Connections",
+      this.connections,
+    );
+    const toolsContainer = new FlinkDatabaseResourceContainer("Tools", this.tools);
+    const modelsContainer = new FlinkDatabaseResourceContainer("Models", this.models);
+    const agentsContainer = new FlinkDatabaseResourceContainer("Agents", this.agents);
+
+    return [connectionsContainer, toolsContainer, modelsContainer, agentsContainer];
   }
 
   async fetchChildren(
@@ -35,43 +57,26 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     forceDeepRefresh: boolean,
   ): Promise<FlinkAIResource[]> {
-    this.children = [];
-
     // for follow-up branches: update these sections with actual Flink AI resource fetching logic
-    // using the CCloudResourceLoader, where the TreeItemCollapsibleState is set to None
-    // when no resources of a given type are available:
+    // using the CCloudResourceLoader to populate these arrays:
 
     // - FlinkAIConnection[] https://github.com/confluentinc/vscode/issues/2983
-    const connectionsContainer = new FlinkDatabaseResourceContainer<FlinkAIResource>(
-      "Connections",
-      TreeItemCollapsibleState.None,
-      [],
-    );
+    // this.connections = await ccloudResourceLoader.getFlinkAIConnections(database);
+    this.connections = [];
 
     // - FlinkAITool[] https://github.com/confluentinc/vscode/issues/2996
-    const toolsContainer = new FlinkDatabaseResourceContainer<FlinkAIResource>(
-      "Tools",
-      TreeItemCollapsibleState.None,
-      [],
-    );
+    // this.tools = await ccloudResourceLoader.getFlinkAITools(database);
+    this.tools = [];
 
     // - FlinkAIModel[] https://github.com/confluentinc/vscode/issues/2988
-    const modelsContainer = new FlinkDatabaseResourceContainer<FlinkAIResource>(
-      "Models",
-      TreeItemCollapsibleState.None,
-      [],
-    );
+    // this.models = await ccloudResourceLoader.getFlinkAIModels(database);
+    this.models = [];
 
     // - FlinkAIAgent[] https://github.com/confluentinc/vscode/issues/3002
-    const agentsContainer = new FlinkDatabaseResourceContainer<FlinkAIResource>(
-      "Agents",
-      TreeItemCollapsibleState.None,
-      [],
-    );
+    // this.agents = await ccloudResourceLoader.getFlinkAIAgents(database);
+    this.agents = [];
 
-    this.children.push(connectionsContainer, toolsContainer, modelsContainer, agentsContainer);
-
-    return this.children;
+    return [...this.connections, ...this.tools, ...this.models, ...this.agents];
   }
 
   getTreeItem(element: FlinkAIViewModeData): TreeItem {
