@@ -272,11 +272,9 @@ export async function artifactUploadQuickPickForm(
           ignoreFocusOut: true,
           validateInput: (value) => {
             if (value && value.trim()) {
-              try {
-                new URL(value);
-                return undefined;
-              } catch {
-                return "Please enter a valid URL";
+              const urlPattern = /^(http:\/\/|https:\/\/).+/;
+              if (!urlPattern.test(value)) {
+                return "Please enter a valid URL starting with http:// or https://";
               }
             }
             return undefined;
