@@ -15,6 +15,10 @@ import { projectScaffoldUri } from "../../emitters";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
+import {
+  maybeInjectScaffoldError,
+  ScaffoldErrorScenario,
+} from "../../projectGeneration/scaffoldErrorSimulator";
 import { getTemplatesList, pickTemplate } from "../../projectGeneration/templates";
 import { getSidecar } from "../../sidecar";
 import { logUsage, UserEvent } from "../../telemetry/events";
@@ -44,13 +48,23 @@ export const scaffoldProjectRequest = async (
   telemetrySource?: string,
 ): Promise<PostResponse> => {
   let pickedTemplate: ScaffoldV1Template | undefined = undefined;
+  let templateList: ScaffoldV1Template[] | undefined = undefined;
   let { templateType, templateName, templateCollection } = templateRequestOptions || {};
 
+  /** 1. Listing available templates */
   try {
     // undefined templateCollection will default to the "vscode" collection
-    // Potential failure point 1: listing templates from the sidecar - caught, logged, user notified, no action available
-    let templateList: ScaffoldV1Template[] = await getTemplatesList(templateCollection);
+    templateList = await getTemplatesList(templateCollection);
+  } catch (err) {
+    logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
+    const baseMessage: string = parseErrorDetails(err);
+    const stageSpecificMessage = `Project generation failed. Unable to list the templates. ${baseMessage || ""}`;
+    void showErrorNotificationWithButtons(stageSpecificMessage);
+    return { success: false, message: stageSpecificMessage };
+  }
 
+  /** 2. Choosing a template */
+  try {
     if (templateName) {
       // ...from a URI where there is a template name passed and showing quickpick is not needed
       pickedTemplate = templateList.find((template) => template.spec!.name === templateName);
@@ -81,22 +95,22 @@ export const scaffoldProjectRequest = async (
         } else if (templateType === "artifact") {
           return tags.includes("udfs");
         }
-        // If no specific type passed, show all templates with producer or consumer tags
-        // FIXME NC : does this mean we should always filter by producer/consumer if type passed?
+        // If an unknown templateType was provided, default to producer/consumer templates???
         return tags.includes("producer") || tags.includes("consumer");
       });
     }
 
     pickedTemplate = await pickTemplate(templateList);
   } catch (err) {
-    logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
-    vscode.window.showErrorMessage("Failed to retrieve template list");
-    return { success: false, message: "Failed to retrieve template list" };
+    logError(err, "template picking", { extra: { functionName: "scaffoldProjectRequest" } });
+    const baseMessage = parseErrorDetails(err);
+    const stageSpecificMessage = `Project generation failed. Unable to pick a template. ${baseMessage || ""}`;
+    void showErrorNotificationWithButtons(stageSpecificMessage);
+    return { success: false, message: stageSpecificMessage };
   }
 
   if (!pickedTemplate) {
-    // user canceled the quickpick
-    // OK here. Not a failure point - user action. No notification happens.
+    // user canceled the quickpick, exit quietly
     return { success: false, message: "Project generation cancelled." };
   }
 
@@ -108,9 +122,9 @@ export const scaffoldProjectRequest = async (
     itemType: telemetrySource,
   });
 
+  /** 3. Setting up & showing the form to gather options from user input */
   const templateSpec: ScaffoldV1TemplateSpec = pickedTemplate.spec!;
 
-  // Not a failure point - webview panel opening is vscode internals not worth trying to notify/action
   const [optionsForm, wasExisting] = scaffoldWebviewCache.findOrCreate(
     { id: templateSpec.name!, template: scaffoldFormTemplate },
     "template-options-form",
@@ -181,7 +195,7 @@ export const scaffoldProjectRequest = async (
           res = await applyTemplate(pickedTemplate, body.data, telemetrySource);
           // only dispose the form if the template was successfully applied
           if (res.success) optionsForm.dispose();
-        } else vscode.window.showErrorMessage("Failed to apply template.");
+        } else vscode.window.showErrorMessage("Failed to apply template."); // FIXME apply step errors bubble up? Or notify on their own?
         return res satisfies MessageResponse<"Submit">;
       }
     }
@@ -211,10 +225,18 @@ export async function applyTemplate(
     },
   };
 
+  // Track which potential failure point/phase we are in so we can surface specific user notifications
+  let failureStage: string = "";
   try {
     // Potential failure point 2: calling the apply op in scaffold service.
+    // TODO we should give users a heads-up in the case of a 403 error and let them know that a proxy might be interfering (see Sentry issue)
+    failureStage = "scaffold service apply operation";
+    const injected = maybeInjectScaffoldError(ScaffoldErrorScenario.None);
+    if (injected) throw injected;
     const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request);
     // Potential failure point 3: buffer extraction
+    failureStage = "template archive buffering";
+
     const arrayBuffer = await applyTemplateResponse.arrayBuffer();
 
     const SAVE_LABEL = "Save to directory";
@@ -241,6 +263,8 @@ export async function applyTemplate(
     // Not a failure point we control - calls vscode internals
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
     // Potential failure point 4: extracting the zip contents to the filesystem
+    failureStage = "writing extracted template files";
+
     await extractZipContents(arrayBuffer, destination);
     logUsage(UserEvent.ProjectScaffoldingAction, {
       status: "project generated",
@@ -281,8 +305,10 @@ export async function applyTemplate(
     }
     return { success: true, message: "Project generated successfully." };
   } catch (e) {
-    // Catches failure points 2, 3, and 4 and gives generic notification with details in output channel
-    logError(e, "applying template", { extra: { templateName: pickedTemplate.spec!.name! } });
+    // Catches failure points 2, 3, and 4 and gives stage-specific notification with details in output channel
+    logError(e, "applying template", {
+      extra: { templateName: pickedTemplate.spec!.name!, failureStage },
+    });
     let message = "Failed to generate template. An unknown error occurred.";
     if (e instanceof Error) {
       message = e.message;
@@ -297,7 +323,10 @@ export async function applyTemplate(
         }
       }
     }
-    return { success: false, message };
+    const stageSpecificMessage = `Template generation failed during ${failureStage}: ${message}`;
+    // Surface user-facing notification with actionable context
+    void showErrorNotificationWithButtons(stageSpecificMessage);
+    return { success: false, message: stageSpecificMessage };
   }
 }
 
@@ -456,4 +485,42 @@ export async function handleProjectScaffoldUriEvent(uri: vscode.Uri): Promise<vo
   params.delete("template");
   const options: { [key: string]: string } = Object.fromEntries(params.entries());
   return await handleProjectScaffoldUri(collection, template, isFormNeeded, options);
+}
+/**
+ * FIXME use known types like ResponseError/APIError
+ * Attempts to extract a useful error message from an unknown error object.
+ * Used to provide actionable feedback when template listing fails.
+ * @param err - The error object thrown during template listing
+ * @returns A string describing the error, or an empty string if not available
+ */
+function parseErrorDetails(err: unknown): string {
+  if (typeof err === "string") {
+    return err;
+  }
+  if (err instanceof Error) {
+    if ("response" in err && typeof (err as any).response?.json === "function") {
+      try {
+        // Try to parse error details from a response body if present
+        const response = (err as any).response;
+        return response.json().then((json: any) => {
+          if (json && json.message) return json.message;
+          if (json && json.errors && Array.isArray(json.errors)) {
+            // TODO use parseErrorMessage function from above?
+            return json.errors.map((e: any) => e.detail || e.message).join("; ");
+          }
+          return JSON.stringify(json);
+        });
+      } catch {
+        // Ignore parsing errors
+      }
+    }
+    return err.message || "";
+  }
+  if (typeof err === "object" && err !== null) {
+    if ("message" in err && typeof (err as any).message === "string") {
+      return (err as any).message;
+    }
+    return JSON.stringify(err);
+  }
+  return "";
 }
