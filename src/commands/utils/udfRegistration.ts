@@ -1,16 +1,16 @@
-import { Progress, ProgressLocation, Uri, window } from "vscode";
+import { type Progress, ProgressLocation, type Uri, window } from "vscode";
 import { udfsChanged } from "../../emitters";
 import { logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
-import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
+import { type CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
   showInfoNotificationWithButtons,
 } from "../../notifications";
 import { flinkDatabaseQuickpick } from "../../quickpicks/kafkaClusters";
 import { logUsage, UserEvent } from "../../telemetry/events";
-import { inspectJarClasses, JarClassInfo } from "../../utils/jarInspector";
+import { inspectJarClasses, type JarClassInfo } from "../../utils/jarInspector";
 import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import { validateUdfInput } from "./uploadArtifactOrUDF";
 
@@ -83,6 +83,15 @@ export async function detectClassesAndRegisterUDFs(artifactFile: Uri, artifactId
     logger.trace(`Prepared ${registrations.length} UDF registration(s).`);
 
     const results = await registerMultipleUdfs(registrations, artifactId);
+    if (!results) {
+      logUsage(UserEvent.FlinkUDFAction, {
+        action: "created",
+        status: "exited",
+        kind: "quick-register",
+        step: "select database",
+      });
+      return; // No error - user cancelled database selection
+    }
     reportRegistrationResults(registrations.length, results);
   } catch (error) {
     const message = error instanceof Error ? error.message : "An unknown error occurred";
@@ -168,21 +177,22 @@ export async function promptForFunctionNames(
  * Opens a progress notification during the process and displays progress updates from inner `executeUdfRegistrations`
  * @param artifact The artifact containing the UDF implementations
  * @param registrations Array of UDF registration information
- * @returns RegistrationResults containing successes and failures
+ * @returns RegistrationResults containing successes and failures, or undefined if user cancelled database selection
  */
 export async function registerMultipleUdfs(
   registrations: UdfRegistrationData[],
   artifactId: string,
-): Promise<RegistrationResults> {
-  let selectedFlinkDatabase = FlinkDatabaseViewProvider.getInstance().database || undefined;
+): Promise<RegistrationResults | undefined> {
+  let selectedFlinkDatabase = FlinkDatabaseViewProvider.getInstance().database;
   if (!selectedFlinkDatabase) {
-    selectedFlinkDatabase = await flinkDatabaseQuickpick(
+    let pickedDB = await flinkDatabaseQuickpick(
       undefined,
       "Select the Flink database (Kafka cluster) where you want to register the UDFs",
     );
-    if (!selectedFlinkDatabase) {
-      throw new Error("No Flink database selected.");
+    if (!pickedDB) {
+      return undefined; // User cancelled database selection
     }
+    selectedFlinkDatabase = pickedDB;
   }
 
   return await window.withProgress(
