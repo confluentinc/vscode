@@ -100,7 +100,7 @@ import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
-import { SupportViewProvider } from "./viewProviders/support";
+import { HelpCenterViewProvider } from "./viewProviders/helpCenter";
 import { TopicViewProvider } from "./viewProviders/topics";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/utils/search";
 
@@ -212,7 +212,7 @@ async function _activateExtension(
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
   const flinkDatabaseViewProvider = FlinkDatabaseViewProvider.getInstance();
-  const supportViewProvider = new SupportViewProvider();
+  const supportViewProvider = new HelpCenterViewProvider();
 
   // ...and any panel view providers
   const flinkStatementResultsPanelProvider = FlinkStatementResultsPanelProvider.getInstance();
