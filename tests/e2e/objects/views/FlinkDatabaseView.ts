@@ -4,11 +4,17 @@ import { stubDialog } from "electron-playwright-helpers";
 import path from "path";
 import { ConnectionType } from "../../connectionTypes";
 import { NotificationArea } from "../notifications/NotificationArea";
+import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
 import { View } from "./View";
 import { KafkaClusterItem } from "./viewItems/KafkaClusterItem";
 import { ViewItem } from "./viewItems/ViewItem";
+
+export enum FlinkViewMode {
+  Artifacts = "Flink Artifacts",
+  Database = "Flink Database",
+}
 
 export enum SelectFlinkDatabase {
   DatabaseFromResourcesView = "Flink database action from the Resources view",
@@ -44,7 +50,7 @@ export class FlinkDatabaseView extends View {
   ): Promise<void> {
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
-        await this.loadArtifactsFromResourcesView();
+        await this.loadArtifactsFromResourcesView(clusterLabel);
         break;
       case SelectFlinkDatabase.FromArtifactsViewButton:
         await this.loadArtifactsFromButton(clusterLabel);
@@ -56,17 +62,20 @@ export class FlinkDatabaseView extends View {
 
   /**
    * Load artifacts by selecting a Kafka cluster from the Resources view.
+   * @param clusterLabel - Optional label or regex to identify the Kafka cluster
    */
-  private async loadArtifactsFromResourcesView(): Promise<void> {
+  private async loadArtifactsFromResourcesView(clusterLabel?: string | RegExp): Promise<void> {
     const resourcesView = new ResourcesView(this.page);
     await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
 
     const flinkableClusters = resourcesView.ccloudFlinkableKafkaClusters;
     await expect(flinkableClusters).not.toHaveCount(0);
 
-    const clusterItem = new KafkaClusterItem(this.page, flinkableClusters.first());
+    const clusterLocator = clusterLabel
+      ? flinkableClusters.filter({ hasText: clusterLabel }).first()
+      : flinkableClusters.first();
+    const clusterItem = new KafkaClusterItem(this.page, clusterLocator);
     await clusterItem.selectAsFlinkDatabase();
-    await this.clickSwitchToFlinkArtifacts();
   }
 
   /**
@@ -84,7 +93,6 @@ export class FlinkDatabaseView extends View {
       ? kafkaClusterQuickpick.items.filter({ hasText: clusterLabel }).first()
       : kafkaClusterQuickpick.items.first();
     await clusterItem.click();
-    await this.clickSwitchToFlinkArtifacts();
   }
 
   /**
@@ -112,8 +120,17 @@ export class FlinkDatabaseView extends View {
     await this.clickNavAction("Select Kafka Cluster as Flink Database");
   }
 
-  /** Click the "Switch to Flink Artifacts" nav action in the view title area. */
-  async clickSwitchToFlinkArtifacts(): Promise<void> {
+  /**
+   * Switches the view mode in the Artifacts view to the specified Flink resource.
+   *
+   * Clicks the "Switch View Mode" nav action in the view title area, opens the context menu,
+   * and selects the menu item matching the provided view mode. Updates the internal `label`
+   * property to match the selected view mode.
+   *
+   * @param viewMode - The Flink resource view mode to switch to.
+   * @returns A promise that resolves when the view has been switched.
+   */
+  async clickSwitchToFlinkResource(viewMode: FlinkViewMode): Promise<void> {
     const expandToggle = this.locator.locator(
       '[title="Switch View Mode"], [aria-label="Switch View Mode"]',
     );
@@ -121,14 +138,15 @@ export class FlinkDatabaseView extends View {
     const menuItem = this.page
       .locator(".context-view .monaco-menu .monaco-action-bar .action-item")
       .filter({
-        hasText: "Switch to Flink Artifacts",
+        hasText: `Switch to ${viewMode}`,
       });
     await menuItem.first().hover();
     // clicking doesn't work here, so use keyboard navigation instead:
     await this.page.keyboard.press("Enter");
-    this.label = /Flink Artifacts.*Section/;
-  }
 
+    // Update the label based on the target view mode
+    this.label = new RegExp(`${viewMode}.*Section`);
+  }
   /**
    * Click the upload button to initiate the artifact upload flow.
    */
@@ -167,14 +185,15 @@ export class FlinkDatabaseView extends View {
     const artifactItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
     await expect(artifactItem).toBeVisible();
     await artifactItem.click();
-
     // Although this resource may be cleaned up, we append a random string to avoid name conflicts during development
     const randomSuffix = Math.random().toString(36).substring(2, 8);
     const baseFileName = path.basename(filePath, ".jar");
     const fullArtifactName = `${baseFileName}-${randomSuffix}`;
 
-    await this.page.keyboard.type(fullArtifactName);
-    await this.page.keyboard.press("Enter");
+    const inputBox = new InputBox(this.page);
+    await expect(inputBox.locator).toBeVisible();
+    await inputBox.input.fill(fullArtifactName);
+    await inputBox.confirm();
 
     return fullArtifactName;
   }

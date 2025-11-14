@@ -13,8 +13,8 @@ export class FlinkRelationsDelegate extends ViewProviderDelegate<
   FlinkRelationElements
 > {
   readonly mode = FlinkDatabaseViewProviderMode.Relations;
-  readonly viewTitle = "Flink Relations (Preview)";
-  readonly loadingMessage = "Loading Flink Relations...";
+  readonly viewTitle = "Flink Database Relations (Preview)";
+  readonly loadingMessage = "Loading Flink Database Relations...";
 
   /** Returns the most recent results from fetchChildren() */
   getChildren(parent?: FlinkRelation): FlinkRelationElements[] {

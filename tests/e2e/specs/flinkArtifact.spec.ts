@@ -3,7 +3,11 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
-import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/ArtifactsView";
+import {
+  FlinkDatabaseView,
+  FlinkViewMode,
+  SelectFlinkDatabase,
+} from "../objects/views/FlinkDatabaseView";
 import { Tag } from "../tags";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -29,7 +33,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   }) => {
     const artifactsView = new FlinkDatabaseView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.FromArtifactsViewButton);
-
+    await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
 
     await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
@@ -46,7 +50,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   }) => {
     const artifactsView = new FlinkDatabaseView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.DatabaseFromResourcesView);
-
+    await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
 
     await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
