@@ -159,7 +159,6 @@ export async function uploadArtifactToCCloud(
   params: ArtifactUploadParams,
   uploadId: string,
 ): Promise<CreateArtifactV1FlinkArtifact201Response> {
-  try {
     const createRequest = buildCreateArtifactRequest(params, uploadId);
 
     logger.info("Creating Flink artifact", {
@@ -195,14 +194,6 @@ export async function uploadArtifactToCCloud(
     artifactsChanged.fire(providerRegion);
 
     return response;
-  } catch (error) {
-    let extra: Record<string, unknown> = {
-      cloud: params.cloud,
-      region: params.region,
-    };
-    logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
-    throw error;
-  }
 }
 
 export function buildCreateArtifactRequest(
