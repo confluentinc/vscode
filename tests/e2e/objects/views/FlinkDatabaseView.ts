@@ -225,15 +225,6 @@ export class FlinkDatabaseView extends View {
    * @param artifactName - The name of the artifact to delete
    */
   async deleteFlinkArtifact(artifactName: string): Promise<void> {
-    await this.triggerDeleteAction(artifactName);
-    await this.waitForDeleteSuccess();
-  }
-
-  /**
-   * Trigger the delete action for a specific artifact.
-   * @param artifactName - The name of the artifact to delete
-   */
-  private async triggerDeleteAction(artifactName: string): Promise<void> {
     const artifactLocator = this.artifacts.filter({ hasText: artifactName });
     await expect(artifactLocator).toHaveCount(1);
     const artifactItem = new ViewItem(this.page, artifactLocator.first());
@@ -243,12 +234,6 @@ export class FlinkDatabaseView extends View {
     // Trigger the context menu delete action
     // The rightClickContextMenuAction uses Enter key which auto-confirms the modal
     await artifactItem.rightClickContextMenuAction("Delete Artifact");
-  }
-
-  /**
-   * Wait for the delete success notification to appear.
-   */
-  private async waitForDeleteSuccess(): Promise<void> {
     const notificationArea = new NotificationArea(this.page);
     const successNotifications = notificationArea.infoNotifications.filter({
       hasText: "deleted successfully",
