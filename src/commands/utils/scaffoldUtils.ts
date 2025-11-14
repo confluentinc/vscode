@@ -15,10 +15,6 @@ import { projectScaffoldUri } from "../../emitters";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
-import {
-  maybeInjectScaffoldError,
-  ScaffoldErrorScenario,
-} from "../../projectGeneration/scaffoldErrorSimulator";
 import { getTemplatesList, pickTemplate } from "../../projectGeneration/templates";
 import { getSidecar } from "../../sidecar";
 import { logUsage, UserEvent } from "../../telemetry/events";
@@ -231,8 +227,6 @@ export async function applyTemplate(
     // Potential failure point 2: calling the apply op in scaffold service.
     // TODO we should give users a heads-up in the case of a 403 error and let them know that a proxy might be interfering (see Sentry issue)
     failureStage = "scaffold service apply operation";
-    const injected = maybeInjectScaffoldError(ScaffoldErrorScenario.None);
-    if (injected) throw injected;
     const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request);
     // Potential failure point 3: buffer extraction
     failureStage = "template archive buffering";
