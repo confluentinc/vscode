@@ -2635,7 +2635,8 @@
     "sinon": "^18.0.1",
     "typescript": "^5.4.2",
     "typescript-eslint": "^8.25.0",
-    "yazl": "^2.5.1"
+    "yazl": "^2.5.1",
+    "husky": "^9.1.7"
   },
   "dependencies": {
     "@segment/analytics-node": "^2.1.2",
