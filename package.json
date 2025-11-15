@@ -1224,7 +1224,7 @@
         },
         {
           "id": "confluent-support",
-          "name": "Support",
+          "name": "Help Center",
           "icon": "$(confluent-logo)"
         }
       ],
