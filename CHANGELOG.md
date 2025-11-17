@@ -4,17 +4,15 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Changed
+
+- Updated the "Support" view name to be "Help Center"
+
 ### Added
 
 - New "Relations" mode for the Flink Database view, now the default mode. Displays tables, views,
   and their columns.
 - Show view definition text in a view's tooltip.
-
-### Changed
-
-- Updated the "Support" view name to be "Help Center" for clarity.
-
-## Unreleased
 
 ## 2.0.0
 
