@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources/kafkaCluster";
 import * as emitters from "../../emitters";
-import { CCloudResourceLoader } from "../../loaders";
+import { type CCloudResourceLoader } from "../../loaders";
 import * as notifications from "../../notifications";
 import * as kafkaClusterQuickpicks from "../../quickpicks/kafkaClusters";
 import * as jarInspector from "../../utils/jarInspector";
@@ -12,12 +12,12 @@ import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import {
   detectClassesAndRegisterUDFs,
   executeUdfRegistrations,
-  ProgressReport,
+  type ProgressReport,
   promptForFunctionNames,
   registerMultipleUdfs,
   reportRegistrationResults,
   selectClassesForUdfRegistration,
-  UdfRegistrationData,
+  type UdfRegistrationData,
 } from "./udfRegistration";
 
 // test helper for creating UdfRegistrationData stubs
@@ -219,16 +219,18 @@ describe("commands/utils/udfRegistration", () => {
       fireStub = sandbox.stub(emitters.udfsChanged, "fire");
     });
 
-    it("throws when no database selected", async () => {
+    it("returns undefined when no database selected", async () => {
       getDbViewStub.resource = null; // no db selected
       const qpStub = sandbox
         .stub(kafkaClusterQuickpicks, "flinkDatabaseQuickpick")
         .resolves(undefined); // user did not select a db
-      await assert.rejects(
-        () => registerMultipleUdfs([makeUdfReg("foo")], "artifact123"),
-        /No Flink database selected/,
-      );
+      const result = await registerMultipleUdfs([makeUdfReg("foo")], "artifact123");
       sinon.assert.calledOnce(qpStub);
+      assert.strictEqual(
+        result,
+        undefined,
+        "Should return undefined when user cancels database selection",
+      );
     });
 
     it("returns empty results when registrations empty", async () => {
@@ -246,8 +248,8 @@ describe("commands/utils/udfRegistration", () => {
       sinon.assert.calledOnce(withProgressStub);
       sinon.assert.calledTwice(loaderStub.executeBackgroundFlinkStatement);
       sinon.assert.calledOnce(fireStub);
-      assert.deepStrictEqual(result.successes, ["foo", "bar"]);
-      assert.deepStrictEqual(result.failures, []);
+      assert.deepStrictEqual(result?.successes, ["foo", "bar"]);
+      assert.deepStrictEqual(result?.failures, []);
     });
 
     it("handles partial failures returning mixed results", async () => {
@@ -261,9 +263,9 @@ describe("commands/utils/udfRegistration", () => {
       const result = await registerMultipleUdfs(regs, "artifact123");
 
       sinon.assert.calledTwice(loaderStub.executeBackgroundFlinkStatement);
-      assert.deepStrictEqual(result.successes, ["okFn"]);
-      assert.strictEqual(result.failures.length, 1);
-      assert.strictEqual(result.failures[0].functionName, "failFn");
+      assert.deepStrictEqual(result?.successes, ["okFn"]);
+      assert.strictEqual(result?.failures.length, 1);
+      assert.strictEqual(result?.failures[0].functionName, "failFn");
     });
 
     it("calls the flinkDatabaseQuickpick function when no database is selected", async () => {
