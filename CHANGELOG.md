@@ -10,6 +10,10 @@ All notable changes to this extension will be documented in this file.
   and their columns.
 - Show view definition text in a view's tooltip.
 
+### Changed
+
+- Updated the "Support" view name to be "Help Center" for clarity.
+
 ## Unreleased
 
 ## 2.0.0
