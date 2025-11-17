@@ -17,11 +17,11 @@ models/ArtifactV1UploadSourcePresignedUrlMetadata.ts
 models/CreateArtifactV1FlinkArtifact201Response.ts
 models/CreateArtifactV1FlinkArtifactRequest.ts
 models/CreateArtifactV1FlinkArtifactRequestUploadSource.ts
-models/ErrorSource.ts
 models/Failure.ts
 models/GetArtifactV1FlinkArtifact200Response.ts
 models/ListMeta.ts
 models/ModelError.ts
+models/ModelErrorSource.ts
 models/ObjectMeta.ts
 models/ObjectReference.ts
 models/PresignedUploadUrlArtifactV1PresignedUrl200Response.ts

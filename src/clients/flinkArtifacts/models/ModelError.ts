@@ -13,13 +13,13 @@
  */
 
 import { mapValues } from "../runtime";
-import type { ErrorSource } from "./ErrorSource";
+import type { ModelErrorSource } from "./ModelErrorSource";
 import {
-  ErrorSourceFromJSON,
-  ErrorSourceFromJSONTyped,
-  ErrorSourceToJSON,
-  ErrorSourceToJSONTyped,
-} from "./ErrorSource";
+  ModelErrorSourceFromJSON,
+  ModelErrorSourceFromJSONTyped,
+  ModelErrorSourceToJSON,
+  ModelErrorSourceToJSONTyped,
+} from "./ModelErrorSource";
 
 /**
  * Describes a particular error encountered while performing an operation.
@@ -59,10 +59,10 @@ export interface ModelError {
   detail?: string;
   /**
    *
-   * @type {ErrorSource}
+   * @type {ModelErrorSource}
    * @memberof ModelError
    */
-  source?: ErrorSource;
+  source?: ModelErrorSource;
 }
 
 /**
@@ -86,7 +86,7 @@ export function ModelErrorFromJSONTyped(json: any, ignoreDiscriminator: boolean)
     code: json["code"] == null ? undefined : json["code"],
     title: json["title"] == null ? undefined : json["title"],
     detail: json["detail"] == null ? undefined : json["detail"],
-    source: json["source"] == null ? undefined : ErrorSourceFromJSON(json["source"]),
+    source: json["source"] == null ? undefined : ModelErrorSourceFromJSON(json["source"]),
   };
 }
 
@@ -108,6 +108,6 @@ export function ModelErrorToJSONTyped(
     code: value["code"],
     title: value["title"],
     detail: value["detail"],
-    source: ErrorSourceToJSON(value["source"]),
+    source: ModelErrorSourceToJSON(value["source"]),
   };
 }
