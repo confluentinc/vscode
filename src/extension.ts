@@ -97,10 +97,10 @@ import { WriteableTmpDir } from "./utils/file";
 import type { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
 import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
+import { HelpCenterViewProvider } from "./viewProviders/helpCenter";
 import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
-import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/utils/search";
 
@@ -212,7 +212,7 @@ async function _activateExtension(
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
   const flinkDatabaseViewProvider = FlinkDatabaseViewProvider.getInstance();
-  const supportViewProvider = new SupportViewProvider();
+  const helpCenterViewProvider = new HelpCenterViewProvider();
 
   // ...and any panel view providers
   const flinkStatementResultsPanelProvider = FlinkStatementResultsPanelProvider.getInstance();
@@ -221,7 +221,7 @@ async function _activateExtension(
     resourceViewProvider,
     topicViewProvider,
     schemasViewProvider,
-    supportViewProvider,
+    helpCenterViewProvider,
     statementsViewProvider,
     flinkDatabaseViewProvider,
     flinkStatementResultsPanelProvider,
