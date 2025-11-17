@@ -220,10 +220,10 @@ describe("commands/utils/udfRegistration", () => {
     });
 
     it("returns undefined when no database selected", async () => {
-      getDbViewStub.resource = null; // no db selected
+      getDbViewStub.resource = null; // no Flink Database selected
       const qpStub = sandbox
         .stub(kafkaClusterQuickpicks, "flinkDatabaseQuickpick")
-        .resolves(undefined); // user did not select a db
+        .resolves(undefined); // user chose not to select a Flink Database
       const result = await registerMultipleUdfs([makeUdfReg("foo")], "artifact123");
       sinon.assert.calledOnce(qpStub);
       assert.strictEqual(
@@ -269,7 +269,7 @@ describe("commands/utils/udfRegistration", () => {
     });
 
     it("calls the flinkDatabaseQuickpick function when no database is selected", async () => {
-      getDbViewStub.resource = null; // no db selected
+      getDbViewStub.resource = null; // no Flink Database selected
       const qpStub = sandbox
         .stub(kafkaClusterQuickpicks, "flinkDatabaseQuickpick")
         .resolves(exampleDatabase);
