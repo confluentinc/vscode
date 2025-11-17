@@ -5,4 +5,7 @@ export class FlinkComputePoolItem extends ViewItem {
   async generateProject(): Promise<void> {
     await this.rightClickContextMenuAction("Generate project from resource");
   }
+  async uploadFlinkArtifact(): Promise<void> {
+    await this.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
+  }
 }

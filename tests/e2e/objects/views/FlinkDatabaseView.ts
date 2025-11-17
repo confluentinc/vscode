@@ -8,6 +8,7 @@ import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
 import { View } from "./View";
+import { FlinkComputePoolItem } from "./viewItems/FlinkComputePoolItem";
 import { KafkaClusterItem } from "./viewItems/KafkaClusterItem";
 import { ViewItem } from "./viewItems/ViewItem";
 
@@ -19,6 +20,7 @@ export enum FlinkViewMode {
 export enum SelectFlinkDatabase {
   DatabaseFromResourcesView = "Flink database action from the Resources view",
   FromArtifactsViewButton = "Artifacts view nav action",
+  ComputePoolFromResourcesView = "Compute pool action from the Resources view",
 }
 
 /**
@@ -55,6 +57,9 @@ export class FlinkDatabaseView extends View {
       case SelectFlinkDatabase.FromArtifactsViewButton:
         await this.loadArtifactsFromButton(clusterLabel);
         break;
+      case SelectFlinkDatabase.ComputePoolFromResourcesView:
+        await this.clickUploadFromComputePool(clusterLabel);
+        break;
       default:
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);
     }
@@ -76,6 +81,24 @@ export class FlinkDatabaseView extends View {
       : flinkableClusters.first();
     const clusterItem = new KafkaClusterItem(this.page, clusterLocator);
     await clusterItem.selectAsFlinkDatabase();
+  }
+
+  /**
+   * Load artifacts by selecting a compute pool from the Resources view.
+   * @param clusterLabel - Optional label or regex to identify the Kafka cluster
+   */
+  private async clickUploadFromComputePool(clusterLabel?: string | RegExp): Promise<void> {
+    const resourcesView = new ResourcesView(this.page);
+    await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
+
+    const computePools = resourcesView.ccloudFlinkComputePools;
+    await expect(computePools).not.toHaveCount(0);
+
+    const computePoolLocator = clusterLabel
+      ? computePools.filter({ hasText: clusterLabel }).first()
+      : computePools.first();
+    const computePoolItem = new FlinkComputePoolItem(this.page, computePoolLocator);
+    await computePoolItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
   }
 
   /**
@@ -103,8 +126,12 @@ export class FlinkDatabaseView extends View {
    * @param filePath - The path to the JAR file to upload
    * @returns The name of the uploaded artifact
    */
-  async uploadFlinkArtifact(electronApp: ElectronApplication, filePath: string): Promise<string> {
-    await this.initiateUpload();
+  async uploadFlinkArtifact(
+    electronApp: ElectronApplication,
+    filePath: string,
+    isFromComputePool: boolean,
+  ): Promise<string> {
+    await this.initiateUpload(isFromComputePool);
     await this.selectJarFile(electronApp, filePath);
     const artifactName = await this.enterArtifactName(filePath);
     await this.confirmUpload();
@@ -150,8 +177,12 @@ export class FlinkDatabaseView extends View {
   /**
    * Click the upload button to initiate the artifact upload flow.
    */
-  private async initiateUpload(): Promise<void> {
-    await this.clickNavAction("Upload Flink Artifact to Confluent Cloud");
+  private async initiateUpload(isFromComputePool: boolean): Promise<void> {
+    if (isFromComputePool) {
+      // Handled by the compute pool item right-click action
+    } else {
+      await this.clickNavAction("Upload Flink Artifact to Confluent Cloud");
+    }
 
     const quickpick = new Quickpick(this.page);
     await expect(quickpick.locator).toBeVisible();
@@ -225,6 +256,7 @@ export class FlinkDatabaseView extends View {
    * @param artifactName - The name of the artifact to delete
    */
   async deleteFlinkArtifact(artifactName: string): Promise<void> {
+    // Locate the artifact item in the Flink Artifacts view
     const artifactLocator = this.artifacts.filter({ hasText: artifactName });
     await expect(artifactLocator).toHaveCount(1);
     const artifactItem = new ViewItem(this.page, artifactLocator.first());

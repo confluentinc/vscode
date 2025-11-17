@@ -34,7 +34,11 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     const artifactsView = new FlinkDatabaseView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.FromArtifactsViewButton);
     await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
-    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
+    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
+      electronApp,
+      artifactPath,
+      false,
+    );
 
     await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
 
@@ -51,7 +55,36 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     const artifactsView = new FlinkDatabaseView(page);
     await artifactsView.loadArtifacts(SelectFlinkDatabase.DatabaseFromResourcesView);
     await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
-    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
+    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
+      electronApp,
+      artifactPath,
+      false,
+    );
+
+    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
+
+    // Clean up: delete the uploaded artifact using the correct name
+    await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
+
+    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(0);
+  });
+  test("should upload Flink Artifact when compute pool selected from the Resources view", async ({
+    page,
+    electronApp,
+  }) => {
+    const artifactsView = new FlinkDatabaseView(page);
+    await artifactsView.ensureExpanded(); // Ensure the view is expanded
+
+    await artifactsView.loadArtifacts(SelectFlinkDatabase.ComputePoolFromResourcesView);
+    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
+      electronApp,
+      artifactPath,
+      true,
+    );
+    await artifactsView.clickSelectFlinkDatabaseKafkaCluster();
+    await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
+    // Wait for at least one artifact to be visible before checking for the specific one
+    await expect(artifactsView.artifacts.first()).toBeVisible();
 
     await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
 
