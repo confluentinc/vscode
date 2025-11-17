@@ -30,7 +30,6 @@ export const CCLOUD_BASE_PATH =
 export enum IconNames {
   APACHE_KAFKA_LOGO = "apache-kafka",
   CURRENT_RESOURCE = "check",
-  CONNECTION = "plug",
   ORGANIZATION = "account",
   CONFLUENT_LOGO = "confluent-logo",
   WARPSTREAM_LOGO = "warpstream-logo",
