@@ -81,7 +81,8 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       artifactPath,
       true,
     );
-    await artifactsView.clickSelectFlinkDatabaseKafkaCluster();
+    await artifactsView.clickSelectKafkaClusterAsFlinkDatabase();
+    // progress--- we need to actually hit enter here
     await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
     // Wait for at least one artifact to be visible before checking for the specific one
     await expect(artifactsView.artifacts.first()).toBeVisible();
