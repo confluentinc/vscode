@@ -8,6 +8,7 @@ import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./
 export class FlinkAIModel implements IResourceBase, IdItem, ISearchable {
   connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
   connectionType: ConnectionType = ConnectionType.Ccloud;
+
   environmentId: EnvironmentId;
   provider: string;
   region: string;
@@ -15,6 +16,7 @@ export class FlinkAIModel implements IResourceBase, IdItem, ISearchable {
 
   name: string;
 
+  // https://github.com/confluentinc/vscode/issues/2989
   iconName: IconNames = IconNames.PLACEHOLDER;
 
   constructor(
