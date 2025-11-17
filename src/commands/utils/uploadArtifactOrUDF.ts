@@ -3,6 +3,8 @@ import * as vscode from "vscode";
 import type {
   CreateArtifactV1FlinkArtifact201Response,
   CreateArtifactV1FlinkArtifactRequest,
+  Failure,
+  ModelError,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
@@ -241,13 +243,13 @@ export async function buildUploadErrorMessage(err: unknown, base: string): Promi
     const resp = await extractResponseBody(err);
 
     if (err.response.status === 400) {
-      // Bad request - a validation error we couldn't prevent. Only log to Sentry if unparseable.
+      // Bad request - validation error. Extract all error details if available.
       if (resp && typeof resp === "object" && "errors" in resp) {
-        // Gather the detail(s) from all error(s)
-        const errors: Array<{ detail: string }> = resp.errors;
+        const failure = resp as Failure;
+        const errors: ModelError[] = Array.from(failure.errors);
         errorMessage = `${errorMessage} ${errors.map((e) => e.detail).join("\n")}`;
       } else {
-        // Unexpected - log to Sentry for investigation
+        // Unexpected format - log for investigation
         const respString = typeof resp === "string" ? resp : JSON.stringify(resp);
         logError(err, `Unparseable 400 response during artifact upload: ${respString}`);
         errorMessage = `${errorMessage} ${respString}`;
@@ -255,10 +257,12 @@ export async function buildUploadErrorMessage(err: unknown, base: string): Promi
     } else if (err.response.status === 500) {
       errorMessage = `${errorMessage} Please make sure that you provided a valid JAR file`;
     } else {
-      // Any other status code
-      try {
-        errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
-      } catch {
+      // Any other status code - attempt to extract error details from Failure response
+      if (resp && typeof resp === "object" && "errors" in resp) {
+        const failure = resp as Failure;
+        const errors: ModelError[] = Array.from(failure.errors);
+        errorMessage = `${errorMessage} ${errors[0]?.detail ?? ""}`;
+      } else {
         errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
       }
     }

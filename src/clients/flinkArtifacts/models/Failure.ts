@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from "../runtime";
+import type { ModelError } from "./ModelError";
+import {
+  ModelErrorFromJSON,
+  ModelErrorFromJSONTyped,
+  ModelErrorToJSON,
+  ModelErrorToJSONTyped,
+} from "./ModelError";
+
 /**
  * Provides information about problems encountered while performing an operation.
  * @export
@@ -21,10 +29,10 @@ import { mapValues } from "../runtime";
 export interface Failure {
   /**
    * List of errors which caused this operation to fail
-   * @type {Set<Error>}
+   * @type {Set<ModelError>}
    * @memberof Failure
    */
-  errors: Set<Error>;
+  errors: Set<ModelError>;
 }
 
 /**
@@ -44,7 +52,7 @@ export function FailureFromJSONTyped(json: any, ignoreDiscriminator: boolean): F
     return json;
   }
   return {
-    errors: new Set(json["errors"]),
+    errors: new Set((json["errors"] as Array<any>).map(ModelErrorFromJSON)),
   };
 }
 
@@ -61,6 +69,6 @@ export function FailureToJSONTyped(
   }
 
   return {
-    errors: Array.from(value["errors"] as Set<any>),
+    errors: Array.from(value["errors"] as Set<any>).map(ModelErrorToJSON),
   };
 }
