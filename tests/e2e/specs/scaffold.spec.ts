@@ -11,11 +11,7 @@ import { InputBox } from "../objects/quickInputs/InputBox";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { SupportView } from "../objects/views/SupportView";
-import {
-  DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
-  SelectKafkaCluster,
-  TopicsView,
-} from "../objects/views/TopicsView";
+import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
 import { View } from "../objects/views/View";
 import { FlinkComputePoolItem } from "../objects/views/viewItems/FlinkComputePoolItem";
 import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
@@ -24,7 +20,6 @@ import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebvi
 import { Tag } from "../tags";
 import { executeVSCodeCommand } from "../utils/commands";
 import { openGeneratedProjectInCurrentWindow, verifyGeneratedProject } from "../utils/scaffold";
-import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 const TEST_ENV_NAME = "main-test-env";
 const TEST_COMPUTE_POOL_NAME = "main-test-pool";
@@ -60,10 +55,10 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
   ];
 
   // Connection types covered by the E2E tests
-  const connectionTypes: Array<[ConnectionType, Tag, number]> = [
-    [ConnectionType.Ccloud, Tag.CCloud, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
-    [ConnectionType.Direct, Tag.Direct, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
-    [ConnectionType.Local, Tag.Local, 1],
+  const connectionTypes: Array<[ConnectionType, Tag]> = [
+    [ConnectionType.Ccloud, Tag.CCloud],
+    [ConnectionType.Direct, Tag.Direct],
+    [ConnectionType.Local, Tag.Local],
   ];
 
   test.describe("CCloud connection", { tag: [Tag.CCloud] }, () => {
@@ -157,62 +152,51 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
       await verifyGeneratedProject(page, templateName, bootstrapServers);
     });
 
-    for (const [connectionType, connectionTag, replicationFactor] of connectionTypes) {
+    for (const [connectionType, connectionTag] of connectionTypes) {
       test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
-        // only set by the template-from-topic test
-        let topicName: string;
-
-        // tell the `connectionItem` fixture which connection type to set up
-        test.use({ connectionType });
+        // specify the connection type to use with the `connectionItem` fixture, and the topic to
+        // create with the `topic` fixture
+        test.use({
+          connectionType,
+          // only used by the "apply ___ template from Kafka topic" test in order to set up a topic
+          // before the test runs, but this doesn't hurt to set up for the other tests
+          topicConfig: { name: `e2e-project-scaffold-${templateName}` },
+        });
 
         test.beforeEach(async ({ connectionItem }) => {
-          // reset topic name between tests
-          topicName = "";
           // ensure connection tree item has resources available to work with
           await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
         });
 
-        test.afterEach(async ({ page }) => {
-          if (topicName) {
-            // we don't need to use the `connectionItem` fixture since we didn't close down the
-            // electron app between switching windows, so the connection should still be usable
-            // but we do need to reopen the sidebar since the file explorer view will be open
-            await openConfluentSidebar(page);
+        test(
+          `should apply ${templateDisplayName} template from Kafka topic in Topics view`,
+          { tag: [Tag.RequiresTopic] },
+          async ({ page, topic: topicName }) => {
+            // Given we navigate to a topic in the Topics view
             const topicsView = new TopicsView(page);
             await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
-            await topicsView.deleteTopic(topicName);
-          }
-        });
+            const targetTopic = topicsView.topics.filter({ hasText: topicName });
+            await expect(targetTopic).not.toHaveCount(0);
+            const topicItem = new TopicItem(page, targetTopic.first());
+            await expect(topicItem.locator).toBeVisible();
+            // and we start the generate project flow from the right-click context menu
+            await topicItem.generateProject();
+            // and we choose a project template from the quickpick
+            const projectQuickpick = new Quickpick(page);
+            await projectQuickpick.selectItemByText(templateDisplayName);
+            // and we submit the form using the pre-filled configuration
+            const scaffoldForm = new ProjectScaffoldWebview(page);
+            await expect(scaffoldForm.bootstrapServersField).not.toBeEmpty();
+            const bootstrapServers = await scaffoldForm.bootstrapServersField.inputValue();
+            await expect(scaffoldForm.topicField).not.toBeEmpty();
+            const topicFieldValue = await scaffoldForm.topicField.inputValue();
+            await scaffoldForm.submitForm();
 
-        test(`should apply ${templateDisplayName} template from Kafka topic in Topics view`, async ({
-          page,
-        }) => {
-          topicName = `e2e-project-scaffold-${templateName}`;
-          // Given we navigate to a topic in the Topics view
-          const topicsView = new TopicsView(page);
-          await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
-          await topicsView.createTopic(topicName, 1, replicationFactor);
-          const targetTopic = topicsView.topics.filter({ hasText: topicName });
-          await expect(targetTopic).not.toHaveCount(0);
-          const topicItem = new TopicItem(page, targetTopic.first());
-          await expect(topicItem.locator).toBeVisible();
-          // and we start the generate project flow from the right-click context menu
-          await topicItem.generateProject();
-          // and we choose a project template from the quickpick
-          const projectQuickpick = new Quickpick(page);
-          await projectQuickpick.selectItemByText(templateDisplayName);
-          // and we submit the form using the pre-filled configuration
-          const scaffoldForm = new ProjectScaffoldWebview(page);
-          await expect(scaffoldForm.bootstrapServersField).not.toBeEmpty();
-          const bootstrapServers = await scaffoldForm.bootstrapServersField.inputValue();
-          await expect(scaffoldForm.topicField).not.toBeEmpty();
-          const topic = await scaffoldForm.topicField.inputValue();
-          await scaffoldForm.submitForm();
-
-          // Then we should see that the project was generated successfully
-          // and that the configuration holds the correct bootstrapServers and topic values
-          await verifyGeneratedProject(page, templateName, bootstrapServers, topic);
-        });
+            // Then we should see that the project was generated successfully
+            // and that the configuration holds the correct bootstrapServers and topic values
+            await verifyGeneratedProject(page, templateName, bootstrapServers, topicFieldValue);
+          },
+        );
 
         test(`should apply ${templateDisplayName} template from Kafka cluster in Resource view`, async ({
           page,
