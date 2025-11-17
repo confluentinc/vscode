@@ -159,50 +159,41 @@ export async function uploadArtifactToCCloud(
   params: ArtifactUploadParams,
   uploadId: string,
 ): Promise<CreateArtifactV1FlinkArtifact201Response> {
-  try {
-    const createRequest = buildCreateArtifactRequest(params, uploadId);
+  const createRequest = buildCreateArtifactRequest(params, uploadId);
 
-    logger.info("Creating Flink artifact", {
-      artifactName: params.artifactName,
-      environment: params.environment,
-      cloud: params.cloud,
-      region: params.region,
-      uploadId,
-      requestPayload: createRequest,
-    });
+  logger.info("Creating Flink artifact", {
+    artifactName: params.artifactName,
+    environment: params.environment,
+    cloud: params.cloud,
+    region: params.region,
+    uploadId,
+    requestPayload: createRequest,
+  });
 
-    const sidecarHandle = await getSidecar();
-    const providerRegion: IEnvProviderRegion = {
-      environmentId: params.environment as EnvironmentId,
-      provider: params.cloud,
-      region: params.region,
-    };
-    const artifactsClient = sidecarHandle.getFlinkArtifactsApi(providerRegion);
+  const sidecarHandle = await getSidecar();
+  const providerRegion: IEnvProviderRegion = {
+    environmentId: params.environment as EnvironmentId,
+    provider: params.cloud,
+    region: params.region,
+  };
+  const artifactsClient = sidecarHandle.getFlinkArtifactsApi(providerRegion);
 
-    const response = await artifactsClient.createArtifactV1FlinkArtifact({
-      CreateArtifactV1FlinkArtifactRequest: createRequest,
-      cloud: params.cloud,
-      region: params.region,
-    });
+  const response = await artifactsClient.createArtifactV1FlinkArtifact({
+    CreateArtifactV1FlinkArtifactRequest: createRequest,
+    cloud: params.cloud,
+    region: params.region,
+  });
 
-    logger.info("Flink artifact created successfully", {
-      artifactId: response.id,
-      artifactName: params.artifactName,
-    });
+  logger.info("Flink artifact created successfully", {
+    artifactId: response.id,
+    artifactName: params.artifactName,
+  });
 
-    // Inform all interested parties that we just mutated the artifacts list
-    // in this env/region.
-    artifactsChanged.fire(providerRegion);
+  // Inform all interested parties that we just mutated the artifacts list
+  // in this env/region.
+  artifactsChanged.fire(providerRegion);
 
-    return response;
-  } catch (error) {
-    let extra: Record<string, unknown> = {
-      cloud: params.cloud,
-      region: params.region,
-    };
-    logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
-    throw error;
-  }
+  return response;
 }
 
 export function buildCreateArtifactRequest(
@@ -247,10 +238,24 @@ export function validateUdfInput(
 export async function buildUploadErrorMessage(err: unknown, base: string): Promise<string> {
   let errorMessage = base;
   if (isResponseError(err)) {
-    if (err.response.status === 500) {
+    const resp = await extractResponseBody(err);
+
+    if (err.response.status === 400) {
+      // Bad request - a validation error we couldn't prevent. Only log to Sentry if unparseable.
+      if (resp && typeof resp === "object" && "errors" in resp) {
+        // Gather the detail(s) from all error(s)
+        const errors: Array<{ detail: string }> = resp.errors;
+        errorMessage = `${errorMessage} ${errors.map((e) => e.detail).join("\n")}`;
+      } else {
+        // Unexpected - log to Sentry for investigation
+        const respString = typeof resp === "string" ? resp : JSON.stringify(resp);
+        logError(err, `Unparseable 400 response during artifact upload: ${respString}`);
+        errorMessage = `${errorMessage} ${respString}`;
+      }
+    } else if (err.response.status === 500) {
       errorMessage = `${errorMessage} Please make sure that you provided a valid JAR file`;
     } else {
-      const resp = await extractResponseBody(err);
+      // Any other status code
       try {
         errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
       } catch {
