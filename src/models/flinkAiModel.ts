@@ -13,24 +13,23 @@ export class FlinkAIModel implements IResourceBase, IdItem, ISearchable {
   region: string;
   databaseId: string;
 
-  id: string;
   name: string;
 
   iconName: IconNames = IconNames.PLACEHOLDER;
 
   constructor(
-    props: Pick<
-      FlinkAIModel,
-      "environmentId" | "provider" | "region" | "databaseId" | "id" | "name"
-    >,
+    props: Pick<FlinkAIModel, "environmentId" | "provider" | "region" | "databaseId" | "name">,
   ) {
     this.environmentId = props.environmentId;
     this.provider = props.provider;
     this.region = props.region;
     this.databaseId = props.databaseId;
 
-    this.id = props.id;
     this.name = props.name;
+  }
+
+  get id(): string {
+    return `${this.environmentId}-${this.databaseId}-${this.name}`;
   }
 
   searchableText(): string {
