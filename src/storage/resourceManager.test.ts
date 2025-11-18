@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { randomUUID } from "crypto";
+import * as sinon from "sinon";
 import { Uri } from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -19,6 +20,7 @@ import {
   TEST_DIRECT_CONNECTION_FORM_SPEC,
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
+import { createFlinkAIModel } from "../../tests/unit/testResources/flinkAIModel";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
@@ -31,6 +33,7 @@ import {
 } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
+import { FlinkAIModel } from "../models/flinkAiModel";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
@@ -40,7 +43,7 @@ import { Subject } from "../models/schema";
 import type { SchemaRegistry } from "../models/schemaRegistry";
 import { CCloudSchemaRegistry, LocalSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { UriMetadataKeys } from "./constants";
+import { UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 import type {
   CustomConnectionSpec,
   DirectConnectionsById,
@@ -60,11 +63,15 @@ import { clearWorkspaceState, getWorkspaceState } from "./utils";
 
 describe("storage/resourceManager", () => {
   let rm: ResourceManager;
+  let sandbox: sinon.SinonSandbox;
 
   before(async () => {
-    // extension needs to be activated before any storage management can be done
     await getTestExtensionContext();
+  });
+
+  beforeEach(() => {
     rm = getResourceManager();
+    sandbox = sinon.createSandbox();
   });
 
   afterEach(async () => {
@@ -585,75 +592,176 @@ describe("storage/resourceManager", () => {
     });
   });
 
-  describe("ResourceManager Flink UDF methods", function () {
-    const OTHER_FLINK_DB_CLUSTER = CCloudKafkaCluster.create({
-      ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-      id: "other-flink-db-id",
-    }) as CCloudFlinkDbKafkaCluster;
+  describe("ResourceManager Flink database resource methods", function () {
+    const testDatabase = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+    const testStorageKey = "test-database-resource" as WorkspaceStorageKeys;
 
-    it("getFlinkUDFs() should return undefined (cache miss) when none stored", async () => {
-      const udfs = await rm.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
-      assert.strictEqual(udfs, undefined);
+    describe("setFlinkDatabaseResources()", () => {
+      it("should throw an error when resources have mixed database IDs", async () => {
+        const mixedResources = [{ databaseId: "abc123" }, { databaseId: "def456" }];
+
+        await assert.rejects(
+          rm["setFlinkDatabaseResources"](testDatabase, testStorageKey, mixedResources),
+          (err: unknown) =>
+            err instanceof Error && err.message.includes("Database ID mismatch in list"),
+        );
+      });
     });
 
-    it("setFlinkUDFs() then getFlinkUDFs() should return stored UDFs", async () => {
-      const udfsToStore = [createFlinkUDF("u-1"), createFlinkUDF("u-2")];
+    describe("getFlinkDatabaseResources()", () => {
+      it("should return undefined when nothing is cached", async () => {
+        const resources = await rm["getFlinkDatabaseResources"]<any>(testDatabase, testStorageKey);
 
-      await rm.setFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, udfsToStore);
+        assert.strictEqual(resources, undefined);
+      });
 
-      const stored: FlinkUdf[] | undefined = await rm.getFlinkUDFs(
-        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-      );
-      assert.ok(stored);
-      assert.deepStrictEqual(
-        stored.map((u) => u.id),
-        udfsToStore.map((u) => u.id),
-      );
-      for (const udf of stored) {
-        assert.ok(udf instanceof FlinkUdf, "Expected instance of FlinkUdf");
-        assert.strictEqual(udf.databaseId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
-        assert.strictEqual(udf.environmentId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.environmentId);
-        assert.strictEqual(udf.provider, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.provider);
-        assert.strictEqual(udf.region, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.region);
-      }
+      it("should return an empty array when an empty array is cached", async () => {
+        // preload empty array to workspace state
+        await rm["setFlinkDatabaseResources"](testDatabase, testStorageKey, []);
+
+        const resources = await rm["getFlinkDatabaseResources"]<any>(testDatabase, testStorageKey);
+
+        assert.deepStrictEqual(resources, []);
+      });
+
+      it("should not leak resources across different databases", async () => {
+        // preload resource for first database
+        const resources = [{ databaseId: testDatabase.id }];
+        await rm["setFlinkDatabaseResources"](testDatabase, testStorageKey, resources);
+        // preload resource for another database
+        const otherTestDatabase = CCloudKafkaCluster.create({
+          ...testDatabase,
+          id: "other-database-id",
+        }) as CCloudFlinkDbKafkaCluster;
+        const otherResources = [{ databaseId: otherTestDatabase.id }];
+        await rm["setFlinkDatabaseResources"](otherTestDatabase, testStorageKey, otherResources);
+
+        const stored: any[] | undefined = await rm["getFlinkDatabaseResources"]<any>(
+          testDatabase,
+          testStorageKey,
+        );
+        assert.ok(stored);
+        assert.deepStrictEqual(stored, resources);
+
+        const otherStored: any[] | undefined = await rm["getFlinkDatabaseResources"]<any>(
+          otherTestDatabase,
+          testStorageKey,
+        );
+        assert.ok(otherStored);
+        assert.deepStrictEqual(otherStored, otherResources);
+      });
+
+      it(`should return FlinkUdf instances when the '${WorkspaceStorageKeys.FLINK_UDFS}' storage key is used`, async () => {
+        // preload UDFs to workspace state
+        const udfs = [createFlinkUDF("udf-1"), createFlinkUDF("udf-2")];
+        await rm["setFlinkDatabaseResources"](testDatabase, WorkspaceStorageKeys.FLINK_UDFS, udfs);
+
+        const stored: FlinkUdf[] | undefined = await rm["getFlinkDatabaseResources"]<FlinkUdf>(
+          testDatabase,
+          WorkspaceStorageKeys.FLINK_UDFS,
+        );
+
+        assert.ok(stored);
+        for (const udf of stored) {
+          assert.ok(udf instanceof FlinkUdf, "Expected instance of FlinkUdf");
+        }
+      });
+
+      it(`should return FlinkAIModel instances when the '${WorkspaceStorageKeys.FLINK_AI_MODELS}' storage key is used`, async () => {
+        // preload AI models to workspace state
+        const models = [createFlinkAIModel("model-1"), createFlinkAIModel("model-2")];
+        await rm["setFlinkDatabaseResources"](
+          testDatabase,
+          WorkspaceStorageKeys.FLINK_AI_MODELS,
+          models,
+        );
+
+        const stored: FlinkAIModel[] | undefined = await rm[
+          "getFlinkDatabaseResources"
+        ]<FlinkAIModel>(testDatabase, WorkspaceStorageKeys.FLINK_AI_MODELS);
+
+        assert.ok(stored);
+        for (const model of stored) {
+          assert.ok(model instanceof FlinkAIModel, "Expected instance of FlinkAIModel");
+        }
+      });
+
+      it("should throw an error when an unsupported storage key is used", async () => {
+        // preload some other database resource to workspace state
+        const resources = [{ databaseId: testDatabase.id }];
+        await rm["setFlinkDatabaseResources"](testDatabase, testStorageKey, resources);
+
+        await assert.rejects(
+          rm["getFlinkDatabaseResources"](testDatabase, testStorageKey),
+          (err: unknown) =>
+            err instanceof Error &&
+            err.message.includes("Unsupported storage key for Flink database resources"),
+        );
+      });
     });
 
-    it("setFlinkUDFs() with empty array should persist empty list (not cache miss)", async () => {
-      await rm.setFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, []);
-      const stored = await rm.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
-      assert.deepStrictEqual(stored, []);
+    describe("setFlinkDatabaseResources() wrappers", () => {
+      let setFlinkDatabaseResourcesStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        setFlinkDatabaseResourcesStub = sandbox.stub();
+        rm["setFlinkDatabaseResources"] = setFlinkDatabaseResourcesStub;
+      });
+
+      it("setFlinkUDFs() should call setFlinkDatabaseResources() with the correct storage key", async () => {
+        const udfs = [createFlinkUDF("udf-1"), createFlinkUDF("udf-2")];
+
+        await rm.setFlinkUDFs(testDatabase, udfs);
+
+        sinon.assert.calledOnceWithExactly(
+          setFlinkDatabaseResourcesStub,
+          testDatabase,
+          WorkspaceStorageKeys.FLINK_UDFS,
+          udfs,
+        );
+      });
+
+      it("should call setFlinkDatabaseResources() with the correct storage key", async () => {
+        const models = [createFlinkAIModel("model-1"), createFlinkAIModel("model-2")];
+
+        await rm.setFlinkAIModels(testDatabase, models);
+
+        sinon.assert.calledOnceWithExactly(
+          setFlinkDatabaseResourcesStub,
+          testDatabase,
+          WorkspaceStorageKeys.FLINK_AI_MODELS,
+          models,
+        );
+      });
     });
 
-    it("getFlinkUDFs() should not leak UDFs across different databases", async () => {
-      const udfs = [createFlinkUDF("u-iso-1")];
-      await rm.setFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, udfs);
+    describe("getFlinkDatabaseResources() wrappers", () => {
+      let getFlinkDatabaseResourcesStub: sinon.SinonStub;
 
-      const otherClusterUdfs = [createFlinkUDF("u-iso-2", OTHER_FLINK_DB_CLUSTER)];
-      await rm.setFlinkUDFs(OTHER_FLINK_DB_CLUSTER, otherClusterUdfs);
+      beforeEach(() => {
+        getFlinkDatabaseResourcesStub = sandbox.stub();
+        rm["getFlinkDatabaseResources"] = getFlinkDatabaseResourcesStub;
+      });
 
-      const stored = await rm.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
-      assert.deepStrictEqual(
-        stored?.map((u) => u.id),
-        udfs.map((u) => u.id),
-      );
+      it("getFlinkAIModels() should call getFlinkDatabaseResources() with the correct storage key", async () => {
+        await rm.getFlinkAIModels(testDatabase);
 
-      const storedOther = await rm.getFlinkUDFs(OTHER_FLINK_DB_CLUSTER);
-      assert.deepStrictEqual(
-        storedOther?.map((u) => u.id),
-        otherClusterUdfs.map((u) => u.id),
-      );
-    });
+        sinon.assert.calledOnceWithExactly(
+          getFlinkDatabaseResourcesStub,
+          testDatabase,
+          WorkspaceStorageKeys.FLINK_AI_MODELS,
+        );
+      });
 
-    it("setFlinkUDFs() should throw on cluster ID mismatch", async () => {
-      const good = createFlinkUDF("u-good");
-      const mismatched = createFlinkUDF("u-bad", OTHER_FLINK_DB_CLUSTER);
+      it("getFlinkUDFs() should call getFlinkDatabaseResources() with the correct storage key", async () => {
+        await rm.getFlinkUDFs(testDatabase);
 
-      await assert.rejects(
-        rm.setFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, [good, mismatched]),
-        (err: unknown) =>
-          err instanceof Error && err.message.includes("Cluster ID mismatch in UDFs list"),
-        "Expected cluster ID mismatch error",
-      );
+        sinon.assert.calledOnceWithExactly(
+          getFlinkDatabaseResourcesStub,
+          testDatabase,
+          WorkspaceStorageKeys.FLINK_UDFS,
+        );
+      });
     });
   });
 
