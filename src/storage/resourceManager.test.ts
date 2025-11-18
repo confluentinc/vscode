@@ -624,32 +624,59 @@ describe("storage/resourceManager", () => {
         assert.deepStrictEqual(resources, []);
       });
 
-      it("should not leak resources across different databases", async () => {
-        // preload resource for first database
+      it("should throw an error when an unsupported storage key is used", async () => {
+        // preload some other database resource to workspace state
         const resources = [{ databaseId: testDatabase.id }];
         await rm["setFlinkDatabaseResources"](testDatabase, testStorageKey, resources);
-        // preload resource for another database
-        const otherTestDatabase = CCloudKafkaCluster.create({
-          ...testDatabase,
-          id: "other-database-id",
-        }) as CCloudFlinkDbKafkaCluster;
-        const otherResources = [{ databaseId: otherTestDatabase.id }];
-        await rm["setFlinkDatabaseResources"](otherTestDatabase, testStorageKey, otherResources);
 
-        const stored: any[] | undefined = await rm["getFlinkDatabaseResources"]<any>(
-          testDatabase,
-          testStorageKey,
+        await assert.rejects(
+          rm["getFlinkDatabaseResources"](testDatabase, testStorageKey),
+          (err: unknown) =>
+            err instanceof Error &&
+            err.message.includes("Unsupported storage key for Flink database resources"),
         );
-        assert.ok(stored);
-        assert.deepStrictEqual(stored, resources);
-
-        const otherStored: any[] | undefined = await rm["getFlinkDatabaseResources"]<any>(
-          otherTestDatabase,
-          testStorageKey,
-        );
-        assert.ok(otherStored);
-        assert.deepStrictEqual(otherStored, otherResources);
       });
+
+      // we can't use the basic `{ databaseId: string }` objects here because we'll hit the error
+      // from the test above ("Unsupported storage key ...")
+      const scenarios = [
+        {
+          key: WorkspaceStorageKeys.FLINK_UDFS,
+          resourceConstructor: createFlinkUDF,
+        },
+        {
+          key: WorkspaceStorageKeys.FLINK_AI_MODELS,
+          resourceConstructor: createFlinkAIModel,
+        },
+      ];
+      for (const { key, resourceConstructor } of scenarios) {
+        it(`should not leak resources across different databases (key=${key})`, async () => {
+          // preload resource for first database
+          const resources = [resourceConstructor("test1")];
+          await rm["setFlinkDatabaseResources"](testDatabase, key, resources);
+          // preload resource for another database
+          const otherTestDatabase = CCloudKafkaCluster.create({
+            ...testDatabase,
+            id: "other-database-id",
+          }) as CCloudFlinkDbKafkaCluster;
+          const otherResources = [resourceConstructor("test2", otherTestDatabase)];
+          await rm["setFlinkDatabaseResources"](otherTestDatabase, key, otherResources);
+
+          const stored: any[] | undefined = await rm["getFlinkDatabaseResources"]<any>(
+            testDatabase,
+            key,
+          );
+          assert.ok(stored);
+          assert.deepStrictEqual(stored, resources);
+
+          const otherStored: any[] | undefined = await rm["getFlinkDatabaseResources"]<any>(
+            otherTestDatabase,
+            key,
+          );
+          assert.ok(otherStored);
+          assert.deepStrictEqual(otherStored, otherResources);
+        });
+      }
 
       it(`should return FlinkUdf instances when the '${WorkspaceStorageKeys.FLINK_UDFS}' storage key is used`, async () => {
         // preload UDFs to workspace state
@@ -684,19 +711,6 @@ describe("storage/resourceManager", () => {
         for (const model of stored) {
           assert.ok(model instanceof FlinkAIModel, "Expected instance of FlinkAIModel");
         }
-      });
-
-      it("should throw an error when an unsupported storage key is used", async () => {
-        // preload some other database resource to workspace state
-        const resources = [{ databaseId: testDatabase.id }];
-        await rm["setFlinkDatabaseResources"](testDatabase, testStorageKey, resources);
-
-        await assert.rejects(
-          rm["getFlinkDatabaseResources"](testDatabase, testStorageKey),
-          (err: unknown) =>
-            err instanceof Error &&
-            err.message.includes("Unsupported storage key for Flink database resources"),
-        );
       });
     });
 
