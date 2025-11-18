@@ -599,7 +599,7 @@ export class ResourceManager {
    * @param storageKey The workspace storage key to use for caching
    * @param resources The list of resources to cache (possibly empty)
    */
-  private async setFlinkDatabaseResources<T extends { databaseId: string }>(
+  async setFlinkDatabaseResources<T extends { databaseId: string }>(
     flinkDatabase: CCloudFlinkDbKafkaCluster,
     storageKey: WorkspaceStorageKeys,
     resources: T[],
@@ -631,7 +631,7 @@ export class ResourceManager {
    * @param storageKey The workspace storage key to use for caching
    * @returns T[] (possibly empty) if known, else undefined indicating a cache miss
    */
-  private async getFlinkDatabaseResources<T extends FlinkDatabaseResource>(
+  async getFlinkDatabaseResources<T extends FlinkDatabaseResource>(
     flinkDatabase: CCloudFlinkDbKafkaCluster,
     storageKey: WorkspaceStorageKeys,
   ): Promise<T[] | undefined> {
