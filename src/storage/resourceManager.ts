@@ -674,6 +674,40 @@ export class ResourceManager {
     }) as T[];
   }
 
+  /** Wrapper around {@linkcode setFlinkDatabaseResources()} for {@link FlinkUdf UDFs}. */
+  async setFlinkUDFs(flinkDatabase: CCloudFlinkDbKafkaCluster, udfs: FlinkUdf[]): Promise<void> {
+    await this.setFlinkDatabaseResources(flinkDatabase, WorkspaceStorageKeys.FLINK_UDFS, udfs);
+  }
+
+  /** Wrapper around {@linkcode getFlinkDatabaseResources()} for {@link FlinkUdf UDFs}. */
+  async getFlinkUDFs(flinkDatabase: CCloudFlinkDbKafkaCluster): Promise<FlinkUdf[] | undefined> {
+    return this.getFlinkDatabaseResources(flinkDatabase, WorkspaceStorageKeys.FLINK_UDFS);
+  }
+
+  /** Wrapper around {@linkcode setFlinkDatabaseResources()} for {@link FlinkAIModel AI models}. */
+  async setFlinkAIModels(
+    flinkDatabase: CCloudFlinkDbKafkaCluster,
+    models: FlinkAIModel[],
+  ): Promise<void> {
+    await this.setFlinkDatabaseResources(
+      flinkDatabase,
+      WorkspaceStorageKeys.FLINK_AI_MODELS,
+      models,
+    );
+  }
+
+  /** Wrapper around {@linkcode getFlinkDatabaseResources()} for {@link FlinkAIModel AI models}. */
+  async getFlinkAIModels(
+    flinkDatabase: CCloudFlinkDbKafkaCluster,
+  ): Promise<FlinkAIModel[] | undefined> {
+    return this.getFlinkDatabaseResources(flinkDatabase, WorkspaceStorageKeys.FLINK_AI_MODELS);
+  }
+
+  // extend get/set wrapper methods for other Flink AI resource classes once available:
+  // - FlinkAIConnection https://github.com/confluentinc/vscode/issues/2982
+  // - FlinkAITool https://github.com/confluentinc/vscode/issues/2995
+  // - FlinkAIAgent https://github.com/confluentinc/vscode/issues/2999
+
   // AUTH PROVIDER
 
   /**
