@@ -768,6 +768,21 @@ describe("CCloudResourceLoader", () => {
 
   describe("getFlinkDatabaseResources()", () => {
     let executeBackgroundFlinkStatementStub: sinon.SinonStub;
+    let getFlinkDatabaseResourcesStub: sinon.SinonStub;
+    let setFlinkDatabaseResourcesStub: sinon.SinonStub;
+
+    const testDatabase = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+    const testStorageKey = "test-resource" as WorkspaceStorageKeys;
+    const testStatementQuery = "SELECT * FROM database_resources;";
+    // simple transformer function that converts the 'foo' value to uppercase to add to the 'bar'
+    // field and adds the databaseId to each row/resource
+    const testTransformer = (db: CCloudFlinkDbKafkaCluster, rows: any[]): any[] => {
+      return rows.map((r) => ({
+        foo: r.foo,
+        bar: r.foo.toUpperCase(),
+        databaseId: db.id,
+      }));
+    };
 
     const testDatabase = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
     const testStorageKey = "test-resource" as WorkspaceStorageKeys;
