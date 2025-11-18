@@ -57,7 +57,7 @@ export class FlinkAIModelTreeItem extends TreeItem {
 
 export function createFlinkModelToolTip(resource: FlinkAIModel): CustomMarkdownString {
   const tooltip = new CustomMarkdownString()
-    .addHeader("Flink AI Model", IconNames.PLACEHOLDER)
+    .addHeader("Flink AI Model", resource.iconName)
     .addField("Name", resource.name);
 
   return tooltip;
