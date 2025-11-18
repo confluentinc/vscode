@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { randomUUID } from "crypto";
+import * as sinon from "sinon";
 import { Uri } from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -62,6 +63,7 @@ import { clearWorkspaceState, getWorkspaceState } from "./utils";
 
 describe("storage/resourceManager", () => {
   let rm: ResourceManager;
+  let sandbox: sinon.SinonSandbox;
 
   before(async () => {
     await getTestExtensionContext();
@@ -69,6 +71,7 @@ describe("storage/resourceManager", () => {
 
   beforeEach(() => {
     rm = getResourceManager();
+    sandbox = sinon.createSandbox();
   });
 
   afterEach(async () => {
