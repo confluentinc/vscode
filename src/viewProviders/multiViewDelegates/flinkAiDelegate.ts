@@ -86,6 +86,6 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     }
     // replace with TreeItem models depending on element type, see:
     // - FlinkAIAgentTreeItem https://github.com/confluentinc/vscode/issues/2999
-    return new TreeItem(element);
+    return element;
   }
 }
