@@ -28,6 +28,7 @@ export const CCLOUD_BASE_PATH =
  * @remarks Any custom icon IDs must match the `contributes.icons` section of package.json.
  */
 export enum IconNames {
+  CONNECTION = "plug",
   APACHE_KAFKA_LOGO = "apache-kafka",
   CURRENT_RESOURCE = "check",
   ORGANIZATION = "account",
