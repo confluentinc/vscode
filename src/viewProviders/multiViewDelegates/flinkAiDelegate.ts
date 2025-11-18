@@ -1,4 +1,4 @@
-import { TreeItem } from "vscode";
+import type { TreeItem } from "vscode";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkAIModel, FlinkAIModelTreeItem } from "../../models/flinkAiModel";
 import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
@@ -89,6 +89,6 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     // - FlinkAIConnectionTreeItem https://github.com/confluentinc/vscode/issues/2982
     // - FlinkAIToolTreeItem https://github.com/confluentinc/vscode/issues/2995
     // - FlinkAIAgentTreeItem https://github.com/confluentinc/vscode/issues/2999
-    return new TreeItem(element);
+    return element;
   }
 }
