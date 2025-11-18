@@ -53,6 +53,13 @@ import {
 
 const logger = new Logger("storage.ccloudResourceLoader");
 
+/** Options for executing a background Flink statement. */
+export interface ExecuteBackgroundStatementOptions {
+  computePool?: CCloudFlinkComputePool;
+  timeout?: number;
+  nameSpice?: string;
+}
+
 /**
  * Singleton class responsible for loading / caching CCloud resources into the resource manager.
  * View providers and/or other consumers of resources stored in the resource manager should
@@ -519,11 +526,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   async executeBackgroundFlinkStatement<RT>(
     sqlStatement: string,
     database: CCloudFlinkDbKafkaCluster,
-    options: {
-      computePool?: CCloudFlinkComputePool;
-      timeout?: number;
-      nameSpice?: string;
-    } = {},
+    options: ExecuteBackgroundStatementOptions = {},
   ): Promise<Array<RT>> {
     const organization = await this.getOrganization();
     if (!organization) {
