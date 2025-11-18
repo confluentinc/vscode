@@ -9,7 +9,9 @@ import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import type { Environment, EnvironmentType } from "../models/environment";
 import { getEnvironmentClass } from "../models/environment";
+import { FlinkAIModel } from "../models/flinkAiModel";
 import { FlinkArtifact } from "../models/flinkArtifact";
+import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
 import { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster, KafkaClusterType } from "../models/kafkaCluster";
 import { getKafkaClusterClass } from "../models/kafkaCluster";
@@ -589,65 +591,87 @@ export class ResourceManager {
     return `${envProviderRegion.environmentId}-${envProviderRegion.provider}-${envProviderRegion.region}`;
   }
 
-  // Flink UDFs, cached per (CCloud) Kafka cluster ID
+  // Flink Database resources
 
   /**
-   * Cache this list of UDFs for a given CCloud Flink DB Kafka cluster/database.
-   * @param flinkDatabase The CCloud Flink DB Kafka cluster for which to set UDFs
-   * @param udfs The list of UDFs to cache (possibly empty, indicating we know there are no UDFs at this time).
+   * Generic method to cache resources for a given CCloud Flink database.
+   * @param flinkDatabase The CCloud Flink database for which to set resources
+   * @param storageKey The workspace storage key to use for caching
+   * @param resources The list of resources to cache (possibly empty)
    */
-  async setFlinkUDFs(flinkDatabase: CCloudFlinkDbKafkaCluster, udfs: FlinkUdf[]): Promise<void> {
-    for (const udf of udfs) {
-      if (udf.databaseId !== flinkDatabase.id) {
+  async setFlinkDatabaseResources<T extends { databaseId: string }>(
+    flinkDatabase: CCloudFlinkDbKafkaCluster,
+    storageKey: WorkspaceStorageKeys,
+    resources: T[],
+  ): Promise<void> {
+    for (const resource of resources) {
+      if (resource.databaseId !== flinkDatabase.id) {
         throw new Error(
-          `Cluster ID mismatch in UDFs list: expected ${flinkDatabase.id}, found ${udf.databaseId}`,
+          `Database ID mismatch in list (${storageKey}): expected ${flinkDatabase.id}, found ${resource.databaseId}`,
         );
       }
     }
 
-    await this.runWithMutex(WorkspaceStorageKeys.FLINK_UDFS, async () => {
-      const existingString: string | undefined = await this.workspaceState.get(
-        WorkspaceStorageKeys.FLINK_UDFS,
-      );
-      const udfsByCluster: Map<string, FlinkUdf[]> = existingString
+    await this.runWithMutex(storageKey, async () => {
+      const existingString: string | undefined = await this.workspaceState.get(storageKey);
+      const resourcesByDatabase: Map<string, T[]> = existingString
         ? stringToMap(existingString)
         : new Map();
 
-      udfsByCluster.set(flinkDatabase.id, udfs);
+      resourcesByDatabase.set(flinkDatabase.id, resources);
 
-      await this.workspaceState.update(WorkspaceStorageKeys.FLINK_UDFS, mapToString(udfsByCluster));
+      await this.workspaceState.update(storageKey, mapToString(resourcesByDatabase));
     });
   }
 
   /**
-   * Fetch cached UDFs for a given CCloud Flink DB Kafka cluster/database, if any.
-   * @param flinkDatabase The CCloud Flink DB Kafka cluster for which to get cached UDFs
-   * @returns FlinkUdf[] (possibly empty) if known, else undefined indicating a cache miss.
+   * Generic method to fetch cached resources for a given CCloud database.
+   * Uses the storage key to automatically map JSON objects to the correct resource class instances.
+   * @param flinkDatabase The CCloud Flink database for which to get cached resources
+   * @param storageKey The workspace storage key to use for caching
+   * @returns T[] (possibly empty) if known, else undefined indicating a cache miss
    */
-  async getFlinkUDFs(flinkDatabase: CCloudFlinkDbKafkaCluster): Promise<FlinkUdf[] | undefined> {
-    let udfsByClusterString: string | undefined;
-
-    await this.runWithMutex(WorkspaceStorageKeys.FLINK_UDFS, async () => {
-      udfsByClusterString = await this.workspaceState.get(WorkspaceStorageKeys.FLINK_UDFS);
+  async getFlinkDatabaseResources<T extends FlinkDatabaseResource>(
+    flinkDatabase: CCloudFlinkDbKafkaCluster,
+    storageKey: WorkspaceStorageKeys,
+  ): Promise<T[] | undefined> {
+    let resourcesByDatabaseString: string | undefined;
+    await this.runWithMutex(storageKey, async () => {
+      resourcesByDatabaseString = await this.workspaceState.get(storageKey);
     });
-
-    const udfsByCluster: Map<string, FlinkUdf[]> = udfsByClusterString
-      ? stringToMap(udfsByClusterString)
+    const resourcesByDatabase: Map<string, T[]> = resourcesByDatabaseString
+      ? stringToMap(resourcesByDatabaseString)
       : new Map();
 
-    const vanillaJSONUdfs = udfsByCluster.get(flinkDatabase.id);
-
-    if (vanillaJSONUdfs === undefined) {
-      logger.debug(`getFlinkUDFs(): No Flink UDFs cached for database ${flinkDatabase.id}`);
+    const rawDatabaseResources = resourcesByDatabase.get(flinkDatabase.id);
+    if (rawDatabaseResources === undefined) {
+      logger.debug(
+        `getFlinkDatabaseResources(): No cached ${storageKey} resources for database ${flinkDatabase.id}`,
+      );
       return undefined;
     }
 
     logger.debug(
-      `getFlinkUDFs(): Found ${vanillaJSONUdfs.length} Flink UDFs for database ${flinkDatabase.id}`,
+      `getFlinkDatabaseResources(): Found ${rawDatabaseResources.length} resources (${storageKey}) for database ${flinkDatabase.id}`,
     );
 
-    return vanillaJSONUdfs.map((raw) => new FlinkUdf(raw));
+    // recreate real class instances from raw JSON objects based on the provided storage key
+    return rawDatabaseResources.map((raw) => {
+      switch (storageKey) {
+        case WorkspaceStorageKeys.FLINK_UDFS:
+          return new FlinkUdf(raw as FlinkUdf);
+        case WorkspaceStorageKeys.FLINK_AI_MODELS:
+          return new FlinkAIModel(raw as FlinkAIModel);
+        default:
+          throw new Error(`Unsupported storage key for Flink database resources: ${storageKey}`);
+      }
+    }) as T[];
   }
+
+  // extend get/set wrapper methods for other Flink AI resource classes once available:
+  // - FlinkAIConnection https://github.com/confluentinc/vscode/issues/2982
+  // - FlinkAITool https://github.com/confluentinc/vscode/issues/2995
+  // - FlinkAIAgent https://github.com/confluentinc/vscode/issues/2999
 
   // AUTH PROVIDER
 

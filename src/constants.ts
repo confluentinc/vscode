@@ -28,9 +28,9 @@ export const CCLOUD_BASE_PATH =
  * @remarks Any custom icon IDs must match the `contributes.icons` section of package.json.
  */
 export enum IconNames {
+  CONNECTION = "plug",
   APACHE_KAFKA_LOGO = "apache-kafka",
   CURRENT_RESOURCE = "check",
-  CONNECTION = "plug",
   ORGANIZATION = "account",
   CONFLUENT_LOGO = "confluent-logo",
   WARPSTREAM_LOGO = "warpstream-logo",
@@ -55,6 +55,8 @@ export enum IconNames {
   FLINK_STATEMENT_STATUS_STOPPED = "confluent-flink-statement-status-stopped",
   FLINK_STATEMENT_STATUS_PENDING = "confluent-flink-statement-status-pending",
   LOADING = "loading~spin",
+  /** General-purpose icon to use when we don't have a dedicated icon for a given resource. */
+  PLACEHOLDER = "symbol-misc",
 }
 
 /** Attribution to use for CCloud URLs, e.g. `?utm_source=${UTM_SOURCE_VSCODE}` */
