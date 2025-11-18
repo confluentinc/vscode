@@ -13,8 +13,6 @@ import {
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
-import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
-import { makeUdfFunctionRow } from "../../tests/unit/testResources/makeUdfRow";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
 import type {
@@ -56,7 +54,6 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { FlinkStatement } from "../models/flinkStatement";
 import { Phase, restFlinkStatementToModel } from "../models/flinkStatement";
-import type { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { EnvironmentId } from "../models/resource";
@@ -66,12 +63,16 @@ import { CachingResourceLoader } from "./cachingResourceLoader";
 import * as relationsUtils from "./utils/relationsAndColumnsSystemCatalogQuery";
 
 import { TEST_FLINK_RELATION } from "../../tests/unit/testResources/flinkRelation";
+import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
+import type { FlinkUdf } from "../models/flinkUDF";
+import { WorkspaceStorageKeys } from "../storage/constants";
 import {
   CCloudResourceLoader,
   loadArtifactsForProviderRegion,
   loadProviderRegions,
 } from "./ccloudResourceLoader";
-import type { RawUdfSystemCatalogRow } from "./utils/udfSystemCatalogQuery";
+import { getFlinkAIModelsQuery } from "./utils/flinkAiModelsQuery";
+import { getUdfSystemCatalogQuery } from "./utils/udfSystemCatalogQuery";
 
 describe("CCloudResourceLoader", () => {
   let sandbox: sinon.SinonSandbox;
@@ -764,106 +765,357 @@ describe("CCloudResourceLoader", () => {
     });
   });
 
-  describe("getFlinkUDFs", () => {
+  describe("getFlinkDatabaseResources()", () => {
     let executeBackgroundFlinkStatementStub: sinon.SinonStub;
+    let getFlinkDatabaseResourcesStub: sinon.SinonStub;
+    let setFlinkDatabaseResourcesStub: sinon.SinonStub;
+
+    const testDatabase = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+    const testStorageKey = "test-resource" as WorkspaceStorageKeys;
+    const testStatementQuery = "SELECT * FROM database_resources;";
+    // simple transformer function that converts the 'foo' value to uppercase to add to the 'bar'
+    // field and adds the databaseId to each row/resource
+    const testTransformer = (db: CCloudFlinkDbKafkaCluster, rows: any[]): any[] => {
+      return rows.map((r) => ({
+        foo: r.foo,
+        bar: r.foo.toUpperCase(),
+        databaseId: db.id,
+      }));
+    };
 
     beforeEach(() => {
       executeBackgroundFlinkStatementStub = sandbox.stub(loader, "executeBackgroundFlinkStatement");
-      // By default, cache misses for UDFs.
-      stubbedResourceManager.getFlinkUDFs.resolves(undefined);
+      // private methods on the ResourceManager aren't stubbed by default, so we need to set them up
+      getFlinkDatabaseResourcesStub = sandbox.stub();
+      stubbedResourceManager["getFlinkDatabaseResources"] = getFlinkDatabaseResourcesStub;
+      setFlinkDatabaseResourcesStub = sandbox.stub();
+      stubbedResourceManager["setFlinkDatabaseResources"] = setFlinkDatabaseResourcesStub;
     });
 
-    it("should handle no UDFs returned from the statement", async () => {
-      const emptyUDFs: FlinkUdf[] = [];
-      executeBackgroundFlinkStatementStub.resolves(emptyUDFs);
+    it("should return an empty array when the background statement returns no results", async () => {
+      const emptyRows: any[] = [];
+      executeBackgroundFlinkStatementStub.resolves(emptyRows);
 
-      const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
-      assert.ok(Array.isArray(udfs));
-      assert.strictEqual(udfs.length, 0);
-      sinon.assert.calledOnce(executeBackgroundFlinkStatementStub);
-      // Should have tried to get from cache first.
-      sinon.assert.calledOnce(stubbedResourceManager.getFlinkUDFs);
-      // Should have cached the empty result.
-      sinon.assert.calledOnce(stubbedResourceManager.setFlinkUDFs);
-      sinon.assert.calledWithExactly(
-        stubbedResourceManager.setFlinkUDFs,
-        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-        emptyUDFs,
+      const resources = await loader["getFlinkDatabaseResources"](
+        testDatabase,
+        testStorageKey,
+        testStatementQuery,
+        () => [],
+        false,
+        // no statement options by default
+      );
+
+      assert.ok(Array.isArray(resources));
+      assert.strictEqual(resources.length, 0);
+      sinon.assert.calledOnceWithExactly(
+        getFlinkDatabaseResourcesStub,
+        testDatabase,
+        testStorageKey,
+      );
+      sinon.assert.calledOnceWithExactly(
+        executeBackgroundFlinkStatementStub,
+        testStatementQuery,
+        testDatabase,
+        undefined,
+      );
+      // no transformations applied since there are no rows
+      sinon.assert.calledOnceWithExactly(
+        setFlinkDatabaseResourcesStub,
+        testDatabase,
+        testStorageKey,
+        resources,
       );
     });
 
-    it("should handle some UDFs returned from the statement", async () => {
-      const udfResultRows: RawUdfSystemCatalogRow[] = [
-        makeUdfFunctionRow("A"),
-        makeUdfFunctionRow("B"),
-        makeUdfFunctionRow("C"),
-      ];
+    it("should return transformed resources when the background statement returns results", async () => {
+      const rawResultRows = [{ foo: "abc" }, { foo: "def" }];
+      executeBackgroundFlinkStatementStub.resolves(rawResultRows);
 
-      executeBackgroundFlinkStatementStub.resolves(udfResultRows);
+      const resources = await loader["getFlinkDatabaseResources"](
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        testStorageKey,
+        testStatementQuery,
+        testTransformer,
+        false,
+        // no statement options by default
+      );
 
-      const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
-      assert.ok(Array.isArray(udfs));
-      assert.strictEqual(udfs.length, udfResultRows.length);
-      for (let i = 0; i < udfResultRows.length; i++) {
-        assert.strictEqual(udfs[i].name, udfResultRows[i].functionRoutineName);
-        assert.strictEqual(udfs[i].databaseId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
+      assert.ok(Array.isArray(resources));
+      assert.strictEqual(resources.length, rawResultRows.length);
+      sinon.assert.calledOnceWithExactly(
+        getFlinkDatabaseResourcesStub,
+        testDatabase,
+        testStorageKey,
+      );
+      sinon.assert.calledOnceWithExactly(
+        executeBackgroundFlinkStatementStub,
+        testStatementQuery,
+        testDatabase,
+        undefined,
+      );
+      // verify that the transformation was applied correctly
+      for (let i = 0; i < rawResultRows.length; i++) {
+        assert.strictEqual(resources[i].foo, rawResultRows[i].foo);
+        assert.strictEqual(resources[i].bar, rawResultRows[i].foo.toUpperCase());
+        assert.strictEqual(resources[i].databaseId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
       }
-      sinon.assert.calledOnce(executeBackgroundFlinkStatementStub);
-      // Should have tried to get from cache first.
-      sinon.assert.calledOnce(stubbedResourceManager.getFlinkUDFs);
-      // Should have cached the result.
-      sinon.assert.calledOnce(stubbedResourceManager.setFlinkUDFs);
-      sinon.assert.calledWithExactly(
-        stubbedResourceManager.setFlinkUDFs,
-        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-        udfs,
+      sinon.assert.calledOnceWithExactly(
+        setFlinkDatabaseResourcesStub,
+        testDatabase,
+        testStorageKey,
+        resources,
       );
     });
 
-    it("should handle resourcemanager cache hit, then skipping the statement execution", async () => {
-      const cachedUDFs: FlinkUdf[] = [createFlinkUDF("func1"), createFlinkUDF("func2")];
-      stubbedResourceManager.getFlinkUDFs.resolves(cachedUDFs);
+    it("should return cached resources without executing a background statement", async () => {
+      const cachedResources = [{ foo: "cached1" }, { foo: "cached2" }];
+      getFlinkDatabaseResourcesStub.resolves(cachedResources);
 
-      const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
-      assert.deepStrictEqual(udfs, cachedUDFs);
-      sinon.assert.calledOnce(stubbedResourceManager.getFlinkUDFs);
+      const resources = await loader["getFlinkDatabaseResources"](
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        testStorageKey,
+        testStatementQuery,
+        testTransformer,
+        false,
+      );
+
+      assert.deepStrictEqual(resources, cachedResources);
+      sinon.assert.calledOnceWithExactly(
+        getFlinkDatabaseResourcesStub,
+        testDatabase,
+        testStorageKey,
+      );
       sinon.assert.notCalled(executeBackgroundFlinkStatementStub);
-      sinon.assert.notCalled(stubbedResourceManager.setFlinkUDFs);
+      sinon.assert.notCalled(setFlinkDatabaseResourcesStub);
     });
 
-    it("should honor forceDeepRefresh=true to skip cache and reload", async () => {
-      const cachedUDFs: FlinkUdf[] = [
-        createFlinkUDF("A"),
-        createFlinkUDF("B"),
-        createFlinkUDF("C"),
-      ];
-      stubbedResourceManager.getFlinkUDFs.resolves(cachedUDFs); // would be a cache hit, but...
+    it("should execute a background statement and update the cache when forceDeepRefresh=true", async () => {
+      const rawResultRows = [{ foo: "A" }, { foo: "B" }];
+      executeBackgroundFlinkStatementStub.resolves(rawResultRows);
 
-      const udfResultRows: RawUdfSystemCatalogRow[] = [
-        makeUdfFunctionRow("A"),
-        makeUdfFunctionRow("B"),
-        makeUdfFunctionRow("C"),
-      ];
-      executeBackgroundFlinkStatementStub.resolves(udfResultRows);
-
-      // call with forceDeepRefresh=true
-      const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
-      assert.ok(Array.isArray(udfs));
-      assert.strictEqual(udfs.length, udfResultRows.length);
-      for (let i = 0; i < udfResultRows.length; i++) {
-        assert.strictEqual(udfs[i].name, udfResultRows[i].functionRoutineName);
-        assert.strictEqual(udfs[i].databaseId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
-      }
-
-      // Will have consulted the cache, but then ignored it, and called the statement, then cached the results.
-      sinon.assert.calledOnce(stubbedResourceManager.getFlinkUDFs);
-      sinon.assert.calledOnce(executeBackgroundFlinkStatementStub);
-      sinon.assert.calledOnce(stubbedResourceManager.setFlinkUDFs);
-      sinon.assert.calledWithExactly(
-        stubbedResourceManager.setFlinkUDFs,
+      const resources = await loader["getFlinkDatabaseResources"](
         TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-        udfs,
+        testStorageKey,
+        testStatementQuery,
+        testTransformer,
+        true,
       );
+
+      assert.ok(Array.isArray(resources));
+      assert.strictEqual(resources.length, rawResultRows.length);
+      sinon.assert.calledOnceWithExactly(
+        getFlinkDatabaseResourcesStub,
+        testDatabase,
+        testStorageKey,
+      );
+      sinon.assert.calledOnceWithExactly(
+        executeBackgroundFlinkStatementStub,
+        testStatementQuery,
+        testDatabase,
+        undefined,
+      );
+      sinon.assert.calledOnceWithExactly(
+        setFlinkDatabaseResourcesStub,
+        testDatabase,
+        testStorageKey,
+        resources,
+      );
+    });
+
+    it("should execute a background statement when forceDeepRefresh=false with no cached data (cache miss)", async () => {
+      // nothing cached
+      getFlinkDatabaseResourcesStub.resolves(undefined);
+      // but statement returns results
+      const rawResultRows = [{ foo: "X" }];
+      executeBackgroundFlinkStatementStub.resolves(rawResultRows);
+
+      const resources = await loader["getFlinkDatabaseResources"](
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        testStorageKey,
+        testStatementQuery,
+        testTransformer,
+        false,
+      );
+
+      assert.ok(Array.isArray(resources));
+      assert.strictEqual(resources.length, 1);
+      sinon.assert.calledOnceWithExactly(
+        getFlinkDatabaseResourcesStub,
+        testDatabase,
+        testStorageKey,
+      );
+      sinon.assert.calledOnceWithExactly(
+        executeBackgroundFlinkStatementStub,
+        testStatementQuery,
+        testDatabase,
+        undefined,
+      );
+      sinon.assert.calledOnceWithExactly(
+        setFlinkDatabaseResourcesStub,
+        testDatabase,
+        testStorageKey,
+        resources,
+      );
+    });
+
+    it("should pass custom statement options to executeBackgroundFlinkStatement", async () => {
+      const rawResultRows = [{ foo: "test" }];
+      executeBackgroundFlinkStatementStub.resolves(rawResultRows);
+      const customOptions = { timeout: 5000 };
+
+      const resources = await loader["getFlinkDatabaseResources"](
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        testStorageKey,
+        testStatementQuery,
+        testTransformer,
+        false,
+        customOptions,
+      );
+
+      assert.ok(Array.isArray(resources));
+      sinon.assert.calledOnceWithExactly(
+        getFlinkDatabaseResourcesStub,
+        testDatabase,
+        testStorageKey,
+      );
+      sinon.assert.calledOnceWithExactly(
+        executeBackgroundFlinkStatementStub,
+        testStatementQuery,
+        testDatabase,
+        customOptions, // verify custom options were passed
+      );
+      sinon.assert.calledOnceWithExactly(
+        setFlinkDatabaseResourcesStub,
+        testDatabase,
+        testStorageKey,
+        resources,
+      );
+    });
+
+    it("should use the transformer function correctly when processing results", async () => {
+      const rawResultRows = [{ input: "hello" }, { input: "world" }];
+      executeBackgroundFlinkStatementStub.resolves(rawResultRows);
+      // different transformer function for this test
+      const customTransformer = (db: CCloudFlinkDbKafkaCluster, rows: any[]): any[] => {
+        return rows.map((r) => ({
+          transformed: r.input.toUpperCase(),
+          reversed: r.input.split("").reverse().join(""),
+          databaseId: db.id,
+        }));
+      };
+
+      const resources = await loader["getFlinkDatabaseResources"](
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        testStorageKey,
+        testStatementQuery,
+        customTransformer,
+        false,
+      );
+
+      assert.strictEqual(resources.length, 2);
+      assert.strictEqual(resources[0].transformed, "HELLO");
+      assert.strictEqual(resources[0].reversed, "olleh");
+      assert.strictEqual(resources[1].transformed, "WORLD");
+      assert.strictEqual(resources[1].reversed, "dlrow");
+      assert.strictEqual(resources[0].databaseId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
+    });
+
+    it("should execute a background statement when forceDeepRefresh=true even with cached data", async () => {
+      const cachedResources = [{ foo: "old" }];
+      getFlinkDatabaseResourcesStub.resolves(cachedResources);
+      const freshResults = [{ foo: "new1" }, { foo: "new2" }];
+      executeBackgroundFlinkStatementStub.resolves(freshResults);
+
+      const resources = await loader["getFlinkDatabaseResources"](
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        testStorageKey,
+        testStatementQuery,
+        testTransformer,
+        true,
+      );
+
+      assert.ok(Array.isArray(resources));
+      assert.strictEqual(resources.length, 2);
+      assert.strictEqual(resources[0].foo, "new1");
+      assert.strictEqual(resources[1].foo, "new2");
+      sinon.assert.calledOnceWithExactly(
+        getFlinkDatabaseResourcesStub,
+        testDatabase,
+        testStorageKey,
+      );
+      sinon.assert.calledOnceWithExactly(
+        executeBackgroundFlinkStatementStub,
+        testStatementQuery,
+        testDatabase,
+        undefined,
+      );
+      sinon.assert.calledOnceWithExactly(
+        setFlinkDatabaseResourcesStub,
+        testDatabase,
+        testStorageKey,
+        resources,
+      );
+    });
+  });
+
+  describe("getFlinkDatabaseResources() wrapper methods", () => {
+    let getFlinkDatabaseResourcesStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      // this time we're stubbing the loader's getFlinkDatabaseResources method, not the one from
+      // the ResourceManager
+      getFlinkDatabaseResourcesStub = sandbox.stub();
+      loader["getFlinkDatabaseResources"] = getFlinkDatabaseResourcesStub;
+    });
+
+    describe("getFlinkUDFs()", () => {
+      for (const forceDeepRefresh of [true, false]) {
+        it(`should call getFlinkDatabaseResources() with correct parameters (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          const testUdfs: FlinkUdf[] = [createFlinkUDF("udf1")];
+          getFlinkDatabaseResourcesStub.resolves(testUdfs);
+
+          const result = await loader.getFlinkUDFs(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          assert.deepStrictEqual(result, testUdfs);
+          sinon.assert.calledOnceWithMatch(
+            getFlinkDatabaseResourcesStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            WorkspaceStorageKeys.FLINK_UDFS,
+            getUdfSystemCatalogQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
+            sinon.match.func,
+            forceDeepRefresh,
+            { nameSpice: "list-udfs" },
+          );
+        });
+      }
+    });
+
+    describe("getFlinkAIModels()", () => {
+      for (const forceDeepRefresh of [true, false]) {
+        it(`should call getFlinkDatabaseResources() with correct parameters (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          const testUdfs: FlinkUdf[] = [createFlinkUDF("udf1")];
+          getFlinkDatabaseResourcesStub.resolves(testUdfs);
+
+          const result = await loader.getFlinkAIModels(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          assert.deepStrictEqual(result, testUdfs);
+          sinon.assert.calledOnceWithMatch(
+            getFlinkDatabaseResourcesStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            WorkspaceStorageKeys.FLINK_AI_MODELS,
+            getFlinkAIModelsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
+            sinon.match.func,
+            forceDeepRefresh,
+            // no statement options
+          );
+        });
+      }
     });
   });
 
