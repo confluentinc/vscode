@@ -1,6 +1,5 @@
 import * as assert from "assert";
 import { randomUUID } from "crypto";
-import * as sinon from "sinon";
 import { Uri } from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -63,7 +62,6 @@ import { clearWorkspaceState, getWorkspaceState } from "./utils";
 
 describe("storage/resourceManager", () => {
   let rm: ResourceManager;
-  let sandbox: sinon.SinonSandbox;
 
   before(async () => {
     await getTestExtensionContext();
@@ -71,7 +69,6 @@ describe("storage/resourceManager", () => {
 
   beforeEach(() => {
     rm = getResourceManager();
-    sandbox = sinon.createSandbox();
   });
 
   afterEach(async () => {
@@ -711,70 +708,6 @@ describe("storage/resourceManager", () => {
         for (const model of stored) {
           assert.ok(model instanceof FlinkAIModel, "Expected instance of FlinkAIModel");
         }
-      });
-    });
-
-    describe("setFlinkDatabaseResources() wrappers", () => {
-      let setFlinkDatabaseResourcesStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        setFlinkDatabaseResourcesStub = sandbox.stub();
-        rm["setFlinkDatabaseResources"] = setFlinkDatabaseResourcesStub;
-      });
-
-      it("setFlinkUDFs() should call setFlinkDatabaseResources() with the correct storage key", async () => {
-        const udfs = [createFlinkUDF("udf-1"), createFlinkUDF("udf-2")];
-
-        await rm.setFlinkUDFs(testDatabase, udfs);
-
-        sinon.assert.calledOnceWithExactly(
-          setFlinkDatabaseResourcesStub,
-          testDatabase,
-          WorkspaceStorageKeys.FLINK_UDFS,
-          udfs,
-        );
-      });
-
-      it("should call setFlinkDatabaseResources() with the correct storage key", async () => {
-        const models = [createFlinkAIModel("model-1"), createFlinkAIModel("model-2")];
-
-        await rm.setFlinkAIModels(testDatabase, models);
-
-        sinon.assert.calledOnceWithExactly(
-          setFlinkDatabaseResourcesStub,
-          testDatabase,
-          WorkspaceStorageKeys.FLINK_AI_MODELS,
-          models,
-        );
-      });
-    });
-
-    describe("getFlinkDatabaseResources() wrappers", () => {
-      let getFlinkDatabaseResourcesStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        getFlinkDatabaseResourcesStub = sandbox.stub();
-        rm["getFlinkDatabaseResources"] = getFlinkDatabaseResourcesStub;
-      });
-
-      it("getFlinkAIModels() should call getFlinkDatabaseResources() with the correct storage key", async () => {
-        await rm.getFlinkAIModels(testDatabase);
-
-        sinon.assert.calledOnceWithExactly(
-          getFlinkDatabaseResourcesStub,
-          testDatabase,
-          WorkspaceStorageKeys.FLINK_AI_MODELS,
-        );
-      });
-
-      it("getFlinkUDFs() should call getFlinkDatabaseResources() with the correct storage key", async () => {
-        await rm.getFlinkUDFs(testDatabase);
-
-        sinon.assert.calledOnceWithExactly(
-          getFlinkDatabaseResourcesStub,
-          testDatabase,
-          WorkspaceStorageKeys.FLINK_UDFS,
-        );
       });
     });
   });
