@@ -598,7 +598,7 @@ describe("storage/resourceManager", () => {
         const mixedResources = [{ databaseId: "abc123" }, { databaseId: "def456" }];
 
         await assert.rejects(
-          rm["setFlinkDatabaseResources"](testDatabase, testStorageKey, mixedResources),
+          rm.setFlinkDatabaseResources(testDatabase, testStorageKey, mixedResources),
           (err: unknown) =>
             err instanceof Error && err.message.includes("Database ID mismatch in list"),
         );
@@ -607,16 +607,16 @@ describe("storage/resourceManager", () => {
 
     describe("getFlinkDatabaseResources()", () => {
       it("should return undefined when nothing is cached", async () => {
-        const resources = await rm["getFlinkDatabaseResources"]<any>(testDatabase, testStorageKey);
+        const resources = await rm.getFlinkDatabaseResources<any>(testDatabase, testStorageKey);
 
         assert.strictEqual(resources, undefined);
       });
 
       it("should return an empty array when an empty array is cached", async () => {
         // preload empty array to workspace state
-        await rm["setFlinkDatabaseResources"](testDatabase, testStorageKey, []);
+        await rm.setFlinkDatabaseResources(testDatabase, testStorageKey, []);
 
-        const resources = await rm["getFlinkDatabaseResources"]<any>(testDatabase, testStorageKey);
+        const resources = await rm.getFlinkDatabaseResources<any>(testDatabase, testStorageKey);
 
         assert.deepStrictEqual(resources, []);
       });
@@ -624,10 +624,10 @@ describe("storage/resourceManager", () => {
       it("should throw an error when an unsupported storage key is used", async () => {
         // preload some other database resource to workspace state
         const resources = [{ databaseId: testDatabase.id }];
-        await rm["setFlinkDatabaseResources"](testDatabase, testStorageKey, resources);
+        await rm.setFlinkDatabaseResources(testDatabase, testStorageKey, resources);
 
         await assert.rejects(
-          rm["getFlinkDatabaseResources"](testDatabase, testStorageKey),
+          rm.getFlinkDatabaseResources(testDatabase, testStorageKey),
           (err: unknown) =>
             err instanceof Error &&
             err.message.includes("Unsupported storage key for Flink database resources"),
@@ -650,23 +650,23 @@ describe("storage/resourceManager", () => {
         it(`should not leak resources across different databases (key=${key})`, async () => {
           // preload resource for first database
           const resources = [resourceConstructor("test1")];
-          await rm["setFlinkDatabaseResources"](testDatabase, key, resources);
+          await rm.setFlinkDatabaseResources(testDatabase, key, resources);
           // preload resource for another database
           const otherTestDatabase = CCloudKafkaCluster.create({
             ...testDatabase,
             id: "other-database-id",
           }) as CCloudFlinkDbKafkaCluster;
           const otherResources = [resourceConstructor("test2", otherTestDatabase)];
-          await rm["setFlinkDatabaseResources"](otherTestDatabase, key, otherResources);
+          await rm.setFlinkDatabaseResources(otherTestDatabase, key, otherResources);
 
-          const stored: any[] | undefined = await rm["getFlinkDatabaseResources"]<any>(
+          const stored: any[] | undefined = await rm.getFlinkDatabaseResources<any>(
             testDatabase,
             key,
           );
           assert.ok(stored);
           assert.deepStrictEqual(stored, resources);
 
-          const otherStored: any[] | undefined = await rm["getFlinkDatabaseResources"]<any>(
+          const otherStored: any[] | undefined = await rm.getFlinkDatabaseResources<any>(
             otherTestDatabase,
             key,
           );
@@ -678,9 +678,9 @@ describe("storage/resourceManager", () => {
       it(`should return FlinkUdf instances when the '${WorkspaceStorageKeys.FLINK_UDFS}' storage key is used`, async () => {
         // preload UDFs to workspace state
         const udfs = [createFlinkUDF("udf-1"), createFlinkUDF("udf-2")];
-        await rm["setFlinkDatabaseResources"](testDatabase, WorkspaceStorageKeys.FLINK_UDFS, udfs);
+        await rm.setFlinkDatabaseResources(testDatabase, WorkspaceStorageKeys.FLINK_UDFS, udfs);
 
-        const stored: FlinkUdf[] | undefined = await rm["getFlinkDatabaseResources"]<FlinkUdf>(
+        const stored: FlinkUdf[] | undefined = await rm.getFlinkDatabaseResources<FlinkUdf>(
           testDatabase,
           WorkspaceStorageKeys.FLINK_UDFS,
         );
@@ -694,7 +694,7 @@ describe("storage/resourceManager", () => {
       it(`should return FlinkAIModel instances when the '${WorkspaceStorageKeys.FLINK_AI_MODELS}' storage key is used`, async () => {
         // preload AI models to workspace state
         const models = [createFlinkAIModel("model-1"), createFlinkAIModel("model-2")];
-        await rm["setFlinkDatabaseResources"](
+        await rm.setFlinkDatabaseResources(
           testDatabase,
           WorkspaceStorageKeys.FLINK_AI_MODELS,
           models,

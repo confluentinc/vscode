@@ -473,7 +473,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   ): Promise<T[]> {
     const rm = getResourceManager();
 
-    let resources: T[] | undefined = await rm["getFlinkDatabaseResources"]<T>(database, storageKey);
+    let resources: T[] | undefined = await rm.getFlinkDatabaseResources<T>(database, storageKey);
     if (resources === undefined || forceDeepRefresh) {
       // nothing cached yet (or asked to forced refresh), so run the statement to list resources
       const rawResults: R[] = await this.executeBackgroundFlinkStatement<R>(
@@ -483,7 +483,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       );
       // convert to resource model instances and cache for later
       resources = transformer(database, rawResults);
-      await rm["setFlinkDatabaseResources"]<T>(database, storageKey, resources);
+      await rm.setFlinkDatabaseResources<T>(database, storageKey, resources);
     }
     return resources;
   }
