@@ -21,6 +21,7 @@ import {
 } from "../../tests/unit/testResources/connection";
 import { createFlinkAIConnection } from "../../tests/unit/testResources/flinkAIConnection";
 import { createFlinkAIModel } from "../../tests/unit/testResources/flinkAIModel";
+import { createFlinkAITool } from "../../tests/unit/testResources/flinkAITool";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
@@ -35,6 +36,7 @@ import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { FlinkAIConnection } from "../models/flinkAiConnection";
 import { FlinkAIModel } from "../models/flinkAiModel";
+import { FlinkAITool } from "../models/flinkAiTool";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
@@ -644,6 +646,10 @@ describe("storage/resourceManager", () => {
           resourceConstructor: createFlinkUDF,
         },
         {
+          key: WorkspaceStorageKeys.FLINK_AI_TOOLS,
+          resourceConstructor: createFlinkAITool,
+        },
+        {
           key: WorkspaceStorageKeys.FLINK_AI_MODELS,
           resourceConstructor: createFlinkAIModel,
         },
@@ -713,6 +719,25 @@ describe("storage/resourceManager", () => {
         assert.ok(stored);
         for (const model of stored) {
           assert.ok(model instanceof FlinkAIModel, "Expected instance of FlinkAIModel");
+        }
+      });
+
+      it(`should return FlinkAITool instances when the '${WorkspaceStorageKeys.FLINK_AI_TOOLS}' storage key is used`, async () => {
+        // preload AI tools to workspace state
+        const tools = [createFlinkAITool("tool-1"), createFlinkAITool("tool-2")];
+        await rm.setFlinkDatabaseResources(
+          testDatabase,
+          WorkspaceStorageKeys.FLINK_AI_TOOLS,
+          tools,
+        );
+
+        const stored: FlinkAITool[] | undefined = await rm[
+          "getFlinkDatabaseResources"
+        ]<FlinkAITool>(testDatabase, WorkspaceStorageKeys.FLINK_AI_TOOLS);
+
+        assert.ok(stored);
+        for (const tool of stored) {
+          assert.ok(tool instanceof FlinkAITool, "Expected instance of FlinkAITool");
         }
       });
 

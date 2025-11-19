@@ -63,6 +63,7 @@ import { CachingResourceLoader } from "./cachingResourceLoader";
 import * as relationsUtils from "./utils/relationsAndColumnsSystemCatalogQuery";
 
 import { createFlinkAIConnection } from "../../tests/unit/testResources/flinkAIConnection";
+import { createFlinkAITool } from "../../tests/unit/testResources/flinkAITool";
 import { TEST_FLINK_RELATION } from "../../tests/unit/testResources/flinkRelation";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import type { FlinkAIConnection } from "../models/flinkAiConnection";
@@ -76,6 +77,7 @@ import {
 } from "./ccloudResourceLoader";
 import { getFlinkAIConnectionsQuery } from "./utils/flinkAiConnectionsQuery";
 import { getFlinkAIModelsQuery } from "./utils/flinkAiModelsQuery";
+import { getFlinkAIToolsQuery } from "./utils/flinkAiToolsQuery";
 import { getUdfSystemCatalogQuery } from "./utils/udfSystemCatalogQuery";
 
 describe("CCloudResourceLoader", () => {
@@ -1107,6 +1109,31 @@ describe("CCloudResourceLoader", () => {
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
             WorkspaceStorageKeys.FLINK_AI_MODELS,
             getFlinkAIModelsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
+            sinon.match.func,
+            forceDeepRefresh,
+            // no statement options
+          );
+        });
+      }
+    });
+
+    describe("getFlinkAITools()", () => {
+      for (const forceDeepRefresh of [true, false]) {
+        it(`should call getFlinkDatabaseResources() with correct parameters (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          const testTools = [createFlinkAITool("tool1")];
+          loaderGetDbResourcesStub.resolves(testTools);
+
+          const result = await loader.getFlinkAITools(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          assert.deepStrictEqual(result, testTools);
+          sinon.assert.calledOnceWithMatch(
+            loaderGetDbResourcesStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            WorkspaceStorageKeys.FLINK_AI_TOOLS,
+            getFlinkAIToolsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
             sinon.match.func,
             forceDeepRefresh,
             // no statement options
