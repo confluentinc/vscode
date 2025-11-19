@@ -674,11 +674,6 @@ export class ResourceManager {
     }) as T[];
   }
 
-  // extend get/set wrapper methods for other Flink AI resource classes once available:
-  // - FlinkAIConnection https://github.com/confluentinc/vscode/issues/2982
-  // - FlinkAITool https://github.com/confluentinc/vscode/issues/2995
-  // - FlinkAIAgent https://github.com/confluentinc/vscode/issues/2999
-
   // AUTH PROVIDER
 
   /**
