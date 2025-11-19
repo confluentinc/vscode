@@ -4,7 +4,7 @@ import { FlinkAIModel, FlinkAIModelTreeItem } from "../../models/flinkAiModel";
 import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";
-import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResource";
+import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
 
 // extend FlinkAIResource union with resource classes once available:
 // - FlinkAIConnection https://github.com/confluentinc/vscode/issues/2982
