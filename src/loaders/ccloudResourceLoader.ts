@@ -21,6 +21,7 @@ import { getCCloudResources } from "../graphql/ccloud";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
+import type { FlinkAIAgent } from "../models/flinkAiAgent";
 import type { FlinkAIModel } from "../models/flinkAiModel";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
@@ -42,6 +43,8 @@ import { ObjectSet } from "../utils/objectset";
 import type { ExecutionResult } from "../utils/workerPool";
 import { executeInWorkerPool, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
+import type { RawFlinkAIAgentRow } from "./utils/flinkAiAgentsQuery";
+import { getFlinkAIAgentsQuery, transformRawFlinkAIAgentRows } from "./utils/flinkAiAgentsQuery";
 import type { RawFlinkAIModelRow } from "./utils/flinkAiModelsQuery";
 import { getFlinkAIModelsQuery, transformRawFlinkAIModelRows } from "./utils/flinkAiModelsQuery";
 import { generateFlinkStatementKey } from "./utils/loaderUtils";
@@ -536,6 +539,33 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       WorkspaceStorageKeys.FLINK_AI_MODELS,
       query,
       transformRawFlinkAIModelRows,
+      forceDeepRefresh,
+      // no special statement options needed
+    );
+    return results;
+  }
+
+  /**
+   * Get the Flink AI agents for a CCloud Flink database.
+   *
+   * @param database The Flink database to get the agents for.
+   * @param forceDeepRefresh Whether to bypass the ResourceManager cache and fetch fresh data.
+   * @returns Array of {@link FlinkAIAgent} objects representing the AI agents in the cluster.
+   */
+  public async getFlinkAIAgents(
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<FlinkAIAgent[]> {
+    const query: string = getFlinkAIAgentsQuery(database);
+
+    const results: FlinkAIAgent[] = await this.getFlinkDatabaseResources<
+      RawFlinkAIAgentRow,
+      FlinkAIAgent
+    >(
+      database,
+      WorkspaceStorageKeys.FLINK_AI_AGENTS,
+      query,
+      transformRawFlinkAIAgentRows,
       forceDeepRefresh,
       // no special statement options needed
     );
