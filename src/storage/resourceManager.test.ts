@@ -33,6 +33,7 @@ import {
 } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
+import { FlinkAIAgent } from "../models/flinkAiAgent";
 import { FlinkAIModel } from "../models/flinkAiModel";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkUdf } from "../models/flinkUDF";
@@ -720,13 +721,13 @@ describe("storage/resourceManager", () => {
           agents,
         );
 
-        const stored: FlinkAIModel[] | undefined = await rm[
+        const stored: FlinkAIAgent[] | undefined = await rm[
           "getFlinkDatabaseResources"
-        ]<FlinkAIModel>(testDatabase, WorkspaceStorageKeys.FLINK_AI_AGENTS);
+        ]<FlinkAIAgent>(testDatabase, WorkspaceStorageKeys.FLINK_AI_AGENTS);
 
         assert.ok(stored);
         for (const agent of stored) {
-          assert.ok(agent instanceof FlinkAIModel, "Expected instance of FlinkAIModel");
+          assert.ok(agent instanceof FlinkAIAgent, "Expected instance of FlinkAIAgent");
         }
       });
     });
