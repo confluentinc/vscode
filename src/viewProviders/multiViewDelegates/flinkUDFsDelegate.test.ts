@@ -4,7 +4,6 @@ import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoa
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
 import { createFlinkUDF } from "../../../tests/unit/testResources/flinkUDF";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
-import { setExtensionContext } from "../../context/extension";
 import type { CCloudResourceLoader } from "../../loaders";
 import type { FlinkUdf } from "../../models/flinkUDF";
 import { FlinkDatabaseViewProvider } from "../flinkDatabase";
@@ -14,7 +13,7 @@ describe("viewProviders/multiViewDelegates/flinkUDFsDelegate.ts", () => {
   let sandbox: sinon.SinonSandbox;
 
   before(async () => {
-    setExtensionContext(await getTestExtensionContext());
+    await getTestExtensionContext();
   });
 
   beforeEach(() => {
