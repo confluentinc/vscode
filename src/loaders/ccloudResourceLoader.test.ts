@@ -62,8 +62,10 @@ import type { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 import * as relationsUtils from "./utils/relationsAndColumnsSystemCatalogQuery";
 
+import { createFlinkAIAgent } from "../../tests/unit/testResources/flinkAIAgent";
 import { TEST_FLINK_RELATION } from "../../tests/unit/testResources/flinkRelation";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
+import type { FlinkAIAgent } from "../models/flinkAiAgent";
 import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
 import type { FlinkUdf } from "../models/flinkUDF";
 import { WorkspaceStorageKeys } from "../storage/constants";
@@ -72,6 +74,7 @@ import {
   loadArtifactsForProviderRegion,
   loadProviderRegions,
 } from "./ccloudResourceLoader";
+import { getFlinkAIAgentsQuery } from "./utils/flinkAiAgentsQuery";
 import { getFlinkAIModelsQuery } from "./utils/flinkAiModelsQuery";
 import { getUdfSystemCatalogQuery } from "./utils/udfSystemCatalogQuery";
 
@@ -1104,6 +1107,31 @@ describe("CCloudResourceLoader", () => {
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
             WorkspaceStorageKeys.FLINK_AI_MODELS,
             getFlinkAIModelsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
+            sinon.match.func,
+            forceDeepRefresh,
+            // no statement options
+          );
+        });
+      }
+    });
+
+    describe("getFlinkAIAgents()", () => {
+      for (const forceDeepRefresh of [true, false]) {
+        it(`should call getFlinkDatabaseResources() with correct parameters (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          const testAgents: FlinkAIAgent[] = [createFlinkAIAgent("agent1")];
+          loaderGetDbResourcesStub.resolves(testAgents);
+
+          const result = await loader.getFlinkAIAgents(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          assert.deepStrictEqual(result, testAgents);
+          sinon.assert.calledOnceWithMatch(
+            loaderGetDbResourcesStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            WorkspaceStorageKeys.FLINK_AI_AGENTS,
+            getFlinkAIAgentsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
             sinon.match.func,
             forceDeepRefresh,
             // no statement options
