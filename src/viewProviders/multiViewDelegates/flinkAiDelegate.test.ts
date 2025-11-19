@@ -2,16 +2,21 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
+import { createFlinkAIConnection } from "../../../tests/unit/testResources/flinkAIConnection";
 import { createFlinkAIModel } from "../../../tests/unit/testResources/flinkAIModel";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import type { CCloudResourceLoader } from "../../loaders";
+import { FlinkAIConnectionTreeItem, type FlinkAIConnection } from "../../models/flinkAiConnection";
 import { FlinkAIModelTreeItem, type FlinkAIModel } from "../../models/flinkAiModel";
 import { FlinkDatabaseViewProvider } from "../flinkDatabase";
 import type { FlinkAIResource, FlinkAIViewModeData } from "./flinkAiDelegate";
 import { FlinkAIDelegate } from "./flinkAiDelegate";
 import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
 
-// const testConnections = [createFlinkAIConnection("Connection1"), createFlinkAIConnection("Connection2")];
+const testConnections = [
+  createFlinkAIConnection("Connection1"),
+  createFlinkAIConnection("Connection2"),
+];
 // const testTools = [createFlinkAITool("Tool1"), createFlinkAITool("Tool2")];
 const testModels = [createFlinkAIModel("Model1"), createFlinkAIModel("Model2")];
 // const testAgents = [createFlinkAIAgent("Agent1"), createFlinkAIAgent("Agent2")];
@@ -50,9 +55,9 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
     describe("fetchChildren()", () => {
       for (const forceDeepRefresh of [true, false]) {
         it(`should return an empty array when no Flink AI resources are available (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          stubbedLoader.getFlinkAIConnections.resolves([]);
           stubbedLoader.getFlinkAIModels.resolves([]);
           // stubbedLoader.getFlinkAIAgents.resolves([]);
-          // stubbedLoader.getFlinkAIConnections.resolves([]);
           // stubbedLoader.getFlinkAITools.resolves([]);
 
           const children: FlinkAIViewModeData[] = await delegate.fetchChildren(
@@ -61,6 +66,12 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
           );
 
           assert.deepStrictEqual(children, []);
+          sinon.assert.calledOnce(stubbedLoader.getFlinkAIConnections);
+          sinon.assert.calledWithExactly(
+            stubbedLoader.getFlinkAIConnections,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
           sinon.assert.calledOnce(stubbedLoader.getFlinkAIModels);
           sinon.assert.calledWithExactly(
             stubbedLoader.getFlinkAIModels,
@@ -68,11 +79,34 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
             forceDeepRefresh,
           );
           // sinon.assert.calledOnce(stubbedLoader.getFlinkAIAgents);
-          // sinon.assert.calledOnce(stubbedLoader.getFlinkAIConnections);
           // sinon.assert.calledOnce(stubbedLoader.getFlinkAITools);
         });
 
+        it(`should include Flink AI connections when returned from the loader (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          stubbedLoader.getFlinkAIConnections.resolves(testConnections);
+          stubbedLoader.getFlinkAIModels.resolves([]);
+
+          const children: FlinkAIViewModeData[] = await delegate.fetchChildren(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          // keep in mind this won't return the container objects, just the combined array of all
+          // available AI resources
+          assert.strictEqual(children.length, 2);
+          assert.deepStrictEqual(children, testConnections);
+          // delegate should also keep track of the fetched connections internally
+          assert.deepStrictEqual(delegate["connections"], testConnections);
+          sinon.assert.calledOnce(stubbedLoader.getFlinkAIConnections);
+          sinon.assert.calledWithExactly(
+            stubbedLoader.getFlinkAIConnections,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+        });
+
         it(`should include Flink AI models when returned from the loader (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          stubbedLoader.getFlinkAIConnections.resolves([]);
           stubbedLoader.getFlinkAIModels.resolves(testModels);
 
           const children: FlinkAIViewModeData[] = await delegate.fetchChildren(
@@ -109,7 +143,7 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
       });
 
       it("should create containers with current resources", () => {
-        // delegate["connections"] = testConnections;
+        delegate["connections"] = testConnections;
         // delegate["tools"] = testTools;
         delegate["models"] = testModels;
         // delegate["agents"] = testAgents;
@@ -118,13 +152,25 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
 
         const containers = children as FlinkDatabaseResourceContainer<FlinkAIResource>[];
         assert.strictEqual(containers[0].label, "Connections");
-        // assert.strictEqual(containers[0].children.length, testConnections.length);
+        assert.strictEqual(containers[0].children.length, testConnections.length);
         assert.strictEqual(containers[1].label, "Tools");
         // assert.strictEqual(containers[1].children.length, testTools.length);
         assert.strictEqual(containers[2].label, "Models");
         assert.strictEqual(containers[2].children.length, testModels.length);
         assert.strictEqual(containers[3].label, "Agents");
         // assert.strictEqual(containers[3].children.length, testAgents.length);
+      });
+
+      it("should return FlinkAIConnections when a Connections container is provided (expanded)", () => {
+        const connectionsContainer = new FlinkDatabaseResourceContainer<FlinkAIConnection>(
+          "Connections",
+          testConnections,
+        );
+
+        const children: FlinkAIViewModeData[] = delegate.getChildren(connectionsContainer);
+
+        assert.strictEqual(children.length, 2);
+        assert.deepStrictEqual(children, testConnections);
       });
 
       it("should return FlinkAIModels when a Models container is provided (expanded)", () => {
@@ -146,6 +192,15 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
         const treeItem = delegate.getTreeItem(container);
 
         assert.strictEqual(treeItem, container);
+      });
+
+      it("should return a FlinkAIConnectionTreeItem when given a FlinkAIConnection", () => {
+        const connection = createFlinkAIConnection("TestConnection");
+        const treeItem = delegate.getTreeItem(connection);
+
+        assert.ok(treeItem instanceof FlinkAIConnectionTreeItem);
+        assert.strictEqual(treeItem.label, "TestConnection");
+        assert.strictEqual(treeItem.resource, connection);
       });
 
       it("should return a FlinkAIModelTreeItem when given a FlinkAIModel", () => {

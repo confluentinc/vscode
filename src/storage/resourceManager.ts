@@ -9,6 +9,7 @@ import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import type { Environment, EnvironmentType } from "../models/environment";
 import { getEnvironmentClass } from "../models/environment";
+import { FlinkAIConnection } from "../models/flinkAiConnection";
 import { FlinkAIModel } from "../models/flinkAiModel";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
@@ -662,8 +663,9 @@ export class ResourceManager {
           return new FlinkUdf(raw as FlinkUdf);
         case WorkspaceStorageKeys.FLINK_AI_MODELS:
           return new FlinkAIModel(raw as FlinkAIModel);
+        case WorkspaceStorageKeys.FLINK_AI_CONNECTIONS:
+          return new FlinkAIConnection(raw as FlinkAIConnection);
         // extend cases for other Flink AI resource classes once available:
-        // - FlinkAIConnection https://github.com/confluentinc/vscode/issues/2982
         // - FlinkAITool https://github.com/confluentinc/vscode/issues/2995
         // - FlinkAIAgent https://github.com/confluentinc/vscode/issues/2999
         default:
