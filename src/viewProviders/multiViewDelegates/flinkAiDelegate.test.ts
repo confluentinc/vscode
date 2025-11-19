@@ -37,8 +37,6 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
     let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
     beforeEach(() => {
-      // don't actually create the Flink Database tree view during tests
-      // sandbox.stub(window, "createTreeView");
       provider = FlinkDatabaseViewProvider.getInstance();
       delegate = new FlinkAIDelegate();
       stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
