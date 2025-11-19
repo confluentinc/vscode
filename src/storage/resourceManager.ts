@@ -9,6 +9,7 @@ import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import type { Environment, EnvironmentType } from "../models/environment";
 import { getEnvironmentClass } from "../models/environment";
+import { FlinkAIAgent } from "../models/flinkAiAgent";
 import { FlinkAIModel } from "../models/flinkAiModel";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
@@ -662,6 +663,8 @@ export class ResourceManager {
           return new FlinkUdf(raw as FlinkUdf);
         case WorkspaceStorageKeys.FLINK_AI_MODELS:
           return new FlinkAIModel(raw as FlinkAIModel);
+        case WorkspaceStorageKeys.FLINK_AI_AGENTS:
+          return new FlinkAIAgent(raw as FlinkAIAgent);
         default:
           throw new Error(`Unsupported storage key for Flink database resources: ${storageKey}`);
       }

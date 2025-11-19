@@ -19,6 +19,7 @@ import {
   TEST_DIRECT_CONNECTION_FORM_SPEC,
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
+import { createFlinkAIAgent } from "../../tests/unit/testResources/flinkAIAgent";
 import { createFlinkAIModel } from "../../tests/unit/testResources/flinkAIModel";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
@@ -707,6 +708,25 @@ describe("storage/resourceManager", () => {
         assert.ok(stored);
         for (const model of stored) {
           assert.ok(model instanceof FlinkAIModel, "Expected instance of FlinkAIModel");
+        }
+      });
+
+      it(`should return FlinkAIAgent instances when the '${WorkspaceStorageKeys.FLINK_AI_AGENTS}' storage key is used`, async () => {
+        // preload AI agents to workspace state
+        const agents = [createFlinkAIAgent("agent-1"), createFlinkAIAgent("agent-2")];
+        await rm.setFlinkDatabaseResources(
+          testDatabase,
+          WorkspaceStorageKeys.FLINK_AI_AGENTS,
+          agents,
+        );
+
+        const stored: FlinkAIModel[] | undefined = await rm[
+          "getFlinkDatabaseResources"
+        ]<FlinkAIModel>(testDatabase, WorkspaceStorageKeys.FLINK_AI_AGENTS);
+
+        assert.ok(stored);
+        for (const agent of stored) {
+          assert.ok(agent instanceof FlinkAIModel, "Expected instance of FlinkAIModel");
         }
       });
     });
