@@ -4,6 +4,7 @@ import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoa
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
 import { createFlinkAIConnection } from "../../../tests/unit/testResources/flinkAIConnection";
 import { createFlinkAIModel } from "../../../tests/unit/testResources/flinkAIModel";
+import { createFlinkAITool } from "../../../tests/unit/testResources/flinkAITool";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import type { CCloudResourceLoader } from "../../loaders";
 import { FlinkAIConnectionTreeItem, type FlinkAIConnection } from "../../models/flinkAiConnection";
@@ -17,7 +18,7 @@ const testConnections = [
   createFlinkAIConnection("Connection1"),
   createFlinkAIConnection("Connection2"),
 ];
-// const testTools = [createFlinkAITool("Tool1"), createFlinkAITool("Tool2")];
+const testTools = [createFlinkAITool("Tool1"), createFlinkAITool("Tool2")];
 const testModels = [createFlinkAIModel("Model1"), createFlinkAIModel("Model2")];
 // const testAgents = [createFlinkAIAgent("Agent1"), createFlinkAIAgent("Agent2")];
 
@@ -60,7 +61,7 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
           stubbedLoader.getFlinkAIConnections.resolves([]);
           stubbedLoader.getFlinkAIModels.resolves([]);
           // stubbedLoader.getFlinkAIAgents.resolves([]);
-          // stubbedLoader.getFlinkAITools.resolves([]);
+          stubbedLoader.getFlinkAITools.resolves([]);
 
           const children: FlinkAIViewModeData[] = await delegate.fetchChildren(
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
@@ -81,12 +82,13 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
             forceDeepRefresh,
           );
           // sinon.assert.calledOnce(stubbedLoader.getFlinkAIAgents);
-          // sinon.assert.calledOnce(stubbedLoader.getFlinkAITools);
+          sinon.assert.calledOnce(stubbedLoader.getFlinkAITools);
         });
 
         it(`should include Flink AI connections when returned from the loader (forceDeepRefresh=${forceDeepRefresh})`, async () => {
           stubbedLoader.getFlinkAIConnections.resolves(testConnections);
           stubbedLoader.getFlinkAIModels.resolves([]);
+          stubbedLoader.getFlinkAITools.resolves([]);
 
           const children: FlinkAIViewModeData[] = await delegate.fetchChildren(
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
@@ -110,6 +112,7 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
         it(`should include Flink AI models when returned from the loader (forceDeepRefresh=${forceDeepRefresh})`, async () => {
           stubbedLoader.getFlinkAIConnections.resolves([]);
           stubbedLoader.getFlinkAIModels.resolves(testModels);
+          stubbedLoader.getFlinkAITools.resolves([]);
 
           const children: FlinkAIViewModeData[] = await delegate.fetchChildren(
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
@@ -146,7 +149,7 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
 
       it("should create containers with current resources", () => {
         delegate["connections"] = testConnections;
-        // delegate["tools"] = testTools;
+        delegate["tools"] = testTools;
         delegate["models"] = testModels;
         // delegate["agents"] = testAgents;
 
@@ -156,7 +159,7 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
         assert.strictEqual(containers[0].label, "Connections");
         assert.strictEqual(containers[0].children.length, testConnections.length);
         assert.strictEqual(containers[1].label, "Tools");
-        // assert.strictEqual(containers[1].children.length, testTools.length);
+        assert.strictEqual(containers[1].children.length, testTools.length);
         assert.strictEqual(containers[2].label, "Models");
         assert.strictEqual(containers[2].children.length, testModels.length);
         assert.strictEqual(containers[3].label, "Agents");
