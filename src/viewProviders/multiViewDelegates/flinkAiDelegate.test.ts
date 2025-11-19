@@ -5,7 +5,7 @@ import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testReso
 import { createFlinkAIModel } from "../../../tests/unit/testResources/flinkAIModel";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import type { CCloudResourceLoader } from "../../loaders";
-import type { FlinkAIModel } from "../../models/flinkAiModel";
+import { FlinkAIModelTreeItem, type FlinkAIModel } from "../../models/flinkAiModel";
 import { FlinkDatabaseViewProvider } from "../flinkDatabase";
 import type { FlinkAIResource, FlinkAIViewModeData } from "./flinkAiDelegate";
 import { FlinkAIDelegate } from "./flinkAiDelegate";
@@ -139,6 +139,24 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
 
         assert.strictEqual(children.length, 2);
         assert.deepStrictEqual(children, testModels);
+      });
+    });
+
+    describe("getTreeItem()", () => {
+      it("should return the FlinkDatabaseResourceContainers directly", () => {
+        const container = new FlinkDatabaseResourceContainer("Connections", []);
+        const treeItem = delegate.getTreeItem(container);
+
+        assert.strictEqual(treeItem, container);
+      });
+
+      it("should return a FlinkAIModelTreeItem when given a FlinkAIModel", () => {
+        const model = createFlinkAIModel("TestModel");
+        const treeItem = delegate.getTreeItem(model);
+
+        assert.ok(treeItem instanceof FlinkAIModelTreeItem);
+        assert.strictEqual(treeItem.label, "TestModel");
+        assert.strictEqual(treeItem.resource, model);
       });
     });
   });
