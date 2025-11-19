@@ -23,6 +23,7 @@ import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
 import type { FlinkAIConnection } from "../models/flinkAiConnection";
 import type { FlinkAIModel } from "../models/flinkAiModel";
+import type { FlinkAITool } from "../models/flinkAiTool";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
@@ -50,6 +51,8 @@ import {
 } from "./utils/flinkAiConnectionsQuery";
 import type { RawFlinkAIModelRow } from "./utils/flinkAiModelsQuery";
 import { getFlinkAIModelsQuery, transformRawFlinkAIModelRows } from "./utils/flinkAiModelsQuery";
+import type { RawFlinkAIToolRow } from "./utils/flinkAiToolsQuery";
+import { getFlinkAIToolsQuery, transformRawFlinkAIToolRows } from "./utils/flinkAiToolsQuery";
 import { generateFlinkStatementKey } from "./utils/loaderUtils";
 import type { RawRelationsAndColumnsRow } from "./utils/relationsAndColumnsSystemCatalogQuery";
 import {
@@ -542,6 +545,33 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       WorkspaceStorageKeys.FLINK_AI_MODELS,
       query,
       transformRawFlinkAIModelRows,
+      forceDeepRefresh,
+      // no special statement options needed
+    );
+    return results;
+  }
+
+  /**
+   * Get the Flink AI tools for a CCloud Flink database.
+   *
+   * @param database The Flink database to get the tools for.
+   * @param forceDeepRefresh Whether to bypass the ResourceManager cache and fetch fresh data.
+   * @returns Array of {@link FlinkAITool} objects representing the AI tools in the cluster.
+   */
+  public async getFlinkAITools(
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<FlinkAITool[]> {
+    const query: string = getFlinkAIToolsQuery(database);
+
+    const results: FlinkAITool[] = await this.getFlinkDatabaseResources<
+      RawFlinkAIToolRow,
+      FlinkAITool
+    >(
+      database,
+      WorkspaceStorageKeys.FLINK_AI_TOOLS,
+      query,
+      transformRawFlinkAIToolRows,
       forceDeepRefresh,
       // no special statement options needed
     );
