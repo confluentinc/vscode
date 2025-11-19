@@ -19,6 +19,7 @@ import {
   TEST_DIRECT_CONNECTION_FORM_SPEC,
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
+import { createFlinkAIConnection } from "../../tests/unit/testResources/flinkAIConnection";
 import { createFlinkAIModel } from "../../tests/unit/testResources/flinkAIModel";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
@@ -32,6 +33,7 @@ import {
 } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
+import { FlinkAIConnection } from "../models/flinkAiConnection";
 import { FlinkAIModel } from "../models/flinkAiModel";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkUdf } from "../models/flinkUDF";
@@ -645,6 +647,10 @@ describe("storage/resourceManager", () => {
           key: WorkspaceStorageKeys.FLINK_AI_MODELS,
           resourceConstructor: createFlinkAIModel,
         },
+        {
+          key: WorkspaceStorageKeys.FLINK_AI_CONNECTIONS,
+          resourceConstructor: createFlinkAIConnection,
+        },
       ];
       for (const { key, resourceConstructor } of scenarios) {
         it(`should not leak resources across different databases (key=${key})`, async () => {
@@ -707,6 +713,31 @@ describe("storage/resourceManager", () => {
         assert.ok(stored);
         for (const model of stored) {
           assert.ok(model instanceof FlinkAIModel, "Expected instance of FlinkAIModel");
+        }
+      });
+
+      it(`should return FlinkAIConnection instances when the '${WorkspaceStorageKeys.FLINK_AI_CONNECTIONS}' storage key is used`, async () => {
+        // preload AI connections to workspace state
+        const connections = [
+          createFlinkAIConnection("connection-1"),
+          createFlinkAIConnection("connection-2"),
+        ];
+        await rm.setFlinkDatabaseResources(
+          testDatabase,
+          WorkspaceStorageKeys.FLINK_AI_CONNECTIONS,
+          connections,
+        );
+
+        const stored: FlinkAIConnection[] | undefined = await rm[
+          "getFlinkDatabaseResources"
+        ]<FlinkAIConnection>(testDatabase, WorkspaceStorageKeys.FLINK_AI_CONNECTIONS);
+
+        assert.ok(stored);
+        for (const connection of stored) {
+          assert.ok(
+            connection instanceof FlinkAIConnection,
+            "Expected instance of FlinkAIConnection",
+          );
         }
       });
     });
