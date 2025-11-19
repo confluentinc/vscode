@@ -18,6 +18,7 @@ import { showErrorNotificationWithButtons } from "../notifications";
 import type { ViewProviderDelegate } from "./baseModels/multiViewBase";
 import { MultiModeViewProvider } from "./baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
+import type { FlinkAIViewModeData } from "./multiViewDelegates/flinkAiDelegate";
 import { FlinkAIDelegate } from "./multiViewDelegates/flinkAiDelegate";
 import {
   FlinkArtifactsDelegate,
@@ -27,7 +28,12 @@ import { FlinkRelationsDelegate } from "./multiViewDelegates/flinkRelationsDeleg
 import { FlinkUDFsDelegate } from "./multiViewDelegates/flinkUDFsDelegate";
 
 /** The row models used as view children */
-export type DatabaseChildrenType = FlinkArtifact | FlinkUdf | FlinkRelation | FlinkRelationColumn;
+export type DatabaseChildrenType =
+  | FlinkArtifact
+  | FlinkUdf
+  | FlinkRelation
+  | FlinkRelationColumn
+  | FlinkAIViewModeData;
 
 /**
  * Multi-mode view provider for Flink artifacts and UDFs.
