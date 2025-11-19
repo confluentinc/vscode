@@ -21,12 +21,15 @@ import { getCCloudResources } from "../graphql/ccloud";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
+import type { FlinkAIConnection } from "../models/flinkAiConnection";
+import type { FlinkAIModel } from "../models/flinkAiModel";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
 import type { FlinkRelation } from "../models/flinkRelation";
 import type { FlinkStatement } from "../models/flinkStatement";
 import { Phase, restFlinkStatementToModel } from "../models/flinkStatement";
-import { FlinkUdf } from "../models/flinkUDF";
+import type { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { CCloudOrganization } from "../models/organization";
@@ -34,11 +37,19 @@ import type { EnvironmentId, IFlinkQueryable, IProviderRegion } from "../models/
 import type { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import type { SidecarHandle } from "../sidecar";
 import { getSidecar } from "../sidecar";
+import { WorkspaceStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
 import type { ExecutionResult } from "../utils/workerPool";
 import { executeInWorkerPool, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
+import type { RawFlinkAIConnectionRow } from "./utils/flinkAiConnectionsQuery";
+import {
+  getFlinkAIConnectionsQuery,
+  transformRawFlinkAIConnectionRows,
+} from "./utils/flinkAiConnectionsQuery";
+import type { RawFlinkAIModelRow } from "./utils/flinkAiModelsQuery";
+import { getFlinkAIModelsQuery, transformRawFlinkAIModelRows } from "./utils/flinkAiModelsQuery";
 import { generateFlinkStatementKey } from "./utils/loaderUtils";
 import type { RawRelationsAndColumnsRow } from "./utils/relationsAndColumnsSystemCatalogQuery";
 import {
@@ -52,6 +63,13 @@ import {
 } from "./utils/udfSystemCatalogQuery";
 
 const logger = new Logger("storage.ccloudResourceLoader");
+
+/** Options for executing a background Flink statement. */
+export interface ExecuteBackgroundStatementOptions {
+  computePool?: CCloudFlinkComputePool;
+  timeout?: number;
+  nameSpice?: string;
+}
 
 /**
  * Singleton class responsible for loading / caching CCloud resources into the resource manager.
@@ -440,43 +458,121 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
-   * Get the Flink UDFs for the given Flinkable CCloud Kafka cluster.
+   * Generic method to get Flink database resources (UDFs, AI models, etc.) for a given Flink database,
+   * with caching via the ResourceManager.
    *
-   * @param cluster The Flink database to get the UDFs for.
+   * @param database The Flink database to get the resources for.
+   * @param storageKey The workspace storage key to use for caching the resources.
+   * @param statementQuery The SQL statement to execute to list the resources.
+   * @param transformer Function to transform raw result rows into resource model instances.
+   * @param forceDeepRefresh Whether to bypass the ResourceManager cache and fetch fresh data.
+   * @param statementOptions Optional parameters for statement execution
+   * @returns Array of {@link FlinkDatabaseResource} objects representing the resources in the database.
+   */
+  private async getFlinkDatabaseResources<R, T extends FlinkDatabaseResource>(
+    database: CCloudFlinkDbKafkaCluster,
+    storageKey: WorkspaceStorageKeys,
+    statementQuery: string,
+    transformer: (database: CCloudFlinkDbKafkaCluster, raw: R[]) => T[],
+    forceDeepRefresh: boolean,
+    statementOptions?: ExecuteBackgroundStatementOptions,
+  ): Promise<T[]> {
+    const rm = getResourceManager();
+
+    let resources: T[] | undefined = await rm.getFlinkDatabaseResources<T>(database, storageKey);
+    if (resources === undefined || forceDeepRefresh) {
+      // nothing cached yet (or asked to forced refresh), so run the statement to list resources
+      const rawResults: R[] = await this.executeBackgroundFlinkStatement<R>(
+        statementQuery,
+        database,
+        statementOptions,
+      );
+      // convert to resource model instances and cache for later
+      resources = transformer(database, rawResults);
+      await rm.setFlinkDatabaseResources<T>(database, storageKey, resources);
+    }
+    return resources;
+  }
+
+  /**
+   * Get the Flink UDFs for the given Flinkable database.
+   *
+   * @param database The Flink database to get the UDFs for.
    * @param forceDeepRefresh Whether to bypass the ResourceManager cache and fetch fresh data.
    * @returns Array of {@link FlinkUdf} objects representing the UDFs in the cluster.
    */
   public async getFlinkUDFs(
-    cluster: CCloudFlinkDbKafkaCluster,
+    database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean,
   ): Promise<FlinkUdf[]> {
-    // Look to see if we have cached UDFs for this Flink database already.
-    const rm = getResourceManager();
-    let udfs = await rm.getFlinkUDFs(cluster);
+    const query: string = getUdfSystemCatalogQuery(database);
 
-    if (udfs === undefined || forceDeepRefresh) {
-      // Run the statement to list UDFs.
+    const results: FlinkUdf[] = await this.getFlinkDatabaseResources<
+      RawUdfSystemCatalogRow,
+      FlinkUdf
+    >(
+      database,
+      WorkspaceStorageKeys.FLINK_UDFS,
+      query,
+      transformUdfSystemCatalogRows,
+      forceDeepRefresh,
+      { nameSpice: "list-udfs" },
+    );
+    return results;
+  }
 
-      // Get the query to run, limiting by the given cluster's ID.
-      const udfSystemCatalogQuery = getUdfSystemCatalogQuery(cluster);
+  /**
+   * Get the Flink AI models for a CCloud Flink database.
+   *
+   * @param database The Flink database to get the models for.
+   * @param forceDeepRefresh Whether to bypass the ResourceManager cache and fetch fresh data.
+   * @returns Array of {@link FlinkAIModel} objects representing the AI models in the cluster.
+   */
+  public async getFlinkAIModels(
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<FlinkAIModel[]> {
+    const query: string = getFlinkAIModelsQuery(database);
 
-      // Will raise Error if the cluster isn't Flinkable or if the statement
-      // execution fails. Will use the first compute pool in the cluster's
-      // flinkPools array to execute the statement.
-      const rawResults = await this.executeBackgroundFlinkStatement<RawUdfSystemCatalogRow>(
-        udfSystemCatalogQuery,
-        cluster,
-        { nameSpice: "list-udfs" },
-      );
+    const results: FlinkAIModel[] = await this.getFlinkDatabaseResources<
+      RawFlinkAIModelRow,
+      FlinkAIModel
+    >(
+      database,
+      WorkspaceStorageKeys.FLINK_AI_MODELS,
+      query,
+      transformRawFlinkAIModelRows,
+      forceDeepRefresh,
+      // no special statement options needed
+    );
+    return results;
+  }
 
-      // Convert the raw results into FlinkUdf objects.
-      udfs = transformUdfSystemCatalogRows(cluster, rawResults);
+  /**
+   * Get the Flink AI connections for a CCloud Flink database.
+   *
+   * @param database The Flink database to get the connections for.
+   * @param forceDeepRefresh Whether to bypass the ResourceManager cache and fetch fresh data.
+   * @returns Array of {@link FlinkAIConnection} objects representing the AI connections in the cluster.
+   */
+  public async getFlinkAIConnections(
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<FlinkAIConnection[]> {
+    const query: string = getFlinkAIConnectionsQuery(database);
 
-      // Cache them in the resource manager for future reference.
-      await rm.setFlinkUDFs(cluster, udfs);
-    }
-
-    return udfs;
+    const results: FlinkAIConnection[] = await this.getFlinkDatabaseResources<
+      RawFlinkAIConnectionRow,
+      FlinkAIConnection
+    >(
+      database,
+      WorkspaceStorageKeys.FLINK_AI_CONNECTIONS,
+      query,
+      transformRawFlinkAIConnectionRows,
+      forceDeepRefresh,
+      // no special statement options needed
+    );
+    return results;
   }
 
   /**
@@ -519,11 +615,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   async executeBackgroundFlinkStatement<RT>(
     sqlStatement: string,
     database: CCloudFlinkDbKafkaCluster,
-    options: {
-      computePool?: CCloudFlinkComputePool;
-      timeout?: number;
-      nameSpice?: string;
-    } = {},
+    options: ExecuteBackgroundStatementOptions = {},
   ): Promise<Array<RT>> {
     const organization = await this.getOrganization();
     if (!organization) {
