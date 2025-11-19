@@ -10,7 +10,7 @@ import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer
 // - FlinkAIConnection https://github.com/confluentinc/vscode/issues/2982
 // - FlinkAITool https://github.com/confluentinc/vscode/issues/2995
 // - FlinkAIAgent https://github.com/confluentinc/vscode/issues/2999
-type FlinkAIResource = FlinkAIModel;
+export type FlinkAIResource = FlinkAIModel;
 export type FlinkAIViewModeData = FlinkDatabaseResourceContainer<FlinkAIResource> | FlinkAIResource;
 
 export class FlinkAIDelegate extends ViewProviderDelegate<
