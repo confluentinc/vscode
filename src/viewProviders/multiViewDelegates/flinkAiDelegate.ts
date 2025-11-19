@@ -1,5 +1,6 @@
 import { TreeItem } from "vscode";
 import { CCloudResourceLoader } from "../../loaders";
+import { FlinkAIAgent, FlinkAIAgentTreeItem } from "../../models/flinkAiAgent";
 import { FlinkAIConnection, FlinkAIConnectionTreeItem } from "../../models/flinkAiConnection";
 import { FlinkAIModel, FlinkAIModelTreeItem } from "../../models/flinkAiModel";
 import { FlinkAITool, FlinkAIToolTreeItem } from "../../models/flinkAiTool";
@@ -9,8 +10,7 @@ import { FlinkDatabaseViewProviderMode } from "./constants";
 import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
 
 // extend FlinkAIResource union with resource classes once available:
-// - FlinkAIAgent https://github.com/confluentinc/vscode/issues/2999
-export type FlinkAIResource = FlinkAIModel | FlinkAIConnection | FlinkAITool;
+export type FlinkAIResource = FlinkAIModel | FlinkAIConnection | FlinkAITool | FlinkAIAgent;
 export type FlinkAIViewModeData = FlinkDatabaseResourceContainer<FlinkAIResource> | FlinkAIResource;
 
 export class FlinkAIDelegate extends ViewProviderDelegate<
@@ -26,8 +26,7 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
   private connections: FlinkAIConnection[] = [];
   private tools: FlinkAITool[] = [];
   private models: FlinkAIModel[] = [];
-  // - FlinkAIAgent[] https://github.com/confluentinc/vscode/issues/2999
-  private agents: FlinkAIResource[] = [];
+  private agents: FlinkAIAgent[] = [];
 
   getChildren(element?: FlinkAIViewModeData): FlinkAIViewModeData[] {
     if (element instanceof FlinkDatabaseResourceContainer) {
@@ -63,9 +62,7 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
 
     this.models = await loader.getFlinkAIModels(database, forceDeepRefresh);
 
-    // - FlinkAIAgent[] https://github.com/confluentinc/vscode/issues/3002
-    // this.agents = await loader.getFlinkAIAgents(database);
-    this.agents = [];
+    this.agents = await loader.getFlinkAIAgents(database, forceDeepRefresh);
 
     return [...this.connections, ...this.tools, ...this.models, ...this.agents];
   }
@@ -84,8 +81,9 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     if (element instanceof FlinkAITool) {
       return new FlinkAIToolTreeItem(element);
     }
-    // replace with TreeItem models depending on element type, see:
-    // - FlinkAIAgentTreeItem https://github.com/confluentinc/vscode/issues/2999
+    if (element instanceof FlinkAIAgent) {
+      return new FlinkAIAgentTreeItem(element);
+    }
     return element;
   }
 }
