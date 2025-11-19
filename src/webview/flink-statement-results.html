@@ -99,34 +99,53 @@
 
         <section>
           <div class="flex-row">
-            <vscode-text-field
-              id="results-search"
-              placeholder="Search across results…"
-              type="search"
-              size="50"
-              data-prop-value="this.search()"
-              data-on-change="this.search(event.target.value)"
-              data-on-keydown="this.handleKeydown(event)"
-              data-on-input="this.handleInput(event)"
-              >Search</vscode-text-field
-            >
+            <div class="flex-column">
+              <vscode-text-field
+                id="results-search"
+                placeholder="Search across results…"
+                type="search"
+                size="50"
+                data-prop-value="this.search()"
+                data-on-change="this.search(event.target.value)"
+                data-on-keydown="this.handleKeydown(event)"
+                data-on-input="this.handleInput(event)"
+                >Search</vscode-text-field
+              >
+            </div>
+            <div>
+              <!-- Settings control positioned outside the grid -->
+              <div
+                style="place-content: end; height: 100%"
+                popovertarget="columnSettings"
+                data-on-click="window.columnSettings.togglePopover()"
+                data-position="bottom-end"
+                tabindex="-1"
+              >
+                <span class="codicon codicon-gear"></span>
+              </div>
+              <section popover id="columnSettings" class="column-control">
+                <div class="flex-column" style="--gap: 0">
+                  <label>Columns</label>
+                  <template data-for="column of this.allColumns() by column">
+                    <label class="checkbox">
+                      <input
+                        type="checkbox"
+                        data-prop-checked="this.isColumnVisible(this.columns()[this.column()].index)"
+                        data-prop-disabled="this.isColumnVisible(this.columns()[this.column()].index) && this.columnVisibilityFlags().filter(f => f).length <= 1"
+                        data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns()[this.column()].index)"
+                      />
+                      <span data-text="this.columns()[this.column()].title()"></span>
+                    </label>
+                  </template>
+                </div>
+              </section>
+            </div>
           </div>
         </section>
       </header>
 
       <section class="content">
         <div class="grid-container">
-          <!-- Settings control positioned outside the grid -->
-          <div
-            class="grid-cell grid-column-header cell-text-overflow grid-settings-control"
-            popovertarget="columnSettings"
-            data-on-click="window.columnSettings.togglePopover()"
-            data-position="bottom-end"
-            tabindex="-1"
-          >
-            <span class="codicon codicon-gear"></span>
-          </div>
-
           <table
             class="grid"
             cellpadding="0"
@@ -148,24 +167,6 @@
                 </template>
               </tr>
             </thead>
-
-            <section popover id="columnSettings" class="column-control">
-              <div class="flex-column" style="--gap: 0">
-                <label>Columns</label>
-                <template data-for="column of this.allColumns() by column">
-                  <label class="checkbox">
-                    <input
-                      type="checkbox"
-                      data-prop-checked="this.isColumnVisible(this.columns()[this.column()].index)"
-                      data-prop-disabled="this.isColumnVisible(this.columns()[this.column()].index) && this.columnVisibilityFlags().filter(f => f).length <= 1"
-                      data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns()[this.column()].index)"
-                    />
-                    <span data-text="this.columns()[this.column()].title()"></span>
-                  </label>
-                </template>
-              </div>
-            </section>
-
             <template data-if="this.hasResults() || this.emptyFilterResult()">
               <tbody>
                 <template data-for="result of this.snapshot().results">
@@ -391,6 +392,7 @@
       .content {
         flex: 1;
         overflow: auto;
+        position: relative;
       }
 
       .cell-text-overflow {
@@ -464,17 +466,8 @@
         color: var(--vscode-progressBar-background);
       }
 
-      .grid-container {
-        position: relative;
-      }
-
-      .grid {
-        padding-left: 26px;
-        /* padding for the settings control width */
-      }
-
       .grid-settings-control {
-        position: absolute;
+        position: sticky;
         top: 0;
         left: 0;
         width: 26px;
