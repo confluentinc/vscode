@@ -124,3 +124,6 @@ bin/ide-sidecar-*-runner
 *.pem
 
 playwright-report/
+
+# Ignore project-level instruction and tool adjustments
+.github/agents/*.md
