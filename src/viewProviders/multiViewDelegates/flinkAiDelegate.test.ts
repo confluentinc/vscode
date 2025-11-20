@@ -88,6 +88,7 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
         it(`should include Flink AI connections when returned from the loader (forceDeepRefresh=${forceDeepRefresh})`, async () => {
           stubbedLoader.getFlinkAIConnections.resolves(testConnections);
           stubbedLoader.getFlinkAIModels.resolves([]);
+          stubbedLoader.getFlinkAIAgents.resolves([]);
           stubbedLoader.getFlinkAITools.resolves([]);
 
           const children: FlinkAIViewModeData[] = await delegate.fetchChildren(
@@ -112,6 +113,7 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
         it(`should include Flink AI models when returned from the loader (forceDeepRefresh=${forceDeepRefresh})`, async () => {
           stubbedLoader.getFlinkAIConnections.resolves([]);
           stubbedLoader.getFlinkAIModels.resolves(testModels);
+          stubbedLoader.getFlinkAIAgents.resolves([]);
           stubbedLoader.getFlinkAITools.resolves([]);
 
           const children: FlinkAIViewModeData[] = await delegate.fetchChildren(
