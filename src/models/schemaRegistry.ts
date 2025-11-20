@@ -54,7 +54,7 @@ export class CCloudSchemaRegistry extends SchemaRegistry {
   }
 
   get ccloudApiKeysUrl(): string {
-    return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/schema-registry/api-keys?utm_source=${UTM_SOURCE_VSCODE}`;
+    return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/stream-governance/schema-registry/overview/api-keys?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 }
 
