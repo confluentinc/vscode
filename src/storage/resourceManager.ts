@@ -11,6 +11,7 @@ import type { Environment, EnvironmentType } from "../models/environment";
 import { getEnvironmentClass } from "../models/environment";
 import { FlinkAIConnection } from "../models/flinkAiConnection";
 import { FlinkAIModel } from "../models/flinkAiModel";
+import { FlinkAITool } from "../models/flinkAiTool";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
 import { FlinkUdf } from "../models/flinkUDF";
@@ -665,8 +666,9 @@ export class ResourceManager {
           return new FlinkAIModel(raw as FlinkAIModel);
         case WorkspaceStorageKeys.FLINK_AI_CONNECTIONS:
           return new FlinkAIConnection(raw as FlinkAIConnection);
+        case WorkspaceStorageKeys.FLINK_AI_TOOLS:
+          return new FlinkAITool(raw as FlinkAITool);
         // extend cases for other Flink AI resource classes once available:
-        // - FlinkAITool https://github.com/confluentinc/vscode/issues/2995
         // - FlinkAIAgent https://github.com/confluentinc/vscode/issues/2999
         default:
           throw new Error(`Unsupported storage key for Flink database resources: ${storageKey}`);
