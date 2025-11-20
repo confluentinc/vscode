@@ -164,7 +164,7 @@ describe("Test CCloudSchemaRegistry properties", () => {
 
   it("ccloudApiKeysUrl should return the correct URL for ccloud schema registry cluster", () => {
     assert.strictEqual(
-      `https://${CCLOUD_BASE_PATH}/environments/${TEST_CCLOUD_SCHEMA_REGISTRY.environmentId}/schema-registry/api-keys?utm_source=${UTM_SOURCE_VSCODE}`,
+      `https://${CCLOUD_BASE_PATH}/settings/api-keys?resourceIds=${TEST_CCLOUD_SCHEMA_REGISTRY.id}&resourceScope=SchemaRegistry?utm_source=${UTM_SOURCE_VSCODE}`,
       TEST_CCLOUD_SCHEMA_REGISTRY.ccloudApiKeysUrl,
     );
   });
