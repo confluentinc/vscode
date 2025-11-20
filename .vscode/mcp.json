@@ -1,0 +1,23 @@
+{
+	"servers": {
+		"github/github-mcp-server": {
+			"type": "http",
+			"url": "https://api.githubcopilot.com/mcp/"
+		},
+		"upstash/context7": {
+			"type": "http",
+			"url": "https://mcp.context7.com/mcp",
+			"headers": {
+				"CONTEXT7_API_KEY": "${input:context7_api_key}"
+			}
+		}
+	},
+	"inputs": [
+		{
+			"id": "context7_api_key",
+			"type": "promptString",
+			"description": "Context7 API key (optional; increases rate limits). Get one at https://context7.com/dashboard",
+			"password": true
+		}
+	]
+}
