@@ -2,11 +2,13 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
+import { createFlinkAIAgent } from "../../../tests/unit/testResources/flinkAIAgent";
 import { createFlinkAIConnection } from "../../../tests/unit/testResources/flinkAIConnection";
 import { createFlinkAIModel } from "../../../tests/unit/testResources/flinkAIModel";
 import { createFlinkAITool } from "../../../tests/unit/testResources/flinkAITool";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import type { CCloudResourceLoader } from "../../loaders";
+import { FlinkAIAgentTreeItem } from "../../models/flinkAiAgent";
 import { FlinkAIConnectionTreeItem, type FlinkAIConnection } from "../../models/flinkAiConnection";
 import { FlinkAIModelTreeItem, type FlinkAIModel } from "../../models/flinkAiModel";
 import { FlinkDatabaseViewProvider } from "../flinkDatabase";
@@ -20,7 +22,7 @@ const testConnections = [
 ];
 const testTools = [createFlinkAITool("Tool1"), createFlinkAITool("Tool2")];
 const testModels = [createFlinkAIModel("Model1"), createFlinkAIModel("Model2")];
-// const testAgents = [createFlinkAIAgent("Agent1"), createFlinkAIAgent("Agent2")];
+const testAgents = [createFlinkAIAgent("Agent1"), createFlinkAIAgent("Agent2")];
 
 describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
   let sandbox: sinon.SinonSandbox;
@@ -58,7 +60,7 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
         it(`should return an empty array when no Flink AI resources are available (forceDeepRefresh=${forceDeepRefresh})`, async () => {
           stubbedLoader.getFlinkAIConnections.resolves([]);
           stubbedLoader.getFlinkAIModels.resolves([]);
-          // stubbedLoader.getFlinkAIAgents.resolves([]);
+          stubbedLoader.getFlinkAIAgents.resolves([]);
           stubbedLoader.getFlinkAITools.resolves([]);
 
           const children: FlinkAIViewModeData[] = await delegate.fetchChildren(
@@ -79,7 +81,7 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
             forceDeepRefresh,
           );
-          // sinon.assert.calledOnce(stubbedLoader.getFlinkAIAgents);
+          sinon.assert.calledOnce(stubbedLoader.getFlinkAIAgents);
           sinon.assert.calledOnce(stubbedLoader.getFlinkAITools);
         });
 
@@ -149,7 +151,7 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
         delegate["connections"] = testConnections;
         delegate["tools"] = testTools;
         delegate["models"] = testModels;
-        // delegate["agents"] = testAgents;
+        delegate["agents"] = testAgents;
 
         const children: FlinkAIViewModeData[] = delegate.getChildren();
 
@@ -161,7 +163,7 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
         assert.strictEqual(containers[2].label, "Models");
         assert.strictEqual(containers[2].children.length, testModels.length);
         assert.strictEqual(containers[3].label, "Agents");
-        // assert.strictEqual(containers[3].children.length, testAgents.length);
+        assert.strictEqual(containers[3].children.length, testAgents.length);
       });
 
       it("should return FlinkAIConnections when a Connections container is provided (expanded)", () => {
@@ -213,6 +215,15 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
         assert.ok(treeItem instanceof FlinkAIModelTreeItem);
         assert.strictEqual(treeItem.label, "TestModel");
         assert.strictEqual(treeItem.resource, model);
+      });
+
+      it("should return a FlinkAIAgentTreeItem when given a FlinkAIAgent", () => {
+        const agent = createFlinkAIAgent("TestAgent");
+        const treeItem = delegate.getTreeItem(agent);
+
+        assert.ok(treeItem instanceof FlinkAIAgentTreeItem);
+        assert.strictEqual(treeItem.label, "TestAgent");
+        assert.strictEqual(treeItem.resource, agent);
       });
     });
   });
