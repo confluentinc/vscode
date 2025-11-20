@@ -1,5 +1,6 @@
 import { TreeItem } from "vscode";
 import { CCloudResourceLoader } from "../../loaders";
+import { FlinkAIConnection, FlinkAIConnectionTreeItem } from "../../models/flinkAiConnection";
 import { FlinkAIModel, FlinkAIModelTreeItem } from "../../models/flinkAiModel";
 import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
@@ -7,10 +8,9 @@ import { FlinkDatabaseViewProviderMode } from "./constants";
 import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
 
 // extend FlinkAIResource union with resource classes once available:
-// - FlinkAIConnection https://github.com/confluentinc/vscode/issues/2982
 // - FlinkAITool https://github.com/confluentinc/vscode/issues/2995
 // - FlinkAIAgent https://github.com/confluentinc/vscode/issues/2999
-export type FlinkAIResource = FlinkAIModel;
+export type FlinkAIResource = FlinkAIModel | FlinkAIConnection;
 export type FlinkAIViewModeData = FlinkDatabaseResourceContainer<FlinkAIResource> | FlinkAIResource;
 
 export class FlinkAIDelegate extends ViewProviderDelegate<
@@ -23,8 +23,7 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
   readonly loadingMessage = "Loading Flink AI resources...";
 
   // update these for specific types instead of the union once available:
-  // - FlinkAIConnection[] https://github.com/confluentinc/vscode/issues/2982
-  private connections: FlinkAIResource[] = [];
+  private connections: FlinkAIConnection[] = [];
   // - FlinkAITool[] https://github.com/confluentinc/vscode/issues/2995
   private tools: FlinkAIResource[] = [];
   private models: FlinkAIModel[] = [];
@@ -59,10 +58,7 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
 
     // for follow-up branches: update these sections with actual Flink AI resource fetching logic
     // using the CCloudResourceLoader to populate these arrays:
-
-    // - FlinkAIConnection[] https://github.com/confluentinc/vscode/issues/2983
-    // this.connections = await loader.getFlinkAIConnections(database);
-    this.connections = [];
+    this.connections = await loader.getFlinkAIConnections(database, forceDeepRefresh);
 
     // - FlinkAITool[] https://github.com/confluentinc/vscode/issues/2996
     // this.tools = await loader.getFlinkAITools(database);
@@ -82,11 +78,13 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
       // already a TreeItem subclass, no need to do anything
       return element;
     }
+    if (element instanceof FlinkAIConnection) {
+      return new FlinkAIConnectionTreeItem(element);
+    }
     if (element instanceof FlinkAIModel) {
       return new FlinkAIModelTreeItem(element);
     }
     // replace with TreeItem models depending on element type, see:
-    // - FlinkAIConnectionTreeItem https://github.com/confluentinc/vscode/issues/2982
     // - FlinkAIToolTreeItem https://github.com/confluentinc/vscode/issues/2995
     // - FlinkAIAgentTreeItem https://github.com/confluentinc/vscode/issues/2999
     return new TreeItem(element);

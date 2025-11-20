@@ -21,6 +21,7 @@ import { getCCloudResources } from "../graphql/ccloud";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
+import type { FlinkAIConnection } from "../models/flinkAiConnection";
 import type { FlinkAIModel } from "../models/flinkAiModel";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
@@ -42,6 +43,11 @@ import { ObjectSet } from "../utils/objectset";
 import type { ExecutionResult } from "../utils/workerPool";
 import { executeInWorkerPool, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
+import type { RawFlinkAIConnectionRow } from "./utils/flinkAiConnectionsQuery";
+import {
+  getFlinkAIConnectionsQuery,
+  transformRawFlinkAIConnectionRows,
+} from "./utils/flinkAiConnectionsQuery";
 import type { RawFlinkAIModelRow } from "./utils/flinkAiModelsQuery";
 import { getFlinkAIModelsQuery, transformRawFlinkAIModelRows } from "./utils/flinkAiModelsQuery";
 import { generateFlinkStatementKey } from "./utils/loaderUtils";
@@ -536,6 +542,33 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       WorkspaceStorageKeys.FLINK_AI_MODELS,
       query,
       transformRawFlinkAIModelRows,
+      forceDeepRefresh,
+      // no special statement options needed
+    );
+    return results;
+  }
+
+  /**
+   * Get the Flink AI connections for a CCloud Flink database.
+   *
+   * @param database The Flink database to get the connections for.
+   * @param forceDeepRefresh Whether to bypass the ResourceManager cache and fetch fresh data.
+   * @returns Array of {@link FlinkAIConnection} objects representing the AI connections in the cluster.
+   */
+  public async getFlinkAIConnections(
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<FlinkAIConnection[]> {
+    const query: string = getFlinkAIConnectionsQuery(database);
+
+    const results: FlinkAIConnection[] = await this.getFlinkDatabaseResources<
+      RawFlinkAIConnectionRow,
+      FlinkAIConnection
+    >(
+      database,
+      WorkspaceStorageKeys.FLINK_AI_CONNECTIONS,
+      query,
+      transformRawFlinkAIConnectionRows,
       forceDeepRefresh,
       // no special statement options needed
     );
