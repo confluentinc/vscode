@@ -53,7 +53,8 @@ tools: [
     "github/github-mcp-server/sub_issue_write",
     "github/github-mcp-server/update_pull_request",
     # https://github.com/mcp/io.github.upstash/context7
-    "upstash/context7/*",
+    "upstash/context7/get-library-docs",
+    "upstash/context7/resolve-library-id",
   ]
 ---
 
