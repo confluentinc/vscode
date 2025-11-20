@@ -785,19 +785,6 @@ describe("CCloudResourceLoader", () => {
       }));
     };
 
-    const testDatabase = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
-    const testStorageKey = "test-resource" as WorkspaceStorageKeys;
-    const testStatementQuery = "SELECT * FROM database_resources;";
-    // simple transformer function that converts the 'id' value to uppercase to add to the 'idUpper'
-    // field and adds the databaseId to each row/resource
-    const testTransformer = (db: CCloudFlinkDbKafkaCluster, rows: any[]): any[] => {
-      return rows.map((r) => ({
-        id: r.id,
-        idUpper: r.id.toUpperCase(),
-        databaseId: db.id,
-      }));
-    };
-
     beforeEach(() => {
       executeBackgroundFlinkStatementStub = sandbox.stub(loader, "executeBackgroundFlinkStatement");
     });
