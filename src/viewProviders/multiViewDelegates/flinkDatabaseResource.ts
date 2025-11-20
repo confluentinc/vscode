@@ -1,18 +1,17 @@
 import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../constants";
-import type { IdItem } from "../../models/main";
-import type { ConnectionId, IResourceBase, ISearchable } from "../../models/resource";
+import type { ConnectionId, IResourceBaseSearchable, ISearchable } from "../../models/resource";
 
 /** A container {@link TreeItem} for resources to display in the Flink Database view. */
-export class FlinkDatabaseResourceContainer<T extends IResourceBase & IdItem & ISearchable>
+export class FlinkDatabaseResourceContainer<T extends IResourceBaseSearchable>
   extends TreeItem
   implements ISearchable
 {
   readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
   readonly connectionType: ConnectionType = ConnectionType.Ccloud;
 
-  // `id` is string|undefined in TreeItem, but only string in IdItem so we need to specify it here
+  // `id` is string|undefined in TreeItem; ensure `id` is a string here
   id: string;
   children: T[];
 

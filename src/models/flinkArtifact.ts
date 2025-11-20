@@ -2,11 +2,10 @@ import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import type { ArtifactV1FlinkArtifactMetadata } from "../clients/flinkArtifacts";
 import type { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH, IconNames, UTM_SOURCE_VSCODE } from "../constants";
-import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
 import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
-export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
+export class FlinkArtifact implements IResourceBase, ISearchable {
   connectionId!: ConnectionId;
   connectionType!: ConnectionType;
   iconName: IconNames = IconNames.FLINK_ARTIFACT;

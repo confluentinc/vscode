@@ -9,7 +9,7 @@ import type {
 } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, IconNames, UTM_SOURCE_VSCODE } from "../constants";
-import type { IdItem } from "./main";
+ 
 import { CustomMarkdownString } from "./main";
 import type {
   ConnectionId,
@@ -57,7 +57,7 @@ export const UNSTOPPABLE_PHASES = [
 /**
  * Model for a Flink statement.
  */
-export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvProviderRegion {
+export class FlinkStatement implements IResourceBase, ISearchable, IEnvProviderRegion {
   // Immutable foreign reference properties
   readonly connectionId!: ConnectionId;
   readonly connectionType!: ConnectionType;

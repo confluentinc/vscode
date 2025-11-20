@@ -2,7 +2,7 @@ import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import { formatSqlType } from "../utils/flinkTypes";
-import type { IdItem } from "./main";
+ 
 import { CustomMarkdownString } from "./main";
 import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
@@ -24,7 +24,7 @@ export class FlinkUdfParameter {
 /**
  * Represents a Flink UDF.
  */
-export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
+export class FlinkUdf implements IResourceBase, ISearchable {
   /** What CCloud environment this UDF came from (from the Kafka Cluster) */
   environmentId: EnvironmentId;
   /** What cloud provider hosts the parent Kafka Cluster? */

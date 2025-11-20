@@ -41,7 +41,7 @@ import type {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { KafkaCluster, KafkaClusterTreeItem } from "../models/kafkaCluster";
-import type { IdItem } from "../models/main";
+ 
 import { LocalMedusa, MedusaTreeItem } from "../models/medusa";
 import type { CCloudOrganization } from "../models/organization";
 import type {
@@ -77,7 +77,7 @@ type ConnectionRowChildren =
   | CCloudFlinkComputePool;
 
 export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends ResourceLoader>
-  implements IResourceBase, IdItem, ISearchable
+  implements IResourceBase, ISearchable
 {
   logger: Logger;
   readonly environments: ET[];

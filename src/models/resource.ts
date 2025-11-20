@@ -1,7 +1,7 @@
 import { ConnectionType } from "../clients/sidecar";
 import type { IconNames } from "../constants";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
-import type { IdItem } from "./main";
+ 
 
 /** A uniquely-branded string-type for a connection ID. */
 export type ConnectionId = string & { readonly brand: unique symbol };
@@ -37,6 +37,8 @@ export interface IResourceBase {
   /** How this resource should be represented as a {@link TreeItem} or {@link QuickPickItem}. */
   iconName?: IconNames;
 }
+
+ 
 
 export interface ICCloudUrlable {
   /** The URL for this resource in Confluent Cloud. */
@@ -130,6 +132,17 @@ export function isSearchable(item: any): item is ISearchable {
   return "searchableText" in item;
 }
 
+/**
+ * Resources that include an `id` and searchable properties used by view providers.
+ * Kept as a separate exported type to avoid forcing all implementers of `IResourceBase`
+ * to implement these members.
+ */
+export type IResourceBaseSearchable = IResourceBase & {
+  readonly id: string;
+  searchableText: () => string;
+  children?: ISearchable[];
+};
+
 /** Extension of IResourceBase identifying a specific schema registry or resources derived from within. */
 export interface ISchemaRegistryResource extends IResourceBase {
   readonly environmentId: EnvironmentId;
@@ -137,7 +150,10 @@ export interface ISchemaRegistryResource extends IResourceBase {
 }
 
 /** Resources with IDs which are in-place updateable given a reference to same class */
-export interface IUpdatableResource extends IResourceBase, IdItem {
+export interface IUpdatableResource extends IResourceBase {
+  /** Unique identifier for the resource. */
+  readonly id: string;
+
   /** Update this resource in-place. */
   update(resource: this): void;
 }

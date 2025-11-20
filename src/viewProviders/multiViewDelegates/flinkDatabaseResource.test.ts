@@ -2,12 +2,11 @@ import * as assert from "assert";
 import { TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../constants";
-import type { IdItem } from "../../models/main";
-import type { IResourceBase, ISearchable } from "../../models/resource";
+import type { IResourceBaseSearchable } from "../../models/resource";
 import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResource";
 
 // not Flink Database specific
-const fakeResource: IResourceBase & IdItem & ISearchable = {
+const fakeResource: IResourceBaseSearchable = {
   connectionId: CCLOUD_CONNECTION_ID,
   connectionType: ConnectionType.Ccloud,
   id: "Resource1",
@@ -46,7 +45,7 @@ describe("viewProviders/multiViewDelegates/flinkDatabaseResource", () => {
         const withChildren = new FlinkDatabaseResourceContainer(label, resources);
         assert.strictEqual(withChildren.description, `(${resources.length})`);
 
-        const emptyResources: (IResourceBase & IdItem & ISearchable)[] = [];
+        const emptyResources: IResourceBaseSearchable[] = [];
         const withoutChildren = new FlinkDatabaseResourceContainer(label, emptyResources);
         assert.strictEqual(withoutChildren.description, `(${emptyResources.length})`);
       });
@@ -55,7 +54,7 @@ describe("viewProviders/multiViewDelegates/flinkDatabaseResource", () => {
     describe("searchableText", () => {
       it("should return the label as searchable text", () => {
         const label = "Searchable Database Resource";
-        const resources: (IResourceBase & IdItem & ISearchable)[] = [];
+        const resources: IResourceBaseSearchable[] = [];
 
         const item = new FlinkDatabaseResourceContainer(label, resources);
 

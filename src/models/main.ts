@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
-
 /** Anything with an `id` string property */
 export interface IdItem {
   readonly id: string;
