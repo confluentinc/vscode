@@ -62,10 +62,12 @@ import type { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 import * as relationsUtils from "./utils/relationsAndColumnsSystemCatalogQuery";
 
+import { createFlinkAIAgent } from "../../tests/unit/testResources/flinkAIAgent";
 import { createFlinkAIConnection } from "../../tests/unit/testResources/flinkAIConnection";
 import { createFlinkAITool } from "../../tests/unit/testResources/flinkAITool";
 import { TEST_FLINK_RELATION } from "../../tests/unit/testResources/flinkRelation";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
+import type { FlinkAIAgent } from "../models/flinkAiAgent";
 import type { FlinkAIConnection } from "../models/flinkAiConnection";
 import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
 import type { FlinkUdf } from "../models/flinkUDF";
@@ -75,6 +77,7 @@ import {
   loadArtifactsForProviderRegion,
   loadProviderRegions,
 } from "./ccloudResourceLoader";
+import { getFlinkAIAgentsQuery } from "./utils/flinkAiAgentsQuery";
 import { getFlinkAIConnectionsQuery } from "./utils/flinkAiConnectionsQuery";
 import { getFlinkAIModelsQuery } from "./utils/flinkAiModelsQuery";
 import { getFlinkAIToolsQuery } from "./utils/flinkAiToolsQuery";
@@ -1159,6 +1162,31 @@ describe("CCloudResourceLoader", () => {
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
             WorkspaceStorageKeys.FLINK_AI_CONNECTIONS,
             getFlinkAIConnectionsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
+            sinon.match.func,
+            forceDeepRefresh,
+            // no statement options
+          );
+        });
+      }
+    });
+
+    describe("getFlinkAIAgents()", () => {
+      for (const forceDeepRefresh of [true, false]) {
+        it(`should call getFlinkDatabaseResources() with correct parameters (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          const testAgents: FlinkAIAgent[] = [createFlinkAIAgent("agent1")];
+          loaderGetDbResourcesStub.resolves(testAgents);
+
+          const result = await loader.getFlinkAIAgents(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          assert.deepStrictEqual(result, testAgents);
+          sinon.assert.calledOnceWithMatch(
+            loaderGetDbResourcesStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            WorkspaceStorageKeys.FLINK_AI_AGENTS,
+            getFlinkAIAgentsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
             sinon.match.func,
             forceDeepRefresh,
             // no statement options
