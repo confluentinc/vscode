@@ -23,6 +23,9 @@ export enum WorkspaceStorageKeys {
 
   /** Map of Flink AI Connections by (CCloud) Kafka cluster id (i.e. a Flinkable Database) */
   FLINK_AI_CONNECTIONS = "flinkAIConnections",
+
+  /** Map of Flink AI Agents by (CCloud) Kafka cluster id (i.e. a Flinkable Database) */
+  FLINK_AI_AGENTS = "flinkAIAgents",
 }
 
 export enum GlobalStorageKeys {

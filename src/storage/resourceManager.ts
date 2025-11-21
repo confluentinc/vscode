@@ -9,6 +9,7 @@ import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import type { Environment, EnvironmentType } from "../models/environment";
 import { getEnvironmentClass } from "../models/environment";
+import { FlinkAIAgent } from "../models/flinkAiAgent";
 import { FlinkAIConnection } from "../models/flinkAiConnection";
 import { FlinkAIModel } from "../models/flinkAiModel";
 import { FlinkAITool } from "../models/flinkAiTool";
@@ -668,8 +669,8 @@ export class ResourceManager {
           return new FlinkAIConnection(raw as FlinkAIConnection);
         case WorkspaceStorageKeys.FLINK_AI_TOOLS:
           return new FlinkAITool(raw as FlinkAITool);
-        // extend cases for other Flink AI resource classes once available:
-        // - FlinkAIAgent https://github.com/confluentinc/vscode/issues/2999
+        case WorkspaceStorageKeys.FLINK_AI_AGENTS:
+          return new FlinkAIAgent(raw as FlinkAIAgent);
         default:
           throw new Error(`Unsupported storage key for Flink database resources: ${storageKey}`);
       }
