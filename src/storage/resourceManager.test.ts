@@ -659,6 +659,10 @@ describe("storage/resourceManager", () => {
           key: WorkspaceStorageKeys.FLINK_AI_CONNECTIONS,
           resourceConstructor: createFlinkAIConnection,
         },
+        {
+          key: WorkspaceStorageKeys.FLINK_AI_AGENTS,
+          resourceConstructor: createFlinkAIAgent,
+        },
       ];
       for (const { key, resourceConstructor } of scenarios) {
         it(`should not leak resources across different databases (key=${key})`, async () => {
