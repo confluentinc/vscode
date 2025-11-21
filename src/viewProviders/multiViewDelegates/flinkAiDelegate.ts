@@ -4,12 +4,12 @@ import { FlinkAIAgent, FlinkAIAgentTreeItem } from "../../models/flinkAiAgent";
 import { FlinkAIConnection, FlinkAIConnectionTreeItem } from "../../models/flinkAiConnection";
 import { FlinkAIModel, FlinkAIModelTreeItem } from "../../models/flinkAiModel";
 import { FlinkAITool, FlinkAIToolTreeItem } from "../../models/flinkAiTool";
+import type { FlinkAIResource } from "../../models/flinkDatabaseResource";
 import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";
 import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
 
-export type FlinkAIResource = FlinkAIModel | FlinkAIConnection | FlinkAITool | FlinkAIAgent;
 export type FlinkAIViewModeData = FlinkDatabaseResourceContainer<FlinkAIResource> | FlinkAIResource;
 
 export class FlinkAIDelegate extends ViewProviderDelegate<

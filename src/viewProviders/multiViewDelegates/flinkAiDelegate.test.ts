@@ -11,8 +11,9 @@ import type { CCloudResourceLoader } from "../../loaders";
 import { FlinkAIAgentTreeItem } from "../../models/flinkAiAgent";
 import { FlinkAIConnectionTreeItem, type FlinkAIConnection } from "../../models/flinkAiConnection";
 import { FlinkAIModelTreeItem, type FlinkAIModel } from "../../models/flinkAiModel";
+import type { FlinkAIResource } from "../../models/flinkDatabaseResource";
 import { FlinkDatabaseViewProvider } from "../flinkDatabase";
-import type { FlinkAIResource, FlinkAIViewModeData } from "./flinkAiDelegate";
+import type { FlinkAIViewModeData } from "./flinkAiDelegate";
 import { FlinkAIDelegate } from "./flinkAiDelegate";
 import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
 
