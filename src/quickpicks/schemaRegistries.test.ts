@@ -80,7 +80,7 @@ describe("quickpicks/schemaRegistries.ts schemaRegistryQuickPick()", function ()
 
     sinon.assert.calledOnce(showQuickPickStub);
     const options = showQuickPickStub.firstCall.args[1];
-    assert.strictEqual(options.title, undefined);
+    assert.strictEqual(options.title, "Select Schema Registry");
     assert.strictEqual(options.placeHolder, "Select a Schema Registry");
     assert.strictEqual(options.ignoreFocusOut, true);
   });
