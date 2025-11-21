@@ -31,6 +31,7 @@ export async function organizationQuickPick(): Promise<CCloudOrganization | unde
 
   const chosenOrganizationItem: QuickPickItemWithValue<CCloudOrganization> | undefined =
     await window.showQuickPick(organizationItems, {
+      title: "Select an organization",
       placeHolder: "Select an organization",
       ignoreFocusOut: true,
     });
