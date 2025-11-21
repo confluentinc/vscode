@@ -1,5 +1,6 @@
-import { TreeItem } from "vscode";
+import type { TreeItem } from "vscode";
 import { CCloudResourceLoader } from "../../loaders";
+import { FlinkAIAgent, FlinkAIAgentTreeItem } from "../../models/flinkAiAgent";
 import { FlinkAIConnection, FlinkAIConnectionTreeItem } from "../../models/flinkAiConnection";
 import { FlinkAIModel, FlinkAIModelTreeItem } from "../../models/flinkAiModel";
 import { FlinkAITool, FlinkAIToolTreeItem } from "../../models/flinkAiTool";
@@ -8,9 +9,7 @@ import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";
 import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
 
-// extend FlinkAIResource union with resource classes once available:
-// - FlinkAIAgent https://github.com/confluentinc/vscode/issues/2999
-export type FlinkAIResource = FlinkAIModel | FlinkAIConnection | FlinkAITool;
+export type FlinkAIResource = FlinkAIModel | FlinkAIConnection | FlinkAITool | FlinkAIAgent;
 export type FlinkAIViewModeData = FlinkDatabaseResourceContainer<FlinkAIResource> | FlinkAIResource;
 
 export class FlinkAIDelegate extends ViewProviderDelegate<
@@ -22,12 +21,10 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
   readonly viewTitle = "Flink AI";
   readonly loadingMessage = "Loading Flink AI resources...";
 
-  // update these for specific types instead of the union once available:
   private connections: FlinkAIConnection[] = [];
   private tools: FlinkAITool[] = [];
   private models: FlinkAIModel[] = [];
-  // - FlinkAIAgent[] https://github.com/confluentinc/vscode/issues/2999
-  private agents: FlinkAIResource[] = [];
+  private agents: FlinkAIAgent[] = [];
 
   getChildren(element?: FlinkAIViewModeData): FlinkAIViewModeData[] {
     if (element instanceof FlinkDatabaseResourceContainer) {
@@ -55,17 +52,13 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
   ): Promise<FlinkAIViewModeData[]> {
     const loader = CCloudResourceLoader.getInstance();
 
-    // for follow-up branches: update these sections with actual Flink AI resource fetching logic
-    // using the CCloudResourceLoader to populate these arrays:
     this.connections = await loader.getFlinkAIConnections(database, forceDeepRefresh);
 
     this.tools = await loader.getFlinkAITools(database, forceDeepRefresh);
 
     this.models = await loader.getFlinkAIModels(database, forceDeepRefresh);
 
-    // - FlinkAIAgent[] https://github.com/confluentinc/vscode/issues/3002
-    // this.agents = await loader.getFlinkAIAgents(database);
-    this.agents = [];
+    this.agents = await loader.getFlinkAIAgents(database, forceDeepRefresh);
 
     return [...this.connections, ...this.tools, ...this.models, ...this.agents];
   }
@@ -84,8 +77,9 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     if (element instanceof FlinkAITool) {
       return new FlinkAIToolTreeItem(element);
     }
-    // replace with TreeItem models depending on element type, see:
-    // - FlinkAIAgentTreeItem https://github.com/confluentinc/vscode/issues/2999
-    return new TreeItem(element);
+    if (element instanceof FlinkAIAgent) {
+      return new FlinkAIAgentTreeItem(element);
+    }
+    return element;
   }
 }
