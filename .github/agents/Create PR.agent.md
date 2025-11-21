@@ -10,7 +10,6 @@ tools: [
     "github/github-mcp-server/pull_request_read",
     "github/github-mcp-server/search_pull_requests",
     "github/github-mcp-server/create_pull_request",
-    "github/github-mcp-server/create_branch",
   ]
 ---
 
