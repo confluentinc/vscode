@@ -122,10 +122,16 @@ generates `src/graphql/sidecarGraphQL.d.ts` (auto-generated, do not edit).
 
 ### Webview Architecture
 
-- HTML templates in `src/webview/*.html` with template variables `${var}`
-- TypeScript logic in corresponding `.ts` files using custom elements pattern
-- Data binding via Observable patterns in `src/webview/bindings/`
-- Communication via `sendWebviewMessage()` and message handlers
+- HTML templates in `src/webview/*.html` with template variables & functions like `this.${var}()`
+  bound to the `ViewModel` in corresponding `.ts` files
+- Signal-based data binding for Template + ViewModel via custom template engine in
+  `src/webview/bindings`
+- Communication between webviews and VS Code host environment via `sendWebviewMessage()` and message
+  handlers in `src/webview/comms`, which wrap the vscode webview message api to provide type safety
+- General CSS styles in `src/webview/uikit/uikit.css` with view-specific overrides in individual
+  HTML templates. VS Code color theme variables preferred and used when appropriate
+- `@vscode/webview-ui-toolkit` is a deprecated dependency - don't use it in new code; use UIKit
+  styles on HTML elements instead.
 
 ### Chat Participant (Copilot Integration)
 
