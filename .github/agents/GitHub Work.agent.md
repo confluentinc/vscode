@@ -56,6 +56,16 @@ tools: [
     "upstash/context7/get-library-docs",
     "upstash/context7/resolve-library-id",
   ]
+handoffs:
+  - label: Review Implementation
+    agent: Implementation Review
+    prompt:
+      Implementation complete. Review changes against project standards and team review patterns.
+    send: false
+  - label: Create PR
+    agent: Create PR
+    prompt: Create a pull request with title and description matching my past PR patterns.
+    send: false
 ---
 
 # GitHub Work Agent
