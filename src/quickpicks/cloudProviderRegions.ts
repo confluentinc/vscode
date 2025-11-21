@@ -103,6 +103,7 @@ export async function cloudProviderRegionQuickPick(
 
   const chosenRegion: QuickPickItemWithValue<IProviderRegion> | undefined =
     await window.showQuickPick(regionItems, {
+      title: "Select a region",
       placeHolder: "Select a region",
       ignoreFocusOut: true,
     });
@@ -179,6 +180,7 @@ export async function flinkDatabaseRegionsQuickPick(
   );
 
   const choice = await window.showQuickPick(quickPickItems, {
+    title: "Select a region containing a Flink database",
     placeHolder: "Select a region containing a Flink database",
     ignoreFocusOut: true,
   });
