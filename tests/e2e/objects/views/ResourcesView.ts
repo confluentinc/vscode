@@ -4,6 +4,7 @@ import { ConnectionType } from "../../connectionTypes";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { DirectConnectionForm } from "../webviews/DirectConnectionFormWebview";
 import { View } from "./View";
+import { ViewItem } from "./viewItems/ViewItem";
 
 /**
  * Object representing the "Resources"
@@ -211,6 +212,35 @@ export class ResourcesView extends View {
     return new DirectConnectionForm(this.page);
   }
 
+  /** Locate a direct connection item in the view by its label. */
+  async getDirectConnection(label: string | RegExp): Promise<Locator> {
+    return await this.getEnvironment(ConnectionType.Direct, label);
+  }
+
+  /** Refresh the 'Confluent Cloud' connection by clicking its inline "Refresh Connection" action. */
+  async refreshCCloudConnection(): Promise<void> {
+    const ccloudLocator = this.confluentCloudItem;
+    await expect(ccloudLocator).toBeVisible();
+    const ccloudItem = new ViewItem(this.page, ccloudLocator);
+    await ccloudItem.clickInlineAction("Refresh Connection");
+  }
+
+  /** Refresh a direct connection by clicking its inline "Refresh Connection" action. */
+  async refreshDirectConnection(label: string | RegExp): Promise<void> {
+    const directConnectionLocator = await this.getDirectConnection(label);
+    await expect(directConnectionLocator).toBeVisible();
+    const directConnectionItem = new ViewItem(this.page, directConnectionLocator);
+    await directConnectionItem.clickInlineAction("Refresh Connection");
+  }
+
+  /** Refresh the 'Local' connection by clicking its inline "Refresh Connection" action. */
+  async refreshLocalConnection(): Promise<void> {
+    const localLocator = this.localItem;
+    await expect(localLocator).toBeVisible();
+    const localItem = new ViewItem(this.page, localLocator);
+    await localItem.clickInlineAction("Refresh Connection");
+  }
+
   /**
    * Locate a connection environment item in the view for a given {@link ConnectionType connection type}.
    * If there are multiple environments for the connection type, you can optionally provide a
@@ -231,7 +261,20 @@ export class ResourcesView extends View {
 
     switch (connectionType) {
       case ConnectionType.Ccloud: {
-        await expect(this.ccloudEnvironments).not.toHaveCount(0);
+        try {
+          // shorter timeout to allow refresh/retry below if needed
+          await expect(this.ccloudEnvironments, {
+            message: "No CCloud environments visible in the Resources view",
+          }).not.toHaveCount(0, { timeout: 3000 });
+        } catch (error) {
+          // we've only seen this fail when VS Code fails to render the "connected" status update
+          // for the CCloud connection, so try refreshing the connection once and re-checking
+          console.warn(
+            `No CCloud environments found in Resources view; refreshing CCloud connection and retrying...`,
+          );
+          await this.refreshCCloudConnection();
+          await expect(this.ccloudEnvironments).not.toHaveCount(0);
+        }
         environment = label
           ? this.ccloudEnvironments.filter({ hasText: label }).first()
           : this.ccloudEnvironments.first();
@@ -273,11 +316,6 @@ export class ResourcesView extends View {
       await environment.click();
     }
     await expect(environment).toHaveAttribute("aria-expanded", "true");
-  }
-
-  /** Locate a direct connection item in the view by its label. */
-  async getDirectConnection(label: string | RegExp): Promise<Locator> {
-    return await this.getEnvironment(ConnectionType.Direct, label);
   }
 
   /**
