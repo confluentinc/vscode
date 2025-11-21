@@ -3,7 +3,7 @@ import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testReso
 import type { RawFlinkAIAgentRow } from "./flinkAiAgentsQuery";
 import { getFlinkAIAgentsQuery, transformRawFlinkAIAgentRows } from "./flinkAiAgentsQuery";
 
-describe("flinkAiAgentsQuery", () => {
+describe("loaders/utils/flinkAiAgentsQuery", () => {
   describe("getFlinkAIAgentsQuery", () => {
     it("should generate SHOW AGENTS query for a database", () => {
       const query = getFlinkAIAgentsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
