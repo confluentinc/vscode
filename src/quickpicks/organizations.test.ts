@@ -47,6 +47,7 @@ describe("quickpicks/organizations.ts organizationQuickPick()", function () {
 
     sinon.assert.calledOnce(showQuickPickStub);
     const options = showQuickPickStub.firstCall.args[1];
+    assert.strictEqual(options.title, "Select an organization");
     assert.strictEqual(options.placeHolder, "Select an organization");
     assert.strictEqual(options.ignoreFocusOut, true);
   });

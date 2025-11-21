@@ -45,7 +45,7 @@ export async function schemaRegistryQuickPickWithViewProgress(): Promise<
  */
 export async function schemaRegistryQuickPick(
   defaultRegistryId: string | undefined = undefined,
-  title?: string,
+  title: string = "Select Schema Registry",
 ): Promise<SchemaRegistry | undefined> {
   const environments: Environment[] = [];
 
