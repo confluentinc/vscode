@@ -14,7 +14,7 @@ Confluent Cloud products and Apache Kafka-compatible clusters within VS Code.
 ### Build & Development
 
 ```bash
-npx gulp build          # Development build
+npx gulp build          # Development build (same as "Build for development")
 npx gulp build -w       # Watch mode
 npx gulp check          # TypeScript type checking
 npx gulp lint           # ESLint (add -f for auto-fix)
@@ -25,7 +25,7 @@ npx gulp lint           # ESLint (add -f for auto-fix)
 ```bash
 npx gulp test                         # Unit tests (Mocha/Sinon)
 npx gulp test -t "test name"          # Run specific test(s) by name
-npx gulp functional                   # Webview tests (Playwright)
+npx gulp functional                   # Webview tests (Playwright) - same as functional tests
 npx gulp e2e                          # End-to-end tests (Playwright)
 npx gulp test --coverage              # Generate Istanbul coverage reports
 ```
@@ -40,8 +40,8 @@ npx gulp format         # Format code with Prettier
 ### API Client Generation
 
 ```bash
-npx gulp apigen         # Generate TypeScript clients from OpenAPI specs
-npx gql-tada generate output  # Regenerate GraphQL types
+npx gulp apigen                       # Generate TypeScript clients from OpenAPI specs
+npx gql-tada generate output          # Regenerate GraphQL types from src/graphql/sidecar.graphql
 ```
 
 ### Packaging
@@ -68,7 +68,8 @@ discard. This enables automatic reconnection and proper resource management.
 
 ### View Provider Architecture
 
-Tree views extend `BaseViewProvider` or `ParentedBaseViewProvider`:
+Tree views extend `BaseViewProvider` or `ParentedBaseViewProvider` (which also extend
+`RefreshableTreeViewProvider`):
 
 - **BaseViewProvider** (`src/viewProviders/baseModels/base.ts`): Abstract base for all tree views
   with search/filter capability
@@ -107,7 +108,7 @@ ResourceLoader (abstract base at src/loaders/resourceLoader.ts)
 1. Update the OpenAPI spec in `src/clients/sidecar-openapi-specs/`
 2. Run `npx gulp apigen`
 3. Commit both the spec changes AND a `.patch` file to `src/clients/sidecar-openapi-specs/patches/`
-   for reproducibility
+   so subsequent generations apply cleanly
 
 **GraphQL**: Uses `gql.tada` for type-safe queries. Schema at `src/graphql/sidecar.graphql`
 generates `src/graphql/sidecarGraphQL.d.ts` (auto-generated, do not edit).
@@ -156,7 +157,7 @@ generates `src/graphql/sidecarGraphQL.d.ts` (auto-generated, do not edit).
 ### 1. Disposable Resource Management (MANDATORY)
 
 - **ALL** classes with event listeners MUST implement `vscode.Disposable`
-- **ALWAYS** call `.dispose()` on resources when done
+- **ALWAYS** call `.dispose()` on resources when done - especially `.event()` listeners
 - **USE** `DisposableCollection` base class (`src/utils/disposables.ts`) to manage multiple
   disposables automatically
 - **PATTERN**: Store disposables from constructors, dispose in class `.dispose()` method
@@ -167,10 +168,12 @@ Example:
 class MyClass extends DisposableCollection {
   constructor() {
     super();
+    // DisposableCollection provides this.disposables array
     this.disposables.push(
       vscode.workspace.onDidChangeConfiguration(...)
     );
   }
+  // .dispose() is automatically handled by DisposableCollection
 }
 ```
 
@@ -190,7 +193,7 @@ class MyClass extends DisposableCollection {
 
 ## Error Handling
 
-- **Logging**: Always use `logError()` utility for consistent error capture
+- **Logging**: Always use `logError()` utility (`src/utils/errors.ts`) for consistent error capture
 - **User-facing**: Use `showErrorNotificationWithButtons()` with "Open Logs" and "File Issue"
   actions
 - **Messages**: Write actionable error messages explaining what happened, why, and how to resolve
@@ -202,6 +205,8 @@ class MyClass extends DisposableCollection {
 - Never modify `src/clients/` directly - update OpenAPI specs and run `npx gulp apigen`
 - Never modify `src/graphql/sidecarGraphQL.d.ts` - update schema and run
   `npx gql-tada generate output`
+- When modifying OpenAPI specs, commit both the spec changes AND a `.patch` file to
+  `src/clients/sidecar-openapi-specs/patches/` for reproducible generation
 
 ### Sidecar Pattern
 
@@ -209,28 +214,43 @@ class MyClass extends DisposableCollection {
 - Support automatic reconnection by not holding handles long-term
 - Always `await getSidecar()` for each operation
 
-### Over-Engineering
+### Comment Preservation
 
-- Don't add features beyond what's requested
-- Don't add error handling for scenarios that can't happen
-- Don't create abstractions for one-time operations
-- Keep solutions simple and focused on current requirements
+- **NEVER delete existing comments** unless they contain significant errors or gaps
+- Comments provide valuable context about business logic, architectural decisions, and edge cases
+- If code appears self-explanatory, comments may explain _why_ rather than _what_
+- When refactoring, enhance comments rather than removing them
 
-### Backwards Compatibility
+### Code Style
 
-- Delete unused code completely - no `_vars`, re-exports, or `// removed` comments
-- Make direct changes rather than adding compatibility shims
+- **Import statements**: Both `import type { }` and `import { }` are acceptable - TypeScript handles
+  them correctly
+- Don't nitpick style issues that don't affect functionality
+- Let automated tooling (ESLint, Prettier) handle formatting consistency
 
 ## Connection Types
 
-The extension supports three connection types:
+The extension supports three connection types, each with different resource loading strategies:
 
 1. **CCLOUD**: Confluent Cloud via OAuth authentication
-2. **LOCAL**: Local Docker-based Kafka and Schema Registry
-3. **DIRECT**: Direct TCP connections to custom Kafka/SR endpoints
 
-Sign-in/sign-out actions are specific to CCLOUD connections. LOCAL connections use the Docker engine
-API. DIRECT connections are configured manually.
+   - Uses `CCloudResourceLoader` with GraphQL queries to the sidecar
+   - Sign-in/sign-out actions manage OAuth tokens
+   - Access to Environments, Kafka clusters, Schema registries, Flink resources
+
+2. **LOCAL**: Local Docker-based Kafka and Schema Registry
+
+   - Uses `LocalResourceLoader` with Docker engine API
+   - Automatically detects local Kafka/SR containers
+   - No authentication required
+
+3. **DIRECT**: Direct TCP connections to custom Kafka/SR endpoints
+   - Uses `DirectResourceLoader` with manual connection configuration
+   - Supports custom brokers and schema registry URLs
+   - Optional SASL authentication
+
+Each connection type has its own ResourceLoader implementation managing the specific connection
+details and API calls.
 
 ## Development Setup
 
@@ -292,11 +312,39 @@ Example: The connectToServer function marks clients as failed in `src/services/p
 
 ## PR Review Focus Areas
 
-- **Disposable Management**: Verify all event listeners are properly disposed
+- **Disposable Management**: Verify all event listeners are properly disposed via
+  `DisposableCollection`
 - **Type Safety**: Ensure no `any` types and all interfaces are properly typed
 - **Single Responsibility**: Check classes/functions maintain focused purposes
 - **Sidecar Pattern**: Confirm proper use of short-lived `SidecarHandle` instances
-- **Testing**: Validate new functionality includes appropriate tests
-- **Error Handling**: Ensure consistent use of `logError()` and user-facing error messages
-- **Comments**: Never delete existing comments unless they contain errors - enhance rather than
-  remove
+- **Testing Coverage**: Validate new functionality includes appropriate unit/E2E tests
+- **Error Handling**: Ensure consistent use of `logError()` and `showErrorNotificationWithButtons()`
+- **Comment Preservation**: Never delete existing comments unless they contain errors - enhance
+  rather than remove
+- **OpenAPI Changes**: Check that spec changes include corresponding patches in
+  `src/clients/sidecar-openapi-specs/patches/`
+- **Extension Settings**: Verify settings follow the `ExtensionSetting<T>` pattern
+- **Webview Patterns**: Validate webview implementations use established template binding patterns
+
+## Local Development with Claude Code
+
+When working with Claude Code during development:
+
+### Code Generation Requests
+
+- Reference existing patterns from the codebase (ResourceLoader, ViewProvider, DisposableCollection)
+- Specify which connection type (CCloud, Direct, Local) when working with Kafka resources
+- Request examples that follow the established testing patterns (Mocha/Sinon for units, Playwright
+  for E2E)
+- Ask for proper disposable management in any new classes or event listeners
+- Request TypeScript interfaces for complex data structures rather than inline types
+
+### Refactoring Assistance
+
+- Preserve all existing comments when refactoring code
+- Maintain the established architectural patterns (sidecar communication, view providers, resource
+  loaders)
+- Ensure refactored code follows the three critical requirements (disposables, type safety, single
+  responsibility)
+- Request TypeScript interfaces for complex data structures rather than inline types
+- Don't introduce unnecessary abstractions or backwards compatibility shims
