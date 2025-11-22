@@ -270,9 +270,9 @@ export class ResourcesView extends View {
           // we've only seen this fail when VS Code fails to render the "connected" status update
           // for the CCloud connection, so try refreshing the connection once and re-checking
           console.warn(
-            `No CCloud environments found in Resources view; refreshing CCloud connection and retrying...`,
+            `No CCloud environments found in Resources view; refreshing connections and retrying...`,
           );
-          await this.refreshCCloudConnection();
+          await this.clickRefresh();
           await expect(this.ccloudEnvironments).not.toHaveCount(0);
         }
         environment = label
