@@ -1543,7 +1543,7 @@
         },
         {
           "command": "confluent.resources.refresh",
-          "when": "false"
+          "when": "true"
         },
         {
           "command": "confluent.resources.refreshConnection",
