@@ -1,7 +1,8 @@
 import type { ElectronApplication, Page, TestInfo } from "@playwright/test";
 import { _electron as electron, expect, test as testBase } from "@playwright/test";
+import archiver from "archiver";
 import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
-import { existsSync, mkdtempSync, readFileSync } from "fs";
+import { createWriteStream, existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
 import type { DirectConnectionOptions, LocalConnectionOptions } from "./connectionTypes";
@@ -312,6 +313,8 @@ async function globalAfterEach(
   // fail tests (that would otherwise pass) if either time out since they're nice-to-haves
   await saveExtensionLogs(testTempDir, electronApp, page, testInfo);
   await saveSidecarLogs(testTempDir, electronApp, page, testInfo);
+  // also include any additional logs from the VS Code window itself (main, window, extension host, etc)
+  await saveVSCodeWindowLogs(testTempDir, testInfo);
 }
 
 async function saveExtensionLogs(
@@ -374,5 +377,38 @@ async function saveSidecarLogs(
     });
   } catch (error) {
     console.error("Error saving sidecar logs:", error);
+  }
+}
+
+async function saveVSCodeWindowLogs(testTempDir: string, testInfo: TestInfo): Promise<void> {
+  // this will end up looking like `${testTempDir}/vscode-test-<hash>/logs/YYYYmmddTHHMMSS/window1/`
+  // which then has `exthost/` and `output_YYYYmmddTHHMMSS/` subdirectories
+  const logsDir = path.join(testTempDir, "logs");
+  if (!existsSync(logsDir)) {
+    console.warn("VS Code logs directory does not exist:", logsDir);
+    return;
+  }
+
+  const zipFileName = "vscode-window-logs.zip";
+  try {
+    const zipPath = path.join(testTempDir, zipFileName);
+    const output = createWriteStream(zipPath);
+    const archive = archiver("zip", { zlib: { level: 9 } });
+
+    // wait for the archive to finish
+    await new Promise<void>((resolve, reject) => {
+      output.on("close", () => resolve());
+      archive.on("error", (err) => reject(err));
+      archive.pipe(output);
+      archive.directory(logsDir, false);
+      archive.finalize();
+    });
+
+    await testInfo.attach(zipFileName, {
+      path: zipPath,
+      contentType: "application/zip",
+    });
+  } catch (error) {
+    console.error("Error zipping VS Code logs directory:", error);
   }
 }
