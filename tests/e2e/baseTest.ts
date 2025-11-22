@@ -308,40 +308,61 @@ async function globalAfterEach(
   page: Page,
   testInfo: TestInfo,
 ): Promise<void> {
-  const notificationArea = new NotificationArea(page);
+  // try to save extension and sidecar logs and attach them to the results for each test, but don't
+  // fail tests (that would otherwise pass) if either time out since they're nice-to-haves
+  await saveExtensionLogs(testTempDir, electronApp, page, testInfo);
+  await saveSidecarLogs(testTempDir, electronApp, page, testInfo);
+}
 
-  // store the extension logs
+async function saveExtensionLogs(
+  testTempDir: string,
+  electronApp: ElectronApplication,
+  page: Page,
+  testInfo: TestInfo,
+): Promise<void> {
   const extensionLogPath = path.join(testTempDir, "vscode-confluent.log");
   await stubDialog(electronApp, "showSaveDialog", {
     filePath: extensionLogPath,
   });
   await executeVSCodeCommand(page, "confluent.support.saveLogs");
-  // wait for info notification indicating extension log file was saved
-  const extLogSuccess = notificationArea.infoNotifications.filter({
-    hasText: "Confluent extension log file saved successfully.",
-  });
-  await expect(extLogSuccess).toHaveCount(1, { timeout: 5000 });
-  // attach the extension log to the test results
-  await testInfo.attach("vscode-confluent.log", {
-    path: extensionLogPath,
-    contentType: "text/plain",
-  });
 
-  // store the (formatted) sidecar logs
+  try {
+    // wait for info notification indicating extension log file was saved
+    const notificationArea = new NotificationArea(page);
+    const extLogSuccess = notificationArea.infoNotifications.filter({
+      hasText: "Confluent extension log file saved successfully.",
+    });
+    await expect(extLogSuccess).toHaveCount(1, { timeout: 5000 });
+    // attach the extension log to the test results
+    await testInfo.attach("vscode-confluent.log", {
+      path: extensionLogPath,
+      contentType: "text/plain",
+    });
+  } catch (error) {
+    console.error("Error saving extension logs:", error);
+  }
+}
+
+async function saveSidecarLogs(
+  testTempDir: string,
+  electronApp: ElectronApplication,
+  page: Page,
+  testInfo: TestInfo,
+): Promise<void> {
   const sidecarLogPath = path.join(testTempDir, "vscode-confluent-sidecar.log");
   await stubDialog(electronApp, "showSaveDialog", {
     filePath: sidecarLogPath,
   });
   await executeVSCodeCommand(page, "confluent.support.saveSidecarLogs");
+
   // select the formatted log option in the quick pick
   const formatQuickPick = new Quickpick(page);
   await expect(formatQuickPick.locator).toBeVisible({ timeout: 5000 });
   await formatQuickPick.selectItemByText("Human-readable format");
-  // NOTE: this occasionally times out on macOS or Windows for unknown reasons even after clearing
-  // any existing sidecar log file, but we don't want this to count as a test failure and these logs
-  // are more nice-to-have
+
   try {
     // wait for info notification indicating sidecar log file was saved
+    const notificationArea = new NotificationArea(page);
     const sidecarLogSuccess = notificationArea.infoNotifications.filter({
       hasText: "Confluent extension sidecar log file saved successfully.",
     });
@@ -352,6 +373,6 @@ async function globalAfterEach(
       contentType: "text/plain",
     });
   } catch (error) {
-    console.warn("Error saving sidecar logs:", error);
+    console.error("Error saving sidecar logs:", error);
   }
 }
