@@ -550,6 +550,12 @@
         "category": "Confluent: Kafka Clusters"
       },
       {
+        "command": "confluent.resources.refresh",
+        "icon": "$(sync)",
+        "title": "Refresh",
+        "category": "Confluent: Resources"
+      },
+      {
         "command": "confluent.resources.refreshConnection",
         "icon": "$(sync)",
         "title": "Refresh Connection",
@@ -1536,6 +1542,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.resources.refresh",
+          "when": "true"
+        },
+        {
           "command": "confluent.resources.refreshConnection",
           "when": "false"
         },
@@ -1816,6 +1826,11 @@
           "command": "confluent.connections.direct",
           "when": "view == confluent-resources",
           "group": "navigation@2"
+        },
+        {
+          "command": "confluent.resources.refresh",
+          "when": "view == confluent-resources",
+          "group": "navigation@3"
         },
         {
           "command": "confluent.schemas.search",
