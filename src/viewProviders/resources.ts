@@ -751,7 +751,6 @@ export class ResourceViewProvider
   }
 
   getTreeItem(element: ResourceViewProviderData): TreeItem {
-    this.logger.debug("getTreeItem", JSON.stringify(element));
     let treeItem: TreeItem;
     if (element instanceof ConnectionRow) {
       treeItem = element.getTreeItem();
@@ -778,7 +777,6 @@ export class ResourceViewProvider
       updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
     }
 
-    this.logger.debug("returning tree item", JSON.stringify(treeItem));
     return treeItem;
   }
 
