@@ -263,9 +263,10 @@ export class ResourcesView extends View {
       case ConnectionType.Ccloud: {
         try {
           // shorter timeout to allow refresh/retry below if needed
-          await expect(this.ccloudEnvironments, {
-            message: "No CCloud environments visible in the Resources view",
-          }).not.toHaveCount(0, { timeout: 3000 });
+          await expect(this.ccloudEnvironments, "should see CCloud environment(s)").not.toHaveCount(
+            0,
+            { timeout: 3000 },
+          );
         } catch (error) {
           // we've only seen this fail when VS Code fails to render the "connected" status update
           // for the CCloud connection, so try refreshing the connection once and re-checking
