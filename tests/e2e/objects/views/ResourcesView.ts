@@ -272,6 +272,7 @@ export class ResourcesView extends View {
           // for the CCloud connection, so try refreshing the connection once and re-checking
           console.warn(
             `No CCloud environments found in Resources view; refreshing connections and retrying...`,
+            { error },
           );
           await this.clickRefresh();
           await expect(this.ccloudEnvironments).not.toHaveCount(0);
