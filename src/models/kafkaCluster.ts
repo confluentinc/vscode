@@ -192,7 +192,12 @@ export class KafkaClusterTreeItem extends TreeItem {
     this.contextValue = contextParts.join("-"); // e.g. "ccloud-flinkable-kafka-cluster" or "direct-kafka-cluster"
 
     // user-facing properties
-    this.description = `${this.resource.id}`;
+    if (this.resource.connectionType === ConnectionType.Ccloud) {
+      const ccloudResource = this.resource as CCloudKafkaCluster;
+      this.description = `${ccloudResource.provider}/${ccloudResource.region}`;
+    } else {
+      this.description = this.resource.id;
+    }
     this.iconPath = new ThemeIcon(this.resource.iconName);
     this.tooltip = createKafkaClusterTooltip(this.resource);
 
