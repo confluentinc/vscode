@@ -256,7 +256,6 @@ export class FlinkDatabaseView extends View {
    * @param artifactName - The name of the artifact to delete
    */
   async deleteFlinkArtifact(artifactName: string): Promise<void> {
-    // Locate the artifact item in the Flink Artifacts view
     const artifactLocator = this.artifacts.filter({ hasText: artifactName });
     await expect(artifactLocator).toHaveCount(1);
     const artifactItem = new ViewItem(this.page, artifactLocator.first());
