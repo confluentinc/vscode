@@ -27,71 +27,64 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     "udfs-simple.jar",
   );
 
-  test("should upload Flink Artifact when cluster selected from Artifacts view button", async ({
-    page,
-    electronApp,
-  }) => {
-    const artifactsView = new FlinkDatabaseView(page);
-    await artifactsView.loadArtifacts(SelectFlinkDatabase.FromArtifactsViewButton);
-    await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
-    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
-      electronApp,
-      artifactPath,
-      false,
-    );
+  const entrypoints = [
+    {
+      entrypoint: SelectFlinkDatabase.FromArtifactsViewButton,
+      testName: "should upload Flink Artifact when cluster selected from Artifacts view button",
+    },
+    {
+      entrypoint: SelectFlinkDatabase.DatabaseFromResourcesView,
+      testName: "should upload Flink Artifact when cluster selected from the Resources view",
+    },
+  ];
 
-    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
+  for (const config of entrypoints) {
+    test(config.testName, async ({ page, electronApp }) => {
+      const artifactsView = new FlinkDatabaseView(page);
+      await artifactsView.loadArtifacts(config.entrypoint);
+      await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
+      const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
+        electronApp,
+        artifactPath,
+        false,
+      );
 
-    // Clean up: delete the uploaded artifact using the correct name
-    await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
+      await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
+        1,
+      );
 
-    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(0);
-  });
-
-  test("should upload Flink Artifact when cluster selected from the Resources view", async ({
-    page,
-    electronApp,
-  }) => {
-    const artifactsView = new FlinkDatabaseView(page);
-    await artifactsView.loadArtifacts(SelectFlinkDatabase.DatabaseFromResourcesView);
-    await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
-    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
-      electronApp,
-      artifactPath,
-      false,
-    );
-
-    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
-
-    // Clean up: delete the uploaded artifact using the correct name
-    await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
-
-    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(0);
-  });
+      await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
+      await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
+        0,
+      );
+    });
+  }
 
   test("should upload Flink Artifact when compute pool selected from the Resources view", async ({
     page,
     electronApp,
   }) => {
     const artifactsView = new FlinkDatabaseView(page);
-    await artifactsView.ensureExpanded(); // Ensure the view is expanded
 
+    await artifactsView.ensureExpanded();
     await artifactsView.loadArtifacts(SelectFlinkDatabase.ComputePoolFromResourcesView);
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
       electronApp,
       artifactPath,
       true,
     );
+
+    // Get the cluster label from the currently selected Flink database view
+    const clusterLabel = await artifactsView.getCurrentKafkaClusterLabel();
+
     await artifactsView.clickSelectKafkaClusterAsFlinkDatabase();
-    await page.keyboard.type("azure");
+    await page.keyboard.type(clusterLabel || "azure"); // fallback to "azure" if undefined
     await page.keyboard.press("Enter");
     await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
-    // Wait for at least one artifact to be visible before checking for the specific one
-    await expect(artifactsView.artifacts.first()).toBeVisible();
 
+    await expect(artifactsView.artifacts.first()).toBeVisible();
     await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
 
-    // Clean up: delete the uploaded artifact using the correct name
     await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
 
     await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(0);

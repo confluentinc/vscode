@@ -148,6 +148,21 @@ export class FlinkDatabaseView extends View {
   }
 
   /**
+   * Get the label of the currently selected Kafka cluster from the view's description.
+   * The description typically contains the cluster label when a Flink database is selected.
+   * @returns The cluster label, or undefined if no cluster is selected
+   */
+  async getCurrentKafkaClusterLabel(): Promise<string | undefined> {
+    // The view description contains the cluster label when a database is selected
+    const description = this.locator.locator(".monaco-icon-label-description-container");
+    if (await description.isVisible()) {
+      const text = await description.textContent();
+      return text?.trim() || undefined;
+    }
+    return undefined;
+  }
+
+  /**
    * Switches the view mode in the Artifacts view to the specified Flink resource.
    *
    * Clicks the "Switch View Mode" nav action in the view title area, opens the context menu,
