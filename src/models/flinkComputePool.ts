@@ -71,7 +71,13 @@ export class FlinkComputePoolTreeItem extends TreeItem {
 
     // user-facing properties
     this.iconPath = new ThemeIcon(resource.iconName);
-    this.description = resource.id;
+    if (this.resource.connectionType === ConnectionType.Ccloud) {
+      const ccloudResource = this.resource as CCloudFlinkComputePool;
+      this.description = `${ccloudResource.provider}/${ccloudResource.region}`;
+    } else {
+      // this won't happen until we support non-CCloud pools
+      this.description = this.resource.id;
+    }
 
     this.tooltip = createFlinkComputePoolTooltip(resource);
 
