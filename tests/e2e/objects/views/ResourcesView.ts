@@ -269,7 +269,7 @@ export class ResourcesView extends View {
           );
         } catch (error) {
           // we've only seen this fail when VS Code fails to render the "connected" status update
-          // for the CCloud connection, so try refreshing the connection once and re-checking
+          // for the CCloud connection, so try refreshing the view once and re-checking
           console.warn(
             `No CCloud environments found in Resources view; refreshing connections and retrying...`,
             { error },
