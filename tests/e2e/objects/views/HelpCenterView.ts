@@ -2,12 +2,12 @@ import type { Page } from "@playwright/test";
 import { View } from "./View";
 
 /**
- * Object representing the "Support"
+ * Object representing the "Help Center"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  */
-export class SupportView extends View {
+export class HelpCenterView extends View {
   constructor(page: Page) {
-    super(page, /Support.*/);
+    super(page, /Help Center.*/);
   }
 }

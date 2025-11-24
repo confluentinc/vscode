@@ -9,8 +9,8 @@ import { URI_SCHEME } from "../constants";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { InputBox } from "../objects/quickInputs/InputBox";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
+import { HelpCenterView } from "../objects/views/HelpCenterView";
 import { ResourcesView } from "../objects/views/ResourcesView";
-import { SupportView } from "../objects/views/SupportView";
 import {
   DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
   SelectKafkaCluster,
@@ -121,11 +121,12 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
   });
 
   for (const [templateDisplayName, templateName] of templates) {
-    test(`should apply ${templateDisplayName} template from Support view`, async ({ page }) => {
-      // Given we navigate to the Support view
-      const supportView = new SupportView(page);
+    test(`should apply ${templateDisplayName} template from Help Center view`, async ({ page }) => {
+      // Given we navigate to the Help Center view
+      const helpCenterView = new HelpCenterView(page);
+      await expect(helpCenterView.locator).toBeVisible();
       // and we start the generate project flow
-      await supportView.clickTreeItem("Generate Project from Template");
+      await helpCenterView.clickTreeItem("Generate Project from Template");
       // and we choose a project template from the quickpick
       const projectQuickpick = new Quickpick(page);
       await projectQuickpick.selectItemByText(templateDisplayName);
