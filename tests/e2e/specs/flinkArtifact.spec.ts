@@ -68,6 +68,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
     await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(0);
   });
+
   test("should upload Flink Artifact when compute pool selected from the Resources view", async ({
     page,
     electronApp,
@@ -82,7 +83,8 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       true,
     );
     await artifactsView.clickSelectKafkaClusterAsFlinkDatabase();
-    // progress--- we need to actually hit enter here
+    await page.keyboard.type("azure");
+    await page.keyboard.press("Enter");
     await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
     // Wait for at least one artifact to be visible before checking for the specific one
     await expect(artifactsView.artifacts.first()).toBeVisible();

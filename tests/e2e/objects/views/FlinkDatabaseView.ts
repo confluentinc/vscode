@@ -140,6 +140,16 @@ export class FlinkDatabaseView extends View {
   }
 
   /**
+   * Gets the name of the currently selected Flink database from the view title
+   */
+  async getSelectedDatabaseName(): Promise<string> {
+    // Assuming the database name is shown in a specific element - adjust selector as needed
+    const databaseElement = this.page.locator('[aria-label*="database"]'); // Adjust selector based on actual UI
+    await expect(databaseElement).toBeVisible();
+    return (await databaseElement.textContent()) ?? "";
+  }
+
+  /**
    * Click the "Select Kafka Cluster" nav action in the view title area, which will show a
    * quickpick with a list of Kafka cluster items.
    */
