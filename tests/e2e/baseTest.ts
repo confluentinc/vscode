@@ -137,18 +137,6 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     await use(electronApp);
 
-    if (trace.toString().includes("on")) {
-      const tracePath = path.join(
-        testInfo.outputDir,
-        `trace-${testInfo.title.replace(/\s+/g, "_")}.zip`,
-      );
-      await electronApp.context().tracing.stop({ path: tracePath });
-      await testInfo.attach("trace", {
-        path: tracePath,
-        contentType: "application/zip",
-      });
-    }
-
     // try to close the Electron app, but don't block test teardown if it stalls
     const electronShutdownTimeout = 3000;
     try {
