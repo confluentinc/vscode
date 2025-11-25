@@ -69,8 +69,18 @@
               </div>
             </template>
           </div>
-          <template data-if="this.statementMeta().failed && this.statementMeta().detail">
+          <template
+            data-if="this.statementMeta().failed && this.statementMeta().detail && !this.isBannerDismissed('failed-detail')"
+          >
             <div class="reportable-box red">
+              <button
+                class="reportable-close-button"
+                aria-label="Dismiss"
+                title="Dismiss"
+                data-on-click="this.dismissBanner('failed-detail')"
+              >
+                <span class="codicon codicon-close"></span>
+              </button>
               <div class="error-heading">
                 <span class="codicon codicon-error"></span>
                 Something went wrong.
@@ -82,8 +92,18 @@
               ></div>
             </div>
           </template>
-          <template data-if="!this.statementMeta().failed && this.statementMeta().detail">
+          <template
+            data-if="!this.statementMeta().failed && this.statementMeta().detail && !this.isBannerDismissed('info-detail')"
+          >
             <div class="reportable-box blue">
+              <button
+                class="reportable-close-button"
+                aria-label="Dismiss"
+                title="Dismiss"
+                data-on-click="this.dismissBanner('info-detail')"
+              >
+                <span class="codicon codicon-close"></span>
+              </button>
               <div class="error-heading">
                 <span class="codicon codicon-info"></span>
                 Info
@@ -551,10 +571,53 @@
       }
 
       .reportable-box {
+        position: relative;
         padding: 12px;
         border-radius: 6px;
         margin-top: 0.5rem;
         margin-bottom: 0.5rem;
+      }
+
+      .reportable-close-button {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 3px;
+        opacity: 0.7;
+        transition:
+          opacity 0.2s,
+          background-color 0.2s;
+      }
+
+      .reportable-close-button:hover {
+        opacity: 1;
+      }
+
+      .reportable-box.red .reportable-close-button {
+        color: #b71c1c;
+      }
+
+      .reportable-box.red .reportable-close-button:hover {
+        background-color: rgba(229, 57, 53, 0.1);
+      }
+
+      .reportable-box.blue .reportable-close-button {
+        color: #0d47a1;
+      }
+
+      .reportable-box.blue .reportable-close-button:hover {
+        background-color: rgba(25, 118, 210, 0.1);
+      }
+
+      .reportable-close-button .codicon {
+        font-size: 16px;
       }
 
       .reportable-box.red {
