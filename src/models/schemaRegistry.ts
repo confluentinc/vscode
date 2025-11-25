@@ -105,7 +105,12 @@ export class SchemaRegistryTreeItem extends TreeItem {
     this.contextValue = `${this.resource.connectionType.toLowerCase()}-schema-registry`;
 
     // user-facing properties
-    this.description = this.resource.id;
+    if (this.resource.connectionType === ConnectionType.Ccloud) {
+      const ccloudResource = this.resource as CCloudSchemaRegistry;
+      this.description = `${ccloudResource.provider}/${ccloudResource.region}`;
+    } else {
+      this.description = this.resource.id;
+    }
     this.iconPath = new ThemeIcon(this.resource.iconName);
     this.tooltip = createSchemaRegistryTooltip(this.resource);
 

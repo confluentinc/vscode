@@ -39,7 +39,7 @@ describe("models/flinkComputePool.ts FlinkComputePoolTreeItem", () => {
     );
     // user-facing properties
     assert.strictEqual(treeItem.label, pool.name);
-    assert.strictEqual(treeItem.description, pool.id);
+    assert.strictEqual(treeItem.description, `${pool.provider}/${pool.region}`);
     assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.None);
     assert.deepStrictEqual(treeItem.iconPath, new ThemeIcon(IconNames.FLINK_COMPUTE_POOL));
   });
