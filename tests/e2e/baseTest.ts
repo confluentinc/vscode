@@ -359,7 +359,7 @@ async function saveExtensionLogs(
       contentType: "text/plain",
     });
   } catch (error) {
-    console.error("Error saving extension logs:", error);
+    console.error(`Error saving extension logs: ${error}`);
   }
 }
 
@@ -393,7 +393,7 @@ async function saveSidecarLogs(
       contentType: "text/plain",
     });
   } catch (error) {
-    console.error("Error saving sidecar logs:", error);
+    console.error(`Error saving sidecar logs: ${error}`);
   }
 }
 
@@ -426,6 +426,6 @@ async function saveVSCodeWindowLogs(testTempDir: string, testInfo: TestInfo): Pr
       contentType: "application/zip",
     });
   } catch (error) {
-    console.error("Error zipping VS Code logs directory:", error);
+    console.error(`Error zipping VS Code logs directory: ${error}`);
   }
 }
