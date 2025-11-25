@@ -149,7 +149,24 @@ export const test = testBase.extend<VSCodeFixtures>({
       });
     }
 
-    await electronApp.context().close();
+    // try to close the Electron app, but don't block test teardown if it stalls
+    const electronShutdownTimeout = 3000;
+    try {
+      await Promise.race([
+        electronApp.context().close(),
+        new Promise((_, reject) =>
+          setTimeout(
+            () =>
+              reject(new Error(`context.close() timeout after ${electronShutdownTimeout / 1000}s`)),
+            electronShutdownTimeout,
+          ),
+        ),
+      ]);
+    } catch (error) {
+      console.warn(`Error closing electron context: ${error}`);
+    }
+
+    console.log("electronApp fixture teardown completed");
   },
 
   page: async ({ electronApp, testTempDir }, use, testInfo) => {
@@ -305,12 +322,16 @@ async function globalAfterEach(
   page: Page,
   testInfo: TestInfo,
 ): Promise<void> {
+  console.log("page globalAfterEach started");
   // try to save extension and sidecar logs and attach them to the results for each test, but don't
   // fail tests (that would otherwise pass) if either time out since they're nice-to-haves
   await saveExtensionLogs(testTempDir, electronApp, page, testInfo);
   await saveSidecarLogs(testTempDir, electronApp, page, testInfo);
   // also include any additional logs from the VS Code window itself (main, window, extension host, etc)
   await saveVSCodeWindowLogs(testTempDir, testInfo);
+
+  await page.close();
+  console.log("page globalAfterEach completed");
 }
 
 async function saveExtensionLogs(
