@@ -31,6 +31,7 @@ export type MessageType =
   | "GetSchema"
   | "GetStreamState"
   | "GetSearchQuery"
+  | "GetSearchSource"
   | "GetStreamError"
   | "PreviewResult"
   | "PreviewAllResults"
@@ -46,6 +47,7 @@ export type MessageType =
 export type PostFunction = {
   (type: "GetStreamState", body: { timestamp?: number }): Promise<StreamState>;
   (type: "GetSearchQuery", body: { timestamp?: number }): Promise<string>;
+  (type: "GetSearchSource", body: { timestamp?: number }): Promise<string | null>;
   (type: "GetStreamError", body: { timestamp?: number }): Promise<{ message: string } | null>;
   (
     type: "GetResults",
@@ -470,6 +472,15 @@ export class FlinkStatementResultsManager {
       }
       case "GetSearchQuery": {
         return this._searchQuery();
+      }
+      case "GetSearchSource": {
+        const query = this._searchQuery();
+        if (!query || query.length === 0) {
+          return null;
+        }
+        // Escape special regex characters to treat the search as a literal string
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return escaped;
       }
       case "GetStatementMeta": {
         return {
