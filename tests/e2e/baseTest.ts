@@ -137,23 +137,19 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     await use(electronApp);
 
-    try {
-      // shorten grace period for shutdown to avoid hanging the entire test run
-      await Promise.race([
-        electronApp.close(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("electronApp.close() timeout after 10s")), 10000),
-        ),
-      ]);
-    } catch (error) {
-      console.warn("Error closing electron app:", error);
-      // force-kill if needed
-      try {
-        await electronApp.context().close();
-      } catch (contextError) {
-        console.warn("Error closing electron context:", contextError);
-      }
+    if (trace.toString().includes("on")) {
+      const tracePath = path.join(
+        testInfo.outputDir,
+        `trace-${testInfo.title.replace(/\s+/g, "_")}.zip`,
+      );
+      await electronApp.context().tracing.stop({ path: tracePath });
+      await testInfo.attach("trace", {
+        path: tracePath,
+        contentType: "application/zip",
+      });
     }
+
+    await electronApp.context().close();
   },
 
   page: async ({ electronApp, testTempDir }, use, testInfo) => {
