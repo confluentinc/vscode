@@ -1,6 +1,7 @@
 import type { ElectronApplication, Page, TestInfo } from "@playwright/test";
 import { _electron as electron, expect, test as testBase } from "@playwright/test";
 import archiver from "archiver";
+import { randomUUID } from "crypto";
 import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
 import { createWriteStream, existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
@@ -319,16 +320,17 @@ export const test = testBase.extend<VSCodeFixtures>({
       SelectKafkaCluster.FromResourcesView,
       topicConfig.clusterLabel,
     );
-    await topicsView.createTopic(topicConfig.name, numPartitions, replicationFactor);
+    const topicName = `${topicConfig.name}-${randomUUID()}`;
+    await topicsView.createTopic(topicName, numPartitions, replicationFactor);
 
-    await use(topicConfig.name);
+    await use(topicName);
 
     // teardown: delete the topic
     // (explicitly make sure the sidebar is open and we reload the topics view in the event a test
     // navigated away to a new window or sidebar)
     await openConfluentSidebar(page);
     await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
-    await topicsView.deleteTopic(topicConfig.name);
+    await topicsView.deleteTopic(topicName);
   },
 });
 
