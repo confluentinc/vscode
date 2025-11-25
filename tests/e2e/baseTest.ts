@@ -137,23 +137,36 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     await use(electronApp);
 
+    if (trace.toString().includes("on")) {
+      const tracePath = path.join(
+        testInfo.outputDir,
+        `trace-${testInfo.title.replace(/\s+/g, "_")}.zip`,
+      );
+      await electronApp.context().tracing.stop({ path: tracePath });
+      await testInfo.attach("trace", {
+        path: tracePath,
+        contentType: "application/zip",
+      });
+    }
+
+    // try to close the Electron app, but don't block test teardown if it stalls
+    const electronShutdownTimeout = 3000;
     try {
-      // shorten grace period for shutdown to avoid hanging the entire test run
       await Promise.race([
-        electronApp.close(),
+        electronApp.context().close(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("electronApp.close() timeout after 10s")), 10000),
+          setTimeout(
+            () =>
+              reject(new Error(`context.close() timeout after ${electronShutdownTimeout / 1000}s`)),
+            electronShutdownTimeout,
+          ),
         ),
       ]);
     } catch (error) {
-      console.warn("Error closing electron app:", error);
-      // force-kill if needed
-      try {
-        await electronApp.context().close();
-      } catch (contextError) {
-        console.warn("Error closing electron context:", contextError);
-      }
+      console.warn(`Error closing electron context: ${error}`);
     }
+
+    console.log("electronApp fixture teardown completed");
   },
 
   page: async ({ electronApp, testTempDir }, use, testInfo) => {
@@ -309,12 +322,16 @@ async function globalAfterEach(
   page: Page,
   testInfo: TestInfo,
 ): Promise<void> {
+  console.log("page globalAfterEach started");
   // try to save extension and sidecar logs and attach them to the results for each test, but don't
   // fail tests (that would otherwise pass) if either time out since they're nice-to-haves
   await saveExtensionLogs(testTempDir, electronApp, page, testInfo);
   await saveSidecarLogs(testTempDir, electronApp, page, testInfo);
   // also include any additional logs from the VS Code window itself (main, window, extension host, etc)
   await saveVSCodeWindowLogs(testTempDir, testInfo);
+
+  await page.close();
+  console.log("page globalAfterEach completed");
 }
 
 async function saveExtensionLogs(
@@ -342,7 +359,7 @@ async function saveExtensionLogs(
       contentType: "text/plain",
     });
   } catch (error) {
-    console.error("Error saving extension logs:", error);
+    console.error(`Error saving extension logs: ${error}`);
   }
 }
 
@@ -376,7 +393,7 @@ async function saveSidecarLogs(
       contentType: "text/plain",
     });
   } catch (error) {
-    console.error("Error saving sidecar logs:", error);
+    console.error(`Error saving sidecar logs: ${error}`);
   }
 }
 
@@ -409,6 +426,6 @@ async function saveVSCodeWindowLogs(testTempDir: string, testInfo: TestInfo): Pr
       contentType: "application/zip",
     });
   } catch (error) {
-    console.error("Error zipping VS Code logs directory:", error);
+    console.error(`Error zipping VS Code logs directory: ${error}`);
   }
 }
