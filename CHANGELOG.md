@@ -4,16 +4,20 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
-### Changed
-
-- Updated the "Support" view name to be "Help Center"
-
 ### Added
 
 - New view modes for the Flink Database view:
   - "Flink Database Relations" (now the default mode) displays tables, views, and their columns
   - "Flink AI" displays connections, tools, models, and agents
 - Show view definition text in a view's tooltip.
+
+### Changed
+
+- Updated the "Support" view name to be "Help Center"
+
+### Fixed
+
+- Fixed producing records with `null` values as keys/values to topics from CCloud connections ([#3065](https://github.com/confluentinc/vscode/issues/3065))
 
 ## 2.0.0
 
