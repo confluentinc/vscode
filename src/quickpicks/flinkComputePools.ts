@@ -149,6 +149,7 @@ export async function flinkComputePoolQuickPick(
   // prompt the user to select a Flink compute pool
   const chosenItem: QuickPickItemWithValue<CCloudFlinkComputePool> | undefined =
     await window.showQuickPick(items, {
+      title: "Select a Flink compute pool",
       placeHolder: "Select a Flink compute pool",
       ignoreFocusOut: true,
     });

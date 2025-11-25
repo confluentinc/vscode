@@ -78,6 +78,7 @@ export async function uriQuickpick(
   });
 
   const quickPick = window.createQuickPick();
+  quickPick.title = "Select a file";
   quickPick.ignoreFocusOut = true;
   quickPick.items = quickpickItems;
 

@@ -46,6 +46,7 @@ export async function ccloudEnvironmentQuickPick(
   const chosenEnvironment: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(
     environmentItems,
     {
+      title: "Select an environment",
       placeHolder: "Select an environment",
     },
   );
