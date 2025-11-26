@@ -101,7 +101,7 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     } else {
       errors.push(["Flink AI Agents", results.agents[0].reason as Error]);
     }
-
+    // the constraint of > 0 means empty results are not considered errors
     if (errors.length > 0) {
       for (const [resource, error] of errors) {
         logError(error, `Failed to load ${resource}`);
