@@ -176,6 +176,21 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
             "Failed to load 2 resources: Flink AI Tools, Flink AI Agents",
           );
         });
+
+        it(`should not display an error when Flink AI resources are empty(forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          stubbedLoader.getFlinkAIConnections.resolves([]);
+          stubbedLoader.getFlinkAIModels.resolves([]);
+          stubbedLoader.getFlinkAIAgents.resolves([]);
+          stubbedLoader.getFlinkAITools.resolves([]);
+
+          const children: FlinkAIViewModeData[] = await delegate.fetchChildren(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          assert.deepStrictEqual(children, []);
+          sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+        });
       }
     });
 
