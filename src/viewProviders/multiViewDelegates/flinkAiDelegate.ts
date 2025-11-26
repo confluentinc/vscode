@@ -1,4 +1,5 @@
 import type { TreeItem } from "vscode";
+import * as vscode from "vscode";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkAIAgent, FlinkAIAgentTreeItem } from "../../models/flinkAiAgent";
 import { FlinkAIConnection, FlinkAIConnectionTreeItem } from "../../models/flinkAiConnection";
@@ -45,22 +46,93 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
 
     return [connectionsContainer, toolsContainer, modelsContainer, agentsContainer];
   }
+  modelsError: Error | undefined;
+  agentsError: Error | undefined;
+  connectionsError: Error | undefined;
+  toolsError: Error | undefined;
+
+  async fetchFlinkAIModels(
+    loader: CCloudResourceLoader,
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<void> {
+    try {
+      this.models = await loader.getFlinkAIModels(database, forceDeepRefresh);
+    } catch (error) {
+      this.modelsError = error as Error;
+    }
+  }
+  async fetchFlinkAIConnections(
+    loader: CCloudResourceLoader,
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<void> {
+    try {
+      this.connections = await loader.getFlinkAIConnections(database, forceDeepRefresh);
+    } catch (error) {
+      this.modelsError = error as Error;
+    }
+  }
+  async fetchFlinkAITools(
+    loader: CCloudResourceLoader,
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<void> {
+    try {
+      this.tools = await loader.getFlinkAITools(database, forceDeepRefresh);
+    } catch (error) {
+      this.modelsError = error as Error;
+    }
+  }
+  async fetchFlinkAIAgents(
+    loader: CCloudResourceLoader,
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<void> {
+    try {
+      this.agents = await loader.getFlinkAIAgents(database, forceDeepRefresh);
+    } catch (error) {
+      this.modelsError = error as Error;
+    }
+  }
 
   async fetchChildren(
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean,
   ): Promise<FlinkAIViewModeData[]> {
-    const loader = CCloudResourceLoader.getInstance();
+    // clear out any errors from the last fetch attempt(s)
+    this.modelsError = undefined;
+    this.agentsError = undefined;
+    this.connectionsError = undefined;
+    this.toolsError = undefined;
 
-    this.connections = await loader.getFlinkAIConnections(database, forceDeepRefresh);
-
-    this.tools = await loader.getFlinkAITools(database, forceDeepRefresh);
-
-    this.models = await loader.getFlinkAIModels(database, forceDeepRefresh);
-
-    this.agents = await loader.getFlinkAIAgents(database, forceDeepRefresh);
-
-    return [...this.connections, ...this.tools, ...this.models, ...this.agents];
+    await Promise.all([
+      this.fetchFlinkAIModels(CCloudResourceLoader.getInstance(), database, forceDeepRefresh),
+      this.fetchFlinkAIAgents(CCloudResourceLoader.getInstance(), database, forceDeepRefresh),
+      this.fetchFlinkAIConnections(CCloudResourceLoader.getInstance(), database, forceDeepRefresh),
+      this.fetchFlinkAITools(CCloudResourceLoader.getInstance(), database, forceDeepRefresh),
+    ]);
+    const errors: [string, Error][] = [];
+    if (this.modelsError) {
+      errors.push(["Models", this.modelsError]);
+    }
+    if (this.agentsError) {
+      errors.push(["Agents", this.agentsError]);
+    }
+    if (this.connectionsError) {
+      errors.push(["Connections", this.connectionsError]);
+    }
+    if (this.toolsError) {
+      errors.push(["Tools", this.toolsError]);
+    }
+    if (errors.length) {
+      let errorMessage = "";
+      for (const [resource, error] of errors) {
+        errorMessage = `${errorMessage}\n${resource} failed to load: ${error.message}`;
+      }
+      vscode.window.showErrorMessage(errorMessage);
+    }
+    return this.getChildren();
   }
 
   getTreeItem(element: FlinkAIViewModeData): TreeItem {
