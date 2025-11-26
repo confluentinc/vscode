@@ -60,46 +60,43 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
   ): Promise<FlinkAIViewModeData[]> {
     const loader = CCloudResourceLoader.getInstance();
 
-    // Use object to track results by resource type for clarity and maintainability
-    const results = {
-      connections: await Promise.allSettled([
-        loader.getFlinkAIConnections(database, forceDeepRefresh),
-      ]),
-      tools: await Promise.allSettled([loader.getFlinkAITools(database, forceDeepRefresh)]),
-      models: await Promise.allSettled([loader.getFlinkAIModels(database, forceDeepRefresh)]),
-      agents: await Promise.allSettled([loader.getFlinkAIAgents(database, forceDeepRefresh)]),
-    };
+    const [connections, tools, models, agents] = await Promise.allSettled([
+      loader.getFlinkAIConnections(database, forceDeepRefresh),
+      loader.getFlinkAITools(database, forceDeepRefresh),
+      loader.getFlinkAIModels(database, forceDeepRefresh),
+      loader.getFlinkAIAgents(database, forceDeepRefresh),
+    ]);
 
     const errors: [string, Error][] = [];
     const resources: FlinkAIViewModeData[] = [];
 
     // Process each resource type
-    if (results.connections[0].status === "fulfilled") {
-      this.connections = results.connections[0].value;
+    if (connections.status === "fulfilled") {
+      this.connections = connections.value;
       resources.push(...this.connections);
     } else {
-      errors.push(["Flink AI Connections", results.connections[0].reason as Error]);
+      errors.push(["Flink AI Connections", connections.reason as Error]);
     }
 
-    if (results.tools[0].status === "fulfilled") {
-      this.tools = results.tools[0].value;
+    if (tools.status === "fulfilled") {
+      this.tools = tools.value;
       resources.push(...this.tools);
     } else {
-      errors.push(["Flink AI Tools", results.tools[0].reason as Error]);
+      errors.push(["Flink AI Tools", tools.reason as Error]);
     }
 
-    if (results.models[0].status === "fulfilled") {
-      this.models = results.models[0].value;
+    if (models.status === "fulfilled") {
+      this.models = models.value;
       resources.push(...this.models);
     } else {
-      errors.push(["Flink AI Models", results.models[0].reason as Error]);
+      errors.push(["Flink AI Models", models.reason as Error]);
     }
 
-    if (results.agents[0].status === "fulfilled") {
-      this.agents = results.agents[0].value;
+    if (agents.status === "fulfilled") {
+      this.agents = agents.value;
       resources.push(...this.agents);
     } else {
-      errors.push(["Flink AI Agents", results.agents[0].reason as Error]);
+      errors.push(["Flink AI Agents", agents.reason as Error]);
     }
     // the constraint of > 0 means empty results are not considered errors
     if (errors.length > 0) {
