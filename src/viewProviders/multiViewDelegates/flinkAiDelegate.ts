@@ -60,45 +60,49 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
   ): Promise<FlinkAIViewModeData[]> {
     const loader = CCloudResourceLoader.getInstance();
 
-    const results = await Promise.allSettled([
-      loader.getFlinkAIConnections(database, forceDeepRefresh),
-      loader.getFlinkAITools(database, forceDeepRefresh),
-      loader.getFlinkAIModels(database, forceDeepRefresh),
-      loader.getFlinkAIAgents(database, forceDeepRefresh),
-    ]);
+    // Use object to track results by resource type for clarity and maintainability
+    const results = {
+      connections: await Promise.allSettled([
+        loader.getFlinkAIConnections(database, forceDeepRefresh),
+      ]),
+      tools: await Promise.allSettled([loader.getFlinkAITools(database, forceDeepRefresh)]),
+      models: await Promise.allSettled([loader.getFlinkAIModels(database, forceDeepRefresh)]),
+      agents: await Promise.allSettled([loader.getFlinkAIAgents(database, forceDeepRefresh)]),
+    };
 
     const errors: [string, Error][] = [];
     const resources: FlinkAIViewModeData[] = [];
 
-    if (results[0].status === "fulfilled") {
-      this.connections = results[0].value;
+    // Process each resource type
+    if (results.connections[0].status === "fulfilled") {
+      this.connections = results.connections[0].value;
       resources.push(...this.connections);
     } else {
-      errors.push(["Flink AI Connections", results[0].reason as Error]);
+      errors.push(["Flink AI Connections", results.connections[0].reason as Error]);
     }
 
-    if (results[1].status === "fulfilled") {
-      this.tools = results[1].value;
+    if (results.tools[0].status === "fulfilled") {
+      this.tools = results.tools[0].value;
       resources.push(...this.tools);
     } else {
-      errors.push(["Flink AI Tools", results[1].reason as Error]);
+      errors.push(["Flink AI Tools", results.tools[0].reason as Error]);
     }
 
-    if (results[2].status === "fulfilled") {
-      this.models = results[2].value;
+    if (results.models[0].status === "fulfilled") {
+      this.models = results.models[0].value;
       resources.push(...this.models);
     } else {
-      errors.push(["Flink AI Models", results[2].reason as Error]);
+      errors.push(["Flink AI Models", results.models[0].reason as Error]);
     }
 
-    if (results[3].status === "fulfilled") {
-      this.agents = results[3].value;
+    if (results.agents[0].status === "fulfilled") {
+      this.agents = results.agents[0].value;
       resources.push(...this.agents);
     } else {
-      errors.push(["Flink AI Agents", results[3].reason as Error]);
+      errors.push(["Flink AI Agents", results.agents[0].reason as Error]);
     }
 
-    if (errors.length) {
+    if (errors.length > 0) {
       for (const [resource, error] of errors) {
         logError(error, `Failed to load ${resource}`);
       }
