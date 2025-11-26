@@ -55,48 +55,44 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     loader: CCloudResourceLoader,
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean,
-  ): Promise<[FlinkAIModel[], Error | null]> {
+  ): Promise<void> {
     try {
-      const models = await loader.getFlinkAIModels(database, forceDeepRefresh);
-      return [models, null];
+      this.models = await loader.getFlinkAIModels(database, forceDeepRefresh);
     } catch (error) {
-      return [[], error as Error];
+      this.modelsError = error as Error;
     }
   }
   async fetchFlinkAIConnections(
     loader: CCloudResourceLoader,
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean,
-  ): Promise<[FlinkAIConnection[], Error | null]> {
+  ): Promise<void> {
     try {
-      const connections = await loader.getFlinkAIConnections(database, forceDeepRefresh);
-      return [connections, null];
+      this.connections = await loader.getFlinkAIConnections(database, forceDeepRefresh);
     } catch (error) {
-      return [[], error as Error];
+      this.modelsError = error as Error;
     }
   }
   async fetchFlinkAITools(
     loader: CCloudResourceLoader,
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean,
-  ): Promise<[FlinkAITool[], Error | null]> {
+  ): Promise<void> {
     try {
-      const tools = await loader.getFlinkAITools(database, forceDeepRefresh);
-      return [tools, null];
+      this.tools = await loader.getFlinkAITools(database, forceDeepRefresh);
     } catch (error) {
-      return [[], error as Error];
+      this.modelsError = error as Error;
     }
   }
   async fetchFlinkAIAgents(
     loader: CCloudResourceLoader,
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean,
-  ): Promise<[FlinkAIAgent[], Error | null]> {
+  ): Promise<void> {
     try {
-      const agents = await loader.getFlinkAIAgents(database, forceDeepRefresh);
-      return [agents, null];
+      this.agents = await loader.getFlinkAIAgents(database, forceDeepRefresh);
     } catch (error) {
-      return [[], error as Error];
+      this.modelsError = error as Error;
     }
   }
 
@@ -105,45 +101,37 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     forceDeepRefresh: boolean,
   ): Promise<FlinkAIViewModeData[]> {
     // clear out any errors from the last fetch attempt(s)
-    const [models, modelsError] = await this.fetchFlinkAIModels(
-      CCloudResourceLoader.getInstance(),
-      database,
-      forceDeepRefresh,
-    );
-    const [connections, connectionsError] = await this.fetchFlinkAIConnections(
-      CCloudResourceLoader.getInstance(),
-      database,
-      forceDeepRefresh,
-    );
-    const [tools, toolsError] = await this.fetchFlinkAITools(
-      CCloudResourceLoader.getInstance(),
-      database,
-      forceDeepRefresh,
-    );
-    const [agents, agentsError] = await this.fetchFlinkAIAgents(
-      CCloudResourceLoader.getInstance(),
-      database,
-      forceDeepRefresh,
-    );
+    this.modelsError = undefined;
+    this.agentsError = undefined;
+    this.connectionsError = undefined;
+    this.toolsError = undefined;
 
-    this.models = models;
-    this.connections = connections;
-    this.tools = tools;
-    this.agents = agents;
-
+    await Promise.all([
+      this.fetchFlinkAIModels(CCloudResourceLoader.getInstance(), database, forceDeepRefresh),
+      this.fetchFlinkAIAgents(CCloudResourceLoader.getInstance(), database, forceDeepRefresh),
+      this.fetchFlinkAIConnections(CCloudResourceLoader.getInstance(), database, forceDeepRefresh),
+      this.fetchFlinkAITools(CCloudResourceLoader.getInstance(), database, forceDeepRefresh),
+    ]);
     const errors: [string, Error][] = [];
-    if (modelsError) errors.push(["Models", modelsError]);
-    if (connectionsError) errors.push(["Connections", connectionsError]);
-    if (toolsError) errors.push(["Tools", toolsError]);
-    if (agentsError) errors.push(["Agents", agentsError]);
-
+    if (this.modelsError) {
+      errors.push(["Models", this.modelsError]);
+    }
+    if (this.agentsError) {
+      errors.push(["Agents", this.agentsError]);
+    }
+    if (this.connectionsError) {
+      errors.push(["Connections", this.connectionsError]);
+    }
+    if (this.toolsError) {
+      errors.push(["Tools", this.toolsError]);
+    }
     if (errors.length) {
-      const errorMessage = errors
-        .map(([resource, error]) => `${resource} failed to load: ${error.message}`)
-        .join("\n");
+      let errorMessage = "";
+      for (const [resource, error] of errors) {
+        errorMessage = `${errorMessage}\n${resource} failed to load: ${error.message}`;
+      }
       vscode.window.showErrorMessage(errorMessage);
     }
-
     return this.getChildren();
   }
 
