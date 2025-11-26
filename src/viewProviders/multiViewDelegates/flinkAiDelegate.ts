@@ -1,5 +1,5 @@
 import type { TreeItem } from "vscode";
-import * as vscode from "vscode";
+import { logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkAIAgent, FlinkAIAgentTreeItem } from "../../models/flinkAiAgent";
 import { FlinkAIConnection, FlinkAIConnectionTreeItem } from "../../models/flinkAiConnection";
@@ -7,6 +7,7 @@ import { FlinkAIModel, FlinkAIModelTreeItem } from "../../models/flinkAiModel";
 import { FlinkAITool, FlinkAIToolTreeItem } from "../../models/flinkAiTool";
 import type { FlinkAIResource } from "../../models/flinkDatabaseResource";
 import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
+import { showErrorNotificationWithButtons } from "../../notifications";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";
 import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
@@ -98,10 +99,14 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     }
 
     if (errors.length) {
-      const errorMessage = errors
-        .map(([resource, error]) => `${resource} failed to load: ${error.message}`)
-        .join("\n");
-      vscode.window.showErrorMessage(errorMessage);
+      for (const [resource, error] of errors) {
+        logError(error, `Failed to load ${resource}`);
+      }
+
+      const resourceList = errors.map(([resource]) => resource).join(", ");
+      const errorMessage = `Failed to load ${errors.length} resource${errors.length > 1 ? "s" : ""}: ${resourceList}`;
+
+      await void showErrorNotificationWithButtons(errorMessage);
     }
 
     return resources;
