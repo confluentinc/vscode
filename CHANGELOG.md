@@ -2,6 +2,12 @@
 
 All notable changes to this extension will be documented in this file.
 
+## 2.0.1
+
+### Fixed
+
+- Fixed producing records with `null` values as keys/values to topics from CCloud connections ([#3065](https://github.com/confluentinc/vscode/issues/3065))
+
 ## 2.0.0
 
 ### Added
