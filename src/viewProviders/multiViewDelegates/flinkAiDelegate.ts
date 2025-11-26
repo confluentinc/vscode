@@ -1,4 +1,5 @@
 import type { TreeItem } from "vscode";
+import * as vscode from "vscode";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkAIAgent, FlinkAIAgentTreeItem } from "../../models/flinkAiAgent";
 import { FlinkAIConnection, FlinkAIConnectionTreeItem } from "../../models/flinkAiConnection";
@@ -45,22 +46,105 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
 
     return [connectionsContainer, toolsContainer, modelsContainer, agentsContainer];
   }
+  modelsError: Error | undefined;
+  agentsError: Error | undefined;
+  connectionsError: Error | undefined;
+  toolsError: Error | undefined;
+
+  async fetchFlinkAIModels(
+    loader: CCloudResourceLoader,
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<[FlinkAIModel[], Error | null]> {
+    try {
+      const models = await loader.getFlinkAIModels(database, forceDeepRefresh);
+      return [models, null];
+    } catch (error) {
+      return [[], error as Error];
+    }
+  }
+  async fetchFlinkAIConnections(
+    loader: CCloudResourceLoader,
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<[FlinkAIConnection[], Error | null]> {
+    try {
+      const connections = await loader.getFlinkAIConnections(database, forceDeepRefresh);
+      return [connections, null];
+    } catch (error) {
+      return [[], error as Error];
+    }
+  }
+  async fetchFlinkAITools(
+    loader: CCloudResourceLoader,
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<[FlinkAITool[], Error | null]> {
+    try {
+      const tools = await loader.getFlinkAITools(database, forceDeepRefresh);
+      return [tools, null];
+    } catch (error) {
+      return [[], error as Error];
+    }
+  }
+  async fetchFlinkAIAgents(
+    loader: CCloudResourceLoader,
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<[FlinkAIAgent[], Error | null]> {
+    try {
+      const agents = await loader.getFlinkAIAgents(database, forceDeepRefresh);
+      return [agents, null];
+    } catch (error) {
+      return [[], error as Error];
+    }
+  }
 
   async fetchChildren(
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean,
   ): Promise<FlinkAIViewModeData[]> {
-    const loader = CCloudResourceLoader.getInstance();
+    // clear out any errors from the last fetch attempt(s)
+    const [models, modelsError] = await this.fetchFlinkAIModels(
+      CCloudResourceLoader.getInstance(),
+      database,
+      forceDeepRefresh,
+    );
+    const [connections, connectionsError] = await this.fetchFlinkAIConnections(
+      CCloudResourceLoader.getInstance(),
+      database,
+      forceDeepRefresh,
+    );
+    const [tools, toolsError] = await this.fetchFlinkAITools(
+      CCloudResourceLoader.getInstance(),
+      database,
+      forceDeepRefresh,
+    );
+    const [agents, agentsError] = await this.fetchFlinkAIAgents(
+      CCloudResourceLoader.getInstance(),
+      database,
+      forceDeepRefresh,
+    );
 
-    this.connections = await loader.getFlinkAIConnections(database, forceDeepRefresh);
+    this.models = models;
+    this.connections = connections;
+    this.tools = tools;
+    this.agents = agents;
 
-    this.tools = await loader.getFlinkAITools(database, forceDeepRefresh);
+    const errors: [string, Error][] = [];
+    if (modelsError) errors.push(["Models", modelsError]);
+    if (connectionsError) errors.push(["Connections", connectionsError]);
+    if (toolsError) errors.push(["Tools", toolsError]);
+    if (agentsError) errors.push(["Agents", agentsError]);
 
-    this.models = await loader.getFlinkAIModels(database, forceDeepRefresh);
+    if (errors.length) {
+      const errorMessage = errors
+        .map(([resource, error]) => `${resource} failed to load: ${error.message}`)
+        .join("\n");
+      vscode.window.showErrorMessage(errorMessage);
+    }
 
-    this.agents = await loader.getFlinkAIAgents(database, forceDeepRefresh);
-
-    return [...this.connections, ...this.tools, ...this.models, ...this.agents];
+    return this.getChildren();
   }
 
   getTreeItem(element: FlinkAIViewModeData): TreeItem {
