@@ -1,4 +1,5 @@
 import type { TreeItem } from "vscode";
+import * as vscode from "vscode";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkAIAgent, FlinkAIAgentTreeItem } from "../../models/flinkAiAgent";
 import { FlinkAIConnection, FlinkAIConnectionTreeItem } from "../../models/flinkAiConnection";
@@ -46,21 +47,64 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     return [connectionsContainer, toolsContainer, modelsContainer, agentsContainer];
   }
 
+  /**
+   * Fetches Flink AI resources for the given database.
+   * @param database CCloudFlinkDbKafkaCluster
+   * @param forceDeepRefresh boolean
+   * @returns resources FlinkAIViewModeData[]
+   */
   async fetchChildren(
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean,
   ): Promise<FlinkAIViewModeData[]> {
     const loader = CCloudResourceLoader.getInstance();
 
-    this.connections = await loader.getFlinkAIConnections(database, forceDeepRefresh);
+    const results = await Promise.allSettled([
+      loader.getFlinkAIConnections(database, forceDeepRefresh),
+      loader.getFlinkAITools(database, forceDeepRefresh),
+      loader.getFlinkAIModels(database, forceDeepRefresh),
+      loader.getFlinkAIAgents(database, forceDeepRefresh),
+    ]);
 
-    this.tools = await loader.getFlinkAITools(database, forceDeepRefresh);
+    const errors: [string, Error][] = [];
+    const resources: FlinkAIViewModeData[] = [];
 
-    this.models = await loader.getFlinkAIModels(database, forceDeepRefresh);
+    if (results[0].status === "fulfilled") {
+      this.connections = results[0].value;
+      resources.push(...this.connections);
+    } else {
+      errors.push(["Flink AI Connections", results[0].reason as Error]);
+    }
 
-    this.agents = await loader.getFlinkAIAgents(database, forceDeepRefresh);
+    if (results[1].status === "fulfilled") {
+      this.tools = results[1].value;
+      resources.push(...this.tools);
+    } else {
+      errors.push(["Flink AI Tools", results[1].reason as Error]);
+    }
 
-    return [...this.connections, ...this.tools, ...this.models, ...this.agents];
+    if (results[2].status === "fulfilled") {
+      this.models = results[2].value;
+      resources.push(...this.models);
+    } else {
+      errors.push(["Flink AI Models", results[2].reason as Error]);
+    }
+
+    if (results[3].status === "fulfilled") {
+      this.agents = results[3].value;
+      resources.push(...this.agents);
+    } else {
+      errors.push(["Flink AI Agents", results[3].reason as Error]);
+    }
+
+    if (errors.length) {
+      const errorMessage = errors
+        .map(([resource, error]) => `${resource} failed to load: ${error.message}`)
+        .join("\n");
+      vscode.window.showErrorMessage(errorMessage);
+    }
+
+    return resources;
   }
 
   getTreeItem(element: FlinkAIViewModeData): TreeItem {
