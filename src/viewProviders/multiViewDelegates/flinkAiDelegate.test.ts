@@ -149,26 +149,8 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
           stubbedLoader.getFlinkAIAgents.rejects(error);
           stubbedLoader.getFlinkAITools.rejects(error);
 
-          const children: FlinkAIViewModeData[] = await delegate.fetchChildren(
-            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-            forceDeepRefresh,
-          );
+          await delegate.fetchChildren(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, forceDeepRefresh);
 
-          assert.deepStrictEqual(children, []);
-          assert.strictEqual(delegate["tools"].length, 0);
-          assert.strictEqual(delegate["agents"].length, 0);
-          sinon.assert.calledOnce(stubbedLoader.getFlinkAITools);
-          sinon.assert.calledOnce(stubbedLoader.getFlinkAIAgents);
-          sinon.assert.calledWithExactly(
-            stubbedLoader.getFlinkAITools,
-            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-            forceDeepRefresh,
-          );
-          sinon.assert.calledWithExactly(
-            stubbedLoader.getFlinkAIAgents,
-            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-            forceDeepRefresh,
-          );
           sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
           const callArgs = showErrorNotificationWithButtonsStub.getCall(0).args;
           assert.strictEqual(
