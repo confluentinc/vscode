@@ -47,6 +47,12 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     return [connectionsContainer, toolsContainer, modelsContainer, agentsContainer];
   }
 
+  /**
+   * Fetches Flink AI resources for the given database.
+   * @param database CCloudFlinkDbKafkaCluster
+   * @param forceDeepRefresh boolean
+   * @returns resources FlinkAIViewModeData[]
+   */
   async fetchChildren(
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean,
@@ -61,19 +67,44 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     ]);
 
     const errors: [string, Error][] = [];
-    for (const result of results) {
-      if (result.status === "rejected") {
-        errors.push(["Flink AI resources", result.reason as Error]);
-      }
+    const resources: FlinkAIViewModeData[] = [];
+
+    if (results[0].status === "fulfilled") {
+      this.connections = results[0].value;
+      resources.push(...this.connections);
+    } else {
+      errors.push(["Flink AI Connections", results[0].reason as Error]);
     }
+
+    if (results[1].status === "fulfilled") {
+      this.tools = results[1].value;
+      resources.push(...this.tools);
+    } else {
+      errors.push(["Flink AI Tools", results[1].reason as Error]);
+    }
+
+    if (results[2].status === "fulfilled") {
+      this.models = results[2].value;
+      resources.push(...this.models);
+    } else {
+      errors.push(["Flink AI Models", results[2].reason as Error]);
+    }
+
+    if (results[3].status === "fulfilled") {
+      this.agents = results[3].value;
+      resources.push(...this.agents);
+    } else {
+      errors.push(["Flink AI Agents", results[3].reason as Error]);
+    }
+
     if (errors.length) {
-      let errorMessage = "";
-      for (const [resource, error] of errors) {
-        errorMessage = `${errorMessage}\n${resource} failed to load: ${error.message}`;
-      }
+      const errorMessage = errors
+        .map(([resource, error]) => `${resource} failed to load: ${error.message}`)
+        .join("\n");
       vscode.window.showErrorMessage(errorMessage);
     }
-    return this.getChildren();
+
+    return resources;
   }
 
   getTreeItem(element: FlinkAIViewModeData): TreeItem {
