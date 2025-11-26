@@ -12,6 +12,7 @@ import { FlinkAIAgentTreeItem } from "../../models/flinkAiAgent";
 import { FlinkAIConnectionTreeItem, type FlinkAIConnection } from "../../models/flinkAiConnection";
 import { FlinkAIModelTreeItem, type FlinkAIModel } from "../../models/flinkAiModel";
 import type { FlinkAIResource } from "../../models/flinkDatabaseResource";
+import * as notifications from "../../notifications";
 import { FlinkDatabaseViewProvider } from "../flinkDatabase";
 import type { FlinkAIViewModeData } from "./flinkAiDelegate";
 import { FlinkAIDelegate } from "./flinkAiDelegate";
@@ -44,11 +45,16 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
     let provider: FlinkDatabaseViewProvider;
     let delegate: FlinkAIDelegate;
     let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+    let showErrorNotificationWithButtonsStub: sinon.SinonStub;
 
     beforeEach(() => {
       provider = FlinkDatabaseViewProvider.getInstance();
       delegate = new FlinkAIDelegate();
       stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
+      showErrorNotificationWithButtonsStub = sandbox.stub(
+        notifications,
+        "showErrorNotificationWithButtons",
+      );
     });
 
     afterEach(() => {
@@ -134,6 +140,56 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
             forceDeepRefresh,
           );
+        });
+
+        it(`should display an error when Flink AI resources fail to load (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          const error = new Error("Test: tools API failed");
+          stubbedLoader.getFlinkAIConnections.resolves([]);
+          stubbedLoader.getFlinkAIModels.resolves([]);
+          stubbedLoader.getFlinkAIAgents.rejects(error);
+          stubbedLoader.getFlinkAITools.rejects(error);
+
+          const children: FlinkAIViewModeData[] = await delegate.fetchChildren(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          assert.deepStrictEqual(children, []);
+          assert.strictEqual(delegate["tools"].length, 0);
+          assert.strictEqual(delegate["agents"].length, 0);
+          sinon.assert.calledOnce(stubbedLoader.getFlinkAITools);
+          sinon.assert.calledOnce(stubbedLoader.getFlinkAIAgents);
+          sinon.assert.calledWithExactly(
+            stubbedLoader.getFlinkAITools,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+          sinon.assert.calledWithExactly(
+            stubbedLoader.getFlinkAIAgents,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+          sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+          const callArgs = showErrorNotificationWithButtonsStub.getCall(0).args;
+          assert.strictEqual(
+            callArgs[0],
+            "Failed to load 2 resources: Flink AI Tools, Flink AI Agents",
+          );
+        });
+
+        it(`should not display an error when Flink AI resources are empty(forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          stubbedLoader.getFlinkAIConnections.resolves([]);
+          stubbedLoader.getFlinkAIModels.resolves([]);
+          stubbedLoader.getFlinkAIAgents.resolves([]);
+          stubbedLoader.getFlinkAITools.resolves([]);
+
+          const children: FlinkAIViewModeData[] = await delegate.fetchChildren(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          assert.deepStrictEqual(children, []);
+          sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
         });
       }
     });
