@@ -30,7 +30,7 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
 
   /**
    * Converts a promise rejection reason to an Error instance.
-   * @param reason Unknown rejection reason
+   * @param reason - Unknown rejection reason
    * @returns Error instance
    */
   private toError(reason: unknown): Error {
@@ -58,10 +58,11 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
   }
 
   /**
-   * Fetches Flink AI resources for the given database.
-   * @param database CCloudFlinkDbKafkaCluster
-   * @param forceDeepRefresh boolean
-   * @returns resources FlinkAIViewModeData[]
+   * Fetches Flink AI resources (connections, tools, models, and agents) for the given database.
+   * Handles partial failures gracefully by logging errors and continuing with available resources.
+   * @param database - The CCloud Flink database and Kafka cluster
+   * @param forceDeepRefresh - Whether to bypass cache and refresh from source
+   * @returns Promise resolving to array of fetched Flink AI resources and containers
    */
   async fetchChildren(
     database: CCloudFlinkDbKafkaCluster,
