@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2025-10-23
+Date generated: 2025-12-2
 
-Revision ID: d671779dd7934102176e27e70c5f1cea9b433b30
+Revision ID: 98cc1970cacd466183a1c807067aba8a28d44b22
 
 ================================================================================
 ================================================================================
@@ -120,7 +120,7 @@ No licenses found
 - @opentelemetry/semantic-conventions (1.28.0) [Apache-2.0]
 - @opentelemetry/semantic-conventions (1.30.0) [Apache-2.0]
 - @opentelemetry/sql-common (0.40.1) [Apache-2.0]
-- @pkgjs/parseargs (0.11.0) [MIT, Apache-2.0]
+- @pkgjs/parseargs (0.11.0) [Apache-2.0, MIT]
 - @prisma/instrumentation (6.4.1) [Apache-2.0]
 - @rollup/rollup-android-arm-eabi (4.24.0) [MIT]
 - @rollup/rollup-android-arm64 (4.24.0) [MIT]
@@ -170,7 +170,7 @@ No licenses found
 - @volar/source-map (2.4.0-alpha.18) [MIT]
 - @vscode/codicons (0.0.36) [CC-BY-4.0, MIT, CC-BY-SA-4.0]
 - @vscode/l10n (0.0.18) [MIT]
-- @vscode/webview-ui-toolkit (1.4.0) [MIT, 0BSD, CC0-1.0, bsd-2-clause-views]
+- @vscode/webview-ui-toolkit (1.4.0) [MIT, CC0-1.0, bsd-2-clause-views, 0BSD]
 - @vue/compiler-core (3.4.34) [MIT]
 - @vue/compiler-dom (3.4.34) [MIT]
 - @vue/compiler-vue2 (2.7.16) [MIT, 0BSD]
@@ -11464,33 +11464,7 @@ Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
-MIT, Apache-2.0
-
-* MIT *
---------------------------------------------------------------------------------
-File matches:
-internal/primordials.js
-package.json
---------------------------------------------------------------------------------
-
-Copyright (c)  Node.js contributors. All rights reserved.
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Apache-2.0, MIT
 
 * Apache-2.0 *
 --------------------------------------------------------------------------------
@@ -11700,6 +11674,32 @@ LICENSE
    See the License for the specific language governing permissions and
    limitations under the License.
 
+
+* MIT *
+--------------------------------------------------------------------------------
+File matches:
+internal/primordials.js
+package.json
+--------------------------------------------------------------------------------
+
+Copyright (c)  Node.js contributors. All rights reserved.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 
 --------------------------------------------------------------------------------
@@ -14507,18 +14507,7 @@ SOFTWARE.
 
 
 * Other Licenses *
-0BSD, CC0-1.0, bsd-2-clause-views
-
-* 0BSD *
---------------------------------------------------------------------------------
-File matches:
-NOTICES
---------------------------------------------------------------------------------
-
-
-Copyright (C) 2006 by Rob Landley <rob@landley.net>
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+CC0-1.0, bsd-2-clause-views, 0BSD
 
 * CC0-1.0 *
 --------------------------------------------------------------------------------
@@ -14580,6 +14569,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
+
+* 0BSD *
+--------------------------------------------------------------------------------
+File matches:
+NOTICES
+--------------------------------------------------------------------------------
+
+
+Copyright (C) 2006 by Rob Landley <rob@landley.net>
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 --------------------------------------------------------------------------------
@@ -17139,6 +17139,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
 
 Copyright (c) 2019 Rich Harris
 
@@ -17450,6 +17454,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+package.json
+--------------------------------------------------------------------------------
 
 Copyright (c) 2014 Chris Talkington, contributors.
 
@@ -19839,8 +19847,9 @@ Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
-mit-0
+mit-0, MIT
 
+* mit-0 *
 --------------------------------------------------------------------------------
 File matches:
 LICENSE
@@ -19864,15 +19873,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Other Licenses *
-MIT
-
+* MIT *
 --------------------------------------------------------------------------------
 File matches:
 package.json
 --------------------------------------------------------------------------------
-
 
 Copyright (c) <year> <copyright holders>
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20202,7 +20207,6 @@ MIT
 File matches:
 LICENSE
 package.json
-README.md
 --------------------------------------------------------------------------------
 
 MIT License
@@ -20522,7 +20526,6 @@ MIT
 File matches:
 LICENSE
 package.json
-README.md
 --------------------------------------------------------------------------------
 
 Copyright (c) 2015 Luigi Pinca
@@ -21627,6 +21630,10 @@ Package Depth: Transitive
 * Declared Licenses *
 ISC
 
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
 
 The ISC License
 
@@ -22116,7 +22123,7 @@ ISC
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE
 --------------------------------------------------------------------------------
 
 The ISC License
@@ -23548,6 +23555,10 @@ Package Depth: Transitive
 * Declared Licenses *
 ISC
 
+--------------------------------------------------------------------------------
+File matches:
+package.json
+--------------------------------------------------------------------------------
 
 The ISC License
 
@@ -30149,6 +30160,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 
 ================================================================================
+
                                     Licenses
 
 ================================================================================
@@ -38666,9 +38678,9 @@ Copyright (c) 2009-2011 Mozilla Foundation and contributors
 
 Copyright (c) 2011 Mozilla Foundation and contributors
 
-Copyright (c) 2011 The Closure Compiler Authors. All rights reserved.
-
 Copyright (c) 2014 Mozilla Foundation and contributors
+
+Copyright (c) 2011 The Closure Compiler Authors. All rights reserved.
 
 Copyright (c) 2022 Sentry
 
@@ -39768,4 +39780,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2025-10-23
+Report Generated by FOSSA on 2025-12-2
