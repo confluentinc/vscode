@@ -87,7 +87,7 @@ describe("quickpicks/flinkComputePools.ts", () => {
       // simulate user selecting the second pool in the list
       showQuickPickStub.resolves({
         label: TEST_CCLOUD_FLINK_COMPUTE_POOL_2.name,
-        description: TEST_CCLOUD_FLINK_COMPUTE_POOL_2.id,
+        description: `${TEST_CCLOUD_FLINK_COMPUTE_POOL_2.provider}/${TEST_CCLOUD_FLINK_COMPUTE_POOL_2.region}`,
         value: TEST_CCLOUD_FLINK_COMPUTE_POOL_2,
       });
 
@@ -107,7 +107,10 @@ describe("quickpicks/flinkComputePools.ts", () => {
       const quickPickItems = extractPoolItemsFromQuickPickCall();
       assert.strictEqual(quickPickItems.length, 1);
       const onlyPool = quickPickItems[0];
-      assert.strictEqual(onlyPool.description, TEST_CCLOUD_FLINK_COMPUTE_POOL_2_ID);
+      assert.strictEqual(
+        onlyPool.description,
+        `${TEST_CCLOUD_FLINK_COMPUTE_POOL_2.provider}/${TEST_CCLOUD_FLINK_COMPUTE_POOL_2.region}`,
+      );
     });
 
     for (const preferredPool of [
@@ -123,8 +126,11 @@ describe("quickpicks/flinkComputePools.ts", () => {
         const quickPickItems = extractPoolItemsFromQuickPickCall();
         assert.strictEqual(quickPickItems.length, 2);
         const firstItem = quickPickItems[0];
-        // The pool's id is in the description field.
-        assert.strictEqual(firstItem.description, preferredPool.id);
+        // The pool's provider/region is in the description field.
+        assert.strictEqual(
+          firstItem.description,
+          `${preferredPool.provider}/${preferredPool.region}`,
+        );
       });
 
       it(`If user has default compute pool set, and called with that selected pool, the default/selected should be at the top of the list and not duplicated: ${preferredPool.id}`, async () => {
@@ -136,8 +142,11 @@ describe("quickpicks/flinkComputePools.ts", () => {
         const quickPickItems = extractPoolItemsFromQuickPickCall();
         assert.strictEqual(quickPickItems.length, 2);
         const firstItem = quickPickItems[0];
-        // The pool's id is in the description field.
-        assert.strictEqual(firstItem.description, preferredPool.id);
+        // The pool's provider/region is in the description field.
+        assert.strictEqual(
+          firstItem.description,
+          `${preferredPool.provider}/${preferredPool.region}`,
+        );
         // Should use icon checked
         assert.strictEqual((firstItem.iconPath as vscode.ThemeIcon).id, IconNames.CURRENT_RESOURCE);
 
@@ -147,7 +156,7 @@ describe("quickpicks/flinkComputePools.ts", () => {
           preferredPool === TEST_CCLOUD_FLINK_COMPUTE_POOL
             ? TEST_CCLOUD_FLINK_COMPUTE_POOL_2
             : TEST_CCLOUD_FLINK_COMPUTE_POOL;
-        assert.strictEqual(secondItem.description, secondPool.id);
+        assert.strictEqual(secondItem.description, `${secondPool.provider}/${secondPool.region}`);
         // and should use the pool's own icon, not the 'selected' icon
         assert.strictEqual((secondItem.iconPath as vscode.ThemeIcon).id, secondPool.iconName);
       });
@@ -166,14 +175,20 @@ describe("quickpicks/flinkComputePools.ts", () => {
         const quickPickItems = extractPoolItemsFromQuickPickCall();
         assert.strictEqual(quickPickItems.length, 2);
         const firstItem = quickPickItems[0];
-        // The pool's id is in the description field.
-        assert.strictEqual(firstItem.description, selectedPool.id);
+        // The pool's provider/region is in the description field.
+        assert.strictEqual(
+          firstItem.description,
+          `${selectedPool.provider}/${selectedPool.region}`,
+        );
         // Should use icon checked
         assert.strictEqual((firstItem.iconPath as vscode.ThemeIcon).id, IconNames.CURRENT_RESOURCE);
 
         // the second item should be the other pool
         const secondItem = quickPickItems[1];
-        assert.strictEqual(secondItem.description, preferredPool.id);
+        assert.strictEqual(
+          secondItem.description,
+          `${preferredPool.provider}/${preferredPool.region}`,
+        );
         // and should use the pool's own icon, not the 'selected' icon
         assert.strictEqual((secondItem.iconPath as vscode.ThemeIcon).id, preferredPool.iconName);
       });
