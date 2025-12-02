@@ -155,9 +155,12 @@ export async function kafkaClusterQuickPick(
     }
     // show the currently-focused cluster, if there is one
     const icon = isFocusedCluster ? IconNames.CURRENT_RESOURCE : cluster.iconName;
+    const description = isCCloud(cluster)
+      ? `${(cluster as CCloudKafkaCluster).provider}/${(cluster as CCloudKafkaCluster).region}`
+      : cluster.id;
     clusterItems.push({
       label: cluster.name,
-      description: cluster.id,
+      description,
       iconPath: new ThemeIcon(icon),
       value: cluster,
     });
