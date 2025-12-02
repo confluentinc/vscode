@@ -254,9 +254,12 @@ describe("quickpicks/kafkaClusters", () => {
       // cluster in same provider/region.
       assert.strictEqual(itemsCalledWith.length, 2);
       assert.strictEqual(itemsCalledWith[0].kind, QuickPickItemKind.Separator);
-      // other two items are the clusters. Their description should be the id.
+      // other two items are the clusters. Their description should be the provider/region.
       // and their .value should be the cluster.
-      assert.strictEqual(itemsCalledWith[1].description, ccloudClusters[0].id);
+      assert.strictEqual(
+        itemsCalledWith[1].description,
+        `${ccloudClusters[0].provider}/${ccloudClusters[0].region}`,
+      );
       assert.strictEqual(itemsCalledWith[1].value, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
     });
 
@@ -273,9 +276,12 @@ describe("quickpicks/kafkaClusters", () => {
       // cluster that is Flinkable.
       assert.strictEqual(itemsCalledWith.length, 2);
       assert.strictEqual(itemsCalledWith[0].kind, QuickPickItemKind.Separator);
-      // other two items are the clusters. Their description should be the id.
+      // other two items are the clusters. Their description should be the provider/region.
       // and their .value should be the cluster.
-      assert.strictEqual(itemsCalledWith[1].description, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
+      assert.strictEqual(
+        itemsCalledWith[1].description,
+        `${TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.provider}/${TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.region}`,
+      );
       assert.strictEqual(itemsCalledWith[1].value, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
     });
   });
