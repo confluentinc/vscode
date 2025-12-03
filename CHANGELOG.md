@@ -15,6 +15,14 @@ All notable changes to this extension will be documented in this file.
 
 - Updated the "Support" view name to be "Help Center"
 
+## 2.0.2
+
+### Fixed
+
+- Fixed OAuth-based authentication with schema registries in Direct connections ([#2647](https://github.com/confluentinc/vscode/issues/2647))
+
+## 2.0.1
+
 ### Fixed
 
 - Fixed producing records with `null` values as keys/values to topics from CCloud connections ([#3065](https://github.com/confluentinc/vscode/issues/3065))
