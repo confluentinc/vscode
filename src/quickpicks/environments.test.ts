@@ -78,6 +78,7 @@ describe("quickpicks/environments.ts ccloudEnvironmentQuickPick() / flinkCcloudE
 
     sinon.assert.calledOnce(showQuickPickStub);
     const options = showQuickPickStub.firstCall.args[1];
+    assert.strictEqual(options.title, "Select an environment");
     assert.strictEqual(options.placeHolder, "Select an environment");
   });
 

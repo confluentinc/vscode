@@ -92,6 +92,7 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
 
       sinon.assert.calledOnce(showQuickPickStub);
       const options = showQuickPickStub.firstCall.args[1];
+      assert.strictEqual(options.title, "Select a region");
       assert.strictEqual(options.placeHolder, "Select a region");
       assert.strictEqual(options.ignoreFocusOut, true);
     });
@@ -313,6 +314,7 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
 
       sinon.assert.calledOnce(showQuickPickStub);
       const options = showQuickPickStub.firstCall.args[1];
+      assert.strictEqual(options.title, "Select a region containing a Flink database");
       assert.strictEqual(options.placeHolder, "Select a region containing a Flink database");
       assert.strictEqual(options.ignoreFocusOut, true);
     });

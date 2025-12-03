@@ -90,6 +90,7 @@ export async function schemaSubjectQuickPick(
 export async function schemaTypeQuickPick(): Promise<SchemaType | undefined> {
   const schemaTypes = Object.values(SchemaType);
   const chosenType = await vscode.window.showQuickPick(schemaTypes, {
+    title: "Choose a schema type",
     placeHolder: "Choose a schema type",
     ignoreFocusOut: true,
   });

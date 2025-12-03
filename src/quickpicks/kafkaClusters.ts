@@ -34,6 +34,8 @@ export async function kafkaClusterQuickPickWithViewProgress(): Promise<KafkaClus
 export type KafkaClusterFilter = (cluster: KafkaCluster) => boolean;
 
 export type KafkaClusterQuickPickOptions = {
+  /** Overriding string for the quickpick title */
+  title?: string;
   /** Overriding string for the quickpick prompt */
   placeHolder?: string;
   /** Function to filter the list of Kafka clusters before making quickpick items. */
@@ -153,9 +155,12 @@ export async function kafkaClusterQuickPick(
     }
     // show the currently-focused cluster, if there is one
     const icon = isFocusedCluster ? IconNames.CURRENT_RESOURCE : cluster.iconName;
+    const description = isCCloud(cluster)
+      ? `${(cluster as CCloudKafkaCluster).provider}/${(cluster as CCloudKafkaCluster).region}`
+      : cluster.id;
     clusterItems.push({
       label: cluster.name,
-      description: cluster.id,
+      description,
       iconPath: new ThemeIcon(icon),
       value: cluster,
     });
@@ -164,6 +169,7 @@ export async function kafkaClusterQuickPick(
   // prompt the user to select a Kafka Cluster
   const chosenClusterItem: QuickPickItemWithValue<KafkaCluster> | undefined =
     await window.showQuickPick(clusterItems, {
+      title: options.title || "Select a Kafka cluster",
       placeHolder: options.placeHolder || "Select a Kafka cluster",
       ignoreFocusOut: true,
     });

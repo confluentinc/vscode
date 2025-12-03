@@ -140,7 +140,7 @@ export async function flinkComputePoolQuickPick(
     const icon = isCurrentlySelectedPool ? IconNames.CURRENT_RESOURCE : pool.iconName;
     items.push({
       label: pool.name,
-      description: pool.id,
+      description: `${pool.provider}/${pool.region}`,
       iconPath: new ThemeIcon(icon),
       value: pool,
     });
@@ -149,6 +149,7 @@ export async function flinkComputePoolQuickPick(
   // prompt the user to select a Flink compute pool
   const chosenItem: QuickPickItemWithValue<CCloudFlinkComputePool> | undefined =
     await window.showQuickPick(items, {
+      title: "Select a Flink compute pool",
       placeHolder: "Select a Flink compute pool",
       ignoreFocusOut: true,
     });

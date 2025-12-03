@@ -61,6 +61,7 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
 
     sinon.assert.calledOnce(showQuickPickStub);
     const options = showQuickPickStub.firstCall.args[1];
+    assert.strictEqual(options.title, "Select a topic");
     assert.strictEqual(options.placeHolder, "Select a topic");
     assert.strictEqual(options.ignoreFocusOut, true);
   });
