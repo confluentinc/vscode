@@ -2,7 +2,7 @@
 
 All notable changes to this extension will be documented in this file.
 
-## Unreleased
+## 2.0.2
 
 ### Fixed
 
