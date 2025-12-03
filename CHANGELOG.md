@@ -2,6 +2,12 @@
 
 All notable changes to this extension will be documented in this file.
 
+## Unreleased
+
+### Fixed
+
+- Fixed OAuth-based authentication with schema registries in Direct connections ([#2647](https://github.com/confluentinc/vscode/issues/2647))
+
 ## 2.0.1
 
 ### Fixed
