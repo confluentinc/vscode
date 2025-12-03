@@ -486,11 +486,21 @@
 
       .resize-handler {
         cursor: ew-resize;
-        width: 4px;
+        width: 5px;
         position: absolute;
         top: 0;
         right: 0;
         bottom: 0;
+        z-index: 10;
+        pointer-events: auto;
+      }
+
+      .resize-handler:hover {
+        background: var(--vscode-editorWidget-border);
+      }
+
+      .resize-handler:active {
+        background: var(--vscode-focusBorder);
       }
 
       .control {
