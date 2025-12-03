@@ -280,16 +280,8 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       const widths = this.colWidth();
       const columnNames = this.allColumns();
       const flags = this.columnVisibilityFlags();
-      // Fallback in case we can't get columns
-      if (widths.length === 0 && columnNames.length === 0) {
-        return "--grid-template-columns: 1fr";
-      }
-      const visibleColumnWidths = columnNames
-        .map((_, index) => ({ index, isVisible: flags[index], width: widths[index] }))
-        .filter((col) => col.isVisible)
-        .map((col) => `${col.width}px`)
-        .join(" ");
-      return `--grid-template-columns: ${visibleColumnWidths}`;
+      const cssValue = this.buildGridTemplateColumns(widths, columnNames, flags);
+      return `--grid-template-columns: ${cssValue}`;
     });
 
     /** Whether the stop button has been clicked */
@@ -333,6 +325,25 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   private _visibleColumns() {
     const flags = this.columnVisibilityFlags();
     return this.allColumns().filter((_, index) => flags[index]);
+  }
+
+  /**
+   * Builds the grid-template-columns custom property value for colWidths and tempColWidths during resize
+   */
+  private buildGridTemplateColumns(
+    widths: number[],
+    columnNames: string[],
+    flags: boolean[],
+  ): string {
+    if (widths.length === 0 && columnNames.length === 0) {
+      return "1fr";
+    }
+    const visibleColumnWidths = columnNames
+      .map((_, index) => ({ index, isVisible: flags[index], width: widths[index] }))
+      .filter((col) => col.isVisible)
+      .map((col) => `${col.width}px`)
+      .join(" ");
+    return visibleColumnWidths;
   }
 
   /** Testing if a column is currently visible. This is for the settings panel. */
@@ -388,17 +399,11 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     if (start == null || this.tempColWidths == null || this.tableElement == null) return;
     const newWidth = Math.round(start + event.clientX);
     this.tempColWidths[index] = Math.max(16, newWidth); // Minimum width of 1rem
-
-    // Directly update CSS custom property for immediate visual feedback
-    // This bypasses the reactive system to avoid conflicts with streaming updates
     const columnNames = this.allColumns();
     const flags = this.columnVisibilityFlags();
-    const visibleColumnWidths = columnNames
-      .map((_, idx) => ({ idx, isVisible: flags[idx], width: this.tempColWidths![idx] }))
-      .filter((col) => col.isVisible)
-      .map((col) => `${col.width}px`)
-      .join(" ");
-    this.tableElement.style.setProperty("--grid-template-columns", visibleColumnWidths);
+    const cssValue = this.buildGridTemplateColumns(this.tempColWidths, columnNames, flags);
+    // Directly update CSS custom property for immediate visual feedback
+    this.tableElement.style.setProperty("--grid-template-columns", cssValue);
   }
 
   /** Cleanup handler when the user stops resizing a column. */
