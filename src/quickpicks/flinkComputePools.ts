@@ -140,7 +140,7 @@ export async function flinkComputePoolQuickPick(
     const icon = isCurrentlySelectedPool ? IconNames.CURRENT_RESOURCE : pool.iconName;
     items.push({
       label: pool.name,
-      description: pool.id,
+      description: `${pool.provider}/${pool.region}`,
       iconPath: new ThemeIcon(icon),
       value: pool,
     });

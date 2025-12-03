@@ -1,5 +1,6 @@
 import type { QuickPickItem, Tab, TabGroup, TextDocument, Uri } from "vscode";
-import { QuickPickItemKind, TabInputText, ThemeIcon, window, workspace } from "vscode";
+import { QuickPickItemKind, TabInputText, ThemeIcon, window } from "vscode";
+import { tryToOpenTextDocument } from "./utils/workspace";
 
 /** Create a quickpick to list all open editors, as well as an item to select a file from the open
  * dialog. */
@@ -44,7 +45,7 @@ export async function uriQuickpick(
   }
 
   // inspect *all* open editors, not just the visible/active ones
-  const documentPromises: Promise<TextDocument>[] = [];
+  const documentPromises: Promise<TextDocument | undefined>[] = [];
   window.tabGroups.all.forEach((tabGroup: TabGroup) => {
     tabGroup.tabs.forEach(async (tab: Tab) => {
       // .input is `unknown`, not sure what other properties are available if `uri` isn't there
@@ -56,14 +57,18 @@ export async function uriQuickpick(
         // skip URIs that don't match the provided schemes
         return;
       }
-      // look up document based on Uri
-      documentPromises.push(Promise.resolve(workspace.openTextDocument(tabInput.uri)));
+      // try to look up document based on Uri
+      documentPromises.push(tryToOpenTextDocument(tabInput.uri));
     });
   });
 
   const documents: TextDocument[] = [];
-  const allDocuments: TextDocument[] = await Promise.all(documentPromises);
-  allDocuments.forEach((document: TextDocument) => {
+  const allDocuments: (TextDocument | undefined)[] = await Promise.all(documentPromises);
+  allDocuments.forEach((document: TextDocument | undefined) => {
+    if (!document) {
+      // couldn't open as a TextDocument (likely binary file), so skip it
+      return;
+    }
     if (currentDocument && document.fileName === currentDocument.fileName) {
       return;
     }
