@@ -549,7 +549,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       query,
       transformRawFlinkAIModelRows,
       forceDeepRefresh,
-      // no special statement options needed
+      { nameSpice: "list-models" },
     );
     return results;
   }
@@ -576,7 +576,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       query,
       transformRawFlinkAIToolRows,
       forceDeepRefresh,
-      // no special statement options needed
+      { nameSpice: "list-tools" },
     );
     return results;
   }
@@ -603,7 +603,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       query,
       transformRawFlinkAIConnectionRows,
       forceDeepRefresh,
-      // no special statement options needed
+      { nameSpice: "list-connections" },
     );
     return results;
   }
@@ -630,7 +630,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       query,
       transformRawFlinkAIAgentRows,
       forceDeepRefresh,
-      // no special statement options needed
+      { nameSpice: "list-agents" },
     );
     return results;
   }

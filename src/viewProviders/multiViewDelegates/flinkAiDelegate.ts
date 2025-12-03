@@ -1,4 +1,5 @@
 import type { TreeItem } from "vscode";
+import { logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkAIAgent, FlinkAIAgentTreeItem } from "../../models/flinkAiAgent";
 import { FlinkAIConnection, FlinkAIConnectionTreeItem } from "../../models/flinkAiConnection";
@@ -6,6 +7,7 @@ import { FlinkAIModel, FlinkAIModelTreeItem } from "../../models/flinkAiModel";
 import { FlinkAITool, FlinkAIToolTreeItem } from "../../models/flinkAiTool";
 import type { FlinkAIResource } from "../../models/flinkDatabaseResource";
 import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
+import { showErrorNotificationWithButtons } from "../../notifications";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";
 import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
@@ -25,6 +27,15 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
   private tools: FlinkAITool[] = [];
   private models: FlinkAIModel[] = [];
   private agents: FlinkAIAgent[] = [];
+
+  /**
+   * Converts a promise rejection reason to an Error instance.
+   * @param reason - Unknown rejection reason
+   * @returns Error instance
+   */
+  private toError(reason: unknown): Error {
+    return reason instanceof Error ? reason : new Error(String(reason));
+  }
 
   getChildren(element?: FlinkAIViewModeData): FlinkAIViewModeData[] {
     if (element instanceof FlinkDatabaseResourceContainer) {
@@ -46,21 +57,70 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     return [connectionsContainer, toolsContainer, modelsContainer, agentsContainer];
   }
 
+  /**
+   * Fetches Flink AI resources (connections, tools, models, and agents) for the given database.
+   * Handles partial failures gracefully by logging errors and continuing with available resources.
+   * @param database - The CCloud Flink database and Kafka cluster
+   * @param forceDeepRefresh - Whether to bypass cache and refresh from source
+   * @returns Promise resolving to array of fetched Flink AI resources and containers
+   */
   async fetchChildren(
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean,
   ): Promise<FlinkAIViewModeData[]> {
     const loader = CCloudResourceLoader.getInstance();
 
-    this.connections = await loader.getFlinkAIConnections(database, forceDeepRefresh);
+    const [connections, tools, models, agents] = await Promise.allSettled([
+      loader.getFlinkAIConnections(database, forceDeepRefresh),
+      loader.getFlinkAITools(database, forceDeepRefresh),
+      loader.getFlinkAIModels(database, forceDeepRefresh),
+      loader.getFlinkAIAgents(database, forceDeepRefresh),
+    ]);
 
-    this.tools = await loader.getFlinkAITools(database, forceDeepRefresh);
+    const errors: [string, Error][] = [];
+    const resources: FlinkAIViewModeData[] = [];
 
-    this.models = await loader.getFlinkAIModels(database, forceDeepRefresh);
+    // Process each resource type
+    if (connections.status === "fulfilled") {
+      this.connections = connections.value;
+      resources.push(...this.connections);
+    } else {
+      errors.push(["Flink AI Connections", this.toError(connections.reason)]);
+    }
 
-    this.agents = await loader.getFlinkAIAgents(database, forceDeepRefresh);
+    if (tools.status === "fulfilled") {
+      this.tools = tools.value;
+      resources.push(...this.tools);
+    } else {
+      errors.push(["Flink AI Tools", this.toError(tools.reason)]);
+    }
 
-    return [...this.connections, ...this.tools, ...this.models, ...this.agents];
+    if (models.status === "fulfilled") {
+      this.models = models.value;
+      resources.push(...this.models);
+    } else {
+      errors.push(["Flink AI Models", this.toError(models.reason)]);
+    }
+
+    if (agents.status === "fulfilled") {
+      this.agents = agents.value;
+      resources.push(...this.agents);
+    } else {
+      errors.push(["Flink AI Agents", this.toError(agents.reason)]);
+    }
+
+    if (errors.length > 0) {
+      for (const [resource, error] of errors) {
+        logError(error, `Failed to load ${resource}`);
+      }
+
+      const resourceList = errors.map(([resource]) => resource).join(", ");
+      const errorMessage = `Failed to load ${errors.length} resource${errors.length > 1 ? "s" : ""}: ${resourceList}`;
+
+      await void showErrorNotificationWithButtons(errorMessage);
+    }
+
+    return resources;
   }
 
   getTreeItem(element: FlinkAIViewModeData): TreeItem {
