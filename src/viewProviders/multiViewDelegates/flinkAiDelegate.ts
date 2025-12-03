@@ -1,5 +1,5 @@
 import type { TreeItem } from "vscode";
-import { logError } from "../../errors";
+import { extractResponseBody, isResponseError, logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkAIAgent, FlinkAIAgentTreeItem } from "../../models/flinkAiAgent";
 import { FlinkAIConnection, FlinkAIConnectionTreeItem } from "../../models/flinkAiConnection";
@@ -29,12 +29,46 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
   private agents: FlinkAIAgent[] = [];
 
   /**
-   * Converts a promise rejection reason to an Error instance.
+   * Converts a promise rejection reason to an Error instance with a user-friendly message.
+   * For HTTP response errors, extracts the error message from the response body.
    * @param reason - Unknown rejection reason
-   * @returns Error instance
+   * @returns Error instance with detailed message
    */
-  private toError(reason: unknown): Error {
-    return reason instanceof Error ? reason : new Error(String(reason));
+  private async toError(reason: unknown): Promise<Error> {
+    if (reason instanceof Error) {
+      // Check if this is a ResponseError with HTTP status and body
+      if (isResponseError(reason)) {
+        try {
+          const responseBody = await extractResponseBody(reason);
+          const statusCode = reason.response.status;
+
+          let errorMessage: string | undefined;
+
+          if (typeof responseBody === "object" && responseBody !== null) {
+            errorMessage =
+              responseBody.message ||
+              responseBody.detail ||
+              responseBody.title ||
+              responseBody.error;
+          } else if (typeof responseBody === "string") {
+            errorMessage = responseBody;
+          }
+
+          if (errorMessage) {
+            return new Error(`HTTP ${statusCode}: ${errorMessage}`);
+          }
+
+          // Fallback to status text if no message found
+          return new Error(`HTTP ${statusCode}: ${reason.response.statusText}`);
+        } catch {
+          return reason;
+        }
+      }
+
+      return reason;
+    }
+
+    return new Error(String(reason));
   }
 
   getChildren(element?: FlinkAIViewModeData): FlinkAIViewModeData[] {
@@ -73,7 +107,7 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     const [connections, tools, models, agents] = await Promise.allSettled([
       loader.getFlinkAIConnections(database, forceDeepRefresh),
       loader.getFlinkAITools(database, forceDeepRefresh),
-      loader.getFlinkAIModels(database, forceDeepRefresh),
+      Promise.reject(new Error("Test error: Flink AI Models failed")),
       loader.getFlinkAIAgents(database, forceDeepRefresh),
     ]);
 
@@ -85,28 +119,28 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
       this.connections = connections.value;
       resources.push(...this.connections);
     } else {
-      errors.push(["Flink AI Connections", this.toError(connections.reason)]);
+      errors.push(["Flink AI Connections", await this.toError(connections.reason)]);
     }
 
     if (tools.status === "fulfilled") {
       this.tools = tools.value;
       resources.push(...this.tools);
     } else {
-      errors.push(["Flink AI Tools", this.toError(tools.reason)]);
+      errors.push(["Flink AI Tools", await this.toError(tools.reason)]);
     }
 
     if (models.status === "fulfilled") {
       this.models = models.value;
       resources.push(...this.models);
     } else {
-      errors.push(["Flink AI Models", this.toError(models.reason)]);
+      errors.push(["Flink AI Models", await this.toError(models.reason)]);
     }
 
     if (agents.status === "fulfilled") {
       this.agents = agents.value;
       resources.push(...this.agents);
     } else {
-      errors.push(["Flink AI Agents", this.toError(agents.reason)]);
+      errors.push(["Flink AI Agents", await this.toError(agents.reason)]);
     }
 
     if (errors.length > 0) {
@@ -115,7 +149,7 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
       }
 
       const resourceList = errors.map(([resource]) => resource).join(", ");
-      const errorMessage = `Failed to load ${errors.length} resource${errors.length > 1 ? "s" : ""}: ${resourceList}`;
+      const errorMessage = `Failed to load ${errors.length} resource${errors.length > 1 ? "s" : ""}: ${resourceList}. ${errors.map(([, error]) => error.message).join("; ")}`;
 
       await void showErrorNotificationWithButtons(errorMessage);
     }
