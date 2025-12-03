@@ -27,7 +27,6 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
   private tools: FlinkAITool[] = [];
   private models: FlinkAIModel[] = [];
   private agents: FlinkAIAgent[] = [];
-
   /**
    * Converts a promise rejection reason to an Error instance with a user-friendly message.
    * For HTTP response errors, extracts the error message from the response body.
@@ -35,40 +34,37 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
    * @returns Error instance with detailed message
    */
   private async toError(reason: unknown): Promise<Error> {
-    if (reason instanceof Error) {
-      // Check if this is a ResponseError with HTTP status and body
-      if (isResponseError(reason)) {
-        try {
-          const responseBody = await extractResponseBody(reason);
-          const statusCode = reason.response.status;
+    if (!(reason instanceof Error)) {
+      return new Error(String(reason));
+    }
 
-          let errorMessage: string | undefined;
-
-          if (typeof responseBody === "object" && responseBody !== null) {
-            errorMessage =
-              responseBody.message ||
-              responseBody.detail ||
-              responseBody.title ||
-              responseBody.error;
-          } else if (typeof responseBody === "string") {
-            errorMessage = responseBody;
-          }
-
-          if (errorMessage) {
-            return new Error(`HTTP ${statusCode}: ${errorMessage}`);
-          }
-
-          // Fallback to status text if no message found
-          return new Error(`HTTP ${statusCode}: ${reason.response.statusText}`);
-        } catch {
-          return reason;
-        }
-      }
-
+    // Not a ResponseError, return as-is
+    if (!isResponseError(reason)) {
       return reason;
     }
 
-    return new Error(String(reason));
+    // Handle ResponseError with HTTP details
+    try {
+      const responseBody = await extractResponseBody(reason);
+      const statusCode = reason.response.status;
+      let errorMessage: string | undefined;
+
+      if (typeof responseBody === "object" && responseBody !== null) {
+        errorMessage =
+          responseBody.message || responseBody.detail || responseBody.title || responseBody.error;
+      } else if (typeof responseBody === "string") {
+        errorMessage = responseBody;
+      }
+
+      if (errorMessage) {
+        return new Error(`HTTP ${statusCode}: ${errorMessage}`);
+      }
+
+      return new Error(`HTTP ${statusCode}: ${reason.response.statusText}`);
+    } catch {
+      // If body extraction fails, return original error
+      return reason;
+    }
   }
 
   getChildren(element?: FlinkAIViewModeData): FlinkAIViewModeData[] {
@@ -107,7 +103,7 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
     const [connections, tools, models, agents] = await Promise.allSettled([
       loader.getFlinkAIConnections(database, forceDeepRefresh),
       loader.getFlinkAITools(database, forceDeepRefresh),
-      Promise.reject(new Error("Test error: Flink AI Models failed")),
+      loader.getFlinkAIModels(database, forceDeepRefresh),
       loader.getFlinkAIAgents(database, forceDeepRefresh),
     ]);
 

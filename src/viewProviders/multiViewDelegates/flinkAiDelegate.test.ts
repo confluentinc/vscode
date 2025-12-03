@@ -143,20 +143,23 @@ describe("viewProviders/multiViewDelegates/flinkAiDelegate", () => {
         });
 
         it(`should display an error when Flink AI resources fail to load (forceDeepRefresh=${forceDeepRefresh})`, async () => {
-          const error = new Error("Test: tools API failed");
+          const toolsError = new Error("Test: tools API failed");
+          const agentsError = new Error("Test: agents API failed");
           stubbedLoader.getFlinkAIConnections.resolves([]);
           stubbedLoader.getFlinkAIModels.resolves([]);
-          stubbedLoader.getFlinkAIAgents.rejects(error);
-          stubbedLoader.getFlinkAITools.rejects(error);
+          stubbedLoader.getFlinkAIAgents.rejects(agentsError);
+          stubbedLoader.getFlinkAITools.rejects(toolsError);
 
           await delegate.fetchChildren(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, forceDeepRefresh);
 
           sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
           const callArgs = showErrorNotificationWithButtonsStub.getCall(0).args;
-          assert.strictEqual(
-            callArgs[0],
-            "Failed to load 2 resources: Flink AI Tools, Flink AI Agents",
+          const errorMessage = callArgs[0] as string;
+          assert.ok(
+            errorMessage.includes("Failed to load 2 resources: Flink AI Tools, Flink AI Agents"),
           );
+          assert.ok(errorMessage.includes("Test: tools API failed"));
+          assert.ok(errorMessage.includes("Test: agents API failed"));
         });
 
         it(`should not display an error when Flink AI resources are empty(forceDeepRefresh=${forceDeepRefresh})`, async () => {
