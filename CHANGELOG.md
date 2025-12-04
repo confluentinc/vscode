@@ -19,13 +19,15 @@ All notable changes to this extension will be documented in this file.
 
 ### Fixed
 
-- Fixed OAuth-based authentication with schema registries in Direct connections ([#2647](https://github.com/confluentinc/vscode/issues/2647))
+- Fixed OAuth-based authentication with schema registries in Direct connections
+  ([#2647](https://github.com/confluentinc/vscode/issues/2647))
 
 ## 2.0.1
 
 ### Fixed
 
-- Fixed producing records with `null` values as keys/values to topics from CCloud connections ([#3065](https://github.com/confluentinc/vscode/issues/3065))
+- Fixed producing records with `null` values as keys/values to topics from CCloud connections
+  ([#3065](https://github.com/confluentinc/vscode/issues/3065))
 
 ## 2.0.0
 
