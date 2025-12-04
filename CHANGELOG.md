@@ -2,17 +2,39 @@
 
 All notable changes to this extension will be documented in this file.
 
+## Unreleased
+
+### Added
+
+- New view modes for the Flink Database view:
+  - "Flink Database Relations" (now the default mode) displays tables, views, and their columns
+  - "Flink AI" displays connections, tools, models, and agents
+- Show view definition text in a view's tooltip.
+
+### Changed
+
+- Updated the "Support" view name to be "Help Center"
+
+## 2.0.3
+
+### Fixed
+
+- Fixed breaking local connections by updating the Docker Engine API version used by the extension
+  ([#3091](https://github.com/confluentinc/vscode/issues/3091))
+
 ## 2.0.2
 
 ### Fixed
 
-- Fixed OAuth-based authentication with schema registries in Direct connections ([#2647](https://github.com/confluentinc/vscode/issues/2647))
+- Fixed OAuth-based authentication with schema registries in Direct connections
+  ([#2647](https://github.com/confluentinc/vscode/issues/2647))
 
 ## 2.0.1
 
 ### Fixed
 
-- Fixed producing records with `null` values as keys/values to topics from CCloud connections ([#3065](https://github.com/confluentinc/vscode/issues/3065))
+- Fixed producing records with `null` values as keys/values to topics from CCloud connections
+  ([#3065](https://github.com/confluentinc/vscode/issues/3065))
 
 ## 2.0.0
 
