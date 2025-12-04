@@ -54,10 +54,10 @@ export class FlinkDatabaseView extends View {
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
         await this.loadArtifactsFromResourcesView(clusterLabel);
-        return undefined;
+        break;
       case SelectFlinkDatabase.FromArtifactsViewButton:
         await this.loadArtifactsFromButton(clusterLabel);
-        return undefined;
+        break;
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
         return await this.clickUploadFromComputePool(clusterLabel);
       default:
