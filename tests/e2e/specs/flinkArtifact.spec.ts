@@ -91,7 +91,12 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     artifactsView: FlinkDatabaseView,
     providerRegion: string,
   ): Promise<string> {
-    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
+    // Skip initiation since the upload modal was already opened via the compute pool context menu
+    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
+      electronApp,
+      artifactPath,
+      true,
+    );
 
     // Parse provider/region from format "PROVIDER/region" (e.g., "AWS/us-east-2")
     const [provider, region] = providerRegion.split("/");

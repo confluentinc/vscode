@@ -127,10 +127,17 @@ export class FlinkDatabaseView extends View {
    * and selects the specified JAR file.
    * @param electronApp - The Electron application instance
    * @param filePath - The path to the JAR file to upload
+   * @param skipInitiation - If true, skips clicking the upload button (assumes quickpick is already open)
    * @returns The name of the uploaded artifact
    */
-  async uploadFlinkArtifact(electronApp: ElectronApplication, filePath: string): Promise<string> {
-    await this.initiateUpload();
+  async uploadFlinkArtifact(
+    electronApp: ElectronApplication,
+    filePath: string,
+    skipInitiation = false,
+  ): Promise<string> {
+    if (!skipInitiation) {
+      await this.initiateUpload();
+    }
     await this.selectJarFile(electronApp, filePath);
     const artifactName = await this.enterArtifactName(filePath);
     await this.confirmUpload();
