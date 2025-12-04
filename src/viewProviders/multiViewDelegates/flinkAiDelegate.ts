@@ -117,7 +117,7 @@ export class FlinkAIDelegate extends ViewProviderDelegate<
       const resourceList = errors.map(([resource]) => resource).join(", ");
       const errorMessage = `Failed to load ${errors.length} resource${errors.length > 1 ? "s" : ""}: ${resourceList}`;
 
-      await void showErrorNotificationWithButtons(errorMessage);
+      void showErrorNotificationWithButtons(errorMessage);
     }
 
     return resources;
