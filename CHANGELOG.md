@@ -15,17 +15,26 @@ All notable changes to this extension will be documented in this file.
 
 - Updated the "Support" view name to be "Help Center"
 
+## 2.0.3
+
+### Fixed
+
+- Bump required minimum Docker engine version to 25.0 (API version 1.44) to fix Local connections on
+  latest Docker Desktop releases ([#3091](https://github.com/confluentinc/vscode/issues/3091))
+
 ## 2.0.2
 
 ### Fixed
 
-- Fixed OAuth-based authentication with schema registries in Direct connections ([#2647](https://github.com/confluentinc/vscode/issues/2647))
+- Fixed OAuth-based authentication with schema registries in Direct connections
+  ([#2647](https://github.com/confluentinc/vscode/issues/2647))
 
 ## 2.0.1
 
 ### Fixed
 
-- Fixed producing records with `null` values as keys/values to topics from CCloud connections ([#3065](https://github.com/confluentinc/vscode/issues/3065))
+- Fixed producing records with `null` values as keys/values to topics from CCloud connections
+  ([#3065](https://github.com/confluentinc/vscode/issues/3065))
 
 ## 2.0.0
 
