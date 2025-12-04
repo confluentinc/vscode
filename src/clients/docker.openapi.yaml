@@ -19,10 +19,10 @@ produces:
 consumes:
   - "application/json"
   - "text/plain"
-basePath: "/v1.43"
+basePath: "/v1.44"
 info:
   title: "Docker Engine API"
-  version: "1.43"
+  version: "1.44"
   x-logo:
     url: "https://docs.docker.com/assets/images/logo-docker-main.png"
   description: |
@@ -364,14 +364,17 @@ definitions:
         description: "Whether the mount should be read-only."
         type: "boolean"
       Consistency:
-        description: "The consistency requirement for the mount: `default`, `consistent`, `cached`, or `delegated`."
+        description:
+          "The consistency requirement for the mount: `default`, `consistent`, `cached`, or
+          `delegated`."
         type: "string"
       BindOptions:
         description: "Optional configuration for the `bind` type."
         type: "object"
         properties:
           Propagation:
-            description: "A propagation mode with the value `[r]private`, `[r]shared`, or `[r]slave`."
+            description:
+              "A propagation mode with the value `[r]private`, `[r]shared`, or `[r]slave`."
             type: "string"
             enum:
               - "private"
@@ -1219,10 +1222,7 @@ definitions:
           enum:
             - {}
           default: {}
-        example: {
-          "80/tcp": {},
-          "443/tcp": {}
-        }
+        example: { "80/tcp": {}, "443/tcp": {} }
       Tty:
         description: |
           Attach standard streams to a TTY, including `stdin` if it is not closed.
@@ -1406,10 +1406,7 @@ definitions:
           enum:
             - {}
           default: {}
-        example: {
-          "80/tcp": {},
-          "443/tcp": {}
-        }
+        example: { "80/tcp": {}, "443/tcp": {} }
       Tty:
         description: |
           Attach standard streams to a TTY, including `stdin` if it is not closed.
@@ -1574,36 +1571,32 @@ definitions:
       "AttachStdin": false
       "AttachStdout": false
       "AttachStderr": false
-      "ExposedPorts": {
-        "80/tcp": {},
-        "443/tcp": {}
-      }
+      "ExposedPorts": { "80/tcp": {}, "443/tcp": {} }
       "Tty": false
       "OpenStdin": false
       "StdinOnce": false
       "Env": ["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"]
       "Cmd": ["/bin/sh"]
-      "Healthcheck": {
-        "Test": ["string"],
-        "Interval": 0,
-        "Timeout": 0,
-        "Retries": 0,
-        "StartPeriod": 0,
-        "StartInterval": 0
-      }
+      "Healthcheck":
+        {
+          "Test": ["string"],
+          "Interval": 0,
+          "Timeout": 0,
+          "Retries": 0,
+          "StartPeriod": 0,
+          "StartInterval": 0,
+        }
       "ArgsEscaped": true
       "Image": ""
-      "Volumes": {
-        "/app/data": {},
-        "/app/config": {}
-      }
+      "Volumes": { "/app/data": {}, "/app/config": {} }
       "WorkingDir": "/public/"
       "Entrypoint": []
       "OnBuild": []
-      "Labels": {
-        "com.example.some-label": "some-value",
-        "com.example.some-other-label": "some-other-value"
-      }
+      "Labels":
+        {
+          "com.example.some-label": "some-value",
+          "com.example.some-other-label": "some-other-value",
+        }
       "StopSignal": "SIGTERM"
       "Shell": ["/bin/sh", "-c"]
 
@@ -1883,11 +1876,12 @@ definitions:
         x-nullable: false
         additionalProperties:
           type: "string"
-        example: {
-          "MergedDir": "/var/lib/docker/overlay2/ef749362d13333e65fc95c572eb525abbe0052e16e086cb64bc3b98ae9aa6d74/merged",
-          "UpperDir": "/var/lib/docker/overlay2/ef749362d13333e65fc95c572eb525abbe0052e16e086cb64bc3b98ae9aa6d74/diff",
-          "WorkDir": "/var/lib/docker/overlay2/ef749362d13333e65fc95c572eb525abbe0052e16e086cb64bc3b98ae9aa6d74/work"
-        }
+        example:
+          {
+            "MergedDir": "/var/lib/docker/overlay2/ef749362d13333e65fc95c572eb525abbe0052e16e086cb64bc3b98ae9aa6d74/merged",
+            "UpperDir": "/var/lib/docker/overlay2/ef749362d13333e65fc95c572eb525abbe0052e16e086cb64bc3b98ae9aa6d74/diff",
+            "WorkDir": "/var/lib/docker/overlay2/ef749362d13333e65fc95c572eb525abbe0052e16e086cb64bc3b98ae9aa6d74/work",
+          }
 
   FilesystemChange:
     description: |
@@ -2606,13 +2600,11 @@ definitions:
     type: "object"
     properties:
       Name:
-        description:
-          ID of the peer-node in the Swarm cluster.
+        description: ID of the peer-node in the Swarm cluster.
         type: "string"
         example: "6869d7c1732b"
       IP:
-        description:
-          IP-address of the peer-node in the Swarm cluster.
+        description: IP-address of the peer-node in the Swarm cluster.
         type: "string"
         example: "10.133.77.91"
 
@@ -2679,7 +2671,9 @@ definitions:
         type: "string"
         description: |
           Description of the build-step that produced the build cache.
-        example: "mount / from exec /bin/sh -c echo 'Binary::apt::APT::Keep-Downloaded-Packages \"true\";' > /etc/apt/apt.conf.d/keep-cache"
+        example:
+          'mount / from exec /bin/sh -c echo ''Binary::apt::APT::Keep-Downloaded-Packages "true";''
+          > /etc/apt/apt.conf.d/keep-cache'
       InUse:
         type: "boolean"
         description: |
@@ -3011,8 +3005,7 @@ definitions:
         example: "tiborvass/sample-volume-plugin"
       Enabled:
         description:
-          True if the plugin is running. False if the plugin is not running,
-          only installed.
+          True if the plugin is running. False if the plugin is not running, only installed.
         type: "boolean"
         x-nullable: false
         example: true
@@ -3401,8 +3394,7 @@ definitions:
           certificates.
         type: "string"
       CertIssuerSubject:
-        description:
-          The base64-url-safe-encoded raw subject bytes of the issuer.
+        description: The base64-url-safe-encoded raw subject bytes of the issuer.
         type: "string"
       CertIssuerPublicKey:
         description: |
@@ -4771,29 +4763,24 @@ definitions:
         EndpointSpec:
           Mode: "vip"
           Ports:
-            -
-              Protocol: "tcp"
+            - Protocol: "tcp"
               TargetPort: 6379
               PublishedPort: 30001
       Endpoint:
         Spec:
           Mode: "vip"
           Ports:
-            -
-              Protocol: "tcp"
+            - Protocol: "tcp"
               TargetPort: 6379
               PublishedPort: 30001
         Ports:
-          -
-            Protocol: "tcp"
+          - Protocol: "tcp"
             TargetPort: 6379
             PublishedPort: 30001
         VirtualIPs:
-          -
-            NetworkID: "4qvuz4ko70xaltuqbt8956gd1"
+          - NetworkID: "4qvuz4ko70xaltuqbt8956gd1"
             Addr: "10.255.0.2/16"
-          -
-            NetworkID: "4qvuz4ko70xaltuqbt8956gd1"
+          - NetworkID: "4qvuz4ko70xaltuqbt8956gd1"
             Addr: "10.255.0.3/16"
 
   ImageDeleteResponseItem:
@@ -4815,7 +4802,9 @@ definitions:
         items:
           type: "string"
     example:
-      Warning: "unable to pin image doesnotexist:latest to digest: image library/doesnotexist:latest not found"
+      Warning:
+        "unable to pin image doesnotexist:latest to digest: image library/doesnotexist:latest not
+        found"
 
   ContainerSummary:
     type: "object"
@@ -5650,7 +5639,6 @@ definitions:
           - "WARNING: bridge-nf-call-iptables is disabled"
           - "WARNING: bridge-nf-call-ip6tables is disabled"
 
-
   # PluginsInfo is a temp struct holding Plugins name
   # registered with docker daemon. It is used by Info struct
   PluginsInfo:
@@ -5687,8 +5675,8 @@ definitions:
         type: "array"
         items:
           type: "string"
-        example: ["awslogs", "fluentd", "gcplogs", "gelf", "journald", "json-file", "splunk", "syslog"]
-
+        example:
+          ["awslogs", "fluentd", "gcplogs", "gelf", "journald", "json-file", "splunk", "syslog"]
 
   RegistryServiceConfig:
     description: |
@@ -5817,8 +5805,7 @@ definitions:
           - "https://[2001:db8:a0b:12f0::1]/"
 
   IndexInfo:
-    description:
-      IndexInfo contains information about a registry.
+    description: IndexInfo contains information about a registry.
     type: "object"
     x-nullable: true
     properties:
@@ -6034,7 +6021,20 @@ definitions:
       Type:
         description: "The type of object emitting the event"
         type: "string"
-        enum: ["builder", "config", "container", "daemon", "image", "network", "node", "plugin", "secret", "service", "volume"]
+        enum:
+          [
+            "builder",
+            "config",
+            "container",
+            "daemon",
+            "image",
+            "network",
+            "node",
+            "plugin",
+            "secret",
+            "service",
+            "volume",
+          ]
         example: "container"
       Action:
         description: "The type of event"
@@ -7103,8 +7103,7 @@ paths:
                 - "TIME"
                 - "CMD"
               Processes:
-                -
-                  - "root"
+                - - "root"
                   - "13642"
                   - "882"
                   - "0"
@@ -7112,8 +7111,7 @@ paths:
                   - "pts/0"
                   - "00:00:00"
                   - "/bin/bash"
-                -
-                  - "root"
+                - - "root"
                   - "13735"
                   - "13642"
                   - "0"
@@ -7620,7 +7618,9 @@ paths:
             $ref: "#/definitions/ErrorResponse"
           examples:
             application/json:
-              message: "Container d37cde0fe4ad63c3a7252023b2f9800282894247d145cb5933ddf6e52cc03a28 is not running"
+              message:
+                "Container d37cde0fe4ad63c3a7252023b2f9800282894247d145cb5933ddf6e52cc03a28 is not
+                running"
         500:
           description: "server error"
           schema:
@@ -8247,7 +8247,8 @@ paths:
         - name: "path"
           in: "query"
           required: true
-          description: "Path to a directory in the container to extract the archive’s contents into. "
+          description:
+            "Path to a directory in the container to extract the archive’s contents into. "
           type: "string"
         - name: "noOverwriteDirNonDir"
           in: "query"
@@ -8313,7 +8314,9 @@ paths:
   /images/json:
     get:
       summary: "List Images"
-      description: "Returns a list of images on the server. Note that it uses a different, smaller representation of an image than inspecting a single image."
+      description:
+        "Returns a list of images on the server. Note that it uses a different, smaller
+        representation of an image than inspecting a single image."
       operationId: "ImageList"
       produces:
         - "application/json"
@@ -8331,7 +8334,8 @@ paths:
       parameters:
         - name: "all"
           in: "query"
-          description: "Show all images. Only images from a final layer (no children) are shown by default."
+          description:
+            "Show all images. Only images from a final layer (no children) are shown by default."
           type: "boolean"
           default: false
         - name: "filters"
@@ -8378,18 +8382,24 @@ paths:
       parameters:
         - name: "inputStream"
           in: "body"
-          description: "A tar archive compressed with one of the following algorithms: identity (no compression), gzip, bzip2, xz."
+          description:
+            "A tar archive compressed with one of the following algorithms: identity (no
+            compression), gzip, bzip2, xz."
           schema:
             type: "string"
             format: "binary"
         - name: "dockerfile"
           in: "query"
-          description: "Path within the build context to the `Dockerfile`. This is ignored if `remote` is specified and points to an external `Dockerfile`."
+          description:
+            "Path within the build context to the `Dockerfile`. This is ignored if `remote` is
+            specified and points to an external `Dockerfile`."
           type: "string"
           default: "Dockerfile"
         - name: "t"
           in: "query"
-          description: "A name and optional tag to apply to the image in the `name:tag` format. If you omit the tag the default `latest` value is assumed. You can provide several `t` parameters."
+          description:
+            "A name and optional tag to apply to the image in the `name:tag` format. If you omit the
+            tag the default `latest` value is assumed. You can provide several `t` parameters."
           type: "string"
         - name: "extrahosts"
           in: "query"
@@ -8397,7 +8407,13 @@ paths:
           type: "string"
         - name: "remote"
           in: "query"
-          description: "A Git repository URI or HTTP/HTTPS context URI. If the URI points to a single text file, the file’s contents are placed into a file called `Dockerfile` and the image is built from that file. If the URI points to a tarball, the file is downloaded by the daemon and the contents therein used as the context for the build. If the URI points to a tarball and the `dockerfile` parameter is also specified, there must be a file with the corresponding path inside the tarball."
+          description:
+            "A Git repository URI or HTTP/HTTPS context URI. If the URI points to a single text
+            file, the file’s contents are placed into a file called `Dockerfile` and the image is
+            built from that file. If the URI points to a tarball, the file is downloaded by the
+            daemon and the contents therein used as the context for the build. If the URI points to
+            a tarball and the `dockerfile` parameter is also specified, there must be a file with
+            the corresponding path inside the tarball."
           type: "string"
         - name: "q"
           in: "query"
@@ -8454,29 +8470,35 @@ paths:
         - name: "buildargs"
           in: "query"
           description: >
-            JSON map of string pairs for build-time variables. Users pass these values at build-time. Docker
-            uses the buildargs as the environment context for commands run via the `Dockerfile` RUN
-            instruction, or for variable expansion in other `Dockerfile` instructions. This is not meant for
-            passing secret values.
+            JSON map of string pairs for build-time variables. Users pass these values at
+            build-time. Docker uses the buildargs as the environment context for commands run via
+            the `Dockerfile` RUN instruction, or for variable expansion in other `Dockerfile`
+            instructions. This is not meant for passing secret values.
 
 
-            For example, the build arg `FOO=bar` would become `{"FOO":"bar"}` in JSON. This would result in the
-            query parameter `buildargs={"FOO":"bar"}`. Note that `{"FOO":"bar"}` should be URI component encoded.
+            For example, the build arg `FOO=bar` would become `{"FOO":"bar"}` in JSON. This would
+            result in the query parameter `buildargs={"FOO":"bar"}`. Note that `{"FOO":"bar"}`
+            should be URI component encoded.
 
 
-            [Read more about the buildargs instruction.](https://docs.docker.com/engine/reference/builder/#arg)
+            [Read more about the buildargs
+            instruction.](https://docs.docker.com/engine/reference/builder/#arg)
           type: "string"
         - name: "shmsize"
           in: "query"
-          description: "Size of `/dev/shm` in bytes. The size must be greater than 0. If omitted the system uses 64MB."
+          description:
+            "Size of `/dev/shm` in bytes. The size must be greater than 0. If omitted the system
+            uses 64MB."
           type: "integer"
         - name: "squash"
           in: "query"
-          description: "Squash the resulting images layers into a single layer. *(Experimental release only.)*"
+          description:
+            "Squash the resulting images layers into a single layer. *(Experimental release only.)*"
           type: "boolean"
         - name: "labels"
           in: "query"
-          description: "Arbitrary key/value labels to set on the image, as a JSON map of string pairs."
+          description:
+            "Arbitrary key/value labels to set on the image, as a JSON map of string pairs."
           type: "string"
         - name: "networkmode"
           in: "query"
@@ -8629,19 +8651,29 @@ paths:
       parameters:
         - name: "fromImage"
           in: "query"
-          description: "Name of the image to pull. The name may include a tag or digest. This parameter may only be used when pulling an image. The pull is cancelled if the HTTP connection is closed."
+          description:
+            "Name of the image to pull. The name may include a tag or digest. This parameter may
+            only be used when pulling an image. The pull is cancelled if the HTTP connection is
+            closed."
           type: "string"
         - name: "fromSrc"
           in: "query"
-          description: "Source to import. The value may be a URL from which the image can be retrieved or `-` to read the image from the request body. This parameter may only be used when importing an image."
+          description:
+            "Source to import. The value may be a URL from which the image can be retrieved or `-`
+            to read the image from the request body. This parameter may only be used when importing
+            an image."
           type: "string"
         - name: "repo"
           in: "query"
-          description: "Repository name given to an image when it is imported. The repo may include a tag. This parameter may only be used when importing an image."
+          description:
+            "Repository name given to an image when it is imported. The repo may include a tag. This
+            parameter may only be used when importing an image."
           type: "string"
         - name: "tag"
           in: "query"
-          description: "Tag or digest. If empty when pulling an image, this causes all tags for the given image to be pulled."
+          description:
+            "Tag or digest. If empty when pulling an image, this causes all tags for the given image
+            to be pulled."
           type: "string"
         - name: "message"
           in: "query"
@@ -8649,7 +8681,8 @@ paths:
           type: "string"
         - name: "inputImage"
           in: "body"
-          description: "Image content if the value `-` has been specified in fromSrc query parameter"
+          description:
+            "Image content if the value `-` has been specified in fromSrc query parameter"
           schema:
             type: "string"
           required: false
@@ -8739,7 +8772,8 @@ paths:
               type: "object"
               x-go-name: HistoryResponseItem
               title: "HistoryResponseItem"
-              description: "individual image layer information in response to ImageHistory operation"
+              description:
+                "individual image layer information in response to ImageHistory operation"
               required: [Id, Created, CreatedBy, Tags, Size, Comment]
               properties:
                 Id:
@@ -8767,7 +8801,9 @@ paths:
             application/json:
               - Id: "3db9c44f45209632d6050b35958829c3a2aa256d81b9a7be45b362ff85c54710"
                 Created: 1398108230
-                CreatedBy: "/bin/sh -c #(nop) ADD file:eb15dbd63394e063b805a3c32ca7bf0266ef64676d5a6fab4801f2e81e2a5148 in /"
+                CreatedBy:
+                  "/bin/sh -c #(nop) ADD
+                  file:eb15dbd63394e063b805a3c32ca7bf0266ef64676d5a6fab4801f2e81e2a5148 in /"
                 Tags:
                   - "ubuntu:lucid"
                   - "ubuntu:10.04"
@@ -8775,7 +8811,10 @@ paths:
                 Comment: ""
               - Id: "6cfa4d1f33fb861d4d114f43b25abd0ac737509268065cdfd69d544a59c85ab8"
                 Created: 1398108222
-                CreatedBy: "/bin/sh -c #(nop) MAINTAINER Tianon Gravi <admwiggin@gmail.com> - mkimage-debootstrap.sh -i iproute,iputils-ping,ubuntu-minimal -t lucid.tar.xz lucid http://archive.ubuntu.com/ubuntu/"
+                CreatedBy:
+                  "/bin/sh -c #(nop) MAINTAINER Tianon Gravi <admwiggin@gmail.com> -
+                  mkimage-debootstrap.sh -i iproute,iputils-ping,ubuntu-minimal -t lucid.tar.xz
+                  lucid http://archive.ubuntu.com/ubuntu/"
                 Tags: []
                 Size: 0
                 Comment: ""
@@ -8940,7 +8979,8 @@ paths:
           required: true
         - name: "force"
           in: "query"
-          description: "Remove the image even if it is being used by stopped containers or has other tags"
+          description:
+            "Remove the image even if it is being used by stopped containers or has other tags"
           type: "boolean"
           default: false
         - name: "noprune"
@@ -9120,7 +9160,9 @@ paths:
   /version:
     get:
       summary: "Get version"
-      description: "Returns the version of Docker that is running and various information about the system that Docker is running on."
+      description:
+        "Returns the version of Docker that is running and various information about the system that
+        Docker is running on."
       operationId: "SystemVersion"
       produces: ["application/json"]
       responses:
@@ -9396,8 +9438,7 @@ paths:
             example:
               LayersSize: 1092588
               Images:
-                -
-                  Id: "sha256:2b8fd9751c4c0f5dd266fcae00707e67a2545ef34f9a29354585f93dac906749"
+                - Id: "sha256:2b8fd9751c4c0f5dd266fcae00707e67a2545ef34f9a29354585f93dac906749"
                   ParentId: ""
                   RepoTags:
                     - "busybox:latest"
@@ -9410,8 +9451,7 @@ paths:
                   Labels: {}
                   Containers: 1
               Containers:
-                -
-                  Id: "e575172ed11dc01bfce087fb27bee502db149e1a0fad7c296ad300bbff178148"
+                - Id: "e575172ed11dc01bfce087fb27bee502db149e1a0fad7c296ad300bbff178148"
                   Names:
                     - "/top"
                   Image: "busybox"
@@ -9442,8 +9482,7 @@ paths:
                         MacAddress: "02:42:ac:12:00:02"
                   Mounts: []
               Volumes:
-                -
-                  Name: "my-volume"
+                - Name: "my-volume"
                   Driver: "local"
                   Mountpoint: "/var/lib/docker/volumes/my-volume/_data"
                   Labels: null
@@ -9453,22 +9492,24 @@ paths:
                     Size: 10920104
                     RefCount: 2
               BuildCache:
-                -
-                  ID: "hw53o5aio51xtltp5xjp8v7fx"
+                - ID: "hw53o5aio51xtltp5xjp8v7fx"
                   Parents: []
                   Type: "regular"
-                  Description: "pulled from docker.io/library/debian@sha256:234cb88d3020898631af0ccbbcca9a66ae7306ecd30c9720690858c1b007d2a0"
+                  Description:
+                    "pulled from
+                    docker.io/library/debian@sha256:234cb88d3020898631af0ccbbcca9a66ae7306ecd30c9720690858c1b007d2a0"
                   InUse: false
                   Shared: true
                   Size: 0
                   CreatedAt: "2021-06-28T13:31:01.474619385Z"
                   LastUsedAt: "2021-07-07T22:02:32.738075951Z"
                   UsageCount: 26
-                -
-                  ID: "ndlpt0hhvkqcdfkputsk4cq9c"
+                - ID: "ndlpt0hhvkqcdfkputsk4cq9c"
                   Parents: ["ndlpt0hhvkqcdfkputsk4cq9c"]
                   Type: "regular"
-                  Description: "mount / from exec /bin/sh -c echo 'Binary::apt::APT::Keep-Downloaded-Packages \"true\";' > /etc/apt/apt.conf.d/keep-cache"
+                  Description:
+                    'mount / from exec /bin/sh -c echo ''Binary::apt::APT::Keep-Downloaded-Packages
+                    "true";'' > /etc/apt/apt.conf.d/keep-cache'
                   InUse: false
                   Shared: true
                   Size: 51
@@ -10121,8 +10162,7 @@ paths:
                 IPAM:
                   Driver: "default"
                   Config:
-                    -
-                      Subnet: "172.17.0.0/16"
+                    - Subnet: "172.17.0.0/16"
                 Options:
                   com.docker.network.bridge.default_bridge: "true"
                   com.docker.network.bridge.enable_icc: "true"
@@ -11428,7 +11468,9 @@ paths:
                 type: "string"
             example:
               ID: "ak7w3gjqoa3kuz8xcpnyy0pvl"
-              Warning: "unable to pin image doesnotexist:latest to digest: image library/doesnotexist:latest not found"
+              Warning:
+                "unable to pin image doesnotexist:latest to digest: image
+                library/doesnotexist:latest not found"
         400:
           description: "bad parameter"
           schema:
@@ -11463,8 +11505,7 @@ paths:
                     ContainerSpec:
                       Image: "nginx:alpine"
                       Mounts:
-                        -
-                          ReadOnly: true
+                        - ReadOnly: true
                           Source: "web-data"
                           Target: "/usr/share/nginx/html"
                           Type: "volume"
@@ -11479,8 +11520,7 @@ paths:
                         Search: ["example.org"]
                         Options: ["timeout:3"]
                       Secrets:
-                        -
-                          File:
+                        - File:
                             Name: "www.example.org.key"
                             UID: "33"
                             GID: "33"
@@ -11518,8 +11558,7 @@ paths:
                     MaxFailureRatio: 0.15
                   EndpointSpec:
                     Ports:
-                      -
-                        Protocol: "tcp"
+                      - Protocol: "tcp"
                         PublishedPort: 8080
                         TargetPort: 80
                   Labels:
