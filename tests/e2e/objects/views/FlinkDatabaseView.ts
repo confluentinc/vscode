@@ -54,10 +54,10 @@ export class FlinkDatabaseView extends View {
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
         await this.loadArtifactsFromResourcesView(clusterLabel);
-        return undefined;
+        break;
       case SelectFlinkDatabase.FromArtifactsViewButton:
         await this.loadArtifactsFromButton(clusterLabel);
-        return undefined;
+        break;
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
         return await this.clickUploadFromComputePool(clusterLabel);
       default:
@@ -129,12 +129,8 @@ export class FlinkDatabaseView extends View {
    * @param filePath - The path to the JAR file to upload
    * @returns The name of the uploaded artifact
    */
-  async uploadFlinkArtifact(
-    electronApp: ElectronApplication,
-    filePath: string,
-    isFromComputePool: boolean,
-  ): Promise<string> {
-    await this.initiateUpload(isFromComputePool);
+  async uploadFlinkArtifact(electronApp: ElectronApplication, filePath: string): Promise<string> {
+    await this.initiateUpload();
     await this.selectJarFile(electronApp, filePath);
     const artifactName = await this.enterArtifactName(filePath);
     await this.confirmUpload();
@@ -202,12 +198,8 @@ export class FlinkDatabaseView extends View {
   /**
    * Click the upload button to initiate the artifact upload flow.
    */
-  private async initiateUpload(isFromComputePool: boolean): Promise<void> {
-    if (isFromComputePool) {
-      // Handled by the compute pool item right-click action
-    } else {
-      await this.clickNavAction("Upload Flink Artifact to Confluent Cloud");
-    }
+  private async initiateUpload(): Promise<void> {
+    await this.clickNavAction("Upload Flink Artifact to Confluent Cloud");
 
     const quickpick = new Quickpick(this.page);
     await expect(quickpick.locator).toBeVisible();

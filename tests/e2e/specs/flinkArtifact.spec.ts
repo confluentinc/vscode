@@ -75,45 +75,23 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   ): Promise<string> {
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
-        return await completeArtifactUploadFlow(
-          { entrypoint: SelectFlinkDatabase.DatabaseFromResourcesView },
-          page,
-          electronApp,
-          artifactPath,
-          artifactsView,
-        );
+        return await completeArtifactUploadFlow(electronApp, artifactPath, artifactsView);
       case SelectFlinkDatabase.FromArtifactsViewButton:
-        return await completeArtifactUploadFlow(
-          { entrypoint: SelectFlinkDatabase.FromArtifactsViewButton },
-          page,
-          electronApp,
-          artifactPath,
-          artifactsView,
-        );
+        return await completeArtifactUploadFlow(electronApp, artifactPath, artifactsView);
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
         if (!providerRegion) {
           throw new Error("providerRegion is required for ComputePoolFromResourcesView");
         }
-        return await completeUploadFlowForComputePool(
-          page,
-          electronApp,
-          artifactsView,
-          providerRegion,
-        );
+        return await completeUploadFlowForComputePool(electronApp, artifactsView, providerRegion);
     }
   }
 
   async function completeUploadFlowForComputePool(
-    page: Page,
     electronApp: ElectronApplication,
     artifactsView: FlinkDatabaseView,
     providerRegion: string,
   ): Promise<string> {
-    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
-      electronApp,
-      artifactPath,
-      true,
-    );
+    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
 
     // Parse provider/region from format "PROVIDER/region" (e.g., "AWS/us-east-2")
     const [provider, region] = providerRegion.split("/");
@@ -126,17 +104,11 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 });
 
 async function completeArtifactUploadFlow(
-  config: { entrypoint: SelectFlinkDatabase },
-  page: Page,
   electronApp: ElectronApplication,
   artifactPath: string,
   artifactsView: FlinkDatabaseView,
 ): Promise<string> {
   await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
-  const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
-    electronApp,
-    artifactPath,
-    false,
-  );
+  const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
   return uploadedArtifactName;
 }
