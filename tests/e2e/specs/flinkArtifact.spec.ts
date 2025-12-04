@@ -47,12 +47,13 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     test(config.testName, async ({ page, electronApp }) => {
       const artifactsView = new FlinkDatabaseView(page);
       await artifactsView.ensureExpanded();
-      await artifactsView.loadArtifacts(config.entrypoint);
+      const providerRegion = await artifactsView.loadArtifacts(config.entrypoint);
       const uploadedArtifactName = await startUploadFlow(
         config.entrypoint,
         page,
         electronApp,
         artifactsView,
+        providerRegion,
       );
       await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
         1,
@@ -70,6 +71,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     page: Page,
     electronApp: ElectronApplication,
     artifactsView: FlinkDatabaseView,
+    providerRegion?: string,
   ): Promise<string> {
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
@@ -89,7 +91,15 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
           artifactsView,
         );
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
-        return await completeUploadFlowForComputePool(page, electronApp, artifactsView);
+        if (!providerRegion) {
+          throw new Error("providerRegion is required for ComputePoolFromResourcesView");
+        }
+        return await completeUploadFlowForComputePool(
+          page,
+          electronApp,
+          artifactsView,
+          providerRegion,
+        );
     }
   }
 
@@ -97,6 +107,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     page: Page,
     electronApp: ElectronApplication,
     artifactsView: FlinkDatabaseView,
+    providerRegion: string,
   ): Promise<string> {
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
       electronApp,
@@ -104,9 +115,9 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       true,
     );
 
-    await artifactsView.clickSelectKafkaClusterAsFlinkDatabase();
-    await page.keyboard.type("azure");
-    await page.keyboard.press("Enter");
+    // Parse provider/region from format "PROVIDER/region" (e.g., "AWS/us-east-2")
+    const [provider, region] = providerRegion.split("/");
+    await artifactsView.selectKafkaClusterByProviderRegion(provider, region);
     await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
 
     await expect(artifactsView.artifacts.first()).toBeVisible();

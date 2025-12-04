@@ -45,21 +45,21 @@ export class FlinkDatabaseView extends View {
    * using the specified entrypoint.
    * @param entrypoint - The method to select the Kafka cluster
    * @param clusterLabel - Optional label or regex to identify the Kafka cluster in the quickpick
+   * @returns The provider/region string if using ComputePoolFromResourcesView, undefined otherwise
    */
   async loadArtifacts(
     entrypoint: SelectFlinkDatabase,
     clusterLabel?: string | RegExp,
-  ): Promise<void> {
+  ): Promise<string | undefined> {
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
         await this.loadArtifactsFromResourcesView(clusterLabel);
-        break;
+        return undefined;
       case SelectFlinkDatabase.FromArtifactsViewButton:
         await this.loadArtifactsFromButton(clusterLabel);
-        break;
+        return undefined;
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
-        await this.clickUploadFromComputePool(clusterLabel);
-        break;
+        return await this.clickUploadFromComputePool(clusterLabel);
       default:
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);
     }
@@ -86,8 +86,9 @@ export class FlinkDatabaseView extends View {
   /**
    * Load artifacts by selecting a compute pool from the Resources view.
    * @param clusterLabel - Optional label or regex to identify the Kafka cluster
+   * @returns The provider/region string of the selected compute pool (e.g., "AWS/us-east-2")
    */
-  private async clickUploadFromComputePool(clusterLabel?: string | RegExp): Promise<void> {
+  private async clickUploadFromComputePool(clusterLabel?: string | RegExp): Promise<string> {
     const resourcesView = new ResourcesView(this.page);
     await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
 
@@ -98,7 +99,9 @@ export class FlinkDatabaseView extends View {
       ? computePools.filter({ hasText: clusterLabel }).first()
       : computePools.first();
     const computePoolItem = new FlinkComputePoolItem(this.page, computePoolLocator);
+    const providerRegion = await computePoolItem.getProviderRegion();
     await computePoolItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
+    return providerRegion;
   }
 
   /**
@@ -145,6 +148,28 @@ export class FlinkDatabaseView extends View {
    */
   async clickSelectKafkaClusterAsFlinkDatabase(): Promise<void> {
     await this.clickNavAction("Select Kafka Cluster as Flink Database");
+  }
+
+  /**
+   * Select a Kafka cluster as Flink database by matching the provider/region.
+   * Opens the cluster selection quickpick and selects the first cluster that matches
+   * the specified provider/region format (e.g., "AWS/us-east-2").
+   * @param provider - The cloud provider (e.g., "AWS", "AZURE", "GCP")
+   * @param region - The region (e.g., "us-east-2", "us-west-2")
+   */
+  async selectKafkaClusterByProviderRegion(provider: string, region: string): Promise<void> {
+    await this.clickSelectKafkaClusterAsFlinkDatabase();
+
+    const kafkaClusterQuickpick = new Quickpick(this.page);
+    await expect(kafkaClusterQuickpick.locator).toBeVisible();
+    await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
+
+    const providerRegionPattern = `${provider}/${region}`;
+    const matchingCluster = kafkaClusterQuickpick.items
+      .filter({ hasText: providerRegionPattern })
+      .first();
+    await expect(matchingCluster).toBeVisible();
+    await matchingCluster.click();
   }
 
   /**
