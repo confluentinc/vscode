@@ -19,8 +19,8 @@ All notable changes to this extension will be documented in this file.
 
 ### Fixed
 
-- Fixed breaking local connections by updating the Docker Engine API version used by the extension
-  ([#3091](https://github.com/confluentinc/vscode/issues/3091))
+- Bump required minimum Docker engine version to 25.0 (API version 1.44) to fix Local connections on
+  latest Docker Desktop releases ([#3091](https://github.com/confluentinc/vscode/issues/3091))
 
 ## 2.0.2
 
