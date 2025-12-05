@@ -28,6 +28,9 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly page: Signal<number>;
   readonly pageSize: Signal<number>;
   readonly resizeColumnDelta: Signal<number | null> = this.signal<number | null>(null);
+  readonly isResizing: Signal<boolean> = this.signal<boolean>(false);
+  private tempColWidths: number[] | null = null;
+  private tableElement: HTMLElement | null = null;
   readonly stopButtonClicked: Signal<boolean>;
   readonly tablePage: Signal<number>;
   readonly changelogPage: Signal<number>;
@@ -243,6 +246,11 @@ export class FlinkStatementResultsViewModel extends ViewModel {
      */
     this.colWidth = this.derive(
       () => {
+        // During active resize, use temporary widths to avoid reactive conflicts
+        if (this.isResizing() && this.tempColWidths != null) {
+          return this.tempColWidths;
+        }
+
         const columnsLength = this.allColumns().length;
         const storedWidths = this.storage.get()?.colWidths;
         if (!storedWidths) {
@@ -272,16 +280,8 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       const widths = this.colWidth();
       const columnNames = this.allColumns();
       const flags = this.columnVisibilityFlags();
-      // Fallback in case we can't get columns
-      if (widths.length === 0 && columnNames.length === 0) {
-        return "--grid-template-columns: 1fr";
-      }
-      const visibleColumnWidths = columnNames
-        .map((_, index) => ({ index, isVisible: flags[index], width: widths[index] }))
-        .filter((col) => col.isVisible)
-        .map((col) => `${col.width}px`)
-        .join(" ");
-      return `--grid-template-columns: ${visibleColumnWidths}`;
+      const cssValue = this.buildGridTemplateColumns(widths, columnNames, flags);
+      return `--grid-template-columns: ${cssValue}`;
     });
 
     /** Whether the stop button has been clicked */
@@ -327,6 +327,25 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     return this.allColumns().filter((_, index) => flags[index]);
   }
 
+  /**
+   * Builds the grid-template-columns custom property value for colWidths and tempColWidths during resize
+   */
+  private buildGridTemplateColumns(
+    widths: number[],
+    columnNames: string[],
+    flags: boolean[],
+  ): string {
+    if (widths.length === 0 && columnNames.length === 0) {
+      return "1fr";
+    }
+    const visibleColumnWidths = columnNames
+      .map((_, index) => ({ index, isVisible: flags[index], width: widths[index] }))
+      .filter((col) => col.isVisible)
+      .map((col) => `${col.width}px`)
+      .join(" ");
+    return visibleColumnWidths;
+  }
+
   /** Testing if a column is currently visible. This is for the settings panel. */
   isColumnVisible(index: number) {
     return this.columnVisibilityFlags()[index];
@@ -363,30 +382,45 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   handleStartResize(event: PointerEvent, index: number) {
     const target = event.target as HTMLElement;
     target.setPointerCapture(event.pointerId);
+    // Initialize temporary widths from current state
+    this.tempColWidths = this.colWidth().slice();
+    this.isResizing(true);
+    // Capture reference to table element for direct CSS manipulation
+    this.tableElement = target.closest(".grid") as HTMLElement;
     // this is half of the computations for the new column width
     // any new clientX added (via move event) provide the new width
-    this.resizeColumnDelta(this.colWidth()[index] - event.clientX);
+    this.resizeColumnDelta(this.tempColWidths[index] - event.clientX);
   }
 
   /** Triggered on each move event while resizing, dynamically changes column width. */
   handleMoveResize(event: PointerEvent, index: number) {
     const start = this.resizeColumnDelta();
     // skip, if the pointer just passing by
-    if (start == null) return;
-    const widths = this.colWidth().slice();
+    if (start == null || this.tempColWidths == null || this.tableElement == null) return;
     const newWidth = Math.round(start + event.clientX);
-    widths[index] = Math.max(16, newWidth); // Minimum width of 1rem
-    this.colWidth(widths);
+    this.tempColWidths[index] = Math.max(16, newWidth); // Minimum width of 1rem
+    const columnNames = this.allColumns();
+    const flags = this.columnVisibilityFlags();
+    const cssValue = this.buildGridTemplateColumns(this.tempColWidths, columnNames, flags);
+    // Directly update CSS custom property for immediate visual feedback
+    this.tableElement.style.setProperty("--grid-template-columns", cssValue);
   }
 
   /** Cleanup handler when the user stops resizing a column. */
   handleStopResize(event: PointerEvent) {
     const target = event.target as HTMLElement;
     target.releasePointerCapture(event.pointerId);
-    // drop temporary state so the move event doesn't change anything after the pointer is released
+
+    // Finalize the resize by persisting temporary widths
+    if (this.tempColWidths != null) {
+      this.storage.set({ ...this.storage.get()!, colWidths: this.tempColWidths });
+    }
+
+    // Clear temporary state
     this.resizeColumnDelta(null);
-    // persist changes to local storage
-    this.storage.set({ ...this.storage.get()!, colWidths: this.colWidth() });
+    this.tempColWidths = null;
+    this.tableElement = null;
+    this.isResizing(false);
   }
 
   /** The text search query string. */
