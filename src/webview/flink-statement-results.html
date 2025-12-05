@@ -69,50 +69,52 @@
               </div>
             </template>
           </div>
-          <template
-            data-if="this.statementMeta().failed && this.statementMeta().detail && !this.isBannerDismissed('failed-detail')"
-          >
-            <div class="reportable-box red">
-              <button
-                class="reportable-close-button"
-                aria-label="Dismiss"
-                title="Dismiss"
-                data-on-click="this.dismissBanner('failed-detail')"
-              >
-                <span class="codicon codicon-close"></span>
-              </button>
-              <div class="error-heading">
-                <span class="codicon codicon-error"></span>
-                Something went wrong.
-              </div>
+          <template data-if="this.statementMeta().failed && this.statementMeta().detail">
+            <div class="detail-section error">
               <div
-                data-testid="statement-detail-error"
-                class="reportable-message"
-                data-html="this.statementMeta().detail && this.statementMeta().detail.replace(/\n/g, '<br>')"
-              ></div>
+                class="detail-header"
+                data-on-click="this.toggleSection('failed-detail')"
+                data-attr-aria-expanded="!this.isSectionCollapsed('failed-detail')"
+                tabindex="0"
+              >
+                <span
+                  class="codicon"
+                  data-attr-class="this.isSectionCollapsed('failed-detail') ? 'codicon-chevron-right' : 'codicon-chevron-down'"
+                ></span>
+                <span class="codicon codicon-error"></span>
+                <span class="detail-title">Something went wrong</span>
+              </div>
+              <template data-if="!this.isSectionCollapsed('failed-detail')">
+                <div
+                  data-testid="statement-detail-error"
+                  class="detail-content"
+                  data-html="this.statementMeta().detail && this.statementMeta().detail.replace(/\n/g, '<br>')"
+                ></div>
+              </template>
             </div>
           </template>
-          <template
-            data-if="!this.statementMeta().failed && this.statementMeta().detail && !this.isBannerDismissed('info-detail')"
-          >
-            <div class="reportable-box blue">
-              <button
-                class="reportable-close-button"
-                aria-label="Dismiss"
-                title="Dismiss"
-                data-on-click="this.dismissBanner('info-detail')"
-              >
-                <span class="codicon codicon-close"></span>
-              </button>
-              <div class="error-heading">
-                <span class="codicon codicon-info"></span>
-                Info
-              </div>
+          <template data-if="!this.statementMeta().failed && this.statementMeta().detail">
+            <div class="detail-section info">
               <div
-                data-testid="statement-detail-info"
-                class="reportable-message"
-                data-html="this.statementMeta().detail && this.statementMeta().detail.replace(/\n/g, '<br>')"
-              ></div>
+                class="detail-header"
+                data-on-click="this.toggleSection('info-detail')"
+                data-attr-aria-expanded="!this.isSectionCollapsed('info-detail')"
+                tabindex="0"
+              >
+                <span
+                  class="codicon"
+                  data-attr-class="this.isSectionCollapsed('info-detail') ? 'codicon-chevron-right' : 'codicon-chevron-down'"
+                ></span>
+                <span class="codicon codicon-info"></span>
+                <span class="detail-title">Info</span>
+              </div>
+              <template data-if="!this.isSectionCollapsed('info-detail')">
+                <div
+                  data-testid="statement-detail-info"
+                  class="detail-content"
+                  data-html="this.statementMeta().detail && this.statementMeta().detail.replace(/\n/g, '<br>')"
+                ></div>
+              </template>
             </div>
           </template>
         </section>
@@ -570,79 +572,66 @@
         color: var(--vscode-descriptionForeground);
       }
 
-      .reportable-box {
-        position: relative;
-        padding: 12px;
-        border-radius: 6px;
+      .detail-section {
         margin-top: 0.5rem;
         margin-bottom: 0.5rem;
+        border-radius: 4px;
+        border: 1px solid var(--vscode-panel-border);
+        overflow: hidden;
       }
 
-      .reportable-close-button {
-        position: absolute;
-        top: 0.5rem;
-        right: 0.5rem;
-        background: transparent;
-        border: none;
+      .detail-section.error {
+        background: var(--vscode-inputValidation-errorBackground);
+        border-color: var(--vscode-inputValidation-errorBorder);
+      }
+
+      .detail-section.info {
+        background: var(--vscode-inputValidation-infoBackground);
+        border-color: var(--vscode-inputValidation-infoBorder);
+      }
+
+      .detail-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 8px 12px;
         cursor: pointer;
-        padding: 0.25rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 3px;
-        opacity: 0.7;
-        transition:
-          opacity 0.2s,
-          background-color 0.2s;
+        user-select: none;
       }
 
-      .reportable-close-button:hover {
-        opacity: 1;
+      .detail-header:hover {
+        opacity: 0.9;
       }
 
-      .reportable-box.red .reportable-close-button {
-        color: #b71c1c;
+      .detail-header:focus {
+        outline: 1px solid var(--vscode-focusBorder);
+        outline-offset: -1px;
       }
 
-      .reportable-box.red .reportable-close-button:hover {
-        background-color: rgba(229, 57, 53, 0.1);
+      .detail-section.error .detail-header {
+        color: var(--vscode-inputValidation-errorForeground);
       }
 
-      .reportable-box.blue .reportable-close-button {
-        color: #0d47a1;
+      .detail-section.info .detail-header {
+        color: var(--vscode-inputValidation-infoForeground);
       }
 
-      .reportable-box.blue .reportable-close-button:hover {
-        background-color: rgba(25, 118, 210, 0.1);
+      .detail-title {
+        font-weight: 600;
       }
 
-      .reportable-close-button .codicon {
-        font-size: 16px;
-      }
-
-      .reportable-box.red {
-        background: #ffeaea;
-        border: 1px solid #e53935;
-        color: #b71c1c;
-      }
-
-      .reportable-box.blue {
-        background: #e3f2fd;
-        border: 1px solid #1976d2;
-        color: #0d47a1;
-      }
-
-      .reportable-message {
-        margin-top: 4px;
+      .detail-content {
+        padding: 0 12px 12px 12px;
         font-size: 95%;
+        line-height: 1.5;
       }
 
-      .error-heading {
-        display: flex;
-        align-items: center;
-        gap: 0.5em;
-        font-weight: bold;
-        margin-bottom: 4px;
+      .detail-section.error .detail-content {
+        color: var(--vscode-inputValidation-errorForeground);
+      }
+
+      .detail-section.info .detail-content {
+        color: var(--vscode-inputValidation-infoForeground);
       }
 
       .toggle-actions {

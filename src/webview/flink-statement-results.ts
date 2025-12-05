@@ -15,7 +15,7 @@ export type ResultsViewerStorageState = {
   colWidths: number[];
   columnVisibilityFlags: boolean[];
   page: number;
-  dismissedBanners: Set<string>;
+  collapsedSections: Set<string>;
 };
 
 /**
@@ -49,7 +49,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly waitingForResults: Signal<boolean>;
   readonly emptyFilterResult: Signal<boolean>;
   readonly hasResults: Signal<boolean>;
-  readonly dismissedBanners: Signal<Set<string>>;
+  readonly collapsedSections: Signal<Set<string>>;
   readonly streamState: Signal<StreamState>;
   readonly streamError: Signal<{ message: string } | null>;
   readonly pageStatLabel: Signal<string | null>;
@@ -164,8 +164,8 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       return filter != null ? filter > 0 : total > 0;
     });
 
-    /** Track which banners have been dismissed by the user */
-    this.dismissedBanners = this.signal(storage.get()?.dismissedBanners ?? new Set<string>());
+    /** Track which detail sections are collapsed by the user */
+    this.collapsedSections = this.signal(storage.get()?.collapsedSections ?? new Set<string>());
 
     /**
      * Short list of pages generated based on current results count and current
@@ -462,16 +462,20 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     setTimeout(() => this.stopButtonClicked(false), 2000);
   }
 
-  /** Dismiss a banner by its identifier */
-  dismissBanner(bannerId: string) {
-    const dismissed = new Set(this.dismissedBanners());
-    dismissed.add(bannerId);
-    this.dismissedBanners(dismissed);
-    this.storage.set({ ...this.storage.get()!, dismissedBanners: dismissed });
+  /** Toggle the collapsed state of a detail section */
+  toggleSection(sectionId: string) {
+    const collapsed = new Set(this.collapsedSections());
+    if (collapsed.has(sectionId)) {
+      collapsed.delete(sectionId);
+    } else {
+      collapsed.add(sectionId);
+    }
+    this.collapsedSections(collapsed);
+    this.storage.set({ ...this.storage.get()!, collapsedSections: collapsed });
   }
 
-  /** Check if a banner has been dismissed */
-  isBannerDismissed(bannerId: string): boolean {
-    return this.dismissedBanners().has(bannerId);
+  /** Check if a section is currently collapsed */
+  isSectionCollapsed(sectionId: string): boolean {
+    return this.collapsedSections().has(sectionId);
   }
 }
