@@ -1,4 +1,4 @@
-import type { ElectronApplication, Page } from "@playwright/test";
+import type { ElectronApplication } from "@playwright/test";
 import { expect } from "@playwright/test";
 import * as path from "path";
 import { fileURLToPath } from "url";
@@ -50,7 +50,6 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       const providerRegion = await artifactsView.loadArtifacts(config.entrypoint);
       const uploadedArtifactName = await startUploadFlow(
         config.entrypoint,
-        page,
         electronApp,
         artifactsView,
         providerRegion,
@@ -68,7 +67,6 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
   async function startUploadFlow(
     entrypoint: SelectFlinkDatabase,
-    page: Page,
     electronApp: ElectronApplication,
     artifactsView: FlinkDatabaseView,
     providerRegion?: string,
