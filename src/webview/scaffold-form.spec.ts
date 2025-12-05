@@ -44,16 +44,20 @@ function stylesheet(options: any = {}): Plugin {
 
 test.use({
   template: render(template, { nonce: "testing" }),
+  // @ts-expect-error: Playwright 1.46+ requires double-array for plugins,
+  // see https://github.com/microsoft/playwright/releases/tag/v1.46.0
   plugins: [
-    virtual({
-      comms: `
+    [
+      virtual({
+        comms: `
         import * as sinon from 'sinon';
         export const sendWebviewMessage = sinon.stub();
       `,
-    }),
-    alias({ entries: { "./comms/comms": "comms" } }),
-    stylesheet({ include: ["**/*.css"], minify: false }),
-    esbuild({ jsx: "automatic", target: "es2022", exclude: [/node_modules/] }),
+      }),
+      alias({ entries: { "./comms/comms": "comms" } }),
+      stylesheet({ include: ["**/*.css"], minify: false }),
+      esbuild({ jsx: "automatic", target: "es2022", exclude: [/node_modules/] }),
+    ],
   ],
 });
 

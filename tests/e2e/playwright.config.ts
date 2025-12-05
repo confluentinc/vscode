@@ -42,7 +42,7 @@ export default defineConfig({
       ]
     : [["list"], ["html"]],
   use: {
-    trace: "retain-on-failure",
+    trace: "on",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
