@@ -70,52 +70,29 @@
             </template>
           </div>
           <template data-if="this.statementMeta().failed && this.statementMeta().detail">
-            <div class="detail-section error">
-              <div
-                class="detail-header"
-                data-on-click="this.toggleSection('failed-detail')"
-                data-attr-aria-expanded="!this.isSectionCollapsed('failed-detail')"
-                tabindex="0"
-              >
-                <span
-                  class="codicon"
-                  data-attr-class="this.isSectionCollapsed('failed-detail') ? 'codicon-chevron-right' : 'codicon-chevron-down'"
-                ></span>
+            <details class="detail-section error">
+              <summary class="detail-header">
                 <span class="codicon codicon-error"></span>
                 <span class="detail-title">Something went wrong</span>
-              </div>
-              <template data-if="!this.isSectionCollapsed('failed-detail')">
-                <div
-                  data-testid="statement-detail-error"
-                  class="detail-content"
-                  data-html="this.statementMeta().detail && this.statementMeta().detail.replace(/\n/g, '<br>')"
-                ></div>
-              </template>
-            </div>
+              </summary>
+              <div
+                data-testid="statement-detail-error"
+                class="detail-content"
+                data-html="this.detailText()"
+              ></div>
+            </details>
           </template>
           <template data-if="!this.statementMeta().failed && this.statementMeta().detail">
-            <div class="detail-section info">
+            <details class="detail-section info">
+              <summary>
+                <span class="codicon codicon-info"></span> <span class="detail-title">Info</span>
+              </summary>
               <div
-                class="detail-header"
-                data-on-click="this.toggleSection('info-detail')"
-                data-attr-aria-expanded="!this.isSectionCollapsed('info-detail')"
-                tabindex="0"
-              >
-                <span
-                  class="codicon"
-                  data-attr-class="this.isSectionCollapsed('info-detail') ? 'codicon-chevron-right' : 'codicon-chevron-down'"
-                ></span>
-                <span class="codicon codicon-info"></span>
-                <span class="detail-title">Info</span>
-              </div>
-              <template data-if="!this.isSectionCollapsed('info-detail')">
-                <div
-                  data-testid="statement-detail-info"
-                  class="detail-content"
-                  data-html="this.statementMeta().detail && this.statementMeta().detail.replace(/\n/g, '<br>')"
-                ></div>
-              </template>
-            </div>
+                data-testid="statement-detail-info"
+                class="detail-content"
+                data-html="this.detailText()"
+              ></div>
+            </details>
           </template>
         </section>
 
@@ -632,6 +609,9 @@
 
       .detail-section.info .detail-content {
         color: var(--vscode-inputValidation-infoForeground);
+      }
+      .detail-content.warning {
+        color: var(--vscode-editorWarning-foreground);
       }
 
       .toggle-actions {

@@ -62,7 +62,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly colWidth: Signal<number[]>;
   readonly gridTemplateColumns: Signal<string>;
   readonly pageButtons: Signal<(number | "ldot" | "rdot")[]>;
-
+  readonly detailText: Signal<string | null>;
   readonly pagePersistWatcher: () => void;
 
   /**
@@ -163,7 +163,12 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       const { total, filter } = this.resultCount();
       return filter != null ? filter > 0 : total > 0;
     });
-
+    this.detailText = this.derive(() => {
+      const detail = this.statementMeta().detail;
+      if (detail?.includes("WARNING"))
+        return `<span class="warning">${detail.replace(/\n/g, "<br>")}</span>`;
+      return detail ? detail.replace(/\n/g, "<br>") : null;
+    });
     /** Track which detail sections are collapsed by the user */
     this.collapsedSections = this.signal(storage.get()?.collapsedSections ?? new Set<string>());
 
