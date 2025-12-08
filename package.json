@@ -1971,11 +1971,6 @@
           "command": "confluent.flinkdatabase.refresh",
           "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && config.confluent.flink.artifacts",
           "group": "navigation@998"
-        },
-        {
-          "submenu": "confluent.flinkdatabase.viewMode",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts && confluent.flinkDatabaseSelected",
-          "group": "navigation@999"
         }
       ],
       "view/item/context": [
@@ -2266,13 +2261,6 @@
         }
       ]
     },
-    "submenus": [
-      {
-        "id": "confluent.flinkdatabase.viewMode",
-        "label": "Switch View Mode",
-        "icon": "$(list-tree)"
-      }
-    ],
     "colors": [],
     "icons": {
       "apache-kafka": {
