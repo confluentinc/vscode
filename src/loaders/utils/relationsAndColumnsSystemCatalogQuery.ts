@@ -219,6 +219,7 @@ export type RawRelationsAndColumnsRow = RawRelationRow | RawColumnRow | RawViewD
  * 3. Column rows without a preceding relation row are cause for an error.
  */
 export function parseRelationsAndColumnsSystemCatalogQueryResponse(
+  database: CCloudFlinkDbKafkaCluster,
   rows: RawRelationsAndColumnsRow[],
 ): FlinkRelation[] {
   // Sorts in-place to ensure relations come before their columns and all columns for a relation are together.
@@ -230,6 +231,10 @@ export function parseRelationsAndColumnsSystemCatalogQueryResponse(
   for (const row of rows) {
     if (row.rowType === "relation") {
       const newRelation: FlinkRelation = new FlinkRelation({
+        environmentId: database.environmentId,
+        provider: database.provider,
+        region: database.region,
+        databaseId: database.id,
         name: row.relationName,
         comment: row.relationComment,
         type: toRelationType(row.relationType),

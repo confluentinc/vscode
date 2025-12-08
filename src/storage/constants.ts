@@ -9,6 +9,9 @@ export enum WorkspaceStorageKeys {
   /** Map of URIs to their associated metadata record/objects. */
   URI_METADATA = "uriMetadata",
 
+  /** Map of Flink Relations by (CCloud) Kafka cluster id (i.e. a Flinkable Database) */
+  FLINK_RELATIONS = "flinkRelations",
+
   /** Map of Flink Artifacts by (CCloud) environment id, cloud provider, cloud region) */
   FLINK_ARTIFACTS = "flinkArtifacts",
 
