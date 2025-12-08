@@ -70,7 +70,7 @@
             </template>
           </div>
           <template data-if="this.statementMeta().failed && this.statementMeta().detail">
-            <details class="detail-section error">
+            <details class="detail-section error" open>
               <summary class="detail-header">
                 <span class="codicon codicon-error"></span>
                 <span class="detail-title">Something went wrong</span>
@@ -83,7 +83,7 @@
             </details>
           </template>
           <template data-if="!this.statementMeta().failed && this.statementMeta().detail">
-            <details class="detail-section info">
+            <details class="detail-section info" open>
               <summary>
                 <span class="codicon codicon-info"></span> <span class="detail-title">Info</span>
               </summary>
