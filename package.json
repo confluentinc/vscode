@@ -832,6 +832,7 @@
     ],
     "configuration": [
       {
+        "id": "general",
         "title": "General",
         "properties": {
           "confluent.debugging.showSidecarExceptions": {
@@ -857,6 +858,7 @@
         }
       },
       {
+        "id": "confluent-cloud",
         "title": "Confluent Cloud",
         "properties": {
           "confluent.cloud.messageViewer.showSchemaWarningNotifications": {
@@ -888,6 +890,7 @@
         }
       },
       {
+        "id": "connections",
         "title": "Connections",
         "properties": {
           "confluent.krb5ConfigPath": {
@@ -898,6 +901,7 @@
         }
       },
       {
+        "id": "local-docker",
         "title": "Local",
         "properties": {
           "confluent.localDocker.socketPath": {
@@ -940,6 +944,7 @@
         }
       },
       {
+        "id": "flink",
         "title": "Flink",
         "properties": {
           "confluent.flink.languageServer": {
