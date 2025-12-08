@@ -2246,24 +2246,6 @@
           "group": "confluent@1",
           "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && resourceExtname == .jar"
         }
-      ],
-      "confluent.flinkdatabase.viewMode": [
-        {
-          "command": "confluent.flinkdatabase.setRelationsViewMode",
-          "group": "viewMode@1"
-        },
-        {
-          "command": "confluent.flinkdatabase.setUDFsViewMode",
-          "group": "viewMode@2"
-        },
-        {
-          "command": "confluent.flinkdatabase.setArtifactsViewMode",
-          "group": "viewMode@3"
-        },
-        {
-          "command": "confluent.flinkdatabase.setAIViewMode",
-          "group": "viewMode@4"
-        }
       ]
     },
     "colors": [],
