@@ -570,32 +570,6 @@
         border-color: var(--vscode-inputValidation-infoBorder);
       }
 
-      .detail-header {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 8px 12px;
-        cursor: pointer;
-        user-select: none;
-      }
-
-      .detail-header:hover {
-        opacity: 0.9;
-      }
-
-      .detail-header:focus {
-        outline: 1px solid var(--vscode-focusBorder);
-        outline-offset: -1px;
-      }
-
-      .detail-section.error .detail-header {
-        color: var(--vscode-inputValidation-errorForeground);
-      }
-
-      .detail-section.info .detail-header {
-        color: var(--vscode-inputValidation-infoForeground);
-      }
-
       .detail-title {
         font-weight: 600;
       }
@@ -612,9 +586,6 @@
 
       .detail-section.info .detail-content {
         color: var(--vscode-inputValidation-infoForeground);
-      }
-      .detail-content.warning {
-        color: var(--vscode-editorWarning-foreground);
       }
 
       .toggle-actions {
