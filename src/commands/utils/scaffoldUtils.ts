@@ -53,7 +53,7 @@ export const scaffoldProjectRequest = async (
     templateList = await getTemplatesList(templateCollection);
   } catch (err) {
     logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
-    const baseMessage: string = parseErrorDetails(err);
+    const baseMessage: string = await parseErrorDetails(err);
     const stageSpecificMessage = `Project generation failed. Unable to list the templates. ${baseMessage || ""}`;
     void showErrorNotificationWithButtons(stageSpecificMessage);
     return { success: false, message: stageSpecificMessage };
@@ -99,7 +99,7 @@ export const scaffoldProjectRequest = async (
     pickedTemplate = await pickTemplate(templateList);
   } catch (err) {
     logError(err, "template picking", { extra: { functionName: "scaffoldProjectRequest" } });
-    const baseMessage = parseErrorDetails(err);
+    const baseMessage = await parseErrorDetails(err);
     const stageSpecificMessage = `Project generation failed. Unable to pick a template. ${baseMessage || ""}`;
     void showErrorNotificationWithButtons(stageSpecificMessage);
     return { success: false, message: stageSpecificMessage };
@@ -191,7 +191,12 @@ export const scaffoldProjectRequest = async (
           res = await applyTemplate(pickedTemplate, body.data, telemetrySource);
           // only dispose the form if the template was successfully applied
           if (res.success) optionsForm.dispose();
-        } else vscode.window.showErrorMessage("Failed to apply template."); // FIXME apply step errors bubble up? Or notify on their own?
+        } else {
+          // This shouldn't happen as pickedTemplate is set earlier, but handle defensively
+          const errorMessage = "Failed to apply template. No template selected.";
+          void showErrorNotificationWithButtons(errorMessage);
+          res = { success: false, message: errorMessage };
+        }
         return res satisfies MessageResponse<"Submit">;
       }
     }
@@ -225,7 +230,6 @@ export async function applyTemplate(
   let failureStage: string = "";
   try {
     // Potential failure point 2: calling the apply op in scaffold service.
-    // TODO we should give users a heads-up in the case of a 403 error and let them know that a proxy might be interfering (see Sentry issue)
     failureStage = "scaffold service apply operation";
     const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request);
     // Potential failure point 3: buffer extraction
@@ -305,16 +309,23 @@ export async function applyTemplate(
     });
     let message = "Failed to generate template. An unknown error occurred.";
     if (e instanceof Error) {
-      message = e.message;
       const response = (e as ResponseError).response;
       if (response) {
-        try {
-          const payload = await response.json().then((json) => JSON.stringify(json));
-          message = parseErrorMessage(payload);
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (jsonError) {
-          message = `Failed to generate template. Unable to parse error response: ${e}`;
+        // Check for 403 Forbidden - likely proxy interference
+        if (response.status === 403) {
+          message =
+            "Access denied. This may be caused by a corporate proxy or VPN blocking the request. Please check your network settings or contact your IT administrator.";
+        } else {
+          try {
+            const payload = await response.json().then((json) => JSON.stringify(json));
+            message = parseErrorMessage(payload);
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          } catch (jsonError) {
+            message = `Failed to generate template. Unable to parse error response: ${e}`;
+          }
         }
+      } else {
+        message = e.message;
       }
     }
     const stageSpecificMessage = `Template generation failed during ${failureStage}: ${message}`;
@@ -481,35 +492,44 @@ export async function handleProjectScaffoldUriEvent(uri: vscode.Uri): Promise<vo
   return await handleProjectScaffoldUri(collection, template, isFormNeeded, options);
 }
 /**
- * FIXME use known types like ResponseError/APIError
  * Attempts to extract a useful error message from an unknown error object.
- * Used to provide actionable feedback when template listing fails.
- * @param err - The error object thrown during template listing
+ * Used to provide actionable feedback when a part of the flow fails.
+ * @param err - The error object thrown during scaffold operations
  * @returns A string describing the error, or an empty string if not available
  */
-function parseErrorDetails(err: unknown): string {
+async function parseErrorDetails(err: unknown): Promise<string> {
   if (typeof err === "string") {
     return err;
   }
+
   if (err instanceof Error) {
-    if ("response" in err && typeof (err as any).response?.json === "function") {
+    // Handle ResponseError with proper type checking
+    const responseErr = err as ResponseError;
+    if (responseErr.response) {
+      const status = responseErr.response.status;
+
+      // Special handling for 403 - likely proxy interference
+      if (status === 403) {
+        return "Access denied. This may be caused by a corporate proxy or VPN blocking the request. Please check your network settings or contact your IT administrator.";
+      }
+
       try {
-        // Try to parse error details from a response body if present
-        const response = (err as any).response;
-        return response.json().then((json: any) => {
-          if (json && json.message) return json.message;
-          if (json && json.errors && Array.isArray(json.errors)) {
-            // TODO use parseErrorMessage function from above?
-            return json.errors.map((e: any) => e.detail || e.message).join("; ");
-          }
-          return JSON.stringify(json);
-        });
+        const json = await responseErr.response.json();
+        if (json && json.message) {
+          return json.message;
+        }
+        if (json && json.errors && Array.isArray(json.errors)) {
+          return json.errors.map((e: any) => e.detail || e.message).join("; ");
+        }
+        return JSON.stringify(json);
       } catch {
-        // Ignore parsing errors
+        // If JSON parsing fails, return the error message
+        return err.message || "An error occurred but details could not be parsed.";
       }
     }
     return err.message || "";
   }
+
   if (typeof err === "object" && err !== null) {
     if ("message" in err && typeof (err as any).message === "string") {
       return (err as any).message;
