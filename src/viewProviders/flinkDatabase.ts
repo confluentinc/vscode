@@ -306,7 +306,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
   /** Fetch table/view relations for the given database. */
   async refreshRelationsContainer(
     database: CCloudFlinkDbKafkaCluster,
-    forceDeepRefresh: boolean,
+    forceDeepRefresh: boolean = false,
   ): Promise<void> {
     this.relations = await this.refreshResourceContainer(
       database,
