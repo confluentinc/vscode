@@ -214,7 +214,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
         schema,
         this.viewMode(),
         this.searchRegexp(),
-        this.formatResultValue.bind(this),
+        (value, search) => this.formatResultValue(value, search),
       );
     });
 
