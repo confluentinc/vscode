@@ -104,6 +104,88 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     await expect(artifactsView.artifacts.first()).toBeVisible();
     return uploadedArtifactName;
   }
+
+  test("should upload Flink Artifact when triggered by right-clicking on a .jar file", async ({
+    page,
+    electronApp,
+    testTempDir,
+  }) => {
+    const { Quickpick } = await import("../objects/quickInputs/Quickpick");
+    const { InputBox } = await import("../objects/quickInputs/InputBox");
+    const { NotificationArea } = await import("../objects/notifications/NotificationArea");
+    const { View } = await import("../objects/views/View");
+    const { ViewItem } = await import("../objects/views/viewItems/ViewItem");
+    const { copyFileSync } = await import("fs");
+
+    // Setup: Load artifacts view and select a Flink database
+    const artifactsView = new FlinkDatabaseView(page);
+    await artifactsView.ensureExpanded();
+    await artifactsView.loadArtifacts(SelectFlinkDatabase.FromArtifactsViewButton);
+
+    // Copy the .jar file to the workspace so it appears in the Explorer
+    const jarFileName = path.basename(artifactPath);
+    const workspaceJarPath = path.join(testTempDir, jarFileName);
+    copyFileSync(artifactPath, workspaceJarPath);
+
+    // Open the Explorer view and find the .jar file
+    const explorerView = new View(page, "Explorer");
+    await explorerView.ensureExpanded();
+    const jarFileItem = new ViewItem(page, explorerView.treeItems.filter({ hasText: jarFileName }));
+    await expect(jarFileItem.locator).toBeVisible();
+
+    // Right-click on the .jar file and select "Upload Flink Artifact"
+    await jarFileItem.rightClickContextMenuAction("Upload Flink Artifact");
+
+    // Wait for quickpick to appear with upload form
+    const quickpick = new Quickpick(page);
+    await expect(quickpick.locator).toBeVisible();
+    await expect(quickpick.items).not.toHaveCount(0);
+
+    // Select Flink compute pool (item 1)
+    const computePoolItem = quickpick.items.filter({ hasText: "1." }).first();
+    await expect(computePoolItem).toBeVisible();
+    await computePoolItem.click();
+
+    // Select Kafka cluster (item 2)
+    const kafkaClusterItem = quickpick.items.filter({ hasText: "2." }).first();
+    await expect(kafkaClusterItem).toBeVisible();
+    await kafkaClusterItem.click();
+
+    // Generate unique artifact name
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    const baseFileName = path.basename(artifactPath, ".jar");
+    const uploadedArtifactName = `${baseFileName}-${randomSuffix}`;
+
+    // Enter the artifact name
+    const artifactNameItem = quickpick.items.filter({ hasText: "3. Artifact Name" }).first();
+    await expect(artifactNameItem).toBeVisible();
+    await artifactNameItem.click();
+
+    const inputBox = new InputBox(page);
+    await expect(inputBox.locator).toBeVisible();
+    await inputBox.input.fill(uploadedArtifactName);
+    await inputBox.confirm();
+
+    // Confirm the upload
+    const uploadAction = quickpick.items.filter({ hasText: "Upload Artifact" }).first();
+    await expect(uploadAction).toBeVisible();
+    await uploadAction.click();
+
+    // Wait for upload success notification
+    const notificationArea = new NotificationArea(page);
+    const successNotifications = notificationArea.infoNotifications.filter({
+      hasText: "uploaded successfully",
+    });
+    await expect(successNotifications.first()).toBeVisible();
+
+    // Verify the artifact appears in the artifacts view
+    await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
+    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
+
+    // Cleanup: delete the artifact
+    await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
+    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(0);
+  });
 });
 
 async function completeArtifactUploadFlow(

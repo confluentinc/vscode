@@ -444,6 +444,10 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     return this.post("PreviewAllResults", { timestamp: this.timestamp() });
   }
 
+  exportToCsv() {
+    return this.post("ExportToCsv", { timestamp: this.timestamp() });
+  }
+
   viewStatementSource() {
     return this.post("ViewStatementSource", { timestamp: this.timestamp() });
   }

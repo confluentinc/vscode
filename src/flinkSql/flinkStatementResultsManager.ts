@@ -40,7 +40,8 @@ export type MessageType =
   | "StopStatement"
   | "ViewStatementSource"
   | "SetViewMode"
-  | "GetViewMode";
+  | "GetViewMode"
+  | "ExportToCsv";
 
 // Define the post function type based on the overloads
 export type PostFunction = {
@@ -88,6 +89,7 @@ export type PostFunction = {
   (type: "ViewStatementSource", body: { timestamp?: number }): Promise<null>;
   (type: "SetViewMode", body: { viewMode: ViewMode; timestamp?: number }): Promise<null>;
   (type: "GetViewMode", body: { timestamp?: number }): Promise<ViewMode>;
+  (type: "ExportToCsv", body: { timestamp?: number }): Promise<null>;
 };
 
 /**
@@ -408,6 +410,100 @@ export class FlinkStatementResultsManager {
     await vscode.commands.executeCommand("confluent.statements.viewstatementsql", this.statement);
   }
 
+  /** Export filtered results to CSV file. */
+  private async exportToCsv(): Promise<void> {
+    try {
+      // Get filtered results and schema
+      const results = this._filteredResults();
+      const schema = this.statement.status?.traits?.schema;
+
+      if (!schema || !schema.columns || schema.columns.length === 0) {
+        void vscode.window.showErrorMessage("No schema available for export");
+        return;
+      }
+
+      if (results.length === 0) {
+        void vscode.window.showErrorMessage("No results to export");
+        return;
+      }
+
+      // Get column names based on view mode
+      const columnNames =
+        this._viewMode() === "changelog"
+          ? ["Operation", ...schema.columns.map((col) => col.name)]
+          : schema.columns.map((col) => col.name);
+
+      // Generate CSV content
+      const csvContent = this.generateCsvContent(results, columnNames);
+
+      // Show save dialog
+      const timestamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, -5);
+      const defaultFilename = `flink-statement-results-${timestamp}.csv`;
+      const saveUri = await vscode.window.showSaveDialog({
+        defaultUri: vscode.Uri.file(defaultFilename),
+        filters: { "CSV files": ["csv"] },
+        title: "Export Flink Results to CSV",
+      });
+
+      if (!saveUri) {
+        // User cancelled
+        return;
+      }
+
+      // Write file
+      await vscode.workspace.fs.writeFile(saveUri, Buffer.from(csvContent, "utf-8"));
+
+      void vscode.window.showInformationMessage(
+        `Exported ${results.length} row${results.length === 1 ? "" : "s"} to ${saveUri.fsPath}`,
+      );
+    } catch (error) {
+      logError(error, "Failed to export CSV", {
+        extra: { functionName: "exportToCsv" },
+      });
+      void vscode.window.showErrorMessage("Failed to export CSV file");
+    }
+  }
+
+  /** Generate CSV content with proper escaping and quoting. */
+  private generateCsvContent(results: any[], columnNames: string[]): string {
+    const lines: string[] = [];
+
+    // Add header row
+    lines.push(columnNames.map((col) => this.escapeCsvValue(col)).join(","));
+
+    // Add data rows
+    for (const row of results) {
+      const values = columnNames.map((colName) => {
+        const value = row[colName];
+        return this.escapeCsvValue(value);
+      });
+      lines.push(values.join(","));
+    }
+
+    return lines.join("\n");
+  }
+
+  /** Escape and quote CSV values according to RFC 4180. */
+  private escapeCsvValue(value: any): string {
+    if (value === null || value === undefined) {
+      return "";
+    }
+
+    const stringValue = String(value);
+
+    // If the value contains comma, quotes, or newline, wrap in quotes and escape quotes
+    if (
+      stringValue.includes(",") ||
+      stringValue.includes('"') ||
+      stringValue.includes("\n") ||
+      stringValue.includes("\r")
+    ) {
+      return `"${stringValue.replace(/"/g, '""')}"`;
+    }
+
+    return stringValue;
+  }
+
   private async _stopStatement() {
     await this.resourceLoader.stopFlinkStatement(this.statement);
   }
@@ -498,6 +594,9 @@ export class FlinkStatementResultsManager {
       }
       case "GetViewMode": {
         return this._viewMode();
+      }
+      case "ExportToCsv": {
+        return this.exportToCsv();
       }
       default: {
         const _exhaustiveCheck: never = type;

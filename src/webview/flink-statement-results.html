@@ -282,6 +282,14 @@
           >
             <span class="codicon codicon-json"></span>
           </vscode-button>
+          <vscode-button
+            appearance="icon"
+            aria-label="Export results to CSV"
+            title="Export results to CSV"
+            data-on-click="this.exportToCsv()"
+          >
+            <span class="codicon codicon-save"></span>
+          </vscode-button>
         </div>
         <div class="toggle-actions">
           <template data-if="this.viewMode() === 'table' && this.statementMeta().isForeground">
