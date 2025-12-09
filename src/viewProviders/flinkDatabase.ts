@@ -234,7 +234,6 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
       container.hasError = false;
       this._onDidChangeTreeData.fire(container);
     } catch (error) {
-      // clear the loading state and show error info as icon+tooltip
       let errorMsg = String(error);
       let errorLanguage = "";
       if (isResponseError(error)) {
@@ -244,6 +243,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
       }
       const msg = `Failed to load ${container.label} for **${database.name}** (${database.id}):`;
       logError(error, `${msg} ${errorMsg}`);
+      // clear the loading state and show error info as tooltip (and icon through setting hasError)
       container.children = [];
       container.tooltip = new CustomMarkdownString()
         .addWarning(msg)
