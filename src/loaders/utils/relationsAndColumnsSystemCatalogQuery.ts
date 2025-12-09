@@ -217,6 +217,8 @@ export type RawRelationsAndColumnsRow = RawRelationRow | RawColumnRow | RawViewD
  * 1. Sort rows by relation (table) name ASC, then by column number ASC with null (relation rows) first.
  * 2. Iterate in order, creating a new Relation when a relation row is encountered, then attaching its columns.
  * 3. Column rows without a preceding relation row are cause for an error.
+ *
+ * The provided `database` is used to add parent resource context to each relation.
  */
 export function parseRelationsAndColumnsSystemCatalogQueryResponse(
   database: CCloudFlinkDbKafkaCluster,
