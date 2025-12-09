@@ -347,7 +347,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
         assert.strictEqual(testContainer.children.length, 0);
         assert.strictEqual(testContainer.hasError, true);
         assert.ok(testContainer.tooltip);
-        assert.ok((testContainer.tooltip as CustomMarkdownString).value.includes("Server Error"));
+        assert.ok((testContainer.tooltip as CustomMarkdownString).value.includes("Server error"));
       });
 
       it("should update the container's tooltip for non-ResponseError errors", async () => {
