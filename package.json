@@ -463,7 +463,7 @@
       },
       {
         "command": "confluent.flinkdatabase.refreshResourceContainer",
-        "icon": "$(refresh)",
+        "icon": "$(sync)",
         "title": "Refresh Group",
         "category": "Confluent: Flink Database View"
       },
@@ -1981,24 +1981,24 @@
           "group": "inline@2"
         },
         {
-          "command": "confluent.flinkdatabase.refreshResourceContainer",
-          "when": "view == confluent-flink-database && viewItem =~ /flink-database.*container/",
-          "group": "inline@1"
-        },
-        {
           "command": "confluent.flinkdatabase.createTopic",
           "when": "view == confluent-flink-database && viewItem == flink-database-relations-container",
-          "group": "inline@2"
+          "group": "inline@1"
         },
         {
           "command": "confluent.artifacts.scaffold",
           "when": "view == confluent-flink-database && viewItem == flink-database-artifacts-container",
-          "group": "inline@2"
+          "group": "inline@1"
         },
         {
           "command": "confluent.uploadArtifact",
           "when": "view == confluent-flink-database && viewItem == flink-database-artifacts-container",
-          "group": "inline@3"
+          "group": "inline@2"
+        },
+        {
+          "command": "confluent.flinkdatabase.refreshResourceContainer",
+          "when": "view == confluent-flink-database && viewItem =~ /flink-database.*container/",
+          "group": "inline@5"
         },
         {
           "command": "confluent.copyOrganizationId",
