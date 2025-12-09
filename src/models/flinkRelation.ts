@@ -253,6 +253,8 @@ export class FlinkRelation implements IResourceBase, IdItem, ISearchable {
   /** Columns of the relation */
   columns: FlinkRelationColumn[];
 
+  iconName = IconNames.TOPIC; // topic = table
+
   constructor(
     props: Pick<
       FlinkRelation,
@@ -342,7 +344,7 @@ export class FlinkRelation implements IResourceBase, IdItem, ISearchable {
 
   getTreeItem(): TreeItem {
     const item = new TreeItem(this.name, TreeItemCollapsibleState.Collapsed);
-    item.iconPath = new ThemeIcon(IconNames.TOPIC); // topic = table
+    item.iconPath = new ThemeIcon(this.iconName);
     item.id = this.name;
 
     const typeSnippet = this.type.toLowerCase().replace(" ", "-");

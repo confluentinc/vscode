@@ -5,10 +5,10 @@ import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_PROVIDER,
   TEST_CCLOUD_REGION,
-} from "../../../tests/unit/testResources";
-import { ConnectionType } from "../../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames } from "../../constants";
-import type { FlinkDatabaseResource } from "../../models/flinkDatabaseResource";
+} from "../../tests/unit/testResources";
+import { ConnectionType } from "../clients/sidecar";
+import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import type { FlinkDatabaseResource } from "./flinkDatabaseResource";
 import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
 
 /**
