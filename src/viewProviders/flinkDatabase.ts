@@ -101,15 +101,6 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
   private readonly aiModelsContainer = AI_MODELS_CONTAINER;
   private readonly aiAgentsContainer = AI_AGENTS_CONTAINER;
 
-  private relations: FlinkRelation[] = [];
-  private artifacts: FlinkArtifact[] = [];
-  private udfs: FlinkUdf[] = [];
-
-  private aiConnections: FlinkAIConnection[] = [];
-  private aiTools: FlinkAITool[] = [];
-  private aiModels: FlinkAIModel[] = [];
-  private aiAgents: FlinkAIAgent[] = [];
-
   get database(): CCloudFlinkDbKafkaCluster | null {
     return this.resource;
   }
@@ -272,7 +263,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean = false,
   ): Promise<void> {
-    this.artifacts = await this.refreshResourceContainer(
+    await this.refreshResourceContainer(
       database,
       this.artifactsContainer,
       (db, refresh) => CCloudResourceLoader.getInstance().getFlinkArtifacts(db, refresh),
@@ -295,7 +286,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean = false,
   ): Promise<void> {
-    this.udfs = await this.refreshResourceContainer(
+    await this.refreshResourceContainer(
       database,
       this.udfsContainer,
       (db, refresh) => CCloudResourceLoader.getInstance().getFlinkUDFs(db, refresh),
@@ -308,7 +299,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean = false,
   ): Promise<void> {
-    this.relations = await this.refreshResourceContainer(
+    await this.refreshResourceContainer(
       database,
       this.relationsContainer,
       (db, refresh) => CCloudResourceLoader.getInstance().getFlinkRelations(db, refresh),
@@ -321,7 +312,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean = false,
   ): Promise<void> {
-    this.aiConnections = await this.refreshResourceContainer(
+    await this.refreshResourceContainer(
       database,
       this.aiConnectionsContainer,
       (db, refresh) => CCloudResourceLoader.getInstance().getFlinkAIConnections(db, refresh),
@@ -334,7 +325,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean = false,
   ): Promise<void> {
-    this.aiTools = await this.refreshResourceContainer(
+    await this.refreshResourceContainer(
       database,
       this.aiToolsContainer,
       (db, refresh) => CCloudResourceLoader.getInstance().getFlinkAITools(db, refresh),
@@ -347,7 +338,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean = false,
   ): Promise<void> {
-    this.aiModels = await this.refreshResourceContainer(
+    await this.refreshResourceContainer(
       database,
       this.aiModelsContainer,
       (db, refresh) => CCloudResourceLoader.getInstance().getFlinkAIModels(db, refresh),
@@ -360,7 +351,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     database: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean = false,
   ): Promise<void> {
-    this.aiAgents = await this.refreshResourceContainer(
+    await this.refreshResourceContainer(
       database,
       this.aiAgentsContainer,
       (db, refresh) => CCloudResourceLoader.getInstance().getFlinkAIAgents(db, refresh),
