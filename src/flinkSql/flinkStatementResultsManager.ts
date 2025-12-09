@@ -478,7 +478,7 @@ export class FlinkStatementResultsManager {
         if (!query || query.length === 0) {
           return null;
         }
-        // Escape special regex characters to treat the search as a literal string
+        // Escape special characters for safe use in regex operations for highlighting
         const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         return escaped;
       }
