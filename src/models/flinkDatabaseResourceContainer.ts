@@ -27,7 +27,7 @@ export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | Fl
   // `id` is string|undefined in TreeItem, but only string in IdItem so we need to specify it here
   id: string;
 
-  _children: T[];
+  private _children: T[];
 
   private _isLoading: boolean = false;
   private _hasError: boolean = false;
@@ -49,6 +49,7 @@ export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | Fl
   /**
    * Flink Database resources belonging to this container.
    * Setting this will clear the internal {@linkcode isLoading} state.
+   * If the children array has items, this will also set {@linkcode hasError} to `false`.
    */
   get children(): T[] {
     return this._children;
@@ -56,9 +57,12 @@ export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | Fl
 
   set children(children: T[]) {
     this._children = children;
-    this._isLoading = false;
+    this.isLoading = false;
     this.description = `(${children.length})`;
-    this.iconPath = undefined;
+
+    if (children.length > 0) {
+      this.hasError = false;
+    }
   }
 
   get isLoading(): boolean {
