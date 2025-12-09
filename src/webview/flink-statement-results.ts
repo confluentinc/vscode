@@ -15,7 +15,6 @@ export type ResultsViewerStorageState = {
   colWidths: number[];
   columnVisibilityFlags: boolean[];
   page: number;
-  collapsedSections: Set<string>;
 };
 
 /**
@@ -49,7 +48,6 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly waitingForResults: Signal<boolean>;
   readonly emptyFilterResult: Signal<boolean>;
   readonly hasResults: Signal<boolean>;
-  readonly collapsedSections: Signal<Set<string>>;
   readonly streamState: Signal<StreamState>;
   readonly streamError: Signal<{ message: string } | null>;
   readonly pageStatLabel: Signal<string | null>;
@@ -167,9 +165,6 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       const detail = this.statementMeta().detail;
       return detail ? detail.replace(/\n/g, "<br>") : null;
     });
-    /** Track which detail sections are collapsed by the user */
-    this.collapsedSections = this.signal(storage.get()?.collapsedSections ?? new Set<string>());
-
     /**
      * Short list of pages generated based on current results count and current
      * page. Always shows first and last page, current page with two siblings.
@@ -463,22 +458,5 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     // Reset the button state after a short delay
     // in case the stop failed for some reason
     setTimeout(() => this.stopButtonClicked(false), 2000);
-  }
-
-  /** Toggle the collapsed state of a detail section */
-  toggleSection(sectionId: string) {
-    const collapsed = new Set(this.collapsedSections());
-    if (collapsed.has(sectionId)) {
-      collapsed.delete(sectionId);
-    } else {
-      collapsed.add(sectionId);
-    }
-    this.collapsedSections(collapsed);
-    this.storage.set({ ...this.storage.get()!, collapsedSections: collapsed });
-  }
-
-  /** Check if a section is currently collapsed */
-  isSectionCollapsed(sectionId: string): boolean {
-    return this.collapsedSections().has(sectionId);
   }
 }
