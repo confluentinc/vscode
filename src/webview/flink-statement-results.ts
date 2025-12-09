@@ -165,8 +165,6 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     });
     this.detailText = this.derive(() => {
       const detail = this.statementMeta().detail;
-      if (detail?.includes("WARNING"))
-        return `<span class="warning">${detail.replace(/\n/g, "<br>")}</span>`;
       return detail ? detail.replace(/\n/g, "<br>") : null;
     });
     /** Track which detail sections are collapsed by the user */

@@ -71,8 +71,7 @@
           </div>
           <template data-if="this.statementMeta().failed && this.statementMeta().detail">
             <details class="detail-section error" open>
-              <summary class="detail-header">
-                <span class="codicon codicon-error"></span>
+              <summary>
                 <span class="detail-title">Something went wrong</span>
               </summary>
               <div
@@ -85,7 +84,7 @@
           <template data-if="!this.statementMeta().failed && this.statementMeta().detail">
             <details class="detail-section info" open>
               <summary>
-                <span class="codicon codicon-info"></span> <span class="detail-title">Info</span>
+                <span class="detail-title">Info</span>
               </summary>
               <div
                 data-testid="statement-detail-info"
@@ -557,12 +556,16 @@
         overflow: hidden;
       }
 
-      .detail-section.error {
+      .detail-section summary {
+        padding: 5px;
+      }
+
+      .detail-section.error[open] {
         background: var(--vscode-inputValidation-errorBackground);
         border-color: var(--vscode-inputValidation-errorBorder);
       }
 
-      .detail-section.info {
+      .detail-section.info[open] {
         background: var(--vscode-inputValidation-infoBackground);
         border-color: var(--vscode-inputValidation-infoBorder);
       }
