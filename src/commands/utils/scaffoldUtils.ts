@@ -261,7 +261,7 @@ export async function applyTemplate(
     // Not a failure point we control - calls vscode internals
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
     // Potential failure point 4: extracting the zip contents to the filesystem
-    failureStage = "writing extracted template files";
+    failureStage = "saving extracted template files to disk";
 
     await extractZipContents(arrayBuffer, destination);
     logUsage(UserEvent.ProjectScaffoldingAction, {
@@ -328,7 +328,7 @@ export async function applyTemplate(
         message = e.message;
       }
     }
-    const stageSpecificMessage = `Template generation failed during ${failureStage}: ${message}`;
+    const stageSpecificMessage = `Template generation failed while ${failureStage}: ${message}`;
     // Surface user-facing notification with actionable context
     void showErrorNotificationWithButtons(stageSpecificMessage);
     return { success: false, message: stageSpecificMessage };
