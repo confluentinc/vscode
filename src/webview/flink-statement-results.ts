@@ -467,7 +467,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   }
 
   /**
-   * Format a result value with search highlighting.
+   * Format a result value with search highlighting. Adapted from message-viewer.ts code.
    * If a search regexp is active, wrap matching text in <mark> elements.
    * @param value The value to format
    * @param search The search regexp to apply (or null)
