@@ -6,11 +6,11 @@ import { unzip } from "unzipit";
 import { ViewColumn } from "vscode";
 import type {
   ApplyScaffoldV1TemplateOperationRequest,
-  ResponseError,
   ScaffoldV1Template,
   ScaffoldV1TemplateSpec,
   TemplatesScaffoldV1Api,
 } from "../../clients/scaffoldingService";
+import { ResponseError } from "../../clients/scaffoldingService";
 import { projectScaffoldUri } from "../../emitters";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
@@ -226,17 +226,16 @@ export async function applyTemplate(
     },
   };
 
-  // Track which potential failure point/phase we are in so we can surface specific user notifications
-  let failureStage: string = "";
+  // Track which phase we are in so we can surface specific user notifications in case of error
+  let stage: string = "";
   try {
-    // Potential failure point 2: calling the apply op in scaffold service.
-    failureStage = "scaffold service apply operation";
+    stage = "performing scaffold service apply operation";
     const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request);
-    // Potential failure point 3: buffer extraction
-    failureStage = "template archive buffering";
 
+    stage = "template archive buffering";
     const arrayBuffer = await applyTemplateResponse.arrayBuffer();
 
+    stage = "requesting a save location";
     const SAVE_LABEL = "Save to directory";
     const fileUris = await vscode.window.showOpenDialog({
       openLabel: SAVE_LABEL,
@@ -260,9 +259,8 @@ export async function applyTemplate(
     }
     // Not a failure point we control - calls vscode internals
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
-    // Potential failure point 4: extracting the zip contents to the filesystem
-    failureStage = "saving extracted template files to disk";
 
+    stage = "saving extracted template files to disk";
     await extractZipContents(arrayBuffer, destination);
     logUsage(UserEvent.ProjectScaffoldingAction, {
       status: "project generated",
@@ -303,13 +301,13 @@ export async function applyTemplate(
     }
     return { success: true, message: "Project generated successfully." };
   } catch (e) {
-    // Catches failure points 2, 3, and 4 and gives stage-specific notification with details in output channel
+    // Catches failure points above and gives stage-specific notification with details in output channel
     logError(e, "applying template", {
-      extra: { templateName: pickedTemplate.spec!.name!, failureStage },
+      extra: { templateName: pickedTemplate.spec!.name!, stage },
     });
     let message = "Failed to generate template. An unknown error occurred.";
-    if (e instanceof Error) {
-      const response = (e as ResponseError).response;
+    if (e instanceof ResponseError) {
+      const response = e.response;
       if (response) {
         // Check for 403 Forbidden - likely proxy interference
         if (response.status === 403) {
@@ -328,7 +326,7 @@ export async function applyTemplate(
         message = e.message;
       }
     }
-    const stageSpecificMessage = `Template generation failed while ${failureStage}: ${message}`;
+    const stageSpecificMessage = `Template generation failed while ${stage}: ${message}`;
     // Surface user-facing notification with actionable context
     void showErrorNotificationWithButtons(stageSpecificMessage);
     return { success: false, message: stageSpecificMessage };
