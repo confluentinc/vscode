@@ -98,7 +98,6 @@ import type { RefreshableTreeViewProvider } from "./viewProviders/baseModels/bas
 import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { HelpCenterViewProvider } from "./viewProviders/helpCenter";
-import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { TopicViewProvider } from "./viewProviders/topics";
@@ -444,11 +443,6 @@ async function setupContextValues() {
     SCHEMA_URI_SCHEME,
     MESSAGE_URI_SCHEME,
   ]);
-  // set the initial Flink database view mode to "Relations"
-  const flinkViewMode = setContextValue(
-    ContextValues.flinkDatabaseViewMode,
-    FlinkDatabaseViewProviderMode.Relations,
-  );
 
   // Default to Docker daemon not being available until proven otherwise
   const dockerAvailable = setContextValue(ContextValues.dockerServiceAvailable, false);
@@ -464,7 +458,6 @@ async function setupContextValues() {
     resourcesWithNames,
     resourcesWithURIs,
     diffableResources,
-    flinkViewMode,
     dockerAvailable,
   ]);
 }

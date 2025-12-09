@@ -87,4 +87,13 @@ export class CustomMarkdownString extends vscode.MarkdownString {
     this.appendMarkdown(`\n\n[${label}](${url})`);
     return this;
   }
+
+  /**
+   * Add a code block to the tooltip, with optional syntax highlighting if a valid `language` value
+   * is provided.
+   */
+  addCodeBlock(code: string, language: string = ""): this {
+    this.appendMarkdown(`\n\n\`\`\`${language}\n${code}\n\`\`\``);
+    return this;
+  }
 }
