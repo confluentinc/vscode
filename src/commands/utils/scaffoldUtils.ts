@@ -10,9 +10,8 @@ import type {
   ScaffoldV1TemplateSpec,
   TemplatesScaffoldV1Api,
 } from "../../clients/scaffoldingService";
-import { ResponseError } from "../../clients/scaffoldingService";
 import { projectScaffoldUri } from "../../emitters";
-import { logError } from "../../errors";
+import { isResponseError, logError } from "../../errors";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { getTemplatesList, pickTemplate } from "../../projectGeneration/templates";
@@ -306,7 +305,7 @@ export async function applyTemplate(
       extra: { templateName: pickedTemplate.spec!.name!, stage },
     });
     let message = "Failed to generate template. An unknown error occurred.";
-    if (e instanceof ResponseError) {
+    if (isResponseError(e)) {
       const response = e.response;
       if (response) {
         // Check for 403 Forbidden - likely proxy interference
@@ -322,9 +321,9 @@ export async function applyTemplate(
             message = `Failed to generate template. Unable to parse error response: ${e}`;
           }
         }
-      } else {
-        message = e.message;
       }
+    } else if (e instanceof Error) {
+      message = e.message;
     }
     const stageSpecificMessage = `Template generation failed while ${stage}: ${message}`;
     // Surface user-facing notification with actionable context
@@ -500,11 +499,10 @@ async function parseErrorDetails(err: unknown): Promise<string> {
     return err;
   }
 
-  if (err instanceof Error) {
+  if (isResponseError(err)) {
     // Handle ResponseError with proper type checking
-    const responseErr = err as ResponseError;
-    if (responseErr.response) {
-      const status = responseErr.response.status;
+    if (err.response) {
+      const status = err.response.status;
 
       // Special handling for 403 - likely proxy interference
       if (status === 403) {
@@ -512,7 +510,7 @@ async function parseErrorDetails(err: unknown): Promise<string> {
       }
 
       try {
-        const json = await responseErr.response.json();
+        const json = await err.response.json();
         if (json && json.message) {
           return json.message;
         }
@@ -525,6 +523,9 @@ async function parseErrorDetails(err: unknown): Promise<string> {
         return err.message || "An error occurred but details could not be parsed.";
       }
     }
+  }
+
+  if (err instanceof Error) {
     return err.message || "";
   }
 
