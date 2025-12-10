@@ -48,7 +48,7 @@ slackItem.command = {
   command: "vscode.open",
   title: "Join Confluent Community Slack",
   tooltip: "Click to join the Confluent Community Slack (#vscode channel)",
-  arguments: [vscode.Uri.parse("https://cnfl.io/slack-dp")],
+  arguments: [vscode.Uri.parse("https://confluentcommunity.slack.com/app_redirect?channel=vscode")],
 };
 
 const issueItem: vscode.TreeItem = new vscode.TreeItem("Report an Issue");

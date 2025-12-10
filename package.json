@@ -1349,6 +1349,10 @@
         "view": "confluent-flink-database",
         "contents": "No Flink database contents matches search string. [Clear search](command:confluent.flink.database.search.clear) or [try a new search](command:confluent.flink.database.search).",
         "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied"
+      },
+      {
+        "view": "confluent-support",
+        "contents": "[Join Confluent Community Slack](https://cnfl.io/slack-dp)"
       }
     ],
     "menus": {
