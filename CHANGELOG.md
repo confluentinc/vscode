@@ -10,7 +10,10 @@ All notable changes to this extension will be documented in this file.
   - "Flink Database Relations" (now the default mode) displays tables, views, and their columns
   - "Flink AI" displays connections, tools, models, and agents
 - Show view definition text in a view's tooltip.
-- "Join Confluent Community Slack" link in the Help Center view to connect with the Confluent community on Slack.
+- "Join Confluent Community Slack" link in the Help Center view to connect with the Confluent
+  community on Slack.
+- Support for custom TLS configuration for Confluent Cloud Schema Registries in the direct
+  connection form
 
 ### Changed
 

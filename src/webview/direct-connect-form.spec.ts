@@ -1172,6 +1172,78 @@ test("sets the client ID suffix correctly when using K8s port-forwarding for War
   );
 });
 
+test("allows TLS config for Schema Registry when platformType is Confluent Cloud", async ({
+  execute,
+  page,
+}) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(async (stub) => {
+    stub.withArgs("Submit").resolves(null);
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  // Fill in the form with Confluent Cloud platform
+  await page.fill("input[name=name]", "CCloud SR TLS Test");
+  await page.selectOption("select[name='formConnectionType']", "Confluent Cloud");
+  await page.fill(
+    "input[name='schema_registry.uri']",
+    "https://psrc-xxxxx.us-east-2.aws.confluent.cloud",
+  );
+  await page.selectOption("select[name='schema_registry.auth_type']", "API");
+  await page.fill("input[name='schema_registry.credentials.api_key']", "test-key");
+  await page.fill("input[name='schema_registry.credentials.api_secret']", "test-secret");
+
+  // Verify SSL checkbox is checked and disabled for Confluent Cloud
+  const schemaSslCheckbox = page.locator(
+    "input[type=checkbox][name='schema_registry.ssl.enabled']",
+  );
+  await expect(schemaSslCheckbox).toBeChecked();
+  await expect(schemaSslCheckbox).toBeDisabled();
+
+  // Verify TLS Configuration section is visible
+  const tlsConfigHeader = page.locator("p:has-text('TLS Configuration')").nth(1); // Second one is for SR
+  await expect(tlsConfigHeader).toBeVisible();
+
+  // Click to expand TLS config and fill in custom certificate paths
+  await tlsConfigHeader.click();
+  await page.selectOption("select[name='schema_registry.ssl.truststore.type']", "PEM");
+  await page.fill("input[name='schema_registry.ssl.truststore.path']", "/path/to/corporate-ca.pem");
+
+  // Submit the form
+  await page.click("input[type=submit][value='Save']");
+
+  const submitCallHandle = await sendWebviewMessage.evaluateHandle(
+    (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
+  );
+  const submitCall = await submitCallHandle?.jsonValue();
+  expect(submitCall).not.toBeUndefined();
+  expect(submitCall?.[0]).toBe("Submit");
+
+  // Verify SSL is enabled and TLS config values are submitted
+  expect(submitCall?.[1]).toEqual(
+    expect.objectContaining({
+      name: "CCloud SR TLS Test",
+      formConnectionType: "Confluent Cloud",
+      "schema_registry.uri": "https://psrc-xxxxx.us-east-2.aws.confluent.cloud",
+      "schema_registry.auth_type": "API",
+      "schema_registry.credentials.api_key": "test-key",
+      "schema_registry.credentials.api_secret": "test-secret",
+      "schema_registry.ssl.enabled": "true",
+      "schema_registry.ssl.truststore.type": "PEM",
+      "schema_registry.ssl.truststore.path": "/path/to/corporate-ca.pem",
+    }),
+  );
+});
+
 // Test Fixtures
 const SPEC_SAMPLE = {
   id: "123",
