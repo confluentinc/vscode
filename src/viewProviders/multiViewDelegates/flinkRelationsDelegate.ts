@@ -24,10 +24,13 @@ export class FlinkRelationsDelegate extends ViewProviderDelegate<
     return this.children;
   }
 
-  async fetchChildren(database: CCloudFlinkDbKafkaCluster): Promise<FlinkRelationElements[]> {
+  async fetchChildren(
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<FlinkRelationElements[]> {
     const ccloudResourceLoader = CCloudResourceLoader.getInstance();
 
-    this.children = await ccloudResourceLoader.getFlinkRelations(database);
+    this.children = await ccloudResourceLoader.getFlinkRelations(database, forceDeepRefresh);
 
     return this.children;
   }

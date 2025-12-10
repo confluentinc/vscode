@@ -15,6 +15,7 @@ import { FlinkAIModel } from "../models/flinkAiModel";
 import { FlinkAITool } from "../models/flinkAiTool";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
+import { FlinkRelation } from "../models/flinkRelation";
 import { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster, KafkaClusterType } from "../models/kafkaCluster";
 import { getKafkaClusterClass } from "../models/kafkaCluster";
@@ -661,6 +662,8 @@ export class ResourceManager {
     // recreate real class instances from raw JSON objects based on the provided storage key
     return rawDatabaseResources.map((raw) => {
       switch (storageKey) {
+        case WorkspaceStorageKeys.FLINK_RELATIONS:
+          return new FlinkRelation(raw as FlinkRelation);
         case WorkspaceStorageKeys.FLINK_UDFS:
           return new FlinkUdf(raw as FlinkUdf);
         case WorkspaceStorageKeys.FLINK_AI_MODELS:
