@@ -1,5 +1,5 @@
 import { Mutex } from "async-mutex";
-import type { Disposable, TextDocument, TextDocumentChangeEvent, TextEditor, Uri } from "vscode";
+import type { Disposable, TextDocument, TextEditor, Uri } from "vscode";
 import { window, workspace } from "vscode";
 import type { LanguageClient } from "vscode-languageclient/node";
 import type { CloseEvent, ErrorEvent, MessageEvent } from "ws";
@@ -180,30 +180,6 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     }
   }
 
-  /**
-   * Simulates a document change to trigger diagnostics on the server side. Is needed to get diagnostics
-   * when opening a new document. Can be removed when the CCloud Flink Language Service has been updated.
-   * @param doc The document to simulate changes for.
-   * @returns A promise that resolves when the notification has been sent.
-   */
-  public async simulateDocumentChangeToTriggerDiagnostics(doc: TextDocument): Promise<void> {
-    if (!this.languageClient) {
-      logger.info("Can't simulate document change for non-existing language client.");
-      return;
-    }
-    await this.languageClient.sendNotification("textDocument/didChange", {
-      textDocument: {
-        uri: doc.uri.toString() || "",
-        version: doc.version,
-      },
-      contentChanges: [
-        {
-          text: doc.getText(),
-        },
-      ],
-    });
-  }
-
   // Event Handlers.
 
   /**
@@ -345,33 +321,6 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     }
   }
 
-  /**
-   * Event handler for {@link workspace.onDidChangeTextDocument}.
-   *
-   * This is called when the text in a document changes, such as when the user types in the editor.
-   * If the document is a Flink SQL file and has diagnostics, we clear them to avoid stale diagnostics, in
-   * that the remote language server does not clear them automatically.
-   */
-  onDidChangeTextDocumentHandler(event: TextDocumentChangeEvent): void {
-    if (!this.isAppropriateDocument(event.document)) {
-      return;
-    }
-
-    const uriString = event.document.uri.toString();
-
-    if (
-      this.openFlinkSqlDocuments.has(uriString) &&
-      this.languageClient?.diagnostics?.has(event.document.uri) &&
-      // Make sure the change updated the content of the document. Otherwise, clearing diagnostics
-      // won't make sense. We'll, for instance, see document change events without content changes
-      // when saving the document.
-      event.contentChanges.length > 0
-    ) {
-      logger.trace(`Clearing diagnostics for document: ${uriString}`);
-      this.clearDiagnostics(event.document.uri);
-    }
-  }
-
   private setEventListeners(): Disposable[] {
     return [
       // Handlers for our codebase custom events  ...
@@ -381,7 +330,6 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       // Handlers for VSCode builtin events ...
       workspace.onDidOpenTextDocument(this.onDidOpenTextDocumentHandler.bind(this)),
       workspace.onDidCloseTextDocument(this.onDidCloseTextDocumentHandler.bind(this)),
-      workspace.onDidChangeTextDocument(this.onDidChangeTextDocumentHandler.bind(this)),
       window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditorHandler.bind(this)),
     ];
   }
@@ -661,15 +609,6 @@ export class FlinkLanguageClientManager extends DisposableCollection {
         });
       } finally {
         logger.trace(`Released initialization lock for ${uriStr}`);
-        // Trigger diagnostics for the active document if language client is available
-        if (this.languageClient) {
-          logger.trace(`Simulating change to ${uriStr} to trigger diagnostics`);
-          for (const textDocument of workspace.textDocuments) {
-            if (textDocument.uri.toString() === uriStr) {
-              await this.simulateDocumentChangeToTriggerDiagnostics(textDocument);
-            }
-          }
-        }
       }
     });
   }
@@ -844,7 +783,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       `Attempting to reconnect websocket. (${this.reconnectCounter + 1}/${this.MAX_RECONNECT_ATTEMPTS})`,
     );
     this.reconnectCounter++;
-    this.restartLanguageClient();
+    void this.restartLanguageClient();
   }
 
   /**
