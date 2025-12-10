@@ -1277,20 +1277,3 @@ describe("FlinkLanguageClientManager", () => {
     });
   });
 });
-
-/**
- * Class stubbing enough of DiagnosticsCollection methods to be useful.
- **/
-class FakeDiagnosticsCollection {
-  public readonly get: sinon.SinonStub;
-  public readonly set: sinon.SinonStub;
-  public readonly has: sinon.SinonStub;
-  public readonly delete: sinon.SinonStub;
-
-  constructor(sandbox: sinon.SinonSandbox) {
-    this.get = sandbox.stub();
-    this.set = sandbox.stub();
-    this.has = sandbox.stub();
-    this.delete = sandbox.stub();
-  }
-}
