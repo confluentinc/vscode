@@ -1,4 +1,5 @@
-import { type Disposable, type TreeItem } from "vscode";
+import { ThemeIcon, type Disposable, type TreeItem } from "vscode";
+import { IconNames } from "../constants";
 import { ContextValues } from "../context/values";
 import {
   artifactsChanged,
@@ -40,36 +41,43 @@ const RELATIONS_CONTAINER = new FlinkDatabaseResourceContainer<FlinkRelation>(
   FlinkDatabaseContainerLabel.RELATIONS,
   [],
   "flink-database-relations-container",
+  new ThemeIcon(IconNames.TOPIC),
 );
 const ARTIFACTS_CONTAINER = new FlinkDatabaseResourceContainer<FlinkArtifact>(
   FlinkDatabaseContainerLabel.ARTIFACTS,
   [],
   "flink-database-artifacts-container",
+  new ThemeIcon(IconNames.FLINK_ARTIFACT),
 );
 const UDFS_CONTAINER = new FlinkDatabaseResourceContainer<FlinkUdf>(
   FlinkDatabaseContainerLabel.UDFS,
   [],
   "flink-database-udfs-container",
+  new ThemeIcon(IconNames.FLINK_FUNCTION),
 );
 const AI_CONNECTIONS_CONTAINER = new FlinkDatabaseResourceContainer<FlinkAIResource>(
   FlinkDatabaseContainerLabel.AI_CONNECTIONS,
   [],
   "flink-database-ai-connections-container",
+  new ThemeIcon(IconNames.CONNECTION),
 );
 const AI_TOOLS_CONTAINER = new FlinkDatabaseResourceContainer<FlinkAIResource>(
   FlinkDatabaseContainerLabel.AI_TOOLS,
   [],
   "flink-database-ai-tools-container",
+  new ThemeIcon(IconNames.FLINK_AI_TOOL),
 );
 const AI_MODELS_CONTAINER = new FlinkDatabaseResourceContainer<FlinkAIResource>(
   FlinkDatabaseContainerLabel.AI_MODELS,
   [],
   "flink-database-ai-models-container",
+  new ThemeIcon(IconNames.FLINK_AI_MODEL),
 );
 const AI_AGENTS_CONTAINER = new FlinkDatabaseResourceContainer<FlinkAIResource>(
   FlinkDatabaseContainerLabel.AI_AGENTS,
   [],
   "flink-database-ai-agents-container",
+  new ThemeIcon(IconNames.FLINK_AI_AGENT),
 );
 
 /**
