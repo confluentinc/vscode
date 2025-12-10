@@ -7,16 +7,37 @@ import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
+import { createFlinkAIAgent } from "../../tests/unit/testResources/flinkAIAgent";
+import { createFlinkAIConnection } from "../../tests/unit/testResources/flinkAIConnection";
+import { createFlinkAIModel } from "../../tests/unit/testResources/flinkAIModel";
+import { createFlinkAITool } from "../../tests/unit/testResources/flinkAITool";
+import { createFlinkArtifact } from "../../tests/unit/testResources/flinkArtifact";
+import { createFakeFlinkDatabaseResource } from "../../tests/unit/testResources/flinkDatabaseResource";
+import {
+  TEST_FLINK_RELATION,
+  TEST_VARCHAR_COLUMN,
+} from "../../tests/unit/testResources/flinkRelation";
+import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import * as errors from "../errors";
+import { ResponseError } from "../clients/flinkArtifacts";
 import type { CCloudResourceLoader } from "../loaders";
 import type { CCloudEnvironment } from "../models/environment";
+import { FlinkAIAgentTreeItem } from "../models/flinkAiAgent";
+import { FlinkAIConnectionTreeItem } from "../models/flinkAiConnection";
+import { FlinkAIModelTreeItem } from "../models/flinkAiModel";
+import { FlinkAIToolTreeItem } from "../models/flinkAiTool";
+import { FlinkArtifactTreeItem } from "../models/flinkArtifact";
+import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
+import {
+  FlinkDatabaseContainerLabel,
+  FlinkDatabaseResourceContainer,
+} from "../models/flinkDatabaseResourceContainer";
+import { FlinkUdfTreeItem } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import type { EnvironmentId } from "../models/resource";
-import * as notifications from "../notifications";
+import type { CustomMarkdownString } from "../models/main";
+import type { EnvironmentId, IEnvProviderRegion } from "../models/resource";
 import { FlinkDatabaseViewProvider } from "./flinkDatabase";
-import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 
 describe("viewProviders/flinkDatabase.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -35,11 +56,25 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
   describe("FlinkDatabaseViewProvider", () => {
     let viewProvider: FlinkDatabaseViewProvider;
+    let ccloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+    let onDidChangeTreeDataFireStub: sinon.SinonStub;
 
     beforeEach(async () => {
       viewProvider = FlinkDatabaseViewProvider.getInstance();
-      // Start in a test-suite known state.
-      await viewProvider.switchMode(FlinkDatabaseViewProviderMode.UDFs);
+      // focused on a Flink database by default
+      viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+
+      onDidChangeTreeDataFireStub = sandbox.stub(viewProvider["_onDidChangeTreeData"], "fire");
+
+      ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
+      // no resources returned by default
+      ccloudLoader.getFlinkRelations.resolves([]);
+      ccloudLoader.getFlinkArtifacts.resolves([]);
+      ccloudLoader.getFlinkUDFs.resolves([]);
+      ccloudLoader.getFlinkAIConnections.resolves([]);
+      ccloudLoader.getFlinkAITools.resolves([]);
+      ccloudLoader.getFlinkAIModels.resolves([]);
+      ccloudLoader.getFlinkAIAgents.resolves([]);
     });
 
     afterEach(() => {
@@ -48,238 +83,647 @@ describe("viewProviders/flinkDatabase.ts", () => {
       FlinkDatabaseViewProvider["instanceMap"].clear();
     });
 
-    describe("hasChildren()", () => {
-      it("returns false when there are no children", () => {
-        viewProvider["children"] = [];
-        assert.strictEqual(viewProvider.hasChildren(), false);
+    describe("getChildren()", () => {
+      let filterChildrenStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        filterChildrenStub = sandbox.stub(viewProvider, "filterChildren");
       });
 
-      it("returns true when there are children", () => {
-        viewProvider["children"] = [{ id: "child-1" } as any];
-        assert.strictEqual(viewProvider.hasChildren(), true);
+      it("should return an empty array when no database is set", () => {
+        viewProvider["resource"] = null;
+
+        const children = viewProvider.getChildren();
+
+        assert.deepStrictEqual(children, []);
+        sinon.assert.notCalled(filterChildrenStub);
+      });
+
+      it("should return container items when a database is set", () => {
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+        const testContainers = [
+          viewProvider["relationsContainer"],
+          viewProvider["artifactsContainer"],
+          viewProvider["udfsContainer"],
+          viewProvider["aiConnectionsContainer"],
+          viewProvider["aiToolsContainer"],
+          viewProvider["aiModelsContainer"],
+          viewProvider["aiAgentsContainer"],
+        ];
+        filterChildrenStub.returns(testContainers);
+
+        const children = viewProvider.getChildren();
+
+        assert.strictEqual(children.length, 7);
+        // all top-level containers, no actual resource instances at the root level
+        const containers = children as FlinkDatabaseResourceContainer<FlinkDatabaseResource>[];
+        for (const container of containers) {
+          assert.ok(container instanceof FlinkDatabaseResourceContainer);
+        }
+        assert.strictEqual(containers[0].label, FlinkDatabaseContainerLabel.RELATIONS);
+        assert.strictEqual(containers[1].label, FlinkDatabaseContainerLabel.ARTIFACTS);
+        assert.strictEqual(containers[2].label, FlinkDatabaseContainerLabel.UDFS);
+        assert.strictEqual(containers[3].label, FlinkDatabaseContainerLabel.AI_CONNECTIONS);
+        assert.strictEqual(containers[4].label, FlinkDatabaseContainerLabel.AI_TOOLS);
+        assert.strictEqual(containers[5].label, FlinkDatabaseContainerLabel.AI_MODELS);
+        assert.strictEqual(containers[6].label, FlinkDatabaseContainerLabel.AI_AGENTS);
+        sinon.assert.calledOnceWithExactly(filterChildrenStub, undefined, testContainers);
+      });
+
+      it("should return container children when expanding a container", () => {
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+        const testRelations = [TEST_FLINK_RELATION];
+        filterChildrenStub.returns(testRelations);
+        const testContainer = new FlinkDatabaseResourceContainer(
+          FlinkDatabaseContainerLabel.RELATIONS,
+          testRelations,
+        );
+
+        const children = viewProvider.getChildren(testContainer);
+
+        assert.deepStrictEqual(children, testRelations);
+        sinon.assert.calledOnceWithExactly(filterChildrenStub, testContainer, children);
+      });
+
+      it("should return relation columns when expanding a relation", () => {
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+        const testColumns = TEST_FLINK_RELATION.columns;
+        filterChildrenStub.returns(testColumns);
+
+        const children = viewProvider.getChildren(TEST_FLINK_RELATION);
+
+        assert.deepStrictEqual(children, testColumns);
+        sinon.assert.calledOnceWithExactly(filterChildrenStub, TEST_FLINK_RELATION, children);
+      });
+    });
+
+    describe("getTreeItem()", () => {
+      let adjustTreeItemForSearchStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        adjustTreeItemForSearchStub = sandbox.stub(viewProvider, "adjustTreeItemForSearch");
+      });
+
+      it("should return a FlinkDatabaseResourceContainer directly", () => {
+        const testContainer = new FlinkDatabaseResourceContainer(
+          FlinkDatabaseContainerLabel.RELATIONS,
+          [],
+        );
+        const treeItem = viewProvider.getTreeItem(testContainer);
+
+        assert.strictEqual(treeItem, testContainer);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testContainer, treeItem);
+      });
+
+      it("should return a TreeItem from FlinkRelation.getTreeItem()", () => {
+        const testRelation = TEST_FLINK_RELATION;
+        const treeItem = viewProvider.getTreeItem(TEST_FLINK_RELATION);
+
+        // can't assert instance of TreeItem since it's just an interface
+        assert.strictEqual(treeItem.label, testRelation.name);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testRelation, treeItem);
+      });
+
+      it("should return a TreeItem from FlinkRelationColumn.getTreeItem()", () => {
+        const testColumn = TEST_VARCHAR_COLUMN;
+        const treeItem = viewProvider.getTreeItem(testColumn);
+
+        // can't assert instance of TreeItem since it's just an interface
+        assert.strictEqual(treeItem.label, testColumn.name);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testColumn, treeItem);
+      });
+
+      it("should return a FlinkArtifactTreeItem from a FlinkArtifact", () => {
+        const testArtifact = createFlinkArtifact({ id: "art1", name: "TestArtifact" });
+        const treeItem = viewProvider.getTreeItem(testArtifact);
+
+        assert.ok(treeItem instanceof FlinkArtifactTreeItem);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testArtifact, treeItem);
+      });
+
+      it("should return a FlinkUdfTreeItem from a FlinkUdf", () => {
+        const testUdf = createFlinkUDF("TestUDF");
+        const treeItem = viewProvider.getTreeItem(testUdf);
+
+        assert.ok(treeItem instanceof FlinkUdfTreeItem);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testUdf, treeItem);
+      });
+
+      it("should return a FlinkAIConnectionTreeItem from a FlinkAIConnection", () => {
+        const testConnection = createFlinkAIConnection("TestConnection");
+        const treeItem = viewProvider.getTreeItem(testConnection);
+
+        assert.ok(treeItem instanceof FlinkAIConnectionTreeItem);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testConnection, treeItem);
+      });
+
+      it("should return a FlinkAIModelTreeItem from a FlinkAIModel", () => {
+        const testModel = createFlinkAIModel("TestModel");
+        const treeItem = viewProvider.getTreeItem(testModel);
+
+        assert.ok(treeItem instanceof FlinkAIModelTreeItem);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testModel, treeItem);
+      });
+
+      it("should return a FlinkAIToolTreeItem from a FlinkAITool", () => {
+        const testTool = createFlinkAITool("TestTool");
+        const treeItem = viewProvider.getTreeItem(testTool);
+
+        assert.ok(treeItem instanceof FlinkAIToolTreeItem);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testTool, treeItem);
+      });
+
+      it("returns FlinkAIAgentTreeItem from FlinkAIAgent", () => {
+        const testAgent = createFlinkAIAgent("TestAgent");
+        const treeItem = viewProvider.getTreeItem(testAgent);
+
+        assert.ok(treeItem instanceof FlinkAIAgentTreeItem);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testAgent, treeItem);
       });
     });
 
     describe("refresh()", () => {
-      let changeFireStub: sinon.SinonStub;
-      let logErrorStub: sinon.SinonStub;
-      let showErrorNotificationStub: sinon.SinonStub;
-      let windowWithProgressStub: sinon.SinonStub;
-      let delegateFetchStub: sinon.SinonStub;
+      let withProgressStub: sinon.SinonStub;
 
       beforeEach(() => {
-        changeFireStub = sandbox.stub(viewProvider["_onDidChangeTreeData"], "fire");
-        logErrorStub = sandbox.stub(errors, "logError");
-        showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
-        windowWithProgressStub = sandbox.stub(window, "withProgress").callsFake((_, callback) => {
+        withProgressStub = sandbox.stub(window, "withProgress").callsFake((_, callback) => {
           const mockProgress = {} as Progress<unknown>;
           const mockToken = {} as CancellationToken;
           return Promise.resolve(callback(mockProgress, mockToken));
         });
-
-        // stub delegate behavior so provider tests don't exercise delegate logic
-        delegateFetchStub = sandbox.stub(viewProvider["currentDelegate"], "fetchChildren");
-        // also add a fake loading message
-        sandbox
-          .stub(viewProvider["currentDelegate"], "loadingMessage")
-          .value("Loading from delegate...");
       });
 
-      it("should clear when no compute pool is selected", async () => {
-        await viewProvider.refresh();
-
-        sinon.assert.calledOnce(changeFireStub);
-        sinon.assert.notCalled(windowWithProgressStub);
-        sinon.assert.notCalled(delegateFetchStub);
-        assert.deepStrictEqual(viewProvider["children"], []);
-      });
-
-      it("should call the current delegate to fetch children when a compute pool is selected", async () => {
-        const resource = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
-        viewProvider["resource"] = resource;
-
-        const fakeChildren = [{ id: "x" }];
-        delegateFetchStub.resolves(fakeChildren);
+      it("should fire onDidChangeTreeData when no database is selected", async () => {
+        viewProvider["resource"] = null;
 
         await viewProvider.refresh();
 
-        sinon.assert.calledOnce(windowWithProgressStub);
-        sinon.assert.calledWithMatch(windowWithProgressStub, sinon.match.any, sinon.match.func);
-        sinon.assert.calledTwice(changeFireStub);
-        sinon.assert.calledOnce(delegateFetchStub);
-        assert.deepStrictEqual(viewProvider["children"], fakeChildren);
+        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        sinon.assert.notCalled(withProgressStub);
+      });
+
+      it("should refresh all containers when a database is selected", async () => {
+        // focused on a database by default
+        await viewProvider.refresh();
+
+        sinon.assert.calledOnce(withProgressStub);
+        sinon.assert.calledOnce(ccloudLoader.getFlinkRelations);
+        sinon.assert.calledOnce(ccloudLoader.getFlinkArtifacts);
+        sinon.assert.calledOnce(ccloudLoader.getFlinkUDFs);
+        sinon.assert.calledOnce(ccloudLoader.getFlinkAIConnections);
+        sinon.assert.calledOnce(ccloudLoader.getFlinkAITools);
+        sinon.assert.calledOnce(ccloudLoader.getFlinkAIModels);
+        sinon.assert.calledOnce(ccloudLoader.getFlinkAIAgents);
       });
 
       for (const forceDeepRefresh of [true, false]) {
-        it(`should pass forceDeepRefresh:${forceDeepRefresh} to delegate::fetchChildren()`, async () => {
-          const resource = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
-          viewProvider["resource"] = resource;
-
+        it(`should pass forceDeepRefresh:${forceDeepRefresh} to all loader methods`, async () => {
           await viewProvider.refresh(forceDeepRefresh);
-          sinon.assert.calledWith(delegateFetchStub, resource, forceDeepRefresh);
+
+          sinon.assert.calledWith(
+            ccloudLoader.getFlinkRelations,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+          sinon.assert.calledWith(
+            ccloudLoader.getFlinkArtifacts,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+          sinon.assert.calledWith(
+            ccloudLoader.getFlinkUDFs,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+          sinon.assert.calledWith(
+            ccloudLoader.getFlinkAIConnections,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+          sinon.assert.calledWith(
+            ccloudLoader.getFlinkAITools,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+          sinon.assert.calledWith(
+            ccloudLoader.getFlinkAIModels,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+          sinon.assert.calledWith(
+            ccloudLoader.getFlinkAIAgents,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
         });
       }
+    });
 
-      it("should show an error notification when the delegate's fetchChildren() fails", async () => {
-        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
-        assert.ok(viewProvider.database);
+    describe("refreshResourceContainer()", () => {
+      // fake resource, container, and loader method not associated with any given resource type
+      const testResources = [createFakeFlinkDatabaseResource()];
+      const testContainer = new FlinkDatabaseResourceContainer(
+        "TEST" as FlinkDatabaseContainerLabel,
+        [],
+      );
+      let testLoaderMethodStub: sinon.SinonStub;
 
-        const fakeError = new Error("uh oh");
-        delegateFetchStub.rejects(fakeError);
-
-        await viewProvider.refresh().catch(() => undefined);
-
-        sinon.assert.calledOnce(windowWithProgressStub);
-        sinon.assert.calledOnce(logErrorStub);
-        sinon.assert.calledWith(logErrorStub, fakeError, "Failed to load Flink UDFs");
-        sinon.assert.calledOnce(showErrorNotificationStub);
-        sinon.assert.calledWith(showErrorNotificationStub, "Failed to load Flink UDFs");
+      beforeEach(() => {
+        testLoaderMethodStub = sandbox.stub().resolves(testResources);
       });
 
-      it("should use the current delegate's loading message in progress indicator", async () => {
-        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
-        delegateFetchStub.resolves([]);
+      it("should refresh the container item before and after the call to the provided loader method", async () => {
+        await viewProvider["refreshResourceContainer"](
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          testContainer,
+          testLoaderMethodStub,
+          false,
+        );
 
-        await viewProvider.refresh();
+        sinon.assert.calledOnce(testLoaderMethodStub);
+        // one update for loading state, one for resolved resources
+        sinon.assert.callCount(onDidChangeTreeDataFireStub, 2);
+        sinon.assert.calledWithExactly(onDidChangeTreeDataFireStub, testContainer);
+        sinon.assert.callOrder(
+          onDidChangeTreeDataFireStub,
+          testLoaderMethodStub,
+          onDidChangeTreeDataFireStub,
+        );
+      });
 
-        const firstArg = windowWithProgressStub.firstCall.args[0];
-        assert.strictEqual(firstArg.title ?? firstArg, "Loading from delegate...");
+      it("should update the resource container's children with results when loader method completes successfully", async () => {
+        await viewProvider["refreshResourceContainer"](
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          testContainer,
+          testLoaderMethodStub,
+          false,
+        );
+
+        assert.strictEqual(testContainer.children.length, testResources.length);
+        assert.strictEqual(testContainer.hasError, false);
+        assert.strictEqual(testContainer.isLoading, false);
+      });
+
+      it("should set the container's hasError to true when the loader call fails", async () => {
+        const error = new ResponseError(new Response("Server error", { status: 500 }));
+        testLoaderMethodStub.rejects(error);
+
+        await viewProvider["refreshResourceContainer"](
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          testContainer,
+          testLoaderMethodStub,
+          false,
+        );
+
+        assert.strictEqual(testContainer.children.length, 0);
+        assert.strictEqual(testContainer.hasError, true);
+        assert.ok(testContainer.tooltip);
+      });
+
+      it("should update the container's tooltip for ResponseError errors", async () => {
+        const error = new ResponseError(new Response("Server error", { status: 500 }));
+        testLoaderMethodStub.rejects(error);
+
+        await viewProvider["refreshResourceContainer"](
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          testContainer,
+          testLoaderMethodStub,
+          false,
+        );
+
+        assert.strictEqual(testContainer.children.length, 0);
+        assert.strictEqual(testContainer.hasError, true);
+        assert.ok(testContainer.tooltip);
+        assert.ok((testContainer.tooltip as CustomMarkdownString).value.includes("Server error"));
+      });
+
+      it("should update the container's tooltip for non-ResponseError errors", async () => {
+        const error = new Error("Network connection failed");
+        testLoaderMethodStub.rejects(error);
+
+        await viewProvider["refreshResourceContainer"](
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          testContainer,
+          testLoaderMethodStub,
+          false,
+        );
+
+        assert.strictEqual(testContainer.children.length, 0);
+        assert.strictEqual(testContainer.hasError, true);
+        assert.ok(testContainer.tooltip);
+        assert.ok((testContainer.tooltip as CustomMarkdownString).value.includes(error.message));
+      });
+
+      for (const forceDeepRefresh of [true, false]) {
+        it(`should pass the database and forceDeepRefresh=${forceDeepRefresh} to the provided loader method`, async () => {
+          testLoaderMethodStub.resolves([]);
+
+          await viewProvider["refreshResourceContainer"](
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            testContainer,
+            testLoaderMethodStub,
+            forceDeepRefresh,
+          );
+
+          sinon.assert.calledOnceWithExactly(
+            testLoaderMethodStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+        });
+      }
+    });
+
+    describe("refreshResourceContainer wrappers", () => {
+      let refreshResourceContainerStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        refreshResourceContainerStub = sandbox.stub();
+        viewProvider["refreshResourceContainer"] = refreshResourceContainerStub;
+      });
+
+      for (const forceDeepRefresh of [true, false]) {
+        it(`refreshArtifactsContainer() should update the artifacts container (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          await viewProvider.refreshArtifactsContainer(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          sinon.assert.calledOnceWithExactly(
+            refreshResourceContainerStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            viewProvider["artifactsContainer"],
+            sinon.match.func, // loader methods tested separately
+            forceDeepRefresh,
+          );
+          // not asserting the container was updated since that's handled in the
+          // refreshResourceContainer tests above
+        });
+
+        it(`refreshRelationsContainer() should pass the relations container (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          await viewProvider.refreshRelationsContainer(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          sinon.assert.calledOnceWithExactly(
+            refreshResourceContainerStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            viewProvider["relationsContainer"],
+            sinon.match.func,
+            forceDeepRefresh,
+          );
+          // not asserting the container was updated since that's handled in the
+          // refreshResourceContainer tests above
+        });
+
+        it(`refreshUDFsContainer() should pass the UDFs container (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          await viewProvider.refreshUDFsContainer(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          sinon.assert.calledOnceWithExactly(
+            refreshResourceContainerStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            viewProvider["udfsContainer"],
+            sinon.match.func,
+            forceDeepRefresh,
+          );
+          // not asserting the container was updated since that's handled in the
+          // refreshResourceContainer tests above
+        });
+
+        it(`refreshAIConnectionsContainer() should pass the AI connections container (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          await viewProvider.refreshAIConnectionsContainer(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          sinon.assert.calledOnceWithExactly(
+            refreshResourceContainerStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            viewProvider["aiConnectionsContainer"],
+            sinon.match.func,
+            forceDeepRefresh,
+          );
+          // not asserting the container was updated since that's handled in the
+          // refreshResourceContainer tests above
+        });
+
+        it(`refreshAIToolsContainer() should pass the AI tools container (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          await viewProvider.refreshAIToolsContainer(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          sinon.assert.calledOnceWithExactly(
+            refreshResourceContainerStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            viewProvider["aiToolsContainer"],
+            sinon.match.func,
+            forceDeepRefresh,
+          );
+          // not asserting the container was updated since that's handled in the
+          // refreshResourceContainer tests above
+        });
+
+        it(`refreshAIModelsContainer() should pass the AI models container (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          await viewProvider.refreshAIModelsContainer(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          sinon.assert.calledOnceWithExactly(
+            refreshResourceContainerStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            viewProvider["aiModelsContainer"],
+            sinon.match.func,
+            forceDeepRefresh,
+          );
+          // not asserting the container was updated since that's handled in the
+          // refreshResourceContainer tests above
+        });
+
+        it(`refreshAIAgentsContainer() should pass the AI agents container (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          await viewProvider.refreshAIAgentsContainer(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          sinon.assert.calledOnceWithExactly(
+            refreshResourceContainerStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            viewProvider["aiAgentsContainer"],
+            sinon.match.func,
+            forceDeepRefresh,
+          );
+          // not asserting the container was updated since that's handled in the
+          // refreshResourceContainer tests above
+        });
+      }
+    });
+
+    describe("refreshResourceContainer wrappers' loader methods", () => {
+      it("refreshArtifactsContainer() should pass the getFlinkArtifacts loader method", async () => {
+        await viewProvider.refreshArtifactsContainer(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+
+        sinon.assert.calledOnceWithExactly(
+          ccloudLoader.getFlinkArtifacts,
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          false,
+        );
+      });
+
+      it("refreshRelationsContainer() should pass the getFlinkRelations loader method", async () => {
+        await viewProvider.refreshRelationsContainer(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+
+        sinon.assert.calledOnceWithExactly(
+          ccloudLoader.getFlinkRelations,
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          false,
+        );
+      });
+
+      it("refreshUDFsContainer() should pass the getFlinkUDFs loader method", async () => {
+        await viewProvider.refreshUDFsContainer(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+
+        sinon.assert.calledOnceWithExactly(
+          ccloudLoader.getFlinkUDFs,
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          false,
+        );
+      });
+
+      it("refreshAIConnectionsContainer() should pass the getFlinkAIConnections loader method", async () => {
+        await viewProvider.refreshAIConnectionsContainer(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+
+        sinon.assert.calledOnceWithExactly(
+          ccloudLoader.getFlinkAIConnections,
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          false,
+        );
+      });
+
+      it("refreshAIToolsContainer() should pass the getFlinkAITools loader method", async () => {
+        await viewProvider.refreshAIToolsContainer(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+
+        sinon.assert.calledOnceWithExactly(
+          ccloudLoader.getFlinkAITools,
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          false,
+        );
+      });
+
+      it("refreshAIModelsContainer() should pass the getFlinkAIModels loader method", async () => {
+        await viewProvider.refreshAIModelsContainer(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+
+        sinon.assert.calledOnceWithExactly(
+          ccloudLoader.getFlinkAIModels,
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          false,
+        );
+      });
+
+      it("refreshAIAgentsContainer() should pass the getFlinkAIAgents loader method", async () => {
+        await viewProvider.refreshAIAgentsContainer(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+
+        sinon.assert.calledOnceWithExactly(
+          ccloudLoader.getFlinkAIAgents,
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          false,
+        );
       });
     });
 
     describe("artifactsChangedHandler", () => {
-      let refreshStub: sinon.SinonStub;
-      let artifactsDelegateFetchChildrenStub: sinon.SinonStub;
+      let refreshArtifactsStub: sinon.SinonStub;
 
-      const someOtherEnvRegion = {
-        provider: "aws",
-        region: "us-west-2",
-        environmentId: "env-123" as EnvironmentId,
+      // matches the provider's default focused database:
+      const testEnvProviderRegion: IEnvProviderRegion = {
+        provider: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.provider,
+        region: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.region,
+        environmentId: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.environmentId,
       };
 
-      beforeEach(async () => {
-        refreshStub = sandbox.stub(viewProvider, "refresh").resolves();
-        const artifactsDelegate = viewProvider["artifactsDelegate"];
-        artifactsDelegateFetchChildrenStub = sandbox.stub(artifactsDelegate, "fetchChildren");
-
-        // Ensure we're in artifacts mode
-        await viewProvider.switchMode(FlinkDatabaseViewProviderMode.Artifacts);
-        refreshStub.resetHistory(); // from the mode switch
+      beforeEach(() => {
+        refreshArtifactsStub = sandbox.stub(viewProvider, "refreshArtifactsContainer").resolves();
       });
 
       it("should do nothing if no database is selected", async () => {
         // no database selected
         viewProvider["resource"] = null;
-        await viewProvider.artifactsChangedHandler(someOtherEnvRegion);
+        await viewProvider.artifactsChangedHandler(testEnvProviderRegion);
 
-        sinon.assert.notCalled(refreshStub);
-        sinon.assert.notCalled(artifactsDelegateFetchChildrenStub);
+        sinon.assert.notCalled(refreshArtifactsStub);
       });
 
-      describe("when viewing a database", () => {
-        const sameDbEnvRegion = {
-          environmentId: "env-999" as EnvironmentId,
-          provider: "gcp",
-          region: "us-central1",
-        };
-        const db = CCloudKafkaCluster.create({
+      it("should do nothing if the changed env/provider/region does not match the focused database", async () => {
+        const otherDatabase = CCloudKafkaCluster.create({
           ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-          ...sameDbEnvRegion,
+          // some other env/provider/region
+          environmentId: "env-999" as EnvironmentId,
+          provider: "awsgcpazure",
+          region: "planet-core99999",
         }) as CCloudFlinkDbKafkaCluster;
+        viewProvider["resource"] = otherDatabase;
 
-        beforeEach(() => {
-          viewProvider["resource"] = db;
-        });
+        await viewProvider.artifactsChangedHandler(testEnvProviderRegion);
 
-        it("should do nothing if the changed env/provider/region does not match the selected database", async () => {
-          // select a database in a different env/provider/region
-          await viewProvider.artifactsChangedHandler(someOtherEnvRegion);
+        sinon.assert.notCalled(refreshArtifactsStub);
+      });
 
-          sinon.assert.notCalled(refreshStub);
-          sinon.assert.notCalled(artifactsDelegateFetchChildrenStub);
-        });
+      it("should refresh artifacts container when env/provider/region matches", async () => {
+        // focused on TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER by default
+        await viewProvider.artifactsChangedHandler(testEnvProviderRegion);
 
-        it("should refresh if the changed env/provider/region matches and we're viewing artifacts", async () => {
-          await viewProvider.artifactsChangedHandler(sameDbEnvRegion);
-
-          sinon.assert.calledOnce(refreshStub);
-          sinon.assert.calledWith(refreshStub, true); // deep refresh
-          sinon.assert.notCalled(artifactsDelegateFetchChildrenStub);
-        });
-
-        it("should tell the artifacts delegate to refresh its cache if the changed env/provider/region matches but we're NOT viewing artifacts", async () => {
-          await viewProvider.switchMode(FlinkDatabaseViewProviderMode.UDFs);
-          refreshStub.resetHistory(); // from the mode switch
-
-          await viewProvider.artifactsChangedHandler(sameDbEnvRegion);
-
-          sinon.assert.notCalled(refreshStub);
-          sinon.assert.calledOnce(artifactsDelegateFetchChildrenStub);
-          sinon.assert.calledWith(artifactsDelegateFetchChildrenStub, db, true);
-        });
+        sinon.assert.calledOnce(refreshArtifactsStub);
+        sinon.assert.calledWith(refreshArtifactsStub, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
       });
     });
 
     describe("udfsChangedHandler", () => {
-      let refreshStub: sinon.SinonStub;
-      let udfsDelegateFetchChildrenStub: sinon.SinonStub;
+      let refreshUDFsStub: sinon.SinonStub;
 
-      beforeEach(async () => {
-        refreshStub = sandbox.stub(viewProvider, "refresh").resolves();
-        const udfsDelegate = viewProvider["udfsDelegate"];
-        udfsDelegateFetchChildrenStub = sandbox.stub(udfsDelegate, "fetchChildren");
-
-        // Ensure we're in UDFs mode
-        await viewProvider.switchMode(FlinkDatabaseViewProviderMode.UDFs);
-        refreshStub.resetHistory(); // from the mode switch
+      beforeEach(() => {
+        refreshUDFsStub = sandbox.stub(viewProvider, "refreshUDFsContainer").resolves();
       });
 
       it("should do nothing if no database is selected", async () => {
-        // no database selected
         viewProvider["resource"] = null;
         await viewProvider.udfsChangedHandler({ id: "db-123" } as CCloudFlinkDbKafkaCluster);
-        sinon.assert.notCalled(refreshStub);
-        sinon.assert.notCalled(udfsDelegateFetchChildrenStub);
+
+        sinon.assert.notCalled(refreshUDFsStub);
       });
 
-      describe("when viewing a database", () => {
+      it("should do nothing if the changed database does not match the selected database", async () => {
         const db = CCloudKafkaCluster.create({
           ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
           id: "db-999",
         }) as CCloudFlinkDbKafkaCluster;
+        viewProvider["resource"] = db;
 
-        beforeEach(() => {
-          viewProvider["resource"] = db;
-        });
+        await viewProvider.udfsChangedHandler({ id: "db-123" } as CCloudFlinkDbKafkaCluster);
 
-        it("should do nothing if the changed database does not match the selected database", async () => {
-          await viewProvider.udfsChangedHandler({ id: "db-123" } as CCloudFlinkDbKafkaCluster);
-          sinon.assert.notCalled(refreshStub);
-          sinon.assert.notCalled(udfsDelegateFetchChildrenStub);
-        });
+        sinon.assert.notCalled(refreshUDFsStub);
+      });
 
-        it("should refresh if the changed database matches and we're viewing UDFs", async () => {
-          await viewProvider.udfsChangedHandler(db);
-          sinon.assert.calledOnce(refreshStub);
-          sinon.assert.calledWith(refreshStub, true); // deep refresh
-          sinon.assert.notCalled(udfsDelegateFetchChildrenStub);
-        });
+      it("should refresh UDFs container when database ID matches", async () => {
+        const db = CCloudKafkaCluster.create({
+          ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          id: "db-999",
+        }) as CCloudFlinkDbKafkaCluster;
+        viewProvider["resource"] = db;
 
-        it("should tell the UDFs delegate to refresh its cache if the changed database matches but we're NOT viewing UDFs", async () => {
-          await viewProvider.switchMode(FlinkDatabaseViewProviderMode.Artifacts);
-          refreshStub.resetHistory(); // from the mode switch
-          await viewProvider.udfsChangedHandler(db);
-          sinon.assert.notCalled(refreshStub);
-          sinon.assert.calledOnce(udfsDelegateFetchChildrenStub);
-          sinon.assert.calledWith(udfsDelegateFetchChildrenStub, db, true);
-        });
+        await viewProvider.udfsChangedHandler(db);
+
+        sinon.assert.calledOnce(refreshUDFsStub);
+        sinon.assert.calledWith(refreshUDFsStub, db, true);
       });
     });
 
     describe("updateTreeViewDescription()", () => {
       const initialDescription = "Initial description";
-
-      let ccloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
       function getDescription(): string | undefined {
         return viewProvider["treeView"].description;
@@ -287,7 +731,6 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       beforeEach(() => {
         viewProvider["treeView"].description = initialDescription;
-        ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
       });
 
       it("does nothing when no database is set", async () => {

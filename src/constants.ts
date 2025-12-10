@@ -54,6 +54,10 @@ export enum IconNames {
   FLINK_STATEMENT_STATUS_DELETING = "confluent-flink-statement-status-deleting",
   FLINK_STATEMENT_STATUS_STOPPED = "confluent-flink-statement-status-stopped",
   FLINK_STATEMENT_STATUS_PENDING = "confluent-flink-statement-status-pending",
+  // Flink AI related connections will use CONNECTION above
+  FLINK_AI_AGENT = "robot",
+  FLINK_AI_MODEL = "sparkle",
+  FLINK_AI_TOOL = "tools",
   LOADING = "loading~spin",
   /** General-purpose icon to use when we don't have a dedicated icon for a given resource. */
   PLACEHOLDER = "symbol-misc",

@@ -12,14 +12,9 @@ import { FlinkComputePoolItem } from "./viewItems/FlinkComputePoolItem";
 import { KafkaClusterItem } from "./viewItems/KafkaClusterItem";
 import { ViewItem } from "./viewItems/ViewItem";
 
-export enum FlinkViewMode {
-  Artifacts = "Flink Artifacts",
-  Database = "Flink Database",
-}
-
 export enum SelectFlinkDatabase {
   DatabaseFromResourcesView = "Flink database action from the Resources view",
-  FromArtifactsViewButton = "Artifacts view nav action",
+  FromDatabaseViewButton = "Flink Database view nav action",
   ComputePoolFromResourcesView = "Compute pool action from the Resources view",
 }
 
@@ -34,10 +29,14 @@ export class FlinkDatabaseView extends View {
     super(page, /Flink Database.*Section/);
   }
 
-  /** Get all (root-level) artifact items in the Flink Artifacts section. */
+  /** Get the Artifacts container item. */
+  get artifactsContainer(): Locator {
+    return this.treeItems.filter({ hasText: "Artifacts" }).first();
+  }
+
+  /** Artifact items within the Artifacts container based on their accessibilityInformation label. */
   get artifacts(): Locator {
-    // Target the Flink Artifacts section specifically, not the Flink Database section
-    return this.treeItems;
+    return this.treeItems.and(this.page.locator('[aria-label^="Flink Artifact: "]'));
   }
 
   /**
@@ -55,7 +54,7 @@ export class FlinkDatabaseView extends View {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
         await this.loadArtifactsFromResourcesView(clusterLabel);
         break;
-      case SelectFlinkDatabase.FromArtifactsViewButton:
+      case SelectFlinkDatabase.FromDatabaseViewButton:
         await this.loadArtifactsFromButton(clusterLabel);
         break;
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
@@ -175,38 +174,30 @@ export class FlinkDatabaseView extends View {
     await matchingCluster.click();
   }
 
-  /**
-   * Switches the view mode in the Artifacts view to the specified Flink resource.
-   *
-   * Clicks the "Switch View Mode" nav action in the view title area, opens the context menu,
-   * and selects the menu item matching the provided view mode. Updates the internal `label`
-   * property to match the selected view mode.
-   *
-   * @param viewMode - The Flink resource view mode to switch to.
-   * @returns A promise that resolves when the view has been switched.
-   */
-  async clickSwitchToFlinkResource(viewMode: FlinkViewMode): Promise<void> {
-    const expandToggle = this.locator.locator(
-      '[title="Switch View Mode"], [aria-label="Switch View Mode"]',
-    );
-    await expandToggle.click();
-    const menuItem = this.page
-      .locator(".context-view .monaco-menu .monaco-action-bar .action-item")
-      .filter({
-        hasText: `Switch to ${viewMode}`,
-      });
-    await menuItem.first().hover();
-    // clicking doesn't work here, so use keyboard navigation instead:
-    await this.page.keyboard.press("Enter");
+  /** Expand a given container item if it is not already expanded. */
+  private async expandContainer(container: Locator): Promise<void> {
+    await expect(container).toBeVisible();
 
-    // Update the label based on the target view mode
-    this.label = new RegExp(`${viewMode}.*Section`);
+    const isExpanded = await container.getAttribute("aria-expanded");
+    // containers are always Collapsed by default, so we don't need to check for null here
+    if (isExpanded === "false") {
+      await container.click();
+      await expect(container).toHaveAttribute("aria-expanded", "true");
+    }
   }
+
+  /** Expand the Artifacts container to show any available artifact items. */
+  async expandArtifactsContainer(): Promise<void> {
+    await this.expandContainer(this.artifactsContainer);
+  }
+
   /**
-   * Click the upload button to initiate the artifact upload flow.
+   * Click the upload button on the Artifacts container to initiate the artifact upload flow.
    */
   private async initiateUpload(): Promise<void> {
-    await this.clickNavAction("Upload Flink Artifact to Confluent Cloud");
+    const container = this.artifactsContainer;
+    const containerItem = new ViewItem(this.page, container);
+    await containerItem.clickInlineAction("Upload Flink Artifact to Confluent Cloud");
 
     const quickpick = new Quickpick(this.page);
     await expect(quickpick.locator).toBeVisible();
