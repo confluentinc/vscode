@@ -216,7 +216,12 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     /** List of all columns in the grid, with their content definition. */
     this.columns = this.derive(() => {
       const schema: SqlV1ResultSchema = this.schema();
-      return createColumnDefinitions(schema, this.viewMode());
+      return createColumnDefinitions(
+        schema,
+        this.viewMode(),
+        this.searchRegexp(),
+        (value, search) => this.formatResultValue(value, search),
+      );
     });
 
     /** Static list of all columns in order shown in the UI. */
@@ -302,6 +307,10 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   search = this.resolve(async () => {
     return await this.post("GetSearchQuery", { timestamp: this.timestamp() });
   }, "");
+  searchRegexp = this.resolve(async () => {
+    const source = await this.post("GetSearchSource", { timestamp: this.timestamp() });
+    return source != null ? new RegExp(source, "gi") : null;
+  }, null);
 
   async setViewMode(viewMode: ViewMode) {
     console.log("statementmeta", this.statementMeta());
@@ -492,5 +501,34 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     // Reset the button state after a short delay
     // in case the stop failed for some reason
     setTimeout(() => this.stopButtonClicked(false), 2000);
+  }
+
+  /**
+   * Format a result value with search highlighting. Adapted from message-viewer.ts code.
+   * If a search regexp is active, wrap matching text in <mark> elements.
+   * @param value The value to format
+   * @param search The search regexp to apply (or null)
+   * @returns Either a plain string or a DocumentFragment with highlighted matches
+   */
+  formatResultValue(value: unknown, search: RegExp | null) {
+    if (value == null) return "NULL";
+    const input = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+    if (search == null) return input;
+    // search regexp is global, reset its index state to avoid mismatches
+    search.lastIndex = 0;
+    const fragment = document.createDocumentFragment();
+    const matches = input.matchAll(search);
+    let cursor = 0;
+    for (const match of matches) {
+      const index = match.index;
+      const length = match[0].length;
+      fragment.append(input.substring(cursor, index));
+      const mark = document.createElement("mark");
+      mark.append(input.substring(index, index + length));
+      fragment.append(mark);
+      cursor = index + length;
+    }
+    fragment.append(input.substring(cursor));
+    return fragment;
   }
 }
