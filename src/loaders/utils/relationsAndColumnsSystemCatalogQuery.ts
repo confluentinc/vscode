@@ -217,8 +217,11 @@ export type RawRelationsAndColumnsRow = RawRelationRow | RawColumnRow | RawViewD
  * 1. Sort rows by relation (table) name ASC, then by column number ASC with null (relation rows) first.
  * 2. Iterate in order, creating a new Relation when a relation row is encountered, then attaching its columns.
  * 3. Column rows without a preceding relation row are cause for an error.
+ *
+ * The provided `database` is used to add parent resource context to each relation.
  */
 export function parseRelationsAndColumnsSystemCatalogQueryResponse(
+  database: CCloudFlinkDbKafkaCluster,
   rows: RawRelationsAndColumnsRow[],
 ): FlinkRelation[] {
   // Sorts in-place to ensure relations come before their columns and all columns for a relation are together.
@@ -230,6 +233,10 @@ export function parseRelationsAndColumnsSystemCatalogQueryResponse(
   for (const row of rows) {
     if (row.rowType === "relation") {
       const newRelation: FlinkRelation = new FlinkRelation({
+        environmentId: database.environmentId,
+        provider: database.provider,
+        region: database.region,
+        databaseId: database.id,
         name: row.relationName,
         comment: row.relationComment,
         type: toRelationType(row.relationType),

@@ -501,6 +501,32 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
+   * Get the tables / views / columns of a given Flink database via system catalog queries.
+   *
+   * @param database The Flink database to get the relations and columns for.
+   * @param forceDeepRefresh Whether to bypass the ResourceManager cache and fetch fresh data.
+   * @returns Array of {@link FlinkRelation} objects representing the relations in the cluster.
+   */
+  public async getFlinkRelations(
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<FlinkRelation[]> {
+    const query: string = getRelationsAndColumnsSystemCatalogQuery(database);
+
+    const results: FlinkRelation[] = await this.getFlinkDatabaseResources<
+      RawRelationsAndColumnsRow,
+      FlinkRelation
+    >(
+      database,
+      WorkspaceStorageKeys.FLINK_RELATIONS,
+      query,
+      parseRelationsAndColumnsSystemCatalogQueryResponse,
+      forceDeepRefresh,
+    );
+    return results;
+  }
+
+  /**
    * Get the Flink UDFs for the given Flinkable database.
    *
    * @param database The Flink database to get the UDFs for.
@@ -633,16 +659,6 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       { nameSpice: "list-agents" },
     );
     return results;
-  }
-
-  /**
-   * Get the tables / views / columns of a given Flink database via system catalog queries.
-   */
-  public async getFlinkRelations(database: CCloudFlinkDbKafkaCluster): Promise<FlinkRelation[]> {
-    const query = getRelationsAndColumnsSystemCatalogQuery(database);
-    const relationsAndColumns =
-      await this.executeBackgroundFlinkStatement<RawRelationsAndColumnsRow>(query, database);
-    return parseRelationsAndColumnsSystemCatalogQueryResponse(relationsAndColumns);
   }
 
   /**

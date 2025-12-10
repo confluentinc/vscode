@@ -2,8 +2,9 @@ import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import { formatSqlType } from "../utils/flinkTypes";
+import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
-import type { ConnectionId } from "./resource";
+import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
 /**
  * Represents a column of a Flink relation (table or view).
@@ -215,7 +216,16 @@ export enum FlinkRelationType {
  * Represents a Flink relation (base table or view) within the system catalog.
  * Immutable data holder with light convenience getters, mirroring the style of FlinkUdf and Column.
  */
-export class FlinkRelation {
+export class FlinkRelation implements IResourceBase, IdItem, ISearchable {
+  /** What CCloud environment this relation came from (from the Kafka Cluster) */
+  environmentId: EnvironmentId;
+  /** What cloud provider hosts the parent Kafka Cluster? */
+  provider: string;
+  /** What cloud region hosts the parent Kafka Cluster? */
+  region: string;
+  /** The (CCloud) Kafka cluster id the relation belongs to. */
+  databaseId: string;
+
   /** Relation name */
   readonly name: string;
   /** Optional comment / description */
@@ -243,9 +253,15 @@ export class FlinkRelation {
   /** Columns of the relation */
   columns: FlinkRelationColumn[];
 
+  iconName = IconNames.TOPIC; // topic = table
+
   constructor(
     props: Pick<
       FlinkRelation,
+      | "environmentId"
+      | "provider"
+      | "region"
+      | "databaseId"
       | "name"
       | "comment"
       | "type"
@@ -258,6 +274,10 @@ export class FlinkRelation {
       | "columns"
     >,
   ) {
+    this.environmentId = props.environmentId;
+    this.provider = props.provider;
+    this.region = props.region;
+    this.databaseId = props.databaseId;
     this.name = props.name;
     this.comment = props.comment;
     this.type = props.type;
@@ -324,7 +344,7 @@ export class FlinkRelation {
 
   getTreeItem(): TreeItem {
     const item = new TreeItem(this.name, TreeItemCollapsibleState.Collapsed);
-    item.iconPath = new ThemeIcon(IconNames.TOPIC); // topic = table
+    item.iconPath = new ThemeIcon(this.iconName);
     item.id = this.name;
 
     const typeSnippet = this.type.toLowerCase().replace(" ", "-");
