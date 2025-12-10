@@ -42,8 +42,6 @@ export function getFlinkAIModelsQuery(database: CCloudFlinkDbKafkaCluster): stri
   `;
 }
 
-type StringBoolean = "YES" | "NO";
-
 /** Describes rows from the models query describing the model as a whole */
 export interface RawModelRow {
   rowType: "model";
