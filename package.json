@@ -740,6 +740,12 @@
         "category": "Confluent: Support"
       },
       {
+        "command": "confluent.support.joinSlack",
+        "icon": "$(person-add)",
+        "title": "Join Confluent Community Slack Workspace",
+        "category": "Confluent: Support"
+      },
+      {
         "command": "confluent.support.openSettings",
         "title": "Open Settings",
         "category": "Confluent: Support"
@@ -1683,6 +1689,10 @@
           "when": "true"
         },
         {
+          "command": "confluent.support.joinSlack",
+          "when": "true"
+        },
+        {
           "command": "confluent.support.openSettings",
           "when": "true"
         },
@@ -1984,6 +1994,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "confluent.support.joinSlack",
+          "when": "view == confluent-support && viewItem == help-center-slack-item",
+          "group": "inline"
+        },
         {
           "command": "confluent.copyResourceId",
           "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithIDs || viewItem =~ /.*-schema$/)",
