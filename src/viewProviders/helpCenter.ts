@@ -42,6 +42,16 @@ feedbackItem.command = {
   tooltip: "Click to Give Feedback",
 };
 
+const slackItem: vscode.TreeItem = new vscode.TreeItem("Open Confluent Community Slack");
+slackItem.iconPath = new vscode.ThemeIcon("organization");
+slackItem.contextValue = "help-center-slack-item";
+slackItem.command = {
+  command: "vscode.open",
+  title: "Join Confluent Community Slack",
+  tooltip: "Click to join the Confluent Community Slack (#vscode channel)",
+  arguments: [vscode.Uri.parse("https://confluentcommunity.slack.com/app_redirect?channel=vscode")],
+};
+
 const issueItem: vscode.TreeItem = new vscode.TreeItem("Report an Issue");
 issueItem.iconPath = new vscode.ThemeIcon("bug");
 issueItem.command = {
@@ -77,6 +87,7 @@ settingsItem.command = {
 const supportItems = [
   walkthroughItem,
   feedbackItem,
+  slackItem,
   issueItem,
   zipItem,
   scaffoldItem,
