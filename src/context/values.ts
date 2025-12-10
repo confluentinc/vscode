@@ -83,8 +83,6 @@ export enum ContextValues {
   /** The user applied a search string to the Flink Statements view. */
   flinkStatementsSearchApplied = "confluent.flinkStatementsSearchApplied",
 
-  /** The user changed the mode of the Flink Database view. */
-  flinkDatabaseViewMode = "confluent.flinkDatabaseViewMode",
   /** The user applied a search string to the Flink Database view. */
   flinkDatabaseSearchApplied = "confluent.flinkDatabaseSearchApplied",
 
