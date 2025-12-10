@@ -6,7 +6,6 @@ import type { CCloudFlinkDbKafkaCluster, KafkaCluster } from "./models/kafkaClus
 import type { ConnectionId, EnvironmentId, IEnvProviderRegion } from "./models/resource";
 import type { Subject, SubjectWithSchemas } from "./models/schema";
 import type { SchemaRegistry } from "./models/schemaRegistry";
-import type { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
 
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
 // we .fire() events and where we react to them via .event()
@@ -152,9 +151,6 @@ export const artifactsChanged = new vscode.EventEmitter<IEnvProviderRegion>();
 
 /** Fires when an action that mutates the Flink UDFs list for a single Flink database (CCloud Flinkable Kafka Cluster) has completed. */
 export const udfsChanged = new vscode.EventEmitter<CCloudFlinkDbKafkaCluster>();
-
-/** Event emitter for switching Flink Database view modes. */
-export const flinkDatabaseViewMode = new vscode.EventEmitter<FlinkDatabaseViewProviderMode>();
 
 /** Event emitter for searching the Flink Database view */
 export const flinkDatabaseViewSearchSet = new vscode.EventEmitter<string | null>();
