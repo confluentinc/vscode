@@ -16,8 +16,7 @@ export class FlinkAIAgent implements IResourceBase, IdItem, ISearchable {
 
   name: string;
 
-  // https://github.com/confluentinc/vscode/issues/3000
-  iconName: IconNames = IconNames.PLACEHOLDER;
+  iconName: IconNames = IconNames.FLINK_AI_AGENT;
 
   constructor(
     props: Pick<FlinkAIAgent, "environmentId" | "provider" | "region" | "databaseId" | "name">,
