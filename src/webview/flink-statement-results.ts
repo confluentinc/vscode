@@ -63,7 +63,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly colWidth: Signal<number[]>;
   readonly gridTemplateColumns: Signal<string>;
   readonly pageButtons: Signal<(number | "ldot" | "rdot")[]>;
-
+  readonly detailText: Signal<string | null>;
   readonly pagePersistWatcher: () => void;
 
   /**
@@ -164,7 +164,10 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       const { total, filter } = this.resultCount();
       return filter != null ? filter > 0 : total > 0;
     });
-
+    this.detailText = this.derive(() => {
+      const detail = this.statementMeta().detail;
+      return detail ? detail.replace(/\n/g, "<br>") : null;
+    });
     /**
      * Short list of pages generated based on current results count and current
      * page. Always shows first and last page, current page with two siblings.
