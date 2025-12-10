@@ -84,16 +84,34 @@ describe("viewProviders/flinkDatabase.ts", () => {
     });
 
     describe("getChildren()", () => {
+      let filterChildrenStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        filterChildrenStub = sandbox.stub(viewProvider, "filterChildren");
+      });
+
       it("should return an empty array when no database is set", () => {
         viewProvider["resource"] = null;
 
         const children = viewProvider.getChildren();
 
         assert.deepStrictEqual(children, []);
+        sinon.assert.notCalled(filterChildrenStub);
       });
 
       it("should return container items when a database is set", () => {
         viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+        const testContainers = [
+          viewProvider["relationsContainer"],
+          viewProvider["artifactsContainer"],
+          viewProvider["udfsContainer"],
+          viewProvider["aiConnectionsContainer"],
+          viewProvider["aiToolsContainer"],
+          viewProvider["aiModelsContainer"],
+          viewProvider["aiAgentsContainer"],
+        ];
+        filterChildrenStub.returns(testContainers);
+
         const children = viewProvider.getChildren();
 
         assert.strictEqual(children.length, 7);
@@ -109,89 +127,118 @@ describe("viewProviders/flinkDatabase.ts", () => {
         assert.strictEqual(containers[4].label, FlinkDatabaseContainerLabel.AI_TOOLS);
         assert.strictEqual(containers[5].label, FlinkDatabaseContainerLabel.AI_MODELS);
         assert.strictEqual(containers[6].label, FlinkDatabaseContainerLabel.AI_AGENTS);
+        sinon.assert.calledOnceWithExactly(filterChildrenStub, undefined, testContainers);
       });
 
       it("should return container children when expanding a container", () => {
         viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
         const testRelations = [TEST_FLINK_RELATION];
-        const container = new FlinkDatabaseResourceContainer(
+        filterChildrenStub.returns(testRelations);
+        const testContainer = new FlinkDatabaseResourceContainer(
           FlinkDatabaseContainerLabel.RELATIONS,
           testRelations,
         );
 
-        const children = viewProvider.getChildren(container);
+        const children = viewProvider.getChildren(testContainer);
 
         assert.deepStrictEqual(children, testRelations);
+        sinon.assert.calledOnceWithExactly(filterChildrenStub, testContainer, children);
       });
 
       it("should return relation columns when expanding a relation", () => {
         viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+        const testColumns = TEST_FLINK_RELATION.columns;
+        filterChildrenStub.returns(testColumns);
 
         const children = viewProvider.getChildren(TEST_FLINK_RELATION);
 
-        assert.deepStrictEqual(children, TEST_FLINK_RELATION.columns);
+        assert.deepStrictEqual(children, testColumns);
+        sinon.assert.calledOnceWithExactly(filterChildrenStub, TEST_FLINK_RELATION, children);
       });
     });
 
     describe("getTreeItem()", () => {
+      let adjustTreeItemForSearchStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        adjustTreeItemForSearchStub = sandbox.stub(viewProvider, "adjustTreeItemForSearch");
+      });
+
       it("should return a FlinkDatabaseResourceContainer directly", () => {
-        const container = new FlinkDatabaseResourceContainer(
+        const testContainer = new FlinkDatabaseResourceContainer(
           FlinkDatabaseContainerLabel.RELATIONS,
           [],
         );
-        const treeItem = viewProvider.getTreeItem(container);
+        const treeItem = viewProvider.getTreeItem(testContainer);
 
-        assert.strictEqual(treeItem, container);
+        assert.strictEqual(treeItem, testContainer);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testContainer, treeItem);
       });
 
       it("should return a TreeItem from FlinkRelation.getTreeItem()", () => {
+        const testRelation = TEST_FLINK_RELATION;
         const treeItem = viewProvider.getTreeItem(TEST_FLINK_RELATION);
 
-        assert.strictEqual(treeItem.label, TEST_FLINK_RELATION.name);
+        // can't assert instance of TreeItem since it's just an interface
+        assert.strictEqual(treeItem.label, testRelation.name);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testRelation, treeItem);
       });
 
       it("should return a TreeItem from FlinkRelationColumn.getTreeItem()", () => {
-        const treeItem = viewProvider.getTreeItem(TEST_VARCHAR_COLUMN);
+        const testColumn = TEST_VARCHAR_COLUMN;
+        const treeItem = viewProvider.getTreeItem(testColumn);
 
-        assert.strictEqual(treeItem.label, TEST_VARCHAR_COLUMN.name);
+        // can't assert instance of TreeItem since it's just an interface
+        assert.strictEqual(treeItem.label, testColumn.name);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testColumn, treeItem);
       });
 
       it("should return a FlinkArtifactTreeItem from a FlinkArtifact", () => {
-        const treeItem = viewProvider.getTreeItem(
-          createFlinkArtifact({ id: "art1", name: "TestArtifact" }),
-        );
+        const testArtifact = createFlinkArtifact({ id: "art1", name: "TestArtifact" });
+        const treeItem = viewProvider.getTreeItem(testArtifact);
 
         assert.ok(treeItem instanceof FlinkArtifactTreeItem);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testArtifact, treeItem);
       });
 
       it("should return a FlinkUdfTreeItem from a FlinkUdf", () => {
-        const treeItem = viewProvider.getTreeItem(createFlinkUDF("TestUDF"));
+        const testUdf = createFlinkUDF("TestUDF");
+        const treeItem = viewProvider.getTreeItem(testUdf);
 
         assert.ok(treeItem instanceof FlinkUdfTreeItem);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testUdf, treeItem);
       });
 
       it("should return a FlinkAIConnectionTreeItem from a FlinkAIConnection", () => {
-        const treeItem = viewProvider.getTreeItem(createFlinkAIConnection("TestConnection"));
+        const testConnection = createFlinkAIConnection("TestConnection");
+        const treeItem = viewProvider.getTreeItem(testConnection);
 
         assert.ok(treeItem instanceof FlinkAIConnectionTreeItem);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testConnection, treeItem);
       });
 
       it("should return a FlinkAIModelTreeItem from a FlinkAIModel", () => {
-        const treeItem = viewProvider.getTreeItem(createFlinkAIModel("TestModel"));
+        const testModel = createFlinkAIModel("TestModel");
+        const treeItem = viewProvider.getTreeItem(testModel);
 
         assert.ok(treeItem instanceof FlinkAIModelTreeItem);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testModel, treeItem);
       });
 
       it("should return a FlinkAIToolTreeItem from a FlinkAITool", () => {
-        const treeItem = viewProvider.getTreeItem(createFlinkAITool("TestTool"));
+        const testTool = createFlinkAITool("TestTool");
+        const treeItem = viewProvider.getTreeItem(testTool);
 
         assert.ok(treeItem instanceof FlinkAIToolTreeItem);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testTool, treeItem);
       });
 
       it("returns FlinkAIAgentTreeItem from FlinkAIAgent", () => {
-        const treeItem = viewProvider.getTreeItem(createFlinkAIAgent("TestAgent"));
+        const testAgent = createFlinkAIAgent("TestAgent");
+        const treeItem = viewProvider.getTreeItem(testAgent);
 
         assert.ok(treeItem instanceof FlinkAIAgentTreeItem);
+        sinon.assert.calledOnceWithExactly(adjustTreeItemForSearchStub, testAgent, treeItem);
       });
     });
 

@@ -114,62 +114,63 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
   }
 
   getChildren(element?: DatabaseChildrenType): DatabaseChildrenType[] {
+    let children: DatabaseChildrenType[] = [];
+
     if (!this.database) {
-      return [];
+      return children;
     }
 
-    if (element instanceof FlinkDatabaseResourceContainer) {
+    if (!element) {
+      // top-level: show resource containers
+      children = [
+        this.relationsContainer,
+        this.artifactsContainer,
+        this.udfsContainer,
+        this.aiConnectionsContainer,
+        this.aiToolsContainer,
+        this.aiModelsContainer,
+        this.aiAgentsContainer,
+      ];
+    } else if (element instanceof FlinkDatabaseResourceContainer) {
       // expanding a container to list actual resources
-      return element.children;
-    }
-    if (element instanceof FlinkRelation) {
-      // return FlinkRelationColumns for expanded FlinkRelation
-      return element.columns;
+      children = element.children;
+    } else if (element instanceof FlinkRelation) {
+      // expanding a FlinkRelation to show its columns
+      children = element.columns;
     }
 
-    return [
-      this.relationsContainer,
-      this.artifactsContainer,
-      this.udfsContainer,
-      this.aiConnectionsContainer,
-      this.aiToolsContainer,
-      this.aiModelsContainer,
-      this.aiAgentsContainer,
-    ];
+    return this.filterChildren(element, children);
   }
 
   getTreeItem(element: DatabaseChildrenType): TreeItem {
+    let treeItem: TreeItem;
+
     if (element instanceof FlinkDatabaseResourceContainer) {
       // already a TreeItem (subclass)
-      return element;
+      treeItem = element;
+    } else if ("getTreeItem" in element && typeof element.getTreeItem === "function") {
+      // just for FlinkRelations/FlinkRelationColumn since they use getTreeItem() instead of separate
+      // classes, but we might migrate other classes to this pattern in the future
+      treeItem = element.getTreeItem();
+    } else if (element instanceof FlinkArtifact) {
+      treeItem = new FlinkArtifactTreeItem(element);
+    } else if (element instanceof FlinkUdf) {
+      treeItem = new FlinkUdfTreeItem(element);
+    } else if (element instanceof FlinkAIConnection) {
+      treeItem = new FlinkAIConnectionTreeItem(element);
+    } else if (element instanceof FlinkAIModel) {
+      treeItem = new FlinkAIModelTreeItem(element);
+    } else if (element instanceof FlinkAITool) {
+      treeItem = new FlinkAIToolTreeItem(element);
+    } else if (element instanceof FlinkAIAgent) {
+      treeItem = new FlinkAIAgentTreeItem(element);
+    } else {
+      treeItem = element as TreeItem;
     }
 
-    // just for FlinkRelations/FlinkRelationColumn since they use getTreeItem() instead of separate
-    // classes, but we might migrate other classes to this pattern in the future
-    if ("getTreeItem" in element && typeof element.getTreeItem === "function") {
-      return element.getTreeItem();
-    }
+    this.adjustTreeItemForSearch(element, treeItem);
 
-    if (element instanceof FlinkArtifact) {
-      return new FlinkArtifactTreeItem(element);
-    }
-    if (element instanceof FlinkUdf) {
-      return new FlinkUdfTreeItem(element);
-    }
-    if (element instanceof FlinkAIConnection) {
-      return new FlinkAIConnectionTreeItem(element);
-    }
-    if (element instanceof FlinkAIModel) {
-      return new FlinkAIModelTreeItem(element);
-    }
-    if (element instanceof FlinkAITool) {
-      return new FlinkAIToolTreeItem(element);
-    }
-    if (element instanceof FlinkAIAgent) {
-      return new FlinkAIAgentTreeItem(element);
-    }
-
-    return element as TreeItem;
+    return treeItem;
   }
 
   /** Refresh all top-level resource containers. */
