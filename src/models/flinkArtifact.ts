@@ -106,6 +106,10 @@ export class FlinkArtifactTreeItem extends TreeItem {
     this.description = resource.description;
 
     this.tooltip = createFlinkArtifactToolTip(resource);
+
+    this.accessibilityInformation = {
+      label: `Flink Artifact: ${resource.name}`,
+    };
   }
 }
 
