@@ -12,7 +12,6 @@ import type {
 } from "../../clients/scaffoldingService";
 import { projectScaffoldUri } from "../../emitters";
 import { isResponseError, logError } from "../../errors";
-import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { getTemplatesList, pickTemplate } from "../../projectGeneration/templates";
 import { getSidecar } from "../../sidecar";
@@ -23,7 +22,6 @@ import { handleWebviewMessage } from "../../webview/comms/comms";
 import type { post, PostResponse } from "../../webview/scaffold-form";
 import scaffoldFormTemplate from "../../webview/scaffold-form.html";
 
-const logger = new Logger("scaffoldutils");
 const scaffoldWebviewCache = new WebviewPanelCache();
 
 export interface PrefilledTemplateOptions {

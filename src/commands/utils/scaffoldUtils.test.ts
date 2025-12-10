@@ -208,7 +208,7 @@ describe("scaffoldUtils", () => {
     });
   });
 
-  describe("parseErrorDetails", () => {
+  describe("parseErrorMessage", () => {
     it("should handle string errors", async () => {
       const { scaffoldProjectRequest } = await import("./scaffoldUtils");
       (templatesModule.getTemplatesList as sinon.SinonStub).rejects("Simple string error");
