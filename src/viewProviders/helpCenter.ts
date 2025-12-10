@@ -42,8 +42,9 @@ feedbackItem.command = {
   tooltip: "Click to Give Feedback",
 };
 
-const slackItem: vscode.TreeItem = new vscode.TreeItem("Join Confluent Community Slack");
+const slackItem: vscode.TreeItem = new vscode.TreeItem("Open Confluent Community Slack");
 slackItem.iconPath = new vscode.ThemeIcon("organization");
+slackItem.contextValue = "help-center-slack-item";
 slackItem.command = {
   command: "vscode.open",
   title: "Join Confluent Community Slack",
