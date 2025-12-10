@@ -16,6 +16,9 @@ export enum FlinkDatabaseContainerLabel {
   AI_AGENTS = "AI Agents",
 }
 
+/** Error icon to use for Flink Database resource containers items if fetching resources fails. */
+export const ERROR_ICON = new ThemeIcon("warning", new ThemeColor("problemsErrorIcon.foreground"));
+
 /** A container {@link TreeItem} for resources to display in the Flink Database view. */
 export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | FlinkArtifact>
   extends TreeItem
@@ -32,8 +35,9 @@ export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | Fl
   private _isLoading: boolean = false;
   private _hasError: boolean = false;
   private readonly _defaultContextValue: string | undefined;
+  private readonly _defaultIcon: ThemeIcon | undefined;
 
-  constructor(label: string, children: T[], contextValue?: string) {
+  constructor(label: string, children: T[], contextValue?: string, icon?: ThemeIcon) {
     const collapsibleState = TreeItemCollapsibleState.Collapsed;
     super(label, collapsibleState);
 
@@ -44,6 +48,8 @@ export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | Fl
     if (contextValue) {
       this.contextValue = contextValue;
     }
+    this._defaultIcon = icon;
+    this.iconPath = this._defaultIcon;
   }
 
   /**
@@ -71,7 +77,7 @@ export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | Fl
 
   set isLoading(loading: boolean) {
     this._isLoading = loading;
-    this.iconPath = loading ? new ThemeIcon(IconNames.LOADING) : undefined;
+    this.iconPath = loading ? new ThemeIcon(IconNames.LOADING) : this._defaultIcon;
   }
 
   get hasError(): boolean {
@@ -80,10 +86,8 @@ export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | Fl
 
   /** Set or clear the error state for this container. */
   set hasError(error: boolean) {
-    this.iconPath = error
-      ? new ThemeIcon("warning", new ThemeColor("problemsErrorIcon.foreground"))
-      : undefined;
     this._hasError = error;
+    this.iconPath = error ? ERROR_ICON : this._defaultIcon;
 
     if (this._defaultContextValue) {
       // append or remove "-error" suffix to context value based on error state to toggle enablement

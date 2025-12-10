@@ -1,11 +1,10 @@
 import * as assert from "assert";
-import type { ThemeIcon } from "vscode";
-import { TreeItemCollapsibleState } from "vscode";
+import { ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { createFakeFlinkDatabaseResource } from "../../tests/unit/testResources/flinkDatabaseResource";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import type { FlinkDatabaseResource } from "./flinkDatabaseResource";
-import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
+import { ERROR_ICON, FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
 
 describe("models/flinkDatabaseResourceContainer", () => {
   describe("FlinkDatabaseResourceContainer", () => {
@@ -73,15 +72,46 @@ describe("models/flinkDatabaseResourceContainer", () => {
         assert.strictEqual(container.isLoading, false);
       });
 
-      it("should adjust .iconPath based on the value of isLoading", () => {
+      it("should use the loading icon when isLoading is set to true", () => {
         const container = new FlinkDatabaseResourceContainer<FlinkDatabaseResource>("Test", []);
 
+        container.isLoading = true;
+        assert.ok(container.iconPath);
+        assert.strictEqual((container.iconPath as ThemeIcon).id, IconNames.LOADING);
+      });
+
+      it("should clear .iconPath when isLoading is set to false and no default icon is provided", () => {
+        const container = new FlinkDatabaseResourceContainer<FlinkDatabaseResource>(
+          "Test",
+          [],
+          // no default icon (nor contextValue) set
+        );
+
+        // set initial loading state
         container.isLoading = true;
         assert.ok(container.iconPath);
         assert.strictEqual((container.iconPath as ThemeIcon).id, IconNames.LOADING);
 
         container.isLoading = false;
         assert.strictEqual(container.iconPath, undefined);
+      });
+
+      it("should use the default icon when isLoading is set to false", () => {
+        const customIcon = new ThemeIcon("symbol-folder");
+        const container = new FlinkDatabaseResourceContainer<FlinkDatabaseResource>(
+          "Test",
+          [],
+          undefined,
+          customIcon,
+        );
+        assert.strictEqual(container.iconPath, customIcon);
+
+        // set initial loading state
+        container.isLoading = true;
+        assert.strictEqual((container.iconPath as ThemeIcon).id, IconNames.LOADING);
+
+        container.isLoading = false;
+        assert.strictEqual(container.iconPath, customIcon);
       });
 
       it("should clear isLoading state when children are set", () => {
@@ -102,20 +132,43 @@ describe("models/flinkDatabaseResourceContainer", () => {
         assert.strictEqual(container.hasError, false);
       });
 
-      it("should adjust .iconPath based on the value of hasError", () => {
+      it("should use the error icon when hasError is set to true", () => {
         const container = new FlinkDatabaseResourceContainer<FlinkDatabaseResource>("Test", []);
 
         container.hasError = true;
         assert.ok(container.iconPath);
-        assert.strictEqual((container.iconPath as ThemeIcon).id, "warning");
-        assert.strictEqual(
-          (container.iconPath as ThemeIcon).color!.id,
-          "problemsErrorIcon.foreground",
-        );
+        assert.deepStrictEqual(container.iconPath, ERROR_ICON);
+      });
+
+      it("should clear .iconPath when hasError is set to false and no default icon is provided", () => {
+        const container = new FlinkDatabaseResourceContainer<FlinkDatabaseResource>("Test", []);
+
+        // set initial error state
+        container.hasError = true;
+        assert.ok(container.iconPath);
+        assert.deepStrictEqual(container.iconPath, ERROR_ICON);
 
         container.hasError = false;
         assert.strictEqual(container.hasError, false);
         assert.strictEqual(container.iconPath, undefined);
+      });
+
+      it("should use the default icon when hasError is set to false", () => {
+        const customIcon = new ThemeIcon("symbol-folder");
+        const container = new FlinkDatabaseResourceContainer<FlinkDatabaseResource>(
+          "Test",
+          [],
+          undefined,
+          customIcon,
+        );
+        assert.strictEqual(container.iconPath, customIcon);
+
+        // set initial error state
+        container.hasError = true;
+        assert.deepStrictEqual(container.iconPath, ERROR_ICON);
+
+        container.hasError = false;
+        assert.strictEqual(container.iconPath, customIcon);
       });
 
       it("should not modify .contextValue when no original contextValue was provided in the constructor", () => {
