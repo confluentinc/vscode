@@ -6,13 +6,12 @@ import { unzip } from "unzipit";
 import { ViewColumn } from "vscode";
 import type {
   ApplyScaffoldV1TemplateOperationRequest,
-  ResponseError,
   ScaffoldV1Template,
   ScaffoldV1TemplateSpec,
   TemplatesScaffoldV1Api,
 } from "../../clients/scaffoldingService";
 import { projectScaffoldUri } from "../../emitters";
-import { logError } from "../../errors";
+import { isResponseError, logError } from "../../errors";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { getTemplatesList, pickTemplate } from "../../projectGeneration/templates";
@@ -44,62 +43,69 @@ export const scaffoldProjectRequest = async (
   telemetrySource?: string,
 ): Promise<PostResponse> => {
   let pickedTemplate: ScaffoldV1Template | undefined = undefined;
-  const templateType = templateRequestOptions?.templateType;
+  let templateList: ScaffoldV1Template[] | undefined = undefined;
+  let { templateType, templateName, templateCollection } = templateRequestOptions || {};
+
+  /** 1. Listing available templates */
   try {
-    // should only be using a templateCollection if this came from a URI; by default all other uses
-    // will default to the "vscode" collection
-    let templateList: ScaffoldV1Template[] = await getTemplatesList(
-      templateRequestOptions?.templateCollection,
-    );
-    if (templateRequestOptions && !templateRequestOptions.templateName) {
-      // When we're triggering the scaffolding from the cluster or topic context menu, we want to show only
-      // templates that are tagged as producer or consumer but with a quickpick
+    // undefined templateCollection will default to the "vscode" collection
+    templateList = await getTemplatesList(templateCollection);
+  } catch (err) {
+    logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
+    const baseMessage: string = await parseErrorMessage(err);
+    const stageSpecificMessage = `Project generation failed. Unable to list the templates. ${baseMessage}`;
+    void showErrorNotificationWithButtons(stageSpecificMessage);
+    return { success: false, message: stageSpecificMessage };
+  }
+
+  /** 2. Choosing a template */
+  try {
+    if (templateName) {
+      // ...from a URI where there is a template name passed and showing quickpick is not needed
+      pickedTemplate = templateList.find((template) => template.spec!.name === templateName);
+      if (!pickedTemplate) {
+        // Send the error to Sentry, but don't notify the user.
+        // Instead they'll be offered the quickpick to select a different template
+        logError(
+          new Error("The template name provided in the request was not found."),
+          "scaffold project from URI",
+          {
+            extra: {
+              templateName: templateName,
+              templateCollection: templateCollection,
+            },
+          },
+        );
+      }
+    }
+
+    if (templateType) {
       templateList = templateList.filter((template) => {
         const tags = template.spec?.tags || [];
-
         if (templateType === "flink") {
           return tags.includes("apache flink") || tags.includes("table api");
+          // "kafka" type comes from Cluster/Topic context menu
         } else if (templateType === "kafka") {
           return tags.includes("producer") || tags.includes("consumer");
         } else if (templateType === "artifact") {
           return tags.includes("udfs");
         }
-
-        // If no specific type, show all templates with producer or consumer tags
+        // If an unknown templateType was provided, default to producer/consumer templates???
         return tags.includes("producer") || tags.includes("consumer");
       });
-
-      pickedTemplate = await pickTemplate(templateList);
-    } else if (templateRequestOptions && templateRequestOptions.templateName) {
-      // Handling from a URI (or Copilot tool invocation) where there is a template name matched and
-      // showing a quickpick is not needed
-      pickedTemplate = templateList.find(
-        (template) => template.spec!.name === templateRequestOptions.templateName,
-      );
-      if (!pickedTemplate) {
-        const errMsg =
-          "Project template not found. Check the template name and collection and try again.";
-        logError(new Error(errMsg), "template not found", {
-          extra: {
-            templateName: templateRequestOptions.templateName,
-            templateCollection: templateRequestOptions.templateCollection,
-          },
-        });
-        void showErrorNotificationWithButtons(errMsg);
-        return { success: false, message: errMsg };
-      }
-    } else {
-      // If no arguments are passed, show all templates
-      pickedTemplate = await pickTemplate(templateList);
     }
+
+    pickedTemplate = await pickTemplate(templateList);
   } catch (err) {
-    logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
-    vscode.window.showErrorMessage("Failed to retrieve template list");
-    return { success: false, message: "Failed to retrieve template list" };
+    logError(err, "template picking", { extra: { functionName: "scaffoldProjectRequest" } });
+    const baseMessage = await parseErrorMessage(err);
+    const stageSpecificMessage = `Project generation failed. Unable to pick a template. ${baseMessage}`;
+    void showErrorNotificationWithButtons(stageSpecificMessage);
+    return { success: false, message: stageSpecificMessage };
   }
 
   if (!pickedTemplate) {
-    // user canceled the quickpick
+    // user canceled the quickpick, exit quietly
     return { success: false, message: "Project generation cancelled." };
   }
 
@@ -111,6 +117,7 @@ export const scaffoldProjectRequest = async (
     itemType: telemetrySource,
   });
 
+  /** 3. Setting up & showing the form to gather options from user input */
   const templateSpec: ScaffoldV1TemplateSpec = pickedTemplate.spec!;
 
   const [optionsForm, wasExisting] = scaffoldWebviewCache.findOrCreate(
@@ -178,12 +185,9 @@ export const scaffoldProjectRequest = async (
           templateName: templateSpec.display_name,
           itemType: telemetrySource,
         });
-        let res: PostResponse = { success: false, message: "Failed to apply template." };
-        if (pickedTemplate) {
-          res = await applyTemplate(pickedTemplate, body.data, telemetrySource);
-          // only dispose the form if the template was successfully applied
-          if (res.success) optionsForm.dispose();
-        } else vscode.window.showErrorMessage("Failed to apply template.");
+        const res: PostResponse = await applyTemplate(pickedTemplate, body.data, telemetrySource);
+        // only dispose the form if the template was successfully applied
+        if (res.success) optionsForm.dispose();
         return res satisfies MessageResponse<"Submit">;
       }
     }
@@ -194,6 +198,7 @@ export const scaffoldProjectRequest = async (
   return { success: true, message: "Form opened" };
 };
 
+// Called on Form Submit
 export async function applyTemplate(
   pickedTemplate: ScaffoldV1Template,
   manifestOptionValues: { [key: string]: unknown },
@@ -205,18 +210,23 @@ export async function applyTemplate(
     Object.entries(manifestOptionValues).map(([k, v]) => [k, String(v)]),
   );
   const request: ApplyScaffoldV1TemplateOperationRequest = {
-    template_collection_name: pickedTemplate.spec!.template_collection!.id!,
+    template_collection_name: pickedTemplate.spec!.template_collection!.id,
     name: pickedTemplate.spec!.name!,
     ApplyScaffoldV1TemplateRequest: {
       options: stringifiedOptions,
     },
   };
 
+  // Track which phase we are in so we can surface specific user notifications in case of error
+  let stage: string = "";
   try {
+    stage = "performing scaffold service apply operation";
     const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request);
 
+    stage = "template archive buffering";
     const arrayBuffer = await applyTemplateResponse.arrayBuffer();
 
+    stage = "requesting a save location";
     const SAVE_LABEL = "Save to directory";
     const fileUris = await vscode.window.showOpenDialog({
       openLabel: SAVE_LABEL,
@@ -235,12 +245,13 @@ export async function applyTemplate(
         templateName: pickedTemplate.spec!.display_name,
         itemType: telemetrySource,
       });
-
+      // Not a failure point - user action. Form remains open and shows X + message at bottom.
       return { success: false, message: "Project generation cancelled before save." };
     }
-
+    // Not a failure point we control - calls vscode internals
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
 
+    stage = "saving extracted template files to disk";
     await extractZipContents(arrayBuffer, destination);
     logUsage(UserEvent.ProjectScaffoldingAction, {
       status: "project generated",
@@ -281,43 +292,85 @@ export async function applyTemplate(
     }
     return { success: true, message: "Project generated successfully." };
   } catch (e) {
-    logError(e, "applying template", { extra: { templateName: pickedTemplate.spec!.name! } });
-    let message = "Failed to generate template. An unknown error occurred.";
-    if (e instanceof Error) {
-      message = e.message;
-      const response = (e as ResponseError).response;
-      if (response) {
-        try {
-          const payload = await response.json().then((json) => JSON.stringify(json));
-          message = parseErrorMessage(payload);
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (jsonError) {
-          message = `Failed to generate template. Unable to parse error response: ${e}`;
-        }
-      }
-    }
-    return { success: false, message };
+    // Catches failure points above and gives stage-specific notification with details in output channel
+    logError(e, "applying template", {
+      extra: { templateName: pickedTemplate.spec!.name!, stage },
+    });
+    const message = await parseErrorMessage(e);
+    const stageSpecificMessage = `Template generation failed while ${stage}: ${message}`;
+    // Surface user-facing notification with actionable context
+    void showErrorNotificationWithButtons(stageSpecificMessage);
+    return { success: false, message: stageSpecificMessage };
   }
 }
 
-function parseErrorMessage(rawMessage: string): string {
-  try {
-    const parsed = JSON.parse(rawMessage);
-    if (parsed.errors && Array.isArray(parsed.errors)) {
-      return parsed.errors
-        .map((error: any) => {
-          const detail = error.detail || "Unknown error";
-          const pointer = error.source?.pointer || "unknown field";
-          const optionName = pointer.replace("/options/", "");
-          return `Invalid format for option '${optionName}': ${detail}`;
-        })
-        .join("\n");
-    }
-  } catch (e) {
-    logger.error("Failed to parse error message:", e);
-    return rawMessage;
+/**
+ * Extracts a user-friendly error message from various error types.
+ * Handles ResponseError, Error objects, strings, and generic objects.
+ * @param err - The error to parse
+ * @returns A formatted error message suitable for user display
+ */
+async function parseErrorMessage(err: unknown): Promise<string> {
+  // Handle string errors directly
+  if (typeof err === "string") {
+    return err;
   }
-  return rawMessage;
+
+  // Handle ResponseError objects from API calls
+  if (isResponseError(err)) {
+    if (err.response) {
+      const status = err.response.status;
+
+      // Special handling for 403 - likely proxy interference
+      if (status === 403) {
+        return "Access denied. This may be caused by a corporate proxy or VPN blocking the request. Please check your network settings or contact your IT administrator.";
+      }
+
+      try {
+        const json = await err.response.json();
+
+        // Handle scaffolding service validation errors with JSON pointer paths
+        if (json.errors && Array.isArray(json.errors)) {
+          return json.errors
+            .map((error: any) => {
+              const detail = error.detail || "Unknown error";
+              const pointer = error.source?.pointer;
+              if (pointer && pointer.startsWith("/options/")) {
+                const optionName = pointer.replace("/options/", "");
+                return `Invalid format for option '${optionName}': ${detail}`;
+              }
+              return detail;
+            })
+            .join("; ");
+        }
+
+        // Handle simple message field
+        if (json.message) {
+          return json.message;
+        }
+
+        return JSON.stringify(json);
+      } catch {
+        // If JSON parsing fails, return a generic message
+        return "Unable to parse error response";
+      }
+    }
+  }
+
+  // Handle standard Error objects
+  if (err instanceof Error) {
+    return err.message || "An unknown error occurred.";
+  }
+
+  // Handle generic objects with a message property
+  if (typeof err === "object" && err !== null) {
+    if ("message" in err && typeof (err as any).message === "string") {
+      return (err as any).message;
+    }
+    return JSON.stringify(err);
+  }
+
+  return "An unknown error occurred.";
 }
 
 async function extractZipContents(buffer: ArrayBuffer, destination: vscode.Uri) {
