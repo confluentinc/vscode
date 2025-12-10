@@ -185,17 +185,9 @@ export const scaffoldProjectRequest = async (
           templateName: templateSpec.display_name,
           itemType: telemetrySource,
         });
-        let res: PostResponse = { success: false, message: "Failed to apply template." };
-        if (pickedTemplate) {
-          res = await applyTemplate(pickedTemplate, body.data, telemetrySource);
-          // only dispose the form if the template was successfully applied
-          if (res.success) optionsForm.dispose();
-        } else {
-          // This shouldn't happen as pickedTemplate is set earlier, but handle defensively
-          const errorMessage = "Failed to apply template. No template selected.";
-          void showErrorNotificationWithButtons(errorMessage);
-          res = { success: false, message: errorMessage };
-        }
+        const res: PostResponse = await applyTemplate(pickedTemplate, body.data, telemetrySource);
+        // only dispose the form if the template was successfully applied
+        if (res.success) optionsForm.dispose();
         return res satisfies MessageResponse<"Submit">;
       }
     }
