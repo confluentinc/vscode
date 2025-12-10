@@ -51,6 +51,12 @@
   color: var(--vscode-list-activeSelectionForeground, #ffffff);
 }
 
+/* Search highlight for grid cells */
+.grid-cell mark {
+  background-color: var(--vscode-editor-findMatchHighlightBackground);
+  color: var(--vscode-editor-findMatchHighlightForeground);
+  overflow: clip;
+}
 /**
  * <label class="checkbox">
  *   <input type="checkbox" />
