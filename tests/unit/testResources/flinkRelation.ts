@@ -3,6 +3,12 @@ import {
   FlinkRelationColumn,
   FlinkRelationType,
 } from "../../../src/models/flinkRelation";
+import {
+  TEST_CCLOUD_ENVIRONMENT_ID,
+  TEST_CCLOUD_PROVIDER,
+  TEST_CCLOUD_REGION,
+} from "./environments";
+import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "./kafkaCluster";
 
 export const TEST_VARCHAR_COLUMN = new FlinkRelationColumn({
   relationName: "test_relation",
@@ -25,6 +31,10 @@ export const TEST_INT_COLUMN = new FlinkRelationColumn({
 });
 
 export const TEST_FLINK_RELATION = new FlinkRelation({
+  environmentId: TEST_CCLOUD_ENVIRONMENT_ID,
+  provider: TEST_CCLOUD_PROVIDER,
+  region: TEST_CCLOUD_REGION,
+  databaseId: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id,
   name: "test_relation",
   comment: "A test relation",
   columns: [TEST_VARCHAR_COLUMN, TEST_INT_COLUMN],

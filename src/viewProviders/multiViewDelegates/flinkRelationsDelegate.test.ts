@@ -48,7 +48,7 @@ describe("flinkRelationsDelegate.ts", () => {
         const expectedRelations = [TEST_FLINK_RELATION];
         stubbedLoader.getFlinkRelations.resolves(expectedRelations);
 
-        const children = await delegate.fetchChildren(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+        const children = await delegate.fetchChildren(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
 
         sinon.assert.match(children, expectedRelations);
         sinon.assert.match(delegate["children"], expectedRelations);
