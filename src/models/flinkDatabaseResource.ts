@@ -8,5 +8,5 @@ import type { FlinkUdf } from "./flinkUDF";
 /** Union type for all Flink AI resources. */
 export type FlinkAIResource = FlinkAIModel | FlinkAIConnection | FlinkAITool | FlinkAIAgent;
 
-/** Union type for top-level resources with a Flink database parent. */
+/** Union type for resources with a Flink database parent. */
 export type FlinkDatabaseResource = FlinkRelation | FlinkUdf | FlinkAIResource;
