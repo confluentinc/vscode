@@ -52,8 +52,8 @@ export const scaffoldProjectRequest = async (
     templateList = await getTemplatesList(templateCollection);
   } catch (err) {
     logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
-    const baseMessage: string = await parseErrorDetails(err);
-    const stageSpecificMessage = `Project generation failed. Unable to list the templates. ${baseMessage || ""}`;
+    const baseMessage: string = await parseErrorMessage(err);
+    const stageSpecificMessage = `Project generation failed. Unable to list the templates. ${baseMessage}`;
     void showErrorNotificationWithButtons(stageSpecificMessage);
     return { success: false, message: stageSpecificMessage };
   }
@@ -98,8 +98,8 @@ export const scaffoldProjectRequest = async (
     pickedTemplate = await pickTemplate(templateList);
   } catch (err) {
     logError(err, "template picking", { extra: { functionName: "scaffoldProjectRequest" } });
-    const baseMessage = await parseErrorDetails(err);
-    const stageSpecificMessage = `Project generation failed. Unable to pick a template. ${baseMessage || ""}`;
+    const baseMessage = await parseErrorMessage(err);
+    const stageSpecificMessage = `Project generation failed. Unable to pick a template. ${baseMessage}`;
     void showErrorNotificationWithButtons(stageSpecificMessage);
     return { success: false, message: stageSpecificMessage };
   }
@@ -304,27 +304,7 @@ export async function applyTemplate(
     logError(e, "applying template", {
       extra: { templateName: pickedTemplate.spec!.name!, stage },
     });
-    let message = "Failed to generate template. An unknown error occurred.";
-    if (isResponseError(e)) {
-      const response = e.response;
-      if (response) {
-        // Check for 403 Forbidden - likely proxy interference
-        if (response.status === 403) {
-          message =
-            "Access denied. This may be caused by a corporate proxy or VPN blocking the request. Please check your network settings or contact your IT administrator.";
-        } else {
-          try {
-            const payload = await response.json().then((json) => JSON.stringify(json));
-            message = parseErrorMessage(payload);
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          } catch (jsonError) {
-            message = `Failed to generate template. Unable to parse error response: ${e}`;
-          }
-        }
-      }
-    } else if (e instanceof Error) {
-      message = e.message;
-    }
+    const message = await parseErrorMessage(e);
     const stageSpecificMessage = `Template generation failed while ${stage}: ${message}`;
     // Surface user-facing notification with actionable context
     void showErrorNotificationWithButtons(stageSpecificMessage);
@@ -332,24 +312,73 @@ export async function applyTemplate(
   }
 }
 
-function parseErrorMessage(rawMessage: string): string {
-  try {
-    const parsed = JSON.parse(rawMessage);
-    if (parsed.errors && Array.isArray(parsed.errors)) {
-      return parsed.errors
-        .map((error: any) => {
-          const detail = error.detail || "Unknown error";
-          const pointer = error.source?.pointer || "unknown field";
-          const optionName = pointer.replace("/options/", "");
-          return `Invalid format for option '${optionName}': ${detail}`;
-        })
-        .join("\n");
-    }
-  } catch (e) {
-    logger.error("Failed to parse error message:", e);
-    return rawMessage;
+/**
+ * Extracts a user-friendly error message from various error types.
+ * Handles ResponseError, Error objects, strings, and generic objects.
+ * @param err - The error to parse
+ * @returns A formatted error message suitable for user display
+ */
+async function parseErrorMessage(err: unknown): Promise<string> {
+  // Handle string errors directly
+  if (typeof err === "string") {
+    return err;
   }
-  return rawMessage;
+
+  // Handle ResponseError objects from API calls
+  if (isResponseError(err)) {
+    if (err.response) {
+      const status = err.response.status;
+
+      // Special handling for 403 - likely proxy interference
+      if (status === 403) {
+        return "Access denied. This may be caused by a corporate proxy or VPN blocking the request. Please check your network settings or contact your IT administrator.";
+      }
+
+      try {
+        const json = await err.response.json();
+
+        // Handle scaffolding service validation errors with JSON pointer paths
+        if (json.errors && Array.isArray(json.errors)) {
+          return json.errors
+            .map((error: any) => {
+              const detail = error.detail || "Unknown error";
+              const pointer = error.source?.pointer;
+              if (pointer && pointer.startsWith("/options/")) {
+                const optionName = pointer.replace("/options/", "");
+                return `Invalid format for option '${optionName}': ${detail}`;
+              }
+              return detail;
+            })
+            .join("; ");
+        }
+
+        // Handle simple message field
+        if (json.message) {
+          return json.message;
+        }
+
+        return JSON.stringify(json);
+      } catch {
+        // If JSON parsing fails, return a generic message
+        return "Unable to parse error response";
+      }
+    }
+  }
+
+  // Handle standard Error objects
+  if (err instanceof Error) {
+    return err.message || "An unknown error occurred.";
+  }
+
+  // Handle generic objects with a message property
+  if (typeof err === "object" && err !== null) {
+    if ("message" in err && typeof (err as any).message === "string") {
+      return (err as any).message;
+    }
+    return JSON.stringify(err);
+  }
+
+  return "An unknown error occurred.";
 }
 
 async function extractZipContents(buffer: ArrayBuffer, destination: vscode.Uri) {
@@ -487,53 +516,4 @@ export async function handleProjectScaffoldUriEvent(uri: vscode.Uri): Promise<vo
   params.delete("template");
   const options: { [key: string]: string } = Object.fromEntries(params.entries());
   return await handleProjectScaffoldUri(collection, template, isFormNeeded, options);
-}
-/**
- * Attempts to extract a useful error message from an unknown error object.
- * Used to provide actionable feedback when a part of the flow fails.
- * @param err - The error object thrown during scaffold operations
- * @returns A string describing the error, or an empty string if not available
- */
-async function parseErrorDetails(err: unknown): Promise<string> {
-  if (typeof err === "string") {
-    return err;
-  }
-
-  if (isResponseError(err)) {
-    // Handle ResponseError with proper type checking
-    if (err.response) {
-      const status = err.response.status;
-
-      // Special handling for 403 - likely proxy interference
-      if (status === 403) {
-        return "Access denied. This may be caused by a corporate proxy or VPN blocking the request. Please check your network settings or contact your IT administrator.";
-      }
-
-      try {
-        const json = await err.response.json();
-        if (json && json.message) {
-          return json.message;
-        }
-        if (json && json.errors && Array.isArray(json.errors)) {
-          return json.errors.map((e: any) => e.detail || e.message).join("; ");
-        }
-        return JSON.stringify(json);
-      } catch {
-        // If JSON parsing fails, return the error message
-        return err.message || "An error occurred but details could not be parsed.";
-      }
-    }
-  }
-
-  if (err instanceof Error) {
-    return err.message || "";
-  }
-
-  if (typeof err === "object" && err !== null) {
-    if ("message" in err && typeof (err as any).message === "string") {
-      return (err as any).message;
-    }
-    return JSON.stringify(err);
-  }
-  return "";
 }
