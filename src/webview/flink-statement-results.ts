@@ -475,7 +475,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
    */
   formatResultValue(value: unknown, search: RegExp | null) {
     if (value == null) return "NULL";
-    const input = typeof value === "string" ? value : JSON.stringify(value, null, " ");
+    const input = typeof value === "string" ? value : JSON.stringify(value, null, 2);
     if (search == null) return input;
     // search regexp is global, reset its index state to avoid mismatches
     search.lastIndex = 0;

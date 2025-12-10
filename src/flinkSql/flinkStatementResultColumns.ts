@@ -95,7 +95,7 @@ function addSchemaColumns(
         children: (result: Record<string, any>) => {
           const value = getValue(result, col, index);
           // Apply search highlighting if formatResultValue function is provided
-          return formatResultValue && searchRegexp !== undefined
+          return formatResultValue && searchRegexp != null
             ? formatResultValue(value, searchRegexp)
             : value;
         },
