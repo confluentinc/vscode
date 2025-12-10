@@ -4,11 +4,7 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
-import {
-  FlinkDatabaseView,
-  FlinkViewMode,
-  SelectFlinkDatabase,
-} from "../objects/views/FlinkDatabaseView";
+import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDatabaseView";
 import { Tag } from "../tags";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -30,7 +26,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
   const entrypoints = [
     {
-      entrypoint: SelectFlinkDatabase.FromArtifactsViewButton,
+      entrypoint: SelectFlinkDatabase.FromDatabaseViewButton,
       testName: "should upload Flink Artifact when cluster selected from Artifacts view button",
     },
     {
@@ -54,6 +50,9 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
         artifactsView,
         providerRegion,
       );
+
+      // make sure Artifacts container is expanded before we check that it's uploaded (and then deleted)
+      await artifactsView.expandArtifactsContainer();
       await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
         1,
       );
@@ -74,7 +73,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
         return await completeArtifactUploadFlow(electronApp, artifactPath, artifactsView);
-      case SelectFlinkDatabase.FromArtifactsViewButton:
+      case SelectFlinkDatabase.FromDatabaseViewButton:
         return await completeArtifactUploadFlow(electronApp, artifactPath, artifactsView);
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
         if (!providerRegion) {
@@ -99,9 +98,8 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     // Parse provider/region from format "PROVIDER/region" (e.g., "AWS/us-east-2")
     const [provider, region] = providerRegion.split("/");
     await artifactsView.selectKafkaClusterByProviderRegion(provider, region);
-    await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
-
-    await expect(artifactsView.artifacts.first()).toBeVisible();
+    // a Flink database is selected, so yield back to the test to expand the container and check
+    // for the uploaded artifact
     return uploadedArtifactName;
   }
 });
@@ -111,7 +109,6 @@ async function completeArtifactUploadFlow(
   artifactPath: string,
   artifactsView: FlinkDatabaseView,
 ): Promise<string> {
-  await artifactsView.clickSwitchToFlinkResource(FlinkViewMode.Artifacts);
   const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
   return uploadedArtifactName;
 }

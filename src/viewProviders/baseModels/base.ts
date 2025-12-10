@@ -144,10 +144,18 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
         // special URI scheme to decorate the tree item with a dot to the right of the label,
         // and color the label, description, and decoration so it stands out in the tree view
         treeItem.resourceUri = Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
+      } else {
+        // clear any previous search decoration URI
+        // NOTE: this will need to be adjusted for https://github.com/confluentinc/vscode/issues/1777
+        treeItem.resourceUri = undefined;
       }
       if (element.children && element.children.length > 0) {
         updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
       }
+    } else {
+      // clear any previous search decoration URI
+      // NOTE: this will need to be adjusted for https://github.com/confluentinc/vscode/issues/1777
+      treeItem.resourceUri = undefined;
     }
   }
 
