@@ -45,7 +45,7 @@ export async function createTopicInFlinkDatabaseViewCommand(): Promise<void> {
   if (topicWasCreated) {
     // Refresh the view to show the new topic in the relations container.
     // Retry a few times if necessary, as the topic creation may take a moment to propagate.
-    for (let i = 0; i < 5 && flinkDBViewProvider["relations"].length === 0; i++) {
+    for (let i = 0; i < 5 && flinkDBViewProvider["relationsContainer"].children.length === 0; i++) {
       await pause(500);
       // Deep refresh the container item to (hopefully) show the new table/topic.
       await flinkDBViewProvider.refreshRelationsContainer(selectedFlinkDatabase, true);

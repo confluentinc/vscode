@@ -122,10 +122,12 @@ describe("commands/flinkDatabaseView.ts", () => {
       createTopicCommandStub.resolves(true);
 
       // Simulate that relations are empty initially, then populated after refresh.
-      flinkDatabaseViewProviderInstance["relations"] = [];
+      flinkDatabaseViewProviderInstance["relationsContainer"].children = [];
       // After first refresh, relations are still empty
       refreshRelationsStub.onFirstCall().callsFake(() => {
-        flinkDatabaseViewProviderInstance["relations"] = [{ id: "topic1" } as any];
+        flinkDatabaseViewProviderInstance["relationsContainer"].children = [
+          { id: "topic1" } as any,
+        ];
         return Promise.resolve();
       });
 
@@ -157,7 +159,7 @@ describe("commands/flinkDatabaseView.ts", () => {
       // Have the stubbed command indicate that a topic was created.
       createTopicCommandStub.resolves(true);
       // but the relations never populate.
-      flinkDatabaseViewProviderInstance["relations"] = [];
+      flinkDatabaseViewProviderInstance["relationsContainer"].children = [];
 
       await createTopicInFlinkDatabaseViewCommand();
 
