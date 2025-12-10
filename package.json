@@ -740,6 +740,12 @@
         "category": "Confluent: Support"
       },
       {
+        "command": "confluent.support.joinSlack",
+        "icon": "$(person-add)",
+        "title": "Join Confluent Community Slack Workspace",
+        "category": "Confluent: Support"
+      },
+      {
         "command": "confluent.support.openSettings",
         "title": "Open Settings",
         "category": "Confluent: Support"
@@ -757,12 +763,6 @@
       {
         "command": "confluent.support.saveSupportZip",
         "title": "Save Support File (.zip)",
-        "category": "Confluent: Support"
-      },
-      {
-        "command": "confluent.support.joinSlack",
-        "icon": "$(person-add)",
-        "title": "Join Confluent Community Slack Workspace",
         "category": "Confluent: Support"
       },
       {
@@ -1684,6 +1684,10 @@
           "when": "true"
         },
         {
+          "command": "confluent.support.joinSlack",
+          "when": "true"
+        },
+        {
           "command": "confluent.support.openSettings",
           "when": "true"
         },
@@ -1697,10 +1701,6 @@
         },
         {
           "command": "confluent.support.saveSupportZip",
-          "when": "true"
-        },
-        {
-          "command": "confluent.support.joinSlack",
           "when": "true"
         },
         {
