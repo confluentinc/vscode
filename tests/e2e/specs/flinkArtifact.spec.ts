@@ -8,6 +8,7 @@ import { ConnectionType } from "../connectionTypes";
 import { FileExplorer } from "../objects/FileExplorer";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDatabaseView";
+import { ViewItem } from "../objects/views/viewItems/ViewItem";
 import { Tag } from "../tags";
 import { executeVSCodeCommand } from "../utils/commands";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
@@ -184,10 +185,11 @@ async function completeArtifactUploadFlowForJAR(
 
   const fileExplorer = new FileExplorer(page);
   await fileExplorer.ensureVisible();
-  await fileExplorer.rightClickFileAndSelectAction(
-    path.basename(artifactPath),
-    "Upload Flink Artifact to Confluent Cloud",
-  );
+  const jarFile = fileExplorer.treeItems.filter({ hasText: path.basename(artifactPath) });
+  await expect(jarFile).toHaveCount(1);
+  await expect(jarFile).toHaveAttribute("aria-label", `${path.basename(artifactPath)}, File`);
+  const fileItem = new ViewItem(page, jarFile);
+  await fileItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
 
   await artifactsView.uploadFlinkArtifactFromJAR(artifactName);
 
