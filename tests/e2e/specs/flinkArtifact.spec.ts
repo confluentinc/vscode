@@ -8,6 +8,7 @@ import { ConnectionType } from "../connectionTypes";
 import { FileExplorer } from "../objects/FileExplorer";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDatabaseView";
+import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDatabaseView";
 import { Tag } from "../tags";
 import { executeVSCodeCommand } from "../utils/commands";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
@@ -31,6 +32,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
   const entrypoints = [
     {
+      entrypoint: SelectFlinkDatabase.FromDatabaseViewButton,
       entrypoint: SelectFlinkDatabase.FromDatabaseViewButton,
       testName: "should upload Flink Artifact when cluster selected from Artifacts view button",
     },
@@ -64,6 +66,9 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
         artifactsView,
         providerRegion,
       );
+
+      // make sure Artifacts container is expanded before we check that it's uploaded (and then deleted)
+      await artifactsView.expandArtifactsContainer();
 
       // make sure Artifacts container is expanded before we check that it's uploaded (and then deleted)
       await artifactsView.expandArtifactsContainer();

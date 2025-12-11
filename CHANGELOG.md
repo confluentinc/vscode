@@ -10,10 +10,22 @@ All notable changes to this extension will be documented in this file.
   - "Flink Database Relations" (now the default mode) displays tables, views, and their columns
   - "Flink AI" displays connections, tools, models, and agents
 - Show view definition text in a view's tooltip.
+- "Join Confluent Community Slack" link in the Help Center view to connect with the Confluent
+  community on Slack.
+- Support for custom TLS configuration for Confluent Cloud Schema Registries in the direct
+  connection form
 
 ### Changed
 
 - Updated the "Support" view name to be "Help Center"
+- The Flink Database view now shows top-level collapsible groups for (table/view) relations,
+  artifacts, UDFs, and AI resources that can be re-fetched independently, removing the need to
+  switch "view modes".
+
+### Removed
+
+- The "Switch to \_\_\_" context menu actions in the Flink Database view have been removed since all
+  resources are now shown together in groups.
 
 ## 2.0.3
 

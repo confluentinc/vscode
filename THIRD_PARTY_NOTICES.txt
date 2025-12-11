@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2025-12-8
+Date generated: 2025-12-10
 
-Revision ID: 5ab15be2ae79b5d98a6bc0ea5cd59b02055c24f8
+Revision ID: 8d5f53d47da5341caeadb0c874d1e483feab18c0
 
 ================================================================================
 ================================================================================
@@ -411,7 +411,7 @@ No licenses found
 - resolve (1.22.8) [MIT, ISC]
 - rimraf (2.7.1) [ISC]
 - robust-predicates (3.0.2) [Unlicense]
-- rollup (4.24.0) [ISC, MIT]
+- rollup (4.24.0) [MIT, ISC]
 - rotating-file-stream (3.2.6) [MIT]
 - rw (1.3.3) [BSD-3-Clause]
 - safe-buffer (5.1.2) [MIT]
@@ -545,7 +545,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE
 --------------------------------------------------------------------------------
 
 MIT License
@@ -807,7 +807,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE
 --------------------------------------------------------------------------------
 
 MIT License
@@ -2303,10 +2303,6 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
---------------------------------------------------------------------------------
-File matches:
-LICENSE
---------------------------------------------------------------------------------
 
 Copyright 2022 Justin Ridgewell <jridgewell@google.com>
 
@@ -13234,7 +13230,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-build/cjs/proxy/base.js
+build/types/proxy/helpers.d.ts
 --------------------------------------------------------------------------------
 
 MIT License
@@ -13342,7 +13338,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE
 --------------------------------------------------------------------------------
 
 MIT License
@@ -13579,7 +13575,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+ts5.6/index.d.ts
 --------------------------------------------------------------------------------
 
     MIT License
@@ -14598,6 +14594,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
 
 The MIT License (MIT)
 
@@ -15268,10 +15268,6 @@ Package Depth: Transitive
 * Declared Licenses *
 Apache-2.0
 
---------------------------------------------------------------------------------
-File matches:
-LICENSE
---------------------------------------------------------------------------------
 
 Apache License
 Version 2.0, January 2004
@@ -16384,6 +16380,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
 
 MIT License
 
@@ -17146,7 +17146,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-LICENSE
+package.json
 --------------------------------------------------------------------------------
 
 Copyright (c) 2019 Rich Harris
@@ -17382,6 +17382,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+package.json
+--------------------------------------------------------------------------------
 
 The MIT License (MIT)
 
@@ -17461,7 +17465,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE
 --------------------------------------------------------------------------------
 
 Copyright (c) 2014 Chris Talkington, contributors.
@@ -17542,7 +17546,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-LICENSE
+package.json
 --------------------------------------------------------------------------------
 
 This software is released under the MIT license:
@@ -19737,7 +19741,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE-MIT.txt
 --------------------------------------------------------------------------------
 
 Copyright Mathias Bynens <https://mathiasbynens.be/>
@@ -20249,10 +20253,6 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
---------------------------------------------------------------------------------
-File matches:
-package.json
---------------------------------------------------------------------------------
 
 The MIT License (MIT)
 
@@ -22517,6 +22517,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
 
 The MIT License
 
@@ -24063,6 +24067,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
 
 The MIT License (MIT)
 
@@ -25354,10 +25362,6 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
---------------------------------------------------------------------------------
-File matches:
-lib/_stream_passthrough.js
---------------------------------------------------------------------------------
 
 Node.js is licensed for use as follows:
 
@@ -26046,7 +26050,32 @@ Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
-ISC, MIT
+MIT, ISC
+
+* MIT *
+--------------------------------------------------------------------------------
+File matches:
+LICENSE.md
+--------------------------------------------------------------------------------
+
+Copyright (c) 2017 these people](https://github.com/rollup/rollup/graphs/contributors)
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 * ISC *
 --------------------------------------------------------------------------------
@@ -26710,31 +26739,6 @@ Repository: https://github.com/yargs/yargs-parser.git
 > ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-* MIT *
---------------------------------------------------------------------------------
-File matches:
-package.json
---------------------------------------------------------------------------------
-
-Copyright (c) 2017 these people](https://github.com/rollup/rollup/graphs/contributors)
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
 
 --------------------------------------------------------------------------------
 Package Title: rotating-file-stream (3.2.6)
@@ -26834,6 +26838,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
 
 The MIT License (MIT)
 
@@ -27556,7 +27564,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE
 --------------------------------------------------------------------------------
 
 Node.js is licensed for use as follows:
@@ -28391,7 +28399,7 @@ Package Depth: Transitive
 
 --------------------------------------------------------------------------------
 File matches:
-tslib.d.ts
+CopyrightNotice.txt
 --------------------------------------------------------------------------------
 
 Copyright (c) Microsoft Corporation.
@@ -39215,11 +39223,13 @@ MIT License
 
 Copyright (c) Microsoft Corporation.
 
+Copyright (c)  Node.js contributors. All rights reserved.
+
 Copyright (c)  Microsoft Corporation. All rights reserved.
 
-Copyright (c)  Microsoft Corporation.
-
 Copyright (c)  Microsoft Corporation. All rights reserved.");
+
+Copyright (c)  Microsoft Corporation.
 
 Copyright (c) 2013 Julian Gruber &lt;julian@juliangruber.com&gt;
 
@@ -39231,9 +39241,9 @@ Copyright (c) 2014 Nathan Rajlich <nathan@tootallnate.net>
 
 Copyright (c) 2014-2017 TJ Holowaychuk <tj@vision-media.ca>
 
-Copyright (c) 2018-2021 Josh Junon
-
 Copyright (c) 2014-2017 TJ Holowaychuk &lt;tj@vision-media.ca&gt;
+
+Copyright (c) 2018-2021 Josh Junon
 
 Copyright (c) 2017 TJ Holowaychuk <tj@vision-media.ca>
 
@@ -39337,8 +39347,6 @@ Copyright (c) Mathias Bynens <https://mathiasbynens.be/>
 
 Copyright (c) Node.js contributors. All rights reserved.
 
-Copyright (c)  Node.js contributors. All rights reserved.
-
 Copyright (c)  Joyent, Inc. and other Node contributors.
 
 Copyright (c) 2017 these people](https://github.com/rollup/rollup/graphs/contributors)
@@ -39385,6 +39393,42 @@ Copyright (c) Kevin Mårtensson <kevinmartensson@gmail.com> (github.com/kevva)
 
 Copyright (c) 2011 Felix Geisendörfer (felix@debuggable.com)
 
+Copyright (c) 2015 Rich Harris
+
+Copyright (c) 2019 RollupJS Plugin Contributors (https://github.com/rollup/plugins/graphs/contributors)
+
+Copyright (c) 2019 Elan Shanker, Paul Miller (https://paulmillr.com)
+
+Copyright (c)  Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+
+Copyright (c)  Paul Miller (https://paulmillr.com)
+
+Copyright (c) 2014 present, Jon Schlinkert.
+
+Copyright (c) 2012-2019 Paul Miller (https://paulmillr.com), Elan Shanker
+
+Copyright (c)  Jorge Bucaran <<https://jorgebucaran.com>>
+
+Copyright (c)  Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)
+
+Copyright (c) 2015, 2019 Elan Shanker
+
+Copyright (c) 2014-2016 Jon Schlinkert
+
+Copyright (c) 2014-2017 Jon Schlinkert.
+
+Copyright (c) 2014-2018 Jon Schlinkert.
+
+Copyright (c) 2017 present, Jon Schlinkert.
+
+Copyright (c) 2012-2019 Thorsten Lorenz, Paul Miller (https://paulmillr.com)
+
+Copyright (c) 2015-2023 Benjamin Coe, Isaac Z. Schlueter, and Contributors
+
+Copyright (c) 2015 present, Jon Schlinkert.
+
+Copyright (c) 2016 Contributors
+
 Copyright (c) Joyent, Inc. and other Node contributors.
 
 Copyright (c) 2012-2022 by various contributors (see AUTHORS)
@@ -39398,8 +39442,6 @@ Copyright (c)  urql GraphQL Team and other contributors
 Copyright (c) 2010 - 2021 Brian Carlson
 
 Copyright (c) 2012-2018 Aseem Kishore, and [others].
-
-Copyright (c) 2012-2019 Thorsten Lorenz, Paul Miller (https://paulmillr.com)
 
 Copyright (c) 2013 Julian Gruber <julian@juliangruber.com>
 
@@ -39424,8 +39466,6 @@ Copyright (c) 2018 Photopea
 Copyright (c) 2019 David Pershouse
 
 Copyright (c) 2019 Functional Software, Inc. dba Sentry
-
-Copyright (c)  Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 
 Copyright (c) 2021 Sergio Xalambrí
 
@@ -39483,17 +39523,19 @@ Copyright (c) 2018-2020 Guy Bedford
 
 Copyright (c) 2012-2018 by various contributors (see AUTHORS)
 
+Copyright (c)  Joyent, Inc. and other Node contributors. All rights reserved.
+
 Copyright (c) 2016-2018 Rob Wu <rob@robwu.nl>
 
 Copyright (c) 2013 Brian J. Brennan
 
 Copyright (c) 2013-2024 Brian J. Brennan
 
-Copyright (c) 2015 Rich Harris
-
 Copyright (c) 2017 Sergey Rubanov (https://github.com/chicoxyzzy)
 
 Copyright (c) EventSource GitHub organisation
+
+Copyright (c)  EventSource GitHub organisation
 
 Copyright (c) 2010-2016 Robert Kieffer and other contributors
 
@@ -39504,8 +39546,6 @@ Copyright (c)  Paul Johnston 1999 - 2009
 Copyright (c) 2010-2020 Robert Kieffer and other contributors
 
 Copyright (c) 2011 2012 2013 Forward
-
-Copyright (c) 2012-2019 Paul Miller (https://paulmillr.com), Elan Shanker
 
 Copyright (c) 2014 Blake Embrey (hello@blakeembrey.com)
 
@@ -39520,14 +39560,6 @@ Copyright (c) 2014 Mathias Buus
 Copyright (c) 2014, 2015, 2016, 2017, 2018 Simon Lydell
 
 Copyright (c) 2014-2015 Arnout Kazemier <opensource@3rd-Eden.com>
-
-Copyright (c) 2014-2016 Jon Schlinkert
-
-Copyright (c) 2014-2017 Jon Schlinkert.
-
-Copyright (c) 2014-2018 Jon Schlinkert.
-
-Copyright (c) 2014 present, Jon Schlinkert.
 
 Copyright (c) 2015 Andres Suarez <zertosh@gmail.com>
 
@@ -39547,8 +39579,6 @@ Copyright (c) 2015 Toru Nagashima
 
 Copyright (c) 2015 Unshift.io, Arnout Kazemier,  the Contributors.
 
-Copyright (c) 2015 present, Jon Schlinkert.
-
 Copyright (c) 2015–2016 Sebastian Mayr
 
 Copyright (c) 2016 Christian Speckner <cnspeckn@googlemail.com>
@@ -39563,8 +39593,6 @@ Copyright (c) 2019-2025 Elasticsearch B.V.
 
 Copyright (c)  2025+, require-in-the-middle contributors
 
-Copyright (c) 2017 present, Jon Schlinkert.
-
 Copyright (c) 2018 Filip Skokan
 
 Copyright (c) 2018 Made With MOXY Lda <hello@moxy.studio>
@@ -39576,6 +39604,8 @@ Copyright (c) 2019 Mathias Buus
 Copyright (c) 2021 Mathias Buus
 
 Copyright (c) Feross Aboukhadijeh
+
+Copyright (c)  Feross Aboukhadijeh
 
 Copyright (c) Feross Aboukhadijeh, and other contributors.
 
@@ -39895,4 +39925,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2025-12-8
+Report Generated by FOSSA on 2025-12-10

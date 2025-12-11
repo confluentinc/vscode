@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "2.1.0-48",
+  "version": "2.1.0-53",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -718,6 +718,12 @@
         "category": "Confluent: Support"
       },
       {
+        "command": "confluent.support.joinSlack",
+        "icon": "$(person-add)",
+        "title": "Join Confluent Community Slack Workspace",
+        "category": "Confluent: Support"
+      },
+      {
         "command": "confluent.support.openSettings",
         "title": "Open Settings",
         "category": "Confluent: Support"
@@ -1307,6 +1313,11 @@
         "view": "confluent-flink-database",
         "contents": "No Flink database (CCloud Kafka cluster) selected. Click below to get started.\n[Select Flink Database/Kafka Cluster](command:confluent.flinkdatabase.kafka-cluster.select)",
         "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && !confluent.flinkDatabaseSelected"
+      },
+      {
+        "view": "confluent-flink-database",
+        "contents": "No Flink database resources match search string. [Clear search](command:confluent.flink.database.search.clear) or [try a new search](command:confluent.flink.database.search).",
+        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied"
       }
     ],
     "menus": {
@@ -1624,6 +1635,10 @@
           "when": "true"
         },
         {
+          "command": "confluent.support.joinSlack",
+          "when": "true"
+        },
+        {
           "command": "confluent.support.openSettings",
           "when": "true"
         },
@@ -1910,6 +1925,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "confluent.support.joinSlack",
+          "when": "view == confluent-support && viewItem == help-center-slack-item",
+          "group": "inline"
+        },
         {
           "command": "confluent.copyResourceId",
           "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithIDs || viewItem =~ /.*-schema$/)",

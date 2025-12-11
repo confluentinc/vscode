@@ -633,7 +633,6 @@ describe("FlinkLanguageClientManager", () => {
       ["custom", "uriMetadataSet", "uriMetadataSetHandler"],
       ["vscode", "onDidOpenTextDocumentStub", "onDidOpenTextDocumentHandler"],
       ["vscode", "onDidCloseTextDocumentStub", "onDidCloseTextDocumentHandler"],
-      ["vscode", "onDidChangeTextDocumentStub", "onDidChangeTextDocumentHandler"],
       ["vscode", "onDidChangeActiveTextEditorStub", "onDidChangeActiveTextEditorHandler"],
     ];
 
@@ -684,65 +683,6 @@ describe("FlinkLanguageClientManager", () => {
     });
   });
 
-  describe("simulateDocumentChangeToTriggerDiagnostics", () => {
-    let fakeLanguageClient: sinon.SinonStubbedInstance<LanguageClient>;
-    let fakeDoc: any;
-    let sendNotificationStub: sinon.SinonStub;
-
-    beforeEach(() => {
-      fakeLanguageClient = sandbox.createStubInstance(LanguageClient);
-      flinkManager["languageClient"] = fakeLanguageClient;
-
-      // content doesn't matter here, we just need uri/version/text for .sendNotification checks
-      fakeDoc = {
-        uri: { toString: () => "file:///test/path.sql" },
-        version: 7,
-        getText: sinon.stub().returns("SELECT * FROM foo;"),
-      };
-      sendNotificationStub = sandbox.stub();
-      flinkManager["languageClient"].sendNotification = sendNotificationStub;
-    });
-
-    it("should do nothing if languageClient is null", async () => {
-      flinkManager["languageClient"] = null;
-
-      await flinkManager.simulateDocumentChangeToTriggerDiagnostics(fakeDoc);
-
-      sinon.assert.notCalled(sendNotificationStub);
-    });
-
-    it("should call sendNotification with correct params if languageClient is set", async () => {
-      await flinkManager.simulateDocumentChangeToTriggerDiagnostics(fakeDoc);
-
-      sinon.assert.calledOnce(sendNotificationStub);
-      const [method, payload] = sendNotificationStub.firstCall.args;
-      assert.strictEqual(method, "textDocument/didChange");
-      assert.strictEqual(payload.textDocument.uri, fakeDoc.uri.toString());
-      assert.strictEqual(payload.textDocument.version, fakeDoc.version);
-      assert.deepStrictEqual(payload.contentChanges, [{ text: fakeDoc.getText() }]);
-    });
-
-    it("should handle empty document Uri strings gracefully", async () => {
-      fakeDoc.uri = { toString: () => "" };
-
-      await flinkManager.simulateDocumentChangeToTriggerDiagnostics(fakeDoc);
-
-      sinon.assert.calledOnce(sendNotificationStub);
-      const payload = sendNotificationStub.firstCall.args[1];
-      assert.strictEqual(payload.textDocument.uri, "");
-    });
-
-    it("should propagate errors from sendNotification", async () => {
-      const fakeError = new Error("uh oh");
-      sendNotificationStub.rejects(fakeError);
-
-      await assert.rejects(
-        async () => await flinkManager.simulateDocumentChangeToTriggerDiagnostics(fakeDoc),
-        fakeError,
-      );
-    });
-  });
-
   describe("maybeStartLanguageClient", () => {
     let getFlinkSqlSettingsStub: sinon.SinonStub;
     let lookupComputePoolInfoStub: sinon.SinonStub;
@@ -752,8 +692,6 @@ describe("FlinkLanguageClientManager", () => {
     let clearDiagnosticsStub: sinon.SinonStub;
     let initializeLanguageClientStub: sinon.SinonStub;
     let notifyConfigChangedStub: sinon.SinonStub;
-    let simulateDocumentChangeToTriggerDiagnosticsStub: sinon.SinonStub;
-    let workspaceTextDocumentsStub: sinon.SinonStub;
 
     beforeEach(() => {
       // simulate authenticated CCloud connection by default
@@ -794,12 +732,6 @@ describe("FlinkLanguageClientManager", () => {
 
       notifyConfigChangedStub = sandbox.stub().resolves();
       flinkManager["notifyConfigChanged"] = notifyConfigChangedStub;
-
-      simulateDocumentChangeToTriggerDiagnosticsStub = sandbox.stub().resolves();
-      flinkManager["simulateDocumentChangeToTriggerDiagnostics"] =
-        simulateDocumentChangeToTriggerDiagnosticsStub;
-
-      workspaceTextDocumentsStub = sandbox.stub(vscode.workspace, "textDocuments").value([]);
 
       // start with a fresh slate
       flinkManager["languageClient"] = null;
@@ -944,57 +876,6 @@ describe("FlinkLanguageClientManager", () => {
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
       sinon.assert.notCalled(clearDiagnosticsStub);
-    });
-
-    it("should call simulateDocumentChangeToTriggerDiagnostics() in finally block when client is created", async () => {
-      const testDocument = {
-        uri: TEST_FILE_URI,
-        languageId: FLINK_SQL_LANGUAGE_ID,
-      } as vscode.TextDocument;
-      workspaceTextDocumentsStub.value([testDocument]);
-
-      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
-
-      sinon.assert.calledOnce(simulateDocumentChangeToTriggerDiagnosticsStub);
-      sinon.assert.calledWith(simulateDocumentChangeToTriggerDiagnosticsStub, testDocument);
-    });
-
-    it("should not call simulateDocumentChangeToTriggerDiagnostics() if no matching document is found", async () => {
-      const otherDocument = {
-        uri: vscode.Uri.parse("file:///other.flink.sql"),
-        languageId: FLINK_SQL_LANGUAGE_ID,
-      } as vscode.TextDocument;
-      workspaceTextDocumentsStub.value([otherDocument]);
-
-      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
-
-      sinon.assert.notCalled(simulateDocumentChangeToTriggerDiagnosticsStub);
-    });
-
-    it("should not call simulateDocumentChangeToTriggerDiagnostics() if no language client exists", async () => {
-      initializeLanguageClientStub.resolves(null);
-
-      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
-
-      sinon.assert.notCalled(simulateDocumentChangeToTriggerDiagnosticsStub);
-    });
-
-    it("should handle errors and still call simulateDocumentChangeToTriggerDiagnostics() in the finally block", async () => {
-      flinkManager["languageClient"] = sandbox.createStubInstance(LanguageClient);
-      const testDocument = {
-        uri: TEST_FILE_URI,
-        languageId: FLINK_SQL_LANGUAGE_ID,
-      } as vscode.TextDocument;
-      workspaceTextDocumentsStub.value([testDocument]);
-      const testError = new Error("Test error");
-      getFlinkSqlSettingsStub.rejects(testError);
-
-      // error shouldn't propagate, just get logged
-      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
-
-      sinon.assert.calledOnce(getFlinkSqlSettingsStub);
-      sinon.assert.notCalled(initializeLanguageClientStub);
-      sinon.assert.calledOnce(simulateDocumentChangeToTriggerDiagnosticsStub);
     });
 
     it("should not add language client to .disposables if initializeLanguageClient() returns null", async () => {
@@ -1320,157 +1201,6 @@ describe("FlinkLanguageClientManager", () => {
       }
     });
 
-    describe("onDidChangeTextDocumentHandler", () => {
-      let fakeDiagnosticsCollection: FakeDiagnosticsCollection;
-
-      beforeEach(() => {
-        // wire a mock LanguageClient to the flinkManager
-        const fakeLanguageClient = sandbox.createStubInstance(LanguageClient);
-
-        // Reassign the read-only `diagnostics` property of the language client
-        fakeDiagnosticsCollection = new FakeDiagnosticsCollection(sandbox);
-        Object.defineProperty(fakeLanguageClient, "diagnostics", {
-          value: fakeDiagnosticsCollection,
-          configurable: true,
-        });
-
-        flinkManager["languageClient"] = fakeLanguageClient;
-      });
-
-      it("should not clear diagnostics for non-flinksql documents on text change", () => {
-        const fakeUri = vscode.Uri.parse("file:///fake/path/test.txt");
-        const fakeDocument = {
-          languageId: "plaintext",
-          uri: fakeUri,
-        } as vscode.TextDocument;
-
-        // Simulate a text document change event
-        const fakeEvent: vscode.TextDocumentChangeEvent = {
-          document: fakeDocument,
-          contentChanges: [],
-          reason: vscode.TextDocumentChangeReason.Undo,
-        };
-
-        flinkManager.onDidChangeTextDocumentHandler(fakeEvent);
-
-        // Should not have cleared diagnostics since this is not a flinksql document
-        sinon.assert.notCalled(fakeDiagnosticsCollection.set);
-      });
-
-      it("should not clear diagnostics for flinksql documents on text change if no prior diagnostics", () => {
-        const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
-        const fakeDocument = {
-          languageId: FLINK_SQL_LANGUAGE_ID,
-          uri: fakeUri,
-        } as vscode.TextDocument;
-
-        // stash the document in the openFlinkSqlDocuments set
-        flinkManager.trackDocument(fakeUri);
-
-        // but no diagnostics set for this document
-        fakeDiagnosticsCollection.get.withArgs(fakeUri).returns(undefined);
-
-        // Simulate a text document change event
-        const fakeEvent: vscode.TextDocumentChangeEvent = {
-          document: fakeDocument,
-          contentChanges: [],
-          reason: vscode.TextDocumentChangeReason.Undo,
-        };
-
-        flinkManager.onDidChangeTextDocumentHandler(fakeEvent);
-
-        // Should not have cleared diagnostics since this document had no prior diagnostics
-        sinon.assert.notCalled(fakeDiagnosticsCollection.set);
-      });
-
-      it("should not do anything if no language client is available", () => {
-        flinkManager["languageClient"] = null; // Simulate no language client
-        const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
-        const fakeDocument = {
-          languageId: FLINK_SQL_LANGUAGE_ID,
-          uri: fakeUri,
-        } as vscode.TextDocument;
-        const fakeEvent: vscode.TextDocumentChangeEvent = {
-          document: fakeDocument,
-          contentChanges: [],
-          reason: vscode.TextDocumentChangeReason.Undo,
-        };
-        flinkManager.onDidChangeTextDocumentHandler(fakeEvent);
-        // Should not have called diagnostics collection methods
-        sinon.assert.notCalled(fakeDiagnosticsCollection.set);
-        sinon.assert.notCalled(fakeDiagnosticsCollection.get);
-        sinon.assert.notCalled(fakeDiagnosticsCollection.delete);
-        sinon.assert.notCalled(fakeDiagnosticsCollection.has);
-      });
-
-      it("should clear diagnostics for flinksql documents on text change if had prior diagnostics and the TextDocumentChangeEvent has contentChanges", () => {
-        const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
-        const fakeDocument = {
-          languageId: FLINK_SQL_LANGUAGE_ID,
-          uri: fakeUri,
-        } as vscode.TextDocument;
-
-        // stash the document in the openFlinkSqlDocuments set
-        flinkManager.trackDocument(fakeUri);
-
-        // And make as if this document had diagnostics set
-        fakeDiagnosticsCollection.has.withArgs(fakeUri).returns(true);
-
-        // Simulate a text document change event
-        const fakeEvent: vscode.TextDocumentChangeEvent = {
-          document: fakeDocument,
-          contentChanges: [
-            {
-              // the content here doesn't matter, we just want a TextDocumentContentChangeEvent
-              range: new vscode.Range(0, 0, 1, 0),
-              rangeOffset: 0,
-              rangeLength: 1,
-              text: "SELECT * FROM test",
-            },
-          ],
-          reason: vscode.TextDocumentChangeReason.Undo,
-        };
-
-        flinkManager.onDidChangeTextDocumentHandler(fakeEvent);
-
-        // Should have detected then cleared diagnostics for this document
-        sinon.assert.calledTwice(fakeDiagnosticsCollection.has);
-        sinon.assert.calledWith(fakeDiagnosticsCollection.has, fakeUri);
-
-        sinon.assert.calledOnce(fakeDiagnosticsCollection.delete);
-        sinon.assert.calledWith(fakeDiagnosticsCollection.delete, fakeUri);
-      });
-
-      it("should not clear diagnostics if the TextDocumentChangeEvent does not have any contentChanges", () => {
-        const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
-        const fakeDocument = {
-          languageId: FLINK_SQL_LANGUAGE_ID,
-          uri: fakeUri,
-        } as vscode.TextDocument;
-
-        // stash the document in the openFlinkSqlDocuments set
-        flinkManager.trackDocument(fakeUri);
-
-        // And make as if this document had diagnostics set
-        fakeDiagnosticsCollection.has.withArgs(fakeUri).returns(true);
-
-        // Simulate a text document change event
-        const fakeEvent: vscode.TextDocumentChangeEvent = {
-          document: fakeDocument,
-          contentChanges: [], // no content changes = no clearing diagnostics
-          reason: vscode.TextDocumentChangeReason.Undo,
-        };
-
-        flinkManager.onDidChangeTextDocumentHandler(fakeEvent);
-
-        // Should check for diagnostics, but no clearing since there weren't content changes
-        sinon.assert.calledOnce(fakeDiagnosticsCollection.has);
-        sinon.assert.calledWith(fakeDiagnosticsCollection.has, fakeUri);
-
-        sinon.assert.notCalled(fakeDiagnosticsCollection.delete);
-      });
-    });
-
     describe("onDidCloseTextDocumentHandler", () => {
       let untrackDocumentStub: sinon.SinonStub;
 
@@ -1547,20 +1277,3 @@ describe("FlinkLanguageClientManager", () => {
     });
   });
 });
-
-/**
- * Class stubbing enough of DiagnosticsCollection methods to be useful.
- **/
-class FakeDiagnosticsCollection {
-  public readonly get: sinon.SinonStub;
-  public readonly set: sinon.SinonStub;
-  public readonly has: sinon.SinonStub;
-  public readonly delete: sinon.SinonStub;
-
-  constructor(sandbox: sinon.SinonSandbox) {
-    this.get = sandbox.stub();
-    this.set = sandbox.stub();
-    this.has = sandbox.stub();
-    this.delete = sandbox.stub();
-  }
-}
