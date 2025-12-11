@@ -16,8 +16,7 @@ export class FlinkAIConnection implements IResourceBase, IdItem, ISearchable {
 
   name: string;
 
-  // https://github.com/confluentinc/vscode/issues/2984
-  iconName: IconNames = IconNames.PLACEHOLDER;
+  iconName: IconNames = IconNames.CONNECTION;
 
   constructor(
     props: Pick<FlinkAIConnection, "environmentId" | "provider" | "region" | "databaseId" | "name">,

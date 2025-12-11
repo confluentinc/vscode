@@ -1,43 +1,52 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import type { Disposable, TreeItem } from "vscode";
-import { EventEmitter, window } from "vscode";
-import {
-  makeStatus,
-  TEST_CCLOUD_FLINK_STATEMENT,
-} from "../../../tests/unit/testResources/flinkStatement";
+import type { Disposable } from "vscode";
+import { EventEmitter, TreeItem, Uri, window } from "vscode";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
+import { ConnectionType } from "../../clients/sidecar";
+import { CCLOUD_CONNECTION_ID } from "../../constants";
 import * as contextValues from "../../context/values";
 import { ContextValues } from "../../context/values";
-import { FlinkStatement, FlinkStatementTreeItem, Phase } from "../../models/flinkStatement";
+import { SEARCH_DECORATION_URI_SCHEME } from "../utils/search";
+import type { BaseViewProviderData } from "./base";
 import { BaseViewProvider } from "./base";
 
-/**
- * Sample view provider subclass for testing {@link BaseViewProvider}.
- * As if there was no `FlinkComputePool` parent resource, just random statements.
- */
-class TestViewProvider extends BaseViewProvider<FlinkStatement> {
+/** Helper function to create a test object that satisfies {@link BaseViewProviderData}. */
+function createTestResource(
+  id: string,
+  name: string,
+  children?: BaseViewProviderData[],
+): BaseViewProviderData {
+  return {
+    id,
+    connectionId: CCLOUD_CONNECTION_ID,
+    connectionType: ConnectionType.Ccloud,
+    searchableText: () => name,
+    children,
+  };
+}
+
+/** Sample view provider subclass for testing {@link BaseViewProvider}. */
+class TestViewProvider extends BaseViewProvider<BaseViewProviderData> {
   loggerName = "viewProviders.test.TestViewProvider";
   viewId = "confluent-test-parentless-statements";
 
   readonly kind = "test-parentless-statements";
 
-  getChildren(element?: FlinkStatement): FlinkStatement[] {
+  getChildren(element?: BaseViewProviderData): BaseViewProviderData[] {
     // Always return two items.
     const items = [
-      TEST_CCLOUD_FLINK_STATEMENT,
-      new FlinkStatement({
-        ...TEST_CCLOUD_FLINK_STATEMENT,
-        name: "statement1",
-        status: makeStatus(Phase.PENDING),
-      }),
+      createTestResource("item-1", "first-item"),
+      createTestResource("item-2", "second-item"),
     ];
 
     return this.filterChildren(element, items);
   }
 
-  getTreeItem(element: FlinkStatement): TreeItem {
-    return new FlinkStatementTreeItem(element);
+  getTreeItem(element: BaseViewProviderData): TreeItem {
+    const treeItem = new TreeItem(element.searchableText());
+    treeItem.id = element.id;
+    return treeItem;
   }
 
   testEventEmitter: EventEmitter<void> = new EventEmitter<void>();
@@ -132,7 +141,7 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
       const setSearchSpy = sandbox.spy(provider, "setSearch");
       provider.searchContextValue = ContextValues.flinkStatementsSearchApplied;
       provider.itemSearchString = "running";
-      provider.searchMatches.add(TEST_CCLOUD_FLINK_STATEMENT);
+      provider.searchMatches.add(createTestResource("test-1", "test-item"));
       provider.totalItemCount = 3;
 
       await provider.reset();
@@ -199,7 +208,10 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
           provider.getChildren();
 
           assert.strictEqual(provider.itemSearchString, arg);
-          assert.strictEqual(provider.searchMatches.size, 0);
+          // searchMatches.size depends on whether the search string matches any items
+          // "First" matches the resource with the "first-*" name; null matches nothing
+          const expectedMatches = arg === "First" ? 1 : 0;
+          assert.strictEqual(provider.searchMatches.size, expectedMatches);
           // totalItemCount is set to 2 because TestViewProvider.getChildren() always returns two items
           // and both are observed by the filterChildren() method.
           assert.strictEqual(provider.totalItemCount, 2);
@@ -213,26 +225,15 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
       it("should filter children based on search string", () => {
         provider.setSearch("first");
 
-        const matchingStatement = new FlinkStatement({
-          ...TEST_CCLOUD_FLINK_STATEMENT,
-          name: "first-statement",
-          status: makeStatus(Phase.STOPPED),
-        });
-        const items = [
-          matchingStatement,
-          new FlinkStatement({
-            ...TEST_CCLOUD_FLINK_STATEMENT,
-            name: "second-statement",
-            status: makeStatus(Phase.PENDING),
-          }),
-        ];
+        const matchingItem = createTestResource("item-1", "first-statement");
+        const items = [matchingItem, createTestResource("item-2", "second-statement")];
 
         provider.totalItemCount = 17; // should be overwritten
 
         const filtered = provider.filterChildren(undefined, items);
 
         assert.strictEqual(filtered.length, 1);
-        assert.strictEqual(filtered[0].id, matchingStatement.id);
+        assert.strictEqual(filtered[0].id, matchingItem.id);
         assert.strictEqual(provider.searchMatches.size, 1);
         assert.strictEqual(provider.totalItemCount, 2);
       });
@@ -241,21 +242,13 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
         provider.setSearch("first");
 
         // set up as if from a previous state, now provider.searchMatches.size == 1
-        provider.searchMatches.add(TEST_CCLOUD_FLINK_STATEMENT);
+        provider.searchMatches.add(createTestResource("prev-item", "previous-item"));
         // Before these next two children are filtered, totalItemCount is 17
         provider.totalItemCount = 17;
 
         const items = [
-          new FlinkStatement({
-            ...TEST_CCLOUD_FLINK_STATEMENT,
-            name: "first-statement",
-            status: makeStatus(Phase.STOPPED),
-          }),
-          new FlinkStatement({
-            ...TEST_CCLOUD_FLINK_STATEMENT,
-            name: "second-statement",
-            status: makeStatus(Phase.PENDING),
-          }),
+          createTestResource("item-1", "first-statement"),
+          createTestResource("item-2", "second-statement"),
         ];
 
         // simulate a previous call with a parent element that populated searchMatches
@@ -283,16 +276,8 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
       provider.setSearch("anything");
 
       const items = [
-        new FlinkStatement({
-          ...TEST_CCLOUD_FLINK_STATEMENT,
-          name: "first-statement",
-          status: makeStatus(Phase.RUNNING),
-        }),
-        new FlinkStatement({
-          ...TEST_CCLOUD_FLINK_STATEMENT,
-          name: "second-statement",
-          status: makeStatus(Phase.PENDING),
-        }),
+        createTestResource("item-1", "first-statement"),
+        createTestResource("item-2", "second-statement"),
       ];
 
       // set up as if from a previous state
@@ -311,6 +296,75 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
       assert.strictEqual(provider.totalItemCount, 4);
       // the search string still doesn't match either item, so filtered should be empty
       assert.strictEqual(filtered.length, 0);
+    });
+  });
+
+  describe("adjustTreeItemForSearch()", () => {
+    it("should set a TreeItem's resourceUri when matching the provider's  search string", () => {
+      const testItem = createTestResource("matching-id", "matching-statement");
+      const testTreeItem = new TreeItem(testItem.searchableText());
+      testTreeItem.id = testItem.id;
+      provider.itemSearchString = "matching";
+
+      provider.adjustTreeItemForSearch(testItem, testTreeItem);
+
+      assert.ok(testTreeItem.resourceUri);
+      assert.strictEqual(testTreeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
+      assert.ok(testTreeItem.resourceUri?.path.includes(testItem.id));
+    });
+
+    it("should clear a TreeItem's resourceUri when it doesn't match the provider's search string", () => {
+      const testItem = createTestResource("non-matching-id", "non-matching-statement");
+      const testTreeItem = new TreeItem(testItem.searchableText());
+      testTreeItem.id = testItem.id;
+      // simulate a previous search that set .resourceUri
+      testTreeItem.resourceUri = Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/previous-id`);
+      provider.itemSearchString = "different-search";
+
+      provider.adjustTreeItemForSearch(testItem, testTreeItem);
+
+      assert.strictEqual(testTreeItem.resourceUri, undefined);
+    });
+
+    it("should clear a TreeItem's resourceUri when no search string is set", () => {
+      const testItem = createTestResource("any-id", "any-statement");
+      const treeItem = new TreeItem(testItem.searchableText());
+      treeItem.id = testItem.id;
+      // simulate a previous search that set .resourceUri
+      treeItem.resourceUri = Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/previous-id`);
+      provider.itemSearchString = null;
+
+      provider.adjustTreeItemForSearch(testItem, treeItem);
+
+      assert.strictEqual(treeItem.resourceUri, undefined);
+    });
+
+    it("should handle persistent TreeItem objects correctly when search is cleared", () => {
+      const testItem = createTestResource("persistent-id", "persistent-statement");
+      const persistentTreeItem = new TreeItem(testItem.searchableText());
+      persistentTreeItem.id = testItem.id;
+
+      // item matches initial search string
+      provider.itemSearchString = "persistent";
+      provider.adjustTreeItemForSearch(testItem, persistentTreeItem);
+      assert.ok(persistentTreeItem.resourceUri);
+      assert.strictEqual(persistentTreeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
+
+      // search is cleared, so resourceUri should also be cleared
+      // (until https://github.com/confluentinc/vscode/issues/1777 changes this behavior)
+      provider.itemSearchString = null;
+      provider.adjustTreeItemForSearch(testItem, persistentTreeItem);
+      assert.strictEqual(persistentTreeItem.resourceUri, undefined);
+
+      // match again to so we know resourceUri is set before switching search strings
+      provider.itemSearchString = "persistent";
+      provider.adjustTreeItemForSearch(testItem, persistentTreeItem);
+      assert.ok(persistentTreeItem.resourceUri);
+
+      // different search where item doesn't match
+      provider.itemSearchString = "different";
+      provider.adjustTreeItemForSearch(testItem, persistentTreeItem);
+      assert.strictEqual(persistentTreeItem.resourceUri, undefined);
     });
   });
 
