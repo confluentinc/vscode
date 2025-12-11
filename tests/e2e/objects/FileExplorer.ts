@@ -1,23 +1,21 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { ActivityBarItem } from "./ActivityBarItem";
+import { View } from "./views/View";
 import { ViewItem } from "./views/viewItems/ViewItem";
 
 /**
  * Object representing the VS Code File Explorer view.
  * Provides methods to interact with files and folders in the explorer.
  */
-export class FileExplorer {
-  constructor(public readonly page: Page) {}
-
-  /** Get the Explorer view container. */
-  get explorerView(): Locator {
-    return this.page.locator('[id="workbench.view.explorer"]');
+export class FileExplorer extends View {
+  constructor(page: Page) {
+    super(page, "Explorer");
   }
 
-  /** Get all tree items in the explorer. */
-  get treeItems(): Locator {
-    return this.explorerView.locator('[role="treeitem"]');
+  /** Override to use the more specific Explorer view ID. */
+  override get locator(): Locator {
+    return this.page.locator('[id="workbench.view.explorer"]');
   }
 
   /**
@@ -46,12 +44,12 @@ export class FileExplorer {
    * Ensure the Explorer view is visible.
    */
   async ensureVisible(): Promise<void> {
-    const isVisible = await this.explorerView.isVisible();
+    const isVisible = await this.locator.isVisible();
     if (!isVisible) {
       const activityBarItem = new ActivityBarItem(this.page, "Explorer");
       await expect(activityBarItem.locator).toBeVisible();
       await activityBarItem.locator.click();
-      await expect(this.explorerView).toBeVisible();
+      await expect(this.locator).toBeVisible();
     }
   }
 }
