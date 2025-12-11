@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
+import { ActivityBarItem } from "./ActivityBarItem";
 import { ViewItem } from "./views/viewItems/ViewItem";
 
 /**
@@ -47,11 +48,9 @@ export class FileExplorer {
   async ensureVisible(): Promise<void> {
     const isVisible = await this.explorerView.isVisible();
     if (!isVisible) {
-      // Open the Explorer view if it's not visible
-      // Use platform-specific keyboard shortcut
-      const isMac = process.platform === "darwin";
-      const modifier = isMac ? "Meta" : "Control";
-      await this.page.keyboard.press(`${modifier}+Shift+E`);
+      const activityBarItem = new ActivityBarItem(this.page, "Explorer");
+      await expect(activityBarItem.locator).toBeVisible();
+      await activityBarItem.locator.click();
       await expect(this.explorerView).toBeVisible();
     }
   }
