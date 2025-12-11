@@ -1,5 +1,17 @@
-/** Utilities used by the scaffold commands */
+/**
+ * Utilities used by the scaffold commands
+ */
 import * as vscode from "vscode";
+
+// (FIXME remove before merge) DEBUG ERROR INJECTION FLAGS - Set to true to test error notifications
+const DEBUG_ERRORS = {
+  templateListing: false,
+  templatePicking: false,
+  applyValidation: false,
+  applyProxy403: false,
+  archiveBuffering: false,
+  fileSaving: false,
+} as const;
 
 import { posix } from "path";
 import { unzip } from "unzipit";
@@ -10,6 +22,7 @@ import type {
   ScaffoldV1TemplateSpec,
   TemplatesScaffoldV1Api,
 } from "../../clients/scaffoldingService";
+import { ResponseError } from "../../clients/scaffoldingService";
 import { projectScaffoldUri } from "../../emitters";
 import { isResponseError, logError } from "../../errors";
 import { showErrorNotificationWithButtons } from "../../notifications";
@@ -48,6 +61,16 @@ export const scaffoldProjectRequest = async (
   try {
     // undefined templateCollection will default to the "vscode" collection
     templateList = await getTemplatesList(templateCollection);
+
+    // DEBUG: Inject error for testing
+    if (DEBUG_ERRORS.templateListing) {
+      throw new ResponseError(
+        new Response(JSON.stringify({ message: "Failed to connect to template service" }), {
+          status: 500,
+        }),
+        "Template listing failed",
+      );
+    }
   } catch (err) {
     logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
     const baseMessage: string = await parseErrorMessage(err);
@@ -94,10 +117,15 @@ export const scaffoldProjectRequest = async (
     }
 
     pickedTemplate = await pickTemplate(templateList);
+
+    // DEBUG: Inject error for testing
+    if (DEBUG_ERRORS.templatePicking) {
+      throw new Error("Unable to retrieve template details");
+    }
   } catch (err) {
     logError(err, "template picking", { extra: { functionName: "scaffoldProjectRequest" } });
     const baseMessage = await parseErrorMessage(err);
-    const stageSpecificMessage = `Project generation failed. Unable to pick a template. ${baseMessage}`;
+    const stageSpecificMessage = `Project generation failed while selecting a template. ${baseMessage}`;
     void showErrorNotificationWithButtons(stageSpecificMessage);
     return { success: false, message: stageSpecificMessage };
   }
@@ -221,8 +249,39 @@ export async function applyTemplate(
     stage = "performing scaffold service apply operation";
     const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request);
 
-    stage = "template archive buffering";
+    // DEBUG: Inject validation error for testing
+    if (DEBUG_ERRORS.applyValidation) {
+      throw new ResponseError(
+        new Response(
+          JSON.stringify({
+            errors: [
+              {
+                detail: "Value must be a valid email address",
+                source: { pointer: "/options/email" },
+              },
+            ],
+          }),
+          { status: 400 },
+        ),
+        "Validation failed",
+      );
+    }
+
+    // DEBUG: Inject 403 proxy error for testing
+    if (DEBUG_ERRORS.applyProxy403) {
+      throw new ResponseError(
+        new Response(JSON.stringify({ message: "Forbidden" }), { status: 403 }),
+        "Access forbidden",
+      );
+    }
+
+    stage = "downloading template files";
     const arrayBuffer = await applyTemplateResponse.arrayBuffer();
+
+    // DEBUG: Inject buffering error for testing
+    if (DEBUG_ERRORS.archiveBuffering) {
+      throw new Error("Failed to read template archive data");
+    }
 
     stage = "requesting a save location";
     const SAVE_LABEL = "Save to directory";
@@ -249,8 +308,14 @@ export async function applyTemplate(
     // Not a failure point we control - calls vscode internals
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
 
-    stage = "saving extracted template files to disk";
+    stage = "saving template files to disk";
     await extractZipContents(arrayBuffer, destination);
+
+    // DEBUG: Inject file save error for testing
+    if (DEBUG_ERRORS.fileSaving) {
+      throw new Error("Permission denied: Unable to write files to the selected directory");
+    }
+
     logUsage(UserEvent.ProjectScaffoldingAction, {
       status: "project generated",
       templateCollection: pickedTemplate.spec!.template_collection?.id,
