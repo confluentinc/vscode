@@ -16,7 +16,7 @@ export enum SelectFlinkDatabase {
   DatabaseFromResourcesView = "Flink database action from the Resources view",
   FromDatabaseViewButton = "Flink Database view nav action",
   ComputePoolFromResourcesView = "Compute pool action from the Resources view",
-  JARFile = "JAR file from file explorer",
+  JarFile = "JAR file from file explorer",
 }
 
 /**
@@ -60,7 +60,7 @@ export class FlinkDatabaseView extends View {
         break;
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
         return await this.clickUploadFromComputePool(clusterLabel);
-      case SelectFlinkDatabase.JARFile:
+      case SelectFlinkDatabase.JarFile:
         return;
       default:
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);

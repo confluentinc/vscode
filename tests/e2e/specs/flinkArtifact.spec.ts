@@ -44,7 +44,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       testName: "should upload Flink Artifact when cluster selected from Flink Compute Pool",
     },
     {
-      entrypoint: SelectFlinkDatabase.JARFile,
+      entrypoint: SelectFlinkDatabase.JarFile,
       testName: "should upload Flink Artifact when initiated from JAR file in file explorer",
     },
   ];
@@ -88,7 +88,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     electronApp: ElectronApplication,
   ): Promise<void> {
     // JAR file test requires opening the fixtures folder as a workspace
-    if (entrypoint === SelectFlinkDatabase.JARFile) {
+    if (entrypoint === SelectFlinkDatabase.JarFile) {
       const fixturesDir = path.join(__dirname, "..", "..", "fixtures", "flink-artifacts");
 
       await stubDialog(electronApp, "showOpenDialog", {
@@ -122,7 +122,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
           throw new Error("providerRegion is required for ComputePoolFromResourcesView");
         }
         return await completeUploadFlowForComputePool(electronApp, artifactsView, providerRegion);
-      case SelectFlinkDatabase.JARFile:
+      case SelectFlinkDatabase.JarFile:
         return await completeArtifactUploadFlowForJAR(
           page,
           artifactPath,
@@ -182,7 +182,7 @@ async function completeArtifactUploadFlowForJAR(
   await fileExplorer.ensureVisible();
   const jarFile = fileExplorer.treeItems.filter({ hasText: path.basename(artifactPath) });
   await expect(jarFile).toHaveCount(1);
-  // await expect(jarFile).toHaveAttribute("aria-label", `${path.basename(artifactPath)}, File`);
+  await expect(jarFile).not.toHaveAttribute("aria-expanded");
   const fileItem = new ViewItem(page, jarFile);
   await fileItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
 

@@ -22,7 +22,7 @@ export class FileExplorer extends View {
    */
   async ensureVisible(): Promise<void> {
     try {
-      await expect(this.locator).toBeVisible({ timeout: 500 });
+      await expect(this.locator).toBeVisible({ timeout: 2000 });
     } catch {
       const activityBarItem = new ActivityBarItem(this.page, "Explorer");
       await expect(activityBarItem.locator).toBeVisible();
