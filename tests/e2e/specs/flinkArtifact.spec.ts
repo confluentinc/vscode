@@ -6,8 +6,6 @@ import { fileURLToPath } from "url";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
 import { FileExplorer } from "../objects/FileExplorer";
-import { Notification } from "../objects/notifications/Notification";
-import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDatabaseView";
 import { Tag } from "../tags";
@@ -44,15 +42,24 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       entrypoint: SelectFlinkDatabase.ComputePoolFromResourcesView,
       testName: "should upload Flink Artifact when cluster selected from Flink Compute Pool",
     },
+    {
+      entrypoint: SelectFlinkDatabase.JARFile,
+      testName: "should upload Flink Artifact when initiated from JAR file in file explorer",
+    },
   ];
 
   for (const config of entrypoints) {
     test(config.testName, async ({ page, electronApp }) => {
+      await setupTestEnvironment(config.entrypoint, page, electronApp);
+
       const artifactsView = new FlinkDatabaseView(page);
       await artifactsView.ensureExpanded();
-      const providerRegion = await artifactsView.loadArtifacts(config.entrypoint);
+
+      const providerRegion = await loadArtifactsForEntrypoint(config.entrypoint, artifactsView);
+
       const uploadedArtifactName = await startUploadFlow(
         config.entrypoint,
+        page,
         electronApp,
         artifactsView,
         providerRegion,
@@ -71,55 +78,43 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     });
   }
 
-  test("should upload Flink Artifact when initiated from JAR file in file explorer", async ({
-    page,
-    electronApp,
-  }) => {
-    // Open the fixtures directory as a workspace folder so the JAR file is visible in file explorer
-    const fixturesDir = path.join(__dirname, "..", "..", "fixtures", "flink-artifacts");
+  async function setupTestEnvironment(
+    entrypoint: SelectFlinkDatabase,
+    page: Page,
+    electronApp: ElectronApplication,
+  ): Promise<void> {
+    // JAR file test requires opening the fixtures folder as a workspace
+    if (entrypoint === SelectFlinkDatabase.JARFile) {
+      const fixturesDir = path.join(__dirname, "..", "..", "fixtures", "flink-artifacts");
 
-    await stubDialog(electronApp, "showOpenDialog", {
-      filePaths: [fixturesDir],
-    });
-    await executeVSCodeCommand(page, "workbench.action.files.openFolder");
+      await stubDialog(electronApp, "showOpenDialog", {
+        filePaths: [fixturesDir],
+      });
+      await executeVSCodeCommand(page, "workbench.action.files.openFolder");
 
-    // Wait for the window to reload after opening the folder
-    await page.waitForLoadState("domcontentloaded");
-    await page.locator(".monaco-workbench").waitFor();
+      // Wait for the window to reload after opening the folder
+      await page.waitForLoadState("domcontentloaded");
+      await page.locator(".monaco-workbench").waitFor();
 
-    // Dismiss the "extensions disabled" notification that appears after folder reload
-    const notificationArea = new NotificationArea(page);
-    const infoNotifications = notificationArea.infoNotifications.filter({
-      hasText: "All installed extensions are temporarily disabled",
-    });
-    await expect(infoNotifications).not.toHaveCount(0);
-    const notification = new Notification(page, infoNotifications.first());
-    await notification.dismiss();
+      // Wait for extension to reactivate
+      await openConfluentSidebar(page);
+    }
+  }
 
-    // Wait for extension to reactivate
-    await openConfluentSidebar(page);
-
-    const artifactsView = new FlinkDatabaseView(page);
-    await artifactsView.ensureExpanded();
-
-    // Upload artifact via JAR file in file explorer
-    const uploadedArtifactName = await completeArtifactUploadFlowForJAR(
-      page,
-      artifactPath,
-      artifactsView,
-    );
-
-    // make sure Artifacts container is expanded before we check that it's uploaded (and then deleted)
-    await artifactsView.expandArtifactsContainer();
-    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(1);
-
-    // Delete the artifact
-    await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
-    await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(0);
-  });
+  async function loadArtifactsForEntrypoint(
+    entrypoint: SelectFlinkDatabase,
+    artifactsView: FlinkDatabaseView,
+  ): Promise<string | undefined> {
+    // JAR file test doesn't use loadArtifacts - it initiates upload from file explorer
+    if (entrypoint === SelectFlinkDatabase.JARFile) {
+      return undefined;
+    }
+    return await artifactsView.loadArtifacts(entrypoint);
+  }
 
   async function startUploadFlow(
     entrypoint: SelectFlinkDatabase,
+    page: Page,
     electronApp: ElectronApplication,
     artifactsView: FlinkDatabaseView,
     providerRegion?: string,
@@ -134,6 +129,8 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
           throw new Error("providerRegion is required for ComputePoolFromResourcesView");
         }
         return await completeUploadFlowForComputePool(electronApp, artifactsView, providerRegion);
+      case SelectFlinkDatabase.JARFile:
+        return await completeArtifactUploadFlowForJAR(page, artifactPath, artifactsView);
     }
   }
 
@@ -182,7 +179,6 @@ async function completeArtifactUploadFlowForJAR(
   const randomSuffix = Math.random().toString(36).substring(2, 8);
   const artifactName = `${baseFileName}-${randomSuffix}`;
 
-  // Right-click on the JAR file and select "Upload Artifact to Confluent Cloud"
   const fileExplorer = new FileExplorer(page);
   await fileExplorer.ensureVisible();
   await fileExplorer.rightClickFileAndSelectAction(
@@ -190,13 +186,11 @@ async function completeArtifactUploadFlowForJAR(
     "Upload Flink Artifact to Confluent Cloud",
   );
 
-  // Complete the quickpick upload flow
   await artifactsView.uploadFlinkArtifactFromJAR(artifactName);
 
   // Switch back to the Confluent extension sidebar from the file explorer
   await openConfluentSidebar(page);
 
-  // Select a Kafka cluster as the Flink database to view the uploaded artifact
   await artifactsView.clickSelectKafkaClusterAsFlinkDatabase();
   const kafkaClusterQuickpick = new Quickpick(page);
   await expect(kafkaClusterQuickpick.locator).toBeVisible();

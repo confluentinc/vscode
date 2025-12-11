@@ -16,6 +16,7 @@ export enum SelectFlinkDatabase {
   DatabaseFromResourcesView = "Flink database action from the Resources view",
   FromDatabaseViewButton = "Flink Database view nav action",
   ComputePoolFromResourcesView = "Compute pool action from the Resources view",
+  JARFile = "JAR file from file explorer",
 }
 
 /**
