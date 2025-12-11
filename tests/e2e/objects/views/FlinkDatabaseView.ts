@@ -17,6 +17,7 @@ export enum SelectFlinkDatabase {
   FromDatabaseViewButton = "Flink Database view nav action",
   ComputePoolFromResourcesView = "Compute pool action from the Resources view",
 }
+
 /**
  * Object representing the "Flink Database tree view"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
