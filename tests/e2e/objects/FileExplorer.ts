@@ -25,9 +25,7 @@ export class FileExplorer {
    * @returns A locator for the file item
    */
   findFile(fileName: string): Locator {
-    // Look for tree items by their accessible label which includes the filename
-    // VS Code file tree items typically have aria-labels like "filename.ext, File"
-    return this.explorerView.getByRole("treeitem", { name: new RegExp(fileName) });
+    return this.explorerView.getByText(fileName, { exact: true });
   }
 
   /**
