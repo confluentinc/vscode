@@ -236,6 +236,8 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     } catch (error) {
       let errorMsg = String(error);
       let errorLanguage = "";
+      // only applies to loading artifacts, since all others are loaded via background statements
+      // and won't throw HTTP response errors
       if (isResponseError(error)) {
         const responseBody = await extractResponseBody(error);
         errorMsg = responseBody?.message || JSON.stringify(responseBody, null, 2);
