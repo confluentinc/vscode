@@ -204,7 +204,7 @@ describe("scaffoldUtils", () => {
       const result = await applyTemplate(template, {}, "test");
 
       sinon.assert.match(result.success, false);
-      sinon.assert.match(result.message, sinon.match(/saving extracted template files to disk/));
+      sinon.assert.match(result.message, sinon.match(/saving template files to disk/));
     });
   });
 
