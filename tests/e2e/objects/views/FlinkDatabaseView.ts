@@ -16,6 +16,7 @@ export enum SelectFlinkDatabase {
   DatabaseFromResourcesView = "Flink database action from the Resources view",
   FromDatabaseViewButton = "Flink Database view nav action",
   ComputePoolFromResourcesView = "Compute pool action from the Resources view",
+  JarFile = "JAR file from file explorer",
 }
 
 /**
@@ -59,6 +60,8 @@ export class FlinkDatabaseView extends View {
         break;
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
         return await this.clickUploadFromComputePool(clusterLabel);
+      case SelectFlinkDatabase.JarFile:
+        return;
       default:
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);
     }
@@ -285,5 +288,71 @@ export class FlinkDatabaseView extends View {
       hasText: "deleted successfully",
     });
     await expect(successNotifications).not.toHaveCount(0);
+  }
+
+  /**
+   * Upload a Flink artifact JAR file from the VS Code file explorer.
+   * Navigates through the quickpick steps after the upload has been initiated from a JAR file.
+   * @param artifactName - The name of the uploaded artifact (for verification)
+   * @param providerRegion - Optional provider/region to match (e.g., "AWS/us-east-2")
+   * @returns The name of the uploaded artifact
+   */
+  async uploadFlinkArtifactFromJAR(artifactName: string, providerRegion?: string): Promise<string> {
+    // Wait for the quickpick to appear
+    const quickpick = new Quickpick(this.page);
+    await expect(quickpick.locator).toBeVisible();
+
+    // Step 1: Select Environment
+    const environmentItem = quickpick.items.filter({ hasText: "1. Select Environment" }).first();
+    await expect(environmentItem).toBeVisible();
+    await environmentItem.click();
+
+    await expect(quickpick.locator).toBeVisible();
+    await expect(quickpick.items).not.toHaveCount(0);
+    await quickpick.items.first().click();
+
+    // Step 2: Select Cloud Provider & Region
+    await expect(quickpick.locator).toBeVisible();
+    const cloudRegionItem = quickpick.items
+      .filter({ hasText: "2. Select Cloud Provider & Region" })
+      .first();
+    await expect(cloudRegionItem).toBeVisible();
+    await cloudRegionItem.click();
+
+    await expect(quickpick.locator).toBeVisible();
+    await expect(quickpick.items).not.toHaveCount(0);
+    const provider: string = providerRegion ? providerRegion.split("/")[0] : "";
+    const providerRegionItem = providerRegion
+      ? quickpick.items.filter({ hasText: provider }).first()
+      : quickpick.items.first();
+    await providerRegionItem.click();
+
+    // Step 3 (JAR file) should already be completed
+    // since we initiated from a JAR file
+
+    // Step 4 (Artifact Name) needs to be completed or the old artifact name remains
+    const nameItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
+    await expect(nameItem).toBeVisible();
+    await nameItem.click();
+
+    const inputBox = new InputBox(this.page);
+    await expect(inputBox.locator).toBeVisible();
+    await inputBox.input.fill(artifactName);
+    await inputBox.confirm();
+
+    // Click "Upload Artifact" button
+    await expect(quickpick.locator).toBeVisible();
+    const uploadAction = quickpick.items.filter({ hasText: "Upload Artifact" }).first();
+    await expect(uploadAction).toBeVisible();
+    await uploadAction.click();
+
+    // Wait for upload success notification
+    const notificationArea = new NotificationArea(this.page);
+    const successNotifications = notificationArea.infoNotifications.filter({
+      hasText: "uploaded successfully",
+    });
+    await expect(successNotifications.first()).toBeVisible();
+
+    return artifactName;
   }
 }
