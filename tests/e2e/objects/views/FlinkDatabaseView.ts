@@ -60,6 +60,8 @@ export class FlinkDatabaseView extends View {
         break;
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
         return await this.clickUploadFromComputePool(clusterLabel);
+      case SelectFlinkDatabase.JARFile:
+        return;
       default:
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);
     }
