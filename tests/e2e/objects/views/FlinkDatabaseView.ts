@@ -320,8 +320,19 @@ export class FlinkDatabaseView extends View {
     await expect(quickpick.items).not.toHaveCount(0);
     await quickpick.items.first().click();
 
-    // Step 3 (JAR file) and Step 4 (artifact name) should already be completed
+    // Step 3 (JAR file) should already be completed
     // since we initiated from a JAR file
+
+    // Step 4 (name) needs to be entered or the old name remains
+
+    const nameItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
+    await expect(nameItem).toBeVisible();
+    await nameItem.click();
+
+    const inputBox = new InputBox(this.page);
+    await expect(inputBox.locator).toBeVisible();
+    await inputBox.input.fill(artifactName);
+    await inputBox.confirm();
 
     // Click "Upload Artifact" button
     await expect(quickpick.locator).toBeVisible();

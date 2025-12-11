@@ -187,11 +187,14 @@ async function completeArtifactUploadFlowForJAR(
   await fileExplorer.ensureVisible();
   await fileExplorer.rightClickFileAndSelectAction(
     path.basename(artifactPath),
-    "Upload Artifact to Confluent Cloud",
+    "Upload Flink Artifact to Confluent Cloud",
   );
 
   // Complete the quickpick upload flow
   await artifactsView.uploadFlinkArtifactFromJAR(artifactName);
+
+  // Switch back to the Confluent extension sidebar from the file explorer
+  await openConfluentSidebar(page);
 
   // Select a Kafka cluster as the Flink database to view the uploaded artifact
   await artifactsView.clickSelectKafkaClusterAsFlinkDatabase();
