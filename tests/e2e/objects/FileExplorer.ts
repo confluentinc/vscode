@@ -21,8 +21,9 @@ export class FileExplorer extends View {
    * Ensure the Explorer view is visible.
    */
   async ensureVisible(): Promise<void> {
-    const isVisible = await this.locator.isVisible();
-    if (!isVisible) {
+    try {
+      await expect(this.locator).toBeVisible({ timeout: 500 });
+    } catch {
       const activityBarItem = new ActivityBarItem(this.page, "Explorer");
       await expect(activityBarItem.locator).toBeVisible();
       await activityBarItem.locator.click();
