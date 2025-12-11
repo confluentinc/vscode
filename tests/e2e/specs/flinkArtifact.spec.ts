@@ -56,7 +56,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       const artifactsView = new FlinkDatabaseView(page);
       await artifactsView.ensureExpanded();
 
-      const providerRegion = await loadArtifactsForEntrypoint(config.entrypoint, artifactsView);
+      const providerRegion = await artifactsView.loadArtifacts(config.entrypoint);
 
       const uploadedArtifactName = await startUploadFlow(
         config.entrypoint,
@@ -105,17 +105,6 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     }
   }
 
-  async function loadArtifactsForEntrypoint(
-    entrypoint: SelectFlinkDatabase,
-    artifactsView: FlinkDatabaseView,
-  ): Promise<string | undefined> {
-    // JAR file test doesn't use loadArtifacts - it initiates upload from file explorer
-    if (entrypoint === SelectFlinkDatabase.JARFile) {
-      return undefined;
-    }
-    return await artifactsView.loadArtifacts(entrypoint);
-  }
-
   async function startUploadFlow(
     entrypoint: SelectFlinkDatabase,
     page: Page,
@@ -134,7 +123,12 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
         }
         return await completeUploadFlowForComputePool(electronApp, artifactsView, providerRegion);
       case SelectFlinkDatabase.JARFile:
-        return await completeArtifactUploadFlowForJAR(page, artifactPath, artifactsView);
+        return await completeArtifactUploadFlowForJAR(
+          page,
+          artifactPath,
+          artifactsView,
+          providerRegion,
+        );
     }
   }
 
@@ -176,6 +170,7 @@ async function completeArtifactUploadFlowForJAR(
   page: Page,
   artifactPath: string,
   artifactsView: FlinkDatabaseView,
+  providerRegion?: string,
 ): Promise<string> {
   // Use the artifact file name (without extension) as the artifact name
   const baseFileName = path.basename(artifactPath, ".jar");
@@ -191,7 +186,7 @@ async function completeArtifactUploadFlowForJAR(
   const fileItem = new ViewItem(page, jarFile);
   await fileItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
 
-  await artifactsView.uploadFlinkArtifactFromJAR(artifactName);
+  await artifactsView.uploadFlinkArtifactFromJAR(artifactName, providerRegion);
 
   // Switch back to the Confluent extension sidebar from the file explorer
   await openConfluentSidebar(page);

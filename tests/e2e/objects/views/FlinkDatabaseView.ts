@@ -292,9 +292,10 @@ export class FlinkDatabaseView extends View {
    * Upload a Flink artifact JAR file from the VS Code file explorer.
    * Navigates through the quickpick steps after the upload has been initiated from a JAR file.
    * @param artifactName - The name of the uploaded artifact (for verification)
+   * @param providerRegion - Optional provider/region to match (e.g., "AWS/us-east-2")
    * @returns The name of the uploaded artifact
    */
-  async uploadFlinkArtifactFromJAR(artifactName: string): Promise<string> {
+  async uploadFlinkArtifactFromJAR(artifactName: string, providerRegion?: string): Promise<string> {
     // Wait for the quickpick to appear
     const quickpick = new Quickpick(this.page);
     await expect(quickpick.locator).toBeVisible();
@@ -318,7 +319,11 @@ export class FlinkDatabaseView extends View {
 
     await expect(quickpick.locator).toBeVisible();
     await expect(quickpick.items).not.toHaveCount(0);
-    await quickpick.items.first().click();
+    const provider: string = providerRegion ? providerRegion.split("/")[0] : "";
+    const providerRegionItem = providerRegion
+      ? quickpick.items.filter({ hasText: provider }).first()
+      : quickpick.items.first();
+    await providerRegionItem.click();
 
     // Step 3 (JAR file) should already be completed
     // since we initiated from a JAR file
