@@ -1307,6 +1307,11 @@
         "view": "confluent-flink-database",
         "contents": "No Flink database (CCloud Kafka cluster) selected. Click below to get started.\n[Select Flink Database/Kafka Cluster](command:confluent.flinkdatabase.kafka-cluster.select)",
         "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && !confluent.flinkDatabaseSelected"
+      },
+      {
+        "view": "confluent-flink-database",
+        "contents": "No Flink database resources match search string. [Clear search](command:confluent.flink.database.search.clear) or [try a new search](command:confluent.flink.database.search).",
+        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied"
       }
     ],
     "menus": {
