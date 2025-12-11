@@ -26,7 +26,7 @@ export class FileExplorer {
    * @returns A locator for the file item
    */
   findFile(fileName: string): Locator {
-    return this.explorerView.getByText(fileName, { exact: true });
+    return this.treeItems.filter({ hasText: fileName });
   }
 
   /**

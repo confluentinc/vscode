@@ -323,7 +323,7 @@ export class FlinkDatabaseView extends View {
     // Step 3 (JAR file) should already be completed
     // since we initiated from a JAR file
 
-    // Step 4 (Artifact Name) needs to be complete or the old artifact name remains
+    // Step 4 (Artifact Name) needs to be completed or the old artifact name remains
     const nameItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
     await expect(nameItem).toBeVisible();
     await nameItem.click();
