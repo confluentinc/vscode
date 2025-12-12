@@ -97,14 +97,14 @@ describe("extensionSettings/base.ts", function () {
         assert.strictEqual(actualValue, expectedValue);
       });
 
-      it("should return undefined when workspace returns null and no defaultValue", () => {
+      it("should return null when workspace value returns null", () => {
         const settingId = "test.internal.setting";
         const setting = new Setting<boolean>(settingId, undefined);
         stubbedConfigs.stubGet(setting, null);
 
         const actualValue = setting.value;
 
-        assert.strictEqual(actualValue, undefined);
+        assert.strictEqual(actualValue, null);
       });
 
       it("should handle string settings correctly", () => {
@@ -288,19 +288,20 @@ describe("extensionSettings/base.ts", function () {
     });
 
     describe("'.value' getter", () => {
-      it("should return the default value if the workspace configuration returns null", () => {
-        const settingId = "test.internal.null";
+      it("should return the default value if the workspace configuration returns undefined", () => {
+        const settingId = "test.internal.undefined";
         const defaultValue = "default-value";
         fakeSection.properties = {
           [settingId]: {
             type: "string",
             default: defaultValue,
-            description: "A test string setting that does not allow null",
+            description: "A test string setting with a default value",
           },
         };
 
         const setting = new ExtensionSetting<string>(settingId, fakeSectionTitle as any);
-        stubbedConfigs.stubGet(setting, null);
+        // just to be explicit:
+        stubbedConfigs.stubGet(setting, undefined);
 
         const actualValue = setting.value;
 

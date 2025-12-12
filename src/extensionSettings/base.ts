@@ -77,7 +77,7 @@ export class Setting<T> {
   /** Get the **current** default/user/workspace value of this setting, if available. */
   get value(): T | undefined {
     const result = workspace.getConfiguration().get<T>(this.id);
-    return result ?? this.defaultValue;
+    return result === undefined ? this.defaultValue : result;
   }
 
   async update(value: T, global?: boolean): Promise<void> {
