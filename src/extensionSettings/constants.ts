@@ -1,4 +1,4 @@
-import { ExtensionSetting, SettingsSection } from "./base";
+import { ExtensionSetting, Setting, SettingsSection } from "./base";
 
 export type NeverAskAlways = "never" | "ask" | "always";
 
@@ -98,19 +98,19 @@ export const LOCAL_SCHEMA_REGISTRY_IMAGE_TAG = new ExtensionSetting<string>(
   SettingsSection.LOCAL,
 );
 /** Whether or not to enable Medusa container functionality. */
-export const ENABLE_MEDUSA_CONTAINER = new ExtensionSetting<boolean>(
+export const ENABLE_MEDUSA_CONTAINER = new Setting<boolean>(
   "confluent.localDocker.medusaEnable",
-  SettingsSection.LOCAL,
+  undefined, // not in package.json
 );
 /** Docker image to use with {@link LOCAL_MEDUSA_IMAGE_TAG} when creating local Medusa containers. */
-export const LOCAL_MEDUSA_IMAGE = new ExtensionSetting<string>(
+export const LOCAL_MEDUSA_IMAGE = new Setting<string>(
   "confluent.localDocker.medusaImageRepo",
-  SettingsSection.LOCAL,
+  undefined, // not in package.json
 );
 /** Docker image tag to use when creating local Medusa containers. */
-export const LOCAL_MEDUSA_IMAGE_TAG = new ExtensionSetting<string>(
+export const LOCAL_MEDUSA_IMAGE_TAG = new Setting<string>(
   "confluent.localDocker.medusaImageTag",
-  SettingsSection.LOCAL,
+  undefined, // not in package.json
 );
 
 // ===== FLINK CONFIGS =====
