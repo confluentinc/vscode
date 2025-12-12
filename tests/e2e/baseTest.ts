@@ -306,6 +306,8 @@ export const test = testBase.extend<VSCodeFixtures>({
     // ensure connection has resources available to work with
     await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
 
+    const topicName = `${topicConfig.name}-${randomUUID()}`;
+
     // set default replication factor (if it wasn't provided) based on connection type
     const replicationFactor =
       topicConfig.replicationFactor ??
@@ -320,7 +322,6 @@ export const test = testBase.extend<VSCodeFixtures>({
       SelectKafkaCluster.FromResourcesView,
       topicConfig.clusterLabel,
     );
-    const topicName = `${topicConfig.name}-${randomUUID()}`;
     await topicsView.createTopic(topicName, numPartitions, replicationFactor);
 
     await use(topicName);
