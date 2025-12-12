@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type { ApiResponse, EventMessage } from "../clients/docker";
 import {
@@ -26,7 +27,7 @@ import type { SystemEventMessage } from "./eventListener";
 import { EventListener } from "./eventListener";
 import { LocalResourceWorkflow } from "./workflows/base";
 import type { ConfluentPlatformSchemaRegistryWorkflow } from "./workflows/cp-schema-registry";
-import type { MedusaWorkflow } from "./workflows/medusa";
+import { MedusaWorkflow } from "./workflows/medusa";
 
 const TEST_CONTAINER_EVENT: SystemEventMessage = {
   id: "test-id",
@@ -38,6 +39,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
   let sandbox: sinon.SinonSandbox;
   let clock: sinon.SinonFakeTimers;
   let eventListener: EventListener;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
 
   before(async function () {
     await getTestExtensionContext();
@@ -49,6 +51,9 @@ describe("docker/eventListener.ts EventListener methods", function () {
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+    // stub the image repo setting to match the static property
+    stubbedConfigs.stubGet(LOCAL_MEDUSA_IMAGE, MedusaWorkflow.imageRepo);
     // IMPORTANT: we need to use the fake timers here so we can control the timing of the event listener
     // logic against the timing of the assertions and the Docker API stubs. The main reasoning here
     // is we're using a polling mechanism to check for events, and we want to be able to advance the
@@ -539,7 +544,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
 
     const medusaEvent: SystemEventMessage = {
       ...TEST_CONTAINER_EVENT,
-      Actor: { Attributes: { image: LOCAL_MEDUSA_IMAGE.defaultValue } },
+      Actor: { Attributes: { image: MedusaWorkflow.imageRepo } },
     };
 
     await eventListener.handleContainerStartEvent(medusaEvent);
