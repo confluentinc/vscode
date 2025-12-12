@@ -473,7 +473,7 @@ describe("viewProviders/resources.ts", () => {
 
         for (const [label, dockerAvailable, connectedness, expectedStatus] of [
           ["No docker service", false, false, "(Docker Unavailable)"],
-          ["Docker service but no kafka container", true, false, "(Local Kafka not running)"],
+          ["Docker service but no kafka container", true, false, "(Kafka not running)"],
           [
             "Docker and local kafka running",
             true,
