@@ -563,6 +563,70 @@ const clients = [
 [`SidecarHandle`](https://github.com/confluentinc/vscode/blob/main/src/sidecar/sidecarHandle.ts)
 with any custom headers and/or other configurations._
 
+### Hidden Settings for Internal Development
+
+Some extension settings are intentionally not exposed in `package.json` to avoid confusing users
+with experimental or pre-MVP features. These "hidden" settings allow internal development and
+testing without risking breaking user workflows.
+
+#### When to use hidden settings
+
+Hidden settings are appropriate for:
+
+- Pre-MVP features that need testing but aren't ready for general use
+- Experimental functionality that may change or be removed
+- Developer-only features that shouldn't appear in VS Code's Settings UI
+- Settings that require technical knowledge to configure correctly
+
+#### How hidden settings work
+
+Hidden settings use the `Setting<T>` base class instead of `ExtensionSetting<T>`:
+
+```typescript
+// Regular setting (in package.json)
+export const SHOW_TEMPLATES = new ExtensionSetting<boolean>(
+  "confluent.templates.show",
+  SettingsSection.GENERAL,
+);
+
+// Hidden setting (not in package.json)
+export const ENABLE_MEDUSA_CONTAINER = new Setting<boolean>(
+  "confluent.localDocker.medusaEnable",
+  undefined, // no section = hidden
+);
+```
+
+Key differences:
+
+- `sectionTitle` is `undefined` for hidden settings
+- `defaultValue` returns `undefined` (no default from package.json)
+- `value` may return `undefined` if not configured by user
+- Code using hidden settings must handle `undefined` values
+
+#### Making hidden settings available for testing
+
+Users can manually configure hidden settings in their VS Code `settings.json`:
+
+1. Open Command Palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Windows/Linux)
+2. Select "Preferences: Open User Settings (JSON)"
+3. Add the setting(s) directly:
+
+```json
+{
+  "confluent.localDocker.medusaEnable": true,
+  "confluent.localDocker.medusaImageRepo": "us-east1-docker.pkg.dev/medusa-prod-env/medusa/medusa",
+  "confluent.localDocker.medusaImageTag": "0.2.1"
+}
+```
+
+#### Currently available hidden settings
+
+- `confluent.localDocker.medusaEnable` (boolean): Enable Medusa container for local Docker
+  environments.
+- `confluent.localDocker.medusaImageRepo` (string): Custom Docker image repository for Medusa
+  container.
+- `confluent.localDocker.medusaImageTag` (string): Custom Docker image tag for Medusa container.
+
 #### Manual adjustments to OpenAPI specs
 
 Sometimes, we need to make manual adjustments to OpenAPI specs before generating the client code. To
