@@ -144,8 +144,11 @@ export async function getLocalSchemaRegistryContainers(
 export async function getLocalMedusaContainers(
   options: LocalResourceContainersOptions = { onlyExtensionManaged: false },
 ): Promise<ContainerSummary[]> {
-  const imageRepo: string = LOCAL_MEDUSA_IMAGE.value;
-  const imageTag: string = LOCAL_MEDUSA_IMAGE_TAG.value;
+  const imageRepo: string | undefined = LOCAL_MEDUSA_IMAGE.value;
+  const imageTag: string | undefined = LOCAL_MEDUSA_IMAGE_TAG.value;
+  if (!imageRepo || !imageTag) {
+    return [];
+  }
   return await getLocalResourceContainers(imageRepo, imageTag, options);
 }
 
