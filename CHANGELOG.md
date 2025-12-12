@@ -18,9 +18,9 @@ All notable changes to this extension will be documented in this file.
 ### Changed
 
 - Updated the "Support" view name to be "Help Center"
-- The Flink Database view now shows top-level collapsible groups for (table/view) relations,
-  artifacts, UDFs, and AI resources that can be re-fetched independently, removing the need to
-  switch "view modes".
+- The Flink Database view is no longer behind a preview setting, and now shows top-level collapsible
+  groups for (table/view) relations, artifacts, UDFs, and AI resources that can be re-fetched
+  independently, removing the need to switch "view modes".
 
 ### Removed
 
