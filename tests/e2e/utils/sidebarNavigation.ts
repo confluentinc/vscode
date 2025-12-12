@@ -19,11 +19,13 @@ export async function openConfluentSidebar(page: Page): Promise<void> {
   // check if the view container is already visible in the primary sidebar first
   // and if not, click the activity bar item to show it
   const viewContainer = new ViewContainer(page, "confluent");
-  const isVisible = await viewContainer.locator.isVisible();
-  if (!isVisible) {
+  try {
+    await expect(viewContainer.locator).toBeVisible({ timeout: 2000 });
+  } catch {
     const activityBarItem = new ActivityBarItem(page, "Confluent");
     await expect(activityBarItem.locator).toBeVisible();
     await activityBarItem.locator.click();
+    await expect(viewContainer.locator).toBeVisible();
   }
 
   const resourcesView = new ResourcesView(page);
