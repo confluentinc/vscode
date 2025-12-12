@@ -687,6 +687,9 @@ Users can manually configure hidden settings in their VS Code `settings.json`:
 }
 ```
 
+(These settings will likely show an "Unknown Configuration Setting" warning in the Settings UI
+until/unless they are added to `package.json`.)
+
 #### Currently available hidden settings
 
 - `confluent.localDocker.medusaEnable` (boolean): Enable Medusa container for local Docker
