@@ -458,12 +458,7 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
       getContextValue<boolean>(ContextValues.dockerServiceAvailable) === true;
 
     if (isDockerAvailable) {
-      if (this.kafkaCluster) {
-        return this.kafkaCluster.uri!;
-      } else if (this.medusa) {
-        return "Only Medusa available";
-      }
-      return "(No connection)";
+      return this.kafkaCluster ? this.kafkaCluster.uri! : "(Local Kafka not running)";
     } else {
       return "(Docker Unavailable)";
     }
