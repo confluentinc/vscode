@@ -10,7 +10,7 @@ describe("extensionSettings/base.ts", function () {
   let stubbedConfigs: StubbedWorkspaceConfiguration;
 
   let configurationSections: ExtensionConfiguration[];
-  const fakeSectionTitle = "Test Section";
+  const fakeSectionTitle = "Test Section" as SettingsSection;
   let fakeSection: ExtensionConfiguration;
 
   before(() => {
@@ -118,7 +118,7 @@ describe("extensionSettings/base.ts", function () {
           },
         };
 
-        const setting = new Setting<string>(settingId, fakeSectionTitle as any);
+        const setting = new Setting<string>(settingId, fakeSectionTitle);
         const expectedValue = "test-pool-id";
         stubbedConfigs.stubGet(setting, expectedValue);
 
@@ -138,7 +138,7 @@ describe("extensionSettings/base.ts", function () {
           },
         };
 
-        const setting = new Setting<number>(settingId, fakeSectionTitle as any);
+        const setting = new Setting<number>(settingId, fakeSectionTitle);
         const expectedValue = 42;
         stubbedConfigs.stubGet(setting, expectedValue);
 
@@ -158,7 +158,7 @@ describe("extensionSettings/base.ts", function () {
           },
         };
 
-        const setting = new Setting<boolean>(settingId, fakeSectionTitle as any);
+        const setting = new Setting<boolean>(settingId, fakeSectionTitle);
         const expectedValue = true;
         stubbedConfigs.stubGet(setting, expectedValue);
 
@@ -179,7 +179,7 @@ describe("extensionSettings/base.ts", function () {
           },
         };
 
-        const setting = new Setting<string[]>(settingId, fakeSectionTitle as any);
+        const setting = new Setting<string[]>(settingId, fakeSectionTitle);
         const expectedValue = ["/path/to/cert1.pem", "/path/to/cert2.pem"];
         stubbedConfigs.stubGet(setting, expectedValue);
 
@@ -199,7 +199,7 @@ describe("extensionSettings/base.ts", function () {
           },
         };
 
-        const setting = new Setting<Record<string, string>>(settingId, fakeSectionTitle as any);
+        const setting = new Setting<Record<string, string>>(settingId, fakeSectionTitle);
         const expectedValue = { foo: "bar,baz" };
         stubbedConfigs.stubGet(setting, expectedValue);
 
@@ -219,7 +219,7 @@ describe("extensionSettings/base.ts", function () {
           },
         };
 
-        const setting = new Setting<string | null>(settingId, fakeSectionTitle as any);
+        const setting = new Setting<string | null>(settingId, fakeSectionTitle);
         const expectedValue = null;
         stubbedConfigs.stubGet(setting, expectedValue);
 
@@ -277,7 +277,7 @@ describe("extensionSettings/base.ts", function () {
         };
         configurationSections.push(fakeSection);
 
-        const setting = new ExtensionSetting(settingId, fakeSectionTitle as any);
+        const setting = new ExtensionSetting(settingId, fakeSectionTitle);
         assert.throws(
           () => setting.defaultValue,
           new Error(
@@ -299,7 +299,7 @@ describe("extensionSettings/base.ts", function () {
           },
         };
 
-        const setting = new ExtensionSetting<string>(settingId, fakeSectionTitle as any);
+        const setting = new ExtensionSetting<string>(settingId, fakeSectionTitle);
         // just to be explicit:
         stubbedConfigs.stubGet(setting, undefined);
 
