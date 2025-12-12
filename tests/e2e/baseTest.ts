@@ -309,6 +309,8 @@ export const test = testBase.extend<VSCodeFixtures>({
     // ensure connection has resources available to work with
     await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
 
+    const topicName = `${topicConfig.name}-${randomUUID()}`;
+
     // set default replication factor (if it wasn't provided) based on connection type
     const replicationFactor =
       topicConfig.replicationFactor ??
@@ -328,7 +330,6 @@ export const test = testBase.extend<VSCodeFixtures>({
     // setup: create the topic
     const topicsView = new TopicsView(page);
     await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView, clusterLabel);
-    const topicName = `${topicConfig.name}-${randomUUID()}`;
     await topicsView.createTopic(topicName, numPartitions, replicationFactor);
 
     // produce messages to the topic if specified
@@ -336,13 +337,13 @@ export const test = testBase.extend<VSCodeFixtures>({
       await produceMessages(
         page,
         connectionType,
-        topicConfig.name,
+        topicName,
         topicConfig.produce,
         directConnectionConfig,
       );
     }
 
-    await use(topicConfig.name);
+    await use(topicName);
 
     // teardown: delete the topic
     // (explicitly make sure the sidebar is open and we reload the topics view in the event a test
