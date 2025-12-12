@@ -27,4 +27,9 @@ export enum Tag {
   DirectConnectionCRUD = "@direct-connection-crud",
   /** Tests that upload and delete Flink artifacts. */
   FlinkArtifacts = "@flink-artifacts",
+
+  // Resource-/fixture-specific tags
+
+  /** Tests that require a Kafka Topic to be set up before running. */
+  RequiresTopic = "@requires-topic",
 }
