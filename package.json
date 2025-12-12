@@ -994,15 +994,6 @@
             "default": true,
             "markdownDescription": "Enable integration with the Confluent Cloud Flink SQL language server for diagnostics, code completion, and other language features in Flink SQL documents. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)"
           },
-          "confluent.flink.artifacts": {
-            "type": "boolean",
-            "default": true,
-            "order": 1,
-            "markdownDescription": "Enable Flink Artifacts functionality including the artifacts view and related features for managing Flink artifacts in Confluent Cloud. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)",
-            "tags": [
-              "preview"
-            ]
-          },
           "confluent.flink.computePoolId": {
             "type": "string",
             "default": "",
@@ -1209,13 +1200,9 @@
         },
         {
           "id": "confluent-flink-database",
-          "name": "Flink Database (Preview)",
+          "name": "Flink Database",
           "visibility": "collapsed",
-          "icon": "$(confluent-logo)",
-          "when": "config.confluent.flink.artifacts",
-          "tags": [
-            "preview"
-          ]
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-support",
@@ -1307,17 +1294,17 @@
       {
         "view": "confluent-flink-database",
         "contents": "No Flink databases (CCloud Kafka clusters) available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)",
-        "when": "config.confluent.flink.artifacts && !confluent.ccloudConnectionAvailable"
+        "when": "!confluent.ccloudConnectionAvailable"
       },
       {
         "view": "confluent-flink-database",
         "contents": "No Flink database (CCloud Kafka cluster) selected. Click below to get started.\n[Select Flink Database/Kafka Cluster](command:confluent.flinkdatabase.kafka-cluster.select)",
-        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && !confluent.flinkDatabaseSelected"
+        "when": "confluent.ccloudConnectionAvailable && !confluent.flinkDatabaseSelected"
       },
       {
         "view": "confluent-flink-database",
         "contents": "No Flink database resources match search string. [Clear search](command:confluent.flink.database.search.clear) or [try a new search](command:confluent.flink.database.search).",
-        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied"
+        "when": "confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied"
       }
     ],
     "menus": {
@@ -1428,7 +1415,7 @@
         },
         {
           "command": "confluent.flink.database.search",
-          "when": "config.confluent.flink.artifacts"
+          "when": "true"
         },
         {
           "command": "confluent.flink.database.search.clear",
@@ -1728,7 +1715,7 @@
         },
         {
           "command": "confluent.uploadArtifact",
-          "when": "confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts"
+          "when": "confluent.ccloudConnectionAvailable"
         }
       ],
       "editor/title": [
@@ -1915,12 +1902,12 @@
         },
         {
           "command": "confluent.flinkdatabase.kafka-cluster.select",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable",
           "group": "navigation@4"
         },
         {
           "command": "confluent.flinkdatabase.refresh",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && config.confluent.flink.artifacts",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected",
           "group": "navigation@998"
         }
       ],
@@ -2032,7 +2019,7 @@
         },
         {
           "command": "confluent.flinkdatabase.kafka-cluster.select",
-          "when": "view == confluent-resources && viewItem =~ /.*-flinkable.*-kafka-cluster/ && config.confluent.flink.artifacts",
+          "when": "view == confluent-resources && viewItem =~ /.*-flinkable.*-kafka-cluster/",
           "group": "4_flink@1"
         },
         {
@@ -2042,7 +2029,7 @@
         },
         {
           "command": "confluent.uploadArtifact",
-          "when": "view == confluent-resources && (viewItem =~ /ccloud.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool.*/) && config.confluent.flink.artifacts",
+          "when": "view == confluent-resources && (viewItem =~ /ccloud.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool.*/)",
           "group": "4_flink@2"
         },
         {
@@ -2215,7 +2202,7 @@
         {
           "command": "confluent.uploadArtifact",
           "group": "confluent@1",
-          "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && resourceExtname == .jar"
+          "when": "confluent.ccloudConnectionAvailable && resourceExtname == .jar"
         }
       ]
     },
