@@ -49,6 +49,7 @@
     "workspaceContains:**/*.avsc",
     "onUri"
   ],
+  "enabledApiProposals": ["codiconDecoration"],
   "main": "./out/extension.js",
   "contributes": {
     "authentication": [
