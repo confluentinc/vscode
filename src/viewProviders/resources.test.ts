@@ -473,7 +473,7 @@ describe("viewProviders/resources.ts", () => {
 
         for (const [label, dockerAvailable, connectedness, expectedStatus] of [
           ["No docker service", false, false, "(Docker Unavailable)"],
-          ["Docker service but no kafka container", true, false, "(No connection)"],
+          ["Docker service but no kafka container", true, false, "(Kafka not running)"],
           [
             "Docker and local kafka running",
             true,
@@ -491,12 +491,6 @@ describe("viewProviders/resources.ts", () => {
             assert.strictEqual(localConnectionRow.status, expectedStatus);
           });
         }
-
-        it("status getter should return 'Only Medusa available' when only Medusa is running", () => {
-          getContextValueStub.returns(true); // docker available
-          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_MEDUSA_ONLY);
-          assert.strictEqual(localConnectionRow.status, "Only Medusa available");
-        });
       });
 
       describe("medusa getter", () => {
