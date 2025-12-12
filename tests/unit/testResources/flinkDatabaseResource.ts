@@ -1,6 +1,6 @@
+import { ConnectionType } from "../../../src/clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../../../src/constants";
 import type { FlinkDatabaseResource } from "../../../src/models/flinkDatabaseResource";
-import { ConnectionType } from "../../e2e/connectionTypes";
 import {
   TEST_CCLOUD_ENVIRONMENT_ID,
   TEST_CCLOUD_PROVIDER,
