@@ -2,13 +2,13 @@ import type { Locator } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
-import { ConnectionType } from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { SchemasView, SchemaType, SelectSchemaRegistry } from "../objects/views/SchemasView";
 import { SubjectItem } from "../objects/views/viewItems/SubjectItem";
 import { Tag } from "../tags";
+import { ConnectionType } from "../types/connection";
 
 /**
  * E2E test suite for testing the whole schema management flow in the extension.

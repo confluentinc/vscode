@@ -3,9 +3,9 @@ import { expect } from "@playwright/test";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { test } from "../baseTest";
-import { ConnectionType } from "../connectionTypes";
 import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDatabaseView";
 import { Tag } from "../tags";
+import { ConnectionType } from "../types/connection";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
