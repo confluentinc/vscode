@@ -1,9 +1,27 @@
 import * as assert from "assert";
+import sinon from "sinon";
+import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceConfiguration";
+import { LOCAL_MEDUSA_IMAGE } from "../../extensionSettings/constants";
 import { LocalResourceKind } from "../constants";
 import { LocalResourceWorkflow } from "./base";
+import { MedusaWorkflow } from "./medusa";
 import { registerLocalResourceWorkflows } from "./workflowInitialization";
 
 describe("docker/workflows/workflowInitialization.ts registerLocalResourceWorkflows()", () => {
+  let sandbox: sinon.SinonSandbox;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+    // stub the image repo setting to match the static property
+    stubbedConfigs.stubGet(LOCAL_MEDUSA_IMAGE, MedusaWorkflow.imageRepo);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
   // clear the registry before and after tests
   beforeEach(() => {
     LocalResourceWorkflow["workflowRegistry"].clear();

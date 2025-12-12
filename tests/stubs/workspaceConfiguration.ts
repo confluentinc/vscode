@@ -1,8 +1,7 @@
 import type { SinonSandbox, SinonStub } from "sinon";
-import { match } from "sinon";
 import type { WorkspaceConfiguration } from "vscode";
 import { workspace } from "vscode";
-import type { ExtensionSetting } from "../../src/extensionSettings/base";
+import type { Setting } from "../../src/extensionSettings/base";
 
 /**
  * The {@link WorkspaceConfiguration} interface, where all methods are replaced with {@link SinonStub stubs}.
@@ -32,7 +31,7 @@ export class StubbedWorkspaceConfiguration implements StubbedWorkspaceConfigurat
   /**
    * Configures the {@linkcode get} stub to return a specific value for a given setting.
    *
-   * @param setting The {@link ExtensionSetting} instance to stub. Must have an `id` property.
+   * @param setting The {@link Setting} instance to stub. Must have an `id` property.
    * @param value The value to return for the given setting.
    * @returns this {@link StubbedWorkspaceConfiguration} instance for chaining.
    *
@@ -47,9 +46,9 @@ export class StubbedWorkspaceConfiguration implements StubbedWorkspaceConfigurat
    * stubbedConfigs.get.withArgs(LOCAL_KAFKA_IMAGE.id, sinon.match.any).returns("confluentinc/cp-kafka");
    * ```
    */
-  stubGet<T>(setting: ExtensionSetting<T>, value: T): StubbedWorkspaceConfiguration {
+  stubGet<T>(setting: Setting<T>, value: T): StubbedWorkspaceConfiguration {
     // use `match.any` to allow an optional second argument (for the default value)
-    this.get.withArgs(setting.id, match.any).returns(value);
+    this.get.withArgs(setting.id).returns(value);
     return this;
   }
 }

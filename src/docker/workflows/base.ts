@@ -103,7 +103,12 @@ export abstract class LocalResourceWorkflow {
 
   /** Get the Medusa workflow. */
   public static getMedusaWorkflow(): LocalResourceWorkflow {
-    const imageRepo: string = LOCAL_MEDUSA_IMAGE.value;
+    const imageRepo: string | undefined = LOCAL_MEDUSA_IMAGE.value;
+    if (!imageRepo) {
+      const errorMsg = `Medusa image repo is not configured.`;
+      window.showErrorMessage(errorMsg);
+      throw new Error(errorMsg);
+    }
     const workflow: LocalResourceWorkflow | undefined =
       LocalResourceWorkflow.workflowRegistry.get(imageRepo);
     if (!workflow) {

@@ -59,6 +59,10 @@ export class MedusaWorkflow extends LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
+    if (!LOCAL_MEDUSA_IMAGE_TAG.value) {
+      const errorMsg = `Medusa image tag is not configured.`;
+      throw new Error(errorMsg);
+    }
     this.imageTag = LOCAL_MEDUSA_IMAGE_TAG.value;
 
     // already handles logging + updating the progress notification
@@ -108,6 +112,10 @@ export class MedusaWorkflow extends LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
+    if (!LOCAL_MEDUSA_IMAGE_TAG.value) {
+      const errorMsg = `Medusa image tag is not configured.`;
+      throw new Error(errorMsg);
+    }
     this.imageTag = LOCAL_MEDUSA_IMAGE_TAG.value;
 
     this.logAndUpdateProgress(`Checking existing ${this.resourceKind} containers...`);
