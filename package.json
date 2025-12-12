@@ -963,24 +963,6 @@
             "minLength": 1,
             "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$",
             "patternErrorMessage": "Image tag must start with an alphanumeric character or underscore, and can only contain alphanumeric characters, underscores, periods, or hyphens."
-          },
-          "confluent.localDocker.medusaEnable": {
-            "type": "boolean",
-            "default": false,
-            "markdownDescription": "Enable Medusa container functionality for local development and testing.",
-            "tags": [
-              "preview"
-            ]
-          },
-          "confluent.localDocker.medusaImageRepo": {
-            "type": "string",
-            "default": "us-east1-docker.pkg.dev/medusa-prod-env/medusa/medusa",
-            "description": "Docker image repo to use when starting a local Medusa container"
-          },
-          "confluent.localDocker.medusaImageTag": {
-            "type": "string",
-            "default": "0.2.1",
-            "description": "Docker image tag to use when starting a local Medusa container"
           }
         }
       },
