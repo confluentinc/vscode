@@ -326,7 +326,7 @@ export class EventListener {
       resourceKind = LocalResourceKind.Kafka;
     } else if (imageName.startsWith(LOCAL_SCHEMA_REGISTRY_IMAGE.value)) {
       resourceKind = LocalResourceKind.SchemaRegistry;
-    } else if (imageName.startsWith(LOCAL_MEDUSA_IMAGE.value)) {
+    } else if (LOCAL_MEDUSA_IMAGE.value && imageName.startsWith(LOCAL_MEDUSA_IMAGE.value)) {
       resourceKind = LocalResourceKind.Medusa;
     }
 
@@ -393,7 +393,7 @@ export class EventListener {
 
     const kafkaImage: string = LOCAL_KAFKA_IMAGE.value;
     const schemaRegistryImage: string = LOCAL_SCHEMA_REGISTRY_IMAGE.value;
-    const medusaImage: string = LOCAL_MEDUSA_IMAGE.value;
+    const medusaImage: string | undefined = LOCAL_MEDUSA_IMAGE.value;
 
     if (imageName.startsWith(kafkaImage)) {
       await setContextValue(ContextValues.localKafkaClusterAvailable, false);
@@ -401,7 +401,7 @@ export class EventListener {
     } else if (imageName.startsWith(schemaRegistryImage)) {
       await setContextValue(ContextValues.localSchemaRegistryAvailable, false);
       localSchemaRegistryConnected.fire(false);
-    } else if (imageName.startsWith(medusaImage)) {
+    } else if (medusaImage && imageName.startsWith(medusaImage)) {
       await setContextValue(ContextValues.localMedusaAvailable, false);
       localMedusaConnected.fire(false);
     }

@@ -627,3 +627,79 @@ following targets:
 
 The PR raised must be summarily reviewed and merged by a maintainer. The PR title will be suffixed
 with `[ci skip]` to avoid triggering the pipeline again.
+
+### Hidden settings
+
+Some extension settings are intentionally not exposed in `package.json` to avoid confusing users
+with experimental, internal, or pre-MVP features. These "hidden" settings allow more flexible
+development and testing without risking breaking user workflows, and can be considered even less
+mature than VS Code's
+[`experimental`-tagged settings](https://code.visualstudio.com/docs/configure/settings#_feature-lifecycle).
+
+#### When to use hidden settings in development
+
+Hidden settings are appropriate for:
+
+- Pre-MVP features that need more work and/or testing and aren't ready for wider use
+- Experimental functionality that may change or be removed
+- Developer-only features that shouldn't appear in VS Code's Settings UI
+- Settings that require technical knowledge to configure correctly
+
+#### How hidden settings work
+
+In [`src/extensionSettings/constants.ts`](../src/extensionSettings/constants.ts), hidden settings
+use the `Setting<T>` base class instead of `ExtensionSetting<T>`:
+
+```typescript
+// Regular setting (in package.json)
+export const SHOW_SIDECAR_EXCEPTIONS = new ExtensionSetting<boolean>(
+  "confluent.debugging.showSidecarExceptions",
+  SettingsSection.GENERAL,
+);
+
+// Hidden setting (not in package.json)
+export const ENABLE_MEDUSA_CONTAINER = new Setting<boolean>(
+  "confluent.localDocker.medusaEnable",
+  undefined, // no section = hidden
+);
+```
+
+Key differences:
+
+- `sectionTitle` is `undefined` for hidden settings
+- `defaultValue` returns `undefined` (no default from package.json)
+- `value` may return `undefined` if not configured by user
+- Code using hidden settings must handle `undefined` values
+
+#### Making hidden settings available for testing
+
+Users can manually configure hidden settings in their VS Code `settings.json`:
+
+1. Open Command Palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Windows/Linux)
+2. Select "Preferences: Open User Settings (JSON)"
+3. Add the setting(s) directly, for example:
+
+```json
+{
+  "confluent.localDocker.medusaEnable": true,
+  "confluent.localDocker.medusaImageRepo": "us-east1-docker.pkg.dev/medusa-prod-env/medusa/medusa",
+  "confluent.localDocker.medusaImageTag": "0.2.1"
+}
+```
+
+(These settings will likely show an "Unknown Configuration Setting" warning in the Settings UI
+until/unless they are added to `package.json`.)
+
+#### Currently available hidden settings
+
+- `confluent.localDocker.medusaEnable` (boolean): Enable Medusa container for local Docker
+  environments.
+- `confluent.localDocker.medusaImageRepo` (string): Custom Docker image repository for Medusa
+  container.
+- `confluent.localDocker.medusaImageTag` (string): Custom Docker image tag for Medusa container.
+
+<!-- prettier-ignore -->
+> [!WARNING]
+> These settings are subject to change and may be removed in future releases. As they are not
+> exposed by default in the extension, users should use them with caution and expect potential bugs,
+> missing features, and/or instability.
