@@ -1,7 +1,6 @@
 import type { ElectronApplication, Page, TestInfo } from "@playwright/test";
 import { _electron as electron, expect, test as testBase } from "@playwright/test";
 import archiver from "archiver";
-import { randomUUID } from "crypto";
 import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
 import { createWriteStream, existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
@@ -29,6 +28,7 @@ import {
 } from "./utils/connections";
 import { configureVSCodeSettings } from "./utils/settings";
 import { openConfluentSidebar } from "./utils/sidebarNavigation";
+import { randomHexString } from "./utils/strings";
 
 // NOTE: we can't import these two directly from 'global.setup.ts'
 // cached test setup file path that's shared across worker processes
@@ -306,7 +306,7 @@ export const test = testBase.extend<VSCodeFixtures>({
     // ensure connection has resources available to work with
     await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
 
-    const topicName = `${topicConfig.name}-${randomUUID()}`;
+    const topicName = `${topicConfig.name}-${randomHexString(6)}`;
 
     // set default replication factor (if it wasn't provided) based on connection type
     const replicationFactor =
