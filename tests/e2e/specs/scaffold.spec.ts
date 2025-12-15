@@ -25,6 +25,7 @@ import { Tag } from "../tags";
 import { executeVSCodeCommand } from "../utils/commands";
 import { openGeneratedProjectInCurrentWindow, verifyGeneratedProject } from "../utils/scaffold";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
+import { randomHexString } from "../utils/strings";
 
 const TEST_ENV_NAME = "main-test-env";
 const TEST_COMPUTE_POOL_NAME = "main-test-pool";
@@ -188,7 +189,7 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
         test(`should apply ${templateDisplayName} template from Kafka topic in Topics view`, async ({
           page,
         }) => {
-          topicName = `e2e-project-scaffold-${templateName}`;
+          topicName = `e2e-project-scaffold-${templateName}-${randomHexString(6)}`;
           // Given we navigate to a topic in the Topics view
           const topicsView = new TopicsView(page);
           await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);

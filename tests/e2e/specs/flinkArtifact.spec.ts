@@ -12,6 +12,7 @@ import { ViewItem } from "../objects/views/viewItems/ViewItem";
 import { Tag } from "../tags";
 import { executeVSCodeCommand } from "../utils/commands";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
+import { randomHexString } from "../utils/strings";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -175,8 +176,7 @@ async function completeArtifactUploadFlowForJAR(
   // Use the artifact file name (without extension) as the artifact name
   const baseFileName = path.basename(artifactPath, ".jar");
   // Add random suffix to avoid conflicts during development
-  const randomSuffix = Math.random().toString(36).substring(2, 8);
-  const artifactName = `${baseFileName}-${randomSuffix}`;
+  const artifactName = `${baseFileName}-${randomHexString(6)}`;
 
   const fileExplorer = new FileExplorer(page);
   await fileExplorer.ensureVisible();

@@ -3,6 +3,7 @@ import { expect } from "@playwright/test";
 import { stubDialog } from "electron-playwright-helpers";
 import path from "path";
 import { ConnectionType } from "../../connectionTypes";
+import { randomHexString } from "../../utils/strings";
 import { NotificationArea } from "../notifications/NotificationArea";
 import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
@@ -234,10 +235,10 @@ export class FlinkDatabaseView extends View {
     const artifactItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
     await expect(artifactItem).toBeVisible();
     await artifactItem.click();
-    // Although this resource may be cleaned up, we append a random string to avoid name conflicts during development
-    const randomSuffix = Math.random().toString(36).substring(2, 8);
+
     const baseFileName = path.basename(filePath, ".jar");
-    const fullArtifactName = `${baseFileName}-${randomSuffix}`;
+    // Although this resource may be cleaned up, we append a random string to avoid name conflicts during development
+    const fullArtifactName = `${baseFileName}-${randomHexString(6)}`;
 
     const inputBox = new InputBox(this.page);
     await expect(inputBox.locator).toBeVisible();
