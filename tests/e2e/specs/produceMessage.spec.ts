@@ -14,6 +14,7 @@ import {
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { Tag } from "../tags";
 import { openNewUntitledDocument } from "../utils/documents";
+import { randomHexString } from "../utils/strings";
 
 /**
  * E2E test suite for testing the produce message functionality, with and without associated schemas.
@@ -75,7 +76,7 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
             await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
             // make sure we have a topic to produce messages to first
             const schemaSuffix = schemaType ? schemaType.toLowerCase() : "no-schema";
-            topicName = `e2e-produce-message-${schemaSuffix}`;
+            topicName = `e2e-produce-message-${schemaSuffix}-${randomHexString(6)}`;
             await topicsView.createTopic(topicName, 1, replicationFactor);
             let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
 
