@@ -9,6 +9,7 @@ import {
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import type { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { Tag } from "../tags";
+import { randomHexString } from "../utils/strings";
 
 /**
  * E2E test suite for testing the Topics view and Message Viewer functionality.
@@ -26,7 +27,7 @@ import { Tag } from "../tags";
  */
 
 test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer] }, () => {
-  let topicName: string = "e2e-topic-message-viewer";
+  let topicName: string = `e2e-topic-message-viewer-${randomHexString(6)}`;
 
   test.afterEach(async ({ page }) => {
     const topicView = new TopicsView(page);
