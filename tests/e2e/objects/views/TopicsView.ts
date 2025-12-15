@@ -52,6 +52,12 @@ export class TopicsView extends View {
     return this.body.locator("[role='treeitem'][aria-level='1']");
   }
 
+  /** Get a topic item by its label/name. */
+  async getTopicItem(topicName: string): Promise<TopicItem> {
+    const item = await this.getItemByLabel(topicName, this.topics);
+    return new TopicItem(this.page, item);
+  }
+
   /** Get all {@link topics topic items} with schemas in the view. */
   get topicsWithSchemas(): Locator {
     return this.topics.filter({ has: this.page.locator(".codicon-confluent-topic") });
@@ -158,11 +164,7 @@ export class TopicsView extends View {
    * topic item.
    */
   async deleteTopic(topicName: string): Promise<void> {
-    const topicLocator: Locator = this.topics.filter({ hasText: topicName });
-    await expect(topicLocator).toHaveCount(1);
-    const topicItem = new TopicItem(this.page, topicLocator.first());
-    await topicItem.locator.scrollIntoViewIfNeeded();
-    await expect(topicItem.locator).toBeVisible();
+    const topicItem = await this.getTopicItem(topicName);
     await topicItem.rightClickContextMenuAction("Delete Topic");
 
     const deletionConfirmationBox = new InputBox(this.page);

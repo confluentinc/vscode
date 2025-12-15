@@ -19,7 +19,7 @@ import {
 import { View } from "../objects/views/View";
 import { FlinkComputePoolItem } from "../objects/views/viewItems/FlinkComputePoolItem";
 import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
-import { TopicItem } from "../objects/views/viewItems/TopicItem";
+import type { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebview";
 import { Tag } from "../tags";
 import { executeVSCodeCommand } from "../utils/commands";
@@ -193,10 +193,7 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
           const topicsView = new TopicsView(page);
           await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
           await topicsView.createTopic(topicName, 1, replicationFactor);
-          const targetTopic = topicsView.topics.filter({ hasText: topicName });
-          await expect(targetTopic).not.toHaveCount(0);
-          const topicItem = new TopicItem(page, targetTopic.first());
-          await expect(topicItem.locator).toBeVisible();
+          const topicItem: TopicItem = await topicsView.getTopicItem(topicName);
           // and we start the generate project flow from the right-click context menu
           await topicItem.generateProject();
           // and we choose a project template from the quickpick
