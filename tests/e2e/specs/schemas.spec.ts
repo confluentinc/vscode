@@ -7,7 +7,7 @@ import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { SchemasView, SchemaType, SelectSchemaRegistry } from "../objects/views/SchemasView";
-import { SubjectItem } from "../objects/views/viewItems/SubjectItem";
+import type { SubjectItem } from "../objects/views/viewItems/SubjectItem";
 import { Tag } from "../tags";
 
 /**
@@ -97,8 +97,7 @@ test.describe("Schema Management", { tag: [Tag.EvolveSchema] }, () => {
             subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
 
             // try to evolve the newly-created schema
-            const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
-            const subjectItem = new SubjectItem(page, subjectLocator.first());
+            const subjectItem: SubjectItem = await schemasView.getSubjectItem(subjectName);
             await subjectItem.clickEvolveLatestSchema();
 
             // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title
@@ -141,9 +140,9 @@ test.describe("Schema Management", { tag: [Tag.EvolveSchema] }, () => {
           }) => {
             const schemasView = new SchemasView(page);
             subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
+
             // try to evolve the newly-created schema
-            const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
-            const subjectItem = new SubjectItem(page, subjectLocator.first());
+            const subjectItem: SubjectItem = await schemasView.getSubjectItem(subjectName);
             await subjectItem.clickEvolveLatestSchema();
 
             // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title

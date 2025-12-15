@@ -78,6 +78,12 @@ export class SchemasView extends View {
     return this.body.locator("[role='treeitem'][aria-level='1']");
   }
 
+  /** Get a subject item by its label/name. */
+  async getSubjectItem(subjectName: string): Promise<SubjectItem> {
+    const item = await this.getItemByLabel(subjectName, this.subjects);
+    return new SubjectItem(this.page, item);
+  }
+
   /**
    * Get all schema version items in the view.
    * (One level below {@link subjects subject items}.)
