@@ -258,7 +258,7 @@ export class SidecarHandle {
     const config = new KafkaRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
-        ...this.defaultClientConfigParams.headers,
+        Authorization: `Bearer ${this.auth_secret}`,
         [CLUSTER_ID_HEADER]: clusterId,
         [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
       },
@@ -270,7 +270,7 @@ export class SidecarHandle {
     const config = new KafkaRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
-        ...this.defaultClientConfigParams.headers,
+        Authorization: `Bearer ${this.auth_secret}`,
         [CLUSTER_ID_HEADER]: clusterId,
         [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
       },
@@ -286,7 +286,7 @@ export class SidecarHandle {
     const config = new KafkaRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
-        ...this.defaultClientConfigParams.headers,
+        Authorization: `Bearer ${this.auth_secret}`,
         [CLUSTER_ID_HEADER]: clusterId,
         [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
       },
@@ -302,7 +302,7 @@ export class SidecarHandle {
     const config = new KafkaRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
-        ...this.defaultClientConfigParams.headers,
+        Authorization: `Bearer ${this.auth_secret}`,
         [CLUSTER_ID_HEADER]: clusterId,
         [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
       },
@@ -340,7 +340,7 @@ export class SidecarHandle {
     const config = new SchemaRegistryRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
-        ...this.defaultClientConfigParams.headers,
+        Authorization: `Bearer ${this.auth_secret}`,
         [CLUSTER_ID_HEADER]: clusterId,
         [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
       },
@@ -356,7 +356,7 @@ export class SidecarHandle {
     const config = new SchemaRegistryRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
-        ...this.defaultClientConfigParams.headers,
+        Authorization: `Bearer ${this.auth_secret}`,
         [CLUSTER_ID_HEADER]: clusterId,
         [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
       },
