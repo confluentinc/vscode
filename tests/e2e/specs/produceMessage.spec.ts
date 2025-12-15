@@ -11,7 +11,7 @@ import {
   SelectKafkaCluster,
   TopicsView,
 } from "../objects/views/TopicsView";
-import { TopicItem } from "../objects/views/viewItems/TopicItem";
+import type { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { Tag } from "../tags";
 import { openNewUntitledDocument } from "../utils/documents";
 
@@ -35,7 +35,7 @@ import { openNewUntitledDocument } from "../utils/documents";
  */
 
 test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] }, () => {
-  let topic: TopicItem;
+  let topicItem: TopicItem;
   let topicName: string;
   let subjectName: string;
 
@@ -106,9 +106,7 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
 
             // until we can delete topics, we may have too many to show at once in the view, so
             // scroll the target topic into view before trying to click it
-            await targetTopic.scrollIntoViewIfNeeded();
-            topic = new TopicItem(page, targetTopic.first());
-            await expect(topic.locator).toBeVisible();
+            topicItem = await topicsView.getTopicItem(topicName);
           });
 
           test.afterEach(async ({ page, electronApp }) => {
@@ -133,7 +131,7 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
             const messageContent: string = loadFixtureFromFile("produceMessages/good.json");
             await document.insertContent(messageContent);
 
-            await topic.clickSendMessages();
+            await topicItem.clickSendMessages();
             // click the currently open document item in the document/URI quickpick
             const documentQuickpick = new Quickpick(page);
             await expect(documentQuickpick.locator).toBeVisible();
@@ -167,7 +165,7 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
             );
             await document.insertContent(badMessageContent);
 
-            await topic.clickSendMessages();
+            await topicItem.clickSendMessages();
             // click the currently open document item in the document/URI quickpick
             const documentQuickpick = new Quickpick(page);
             await expect(documentQuickpick.locator).toBeVisible();
@@ -199,7 +197,7 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
               );
               await document.insertContent(uglyMessageContent);
 
-              await topic.clickSendMessages();
+              await topicItem.clickSendMessages();
               // click the currently open document item in the document/URI quickpick
               const documentQuickpick = new Quickpick(page);
               await expect(documentQuickpick.locator).toBeVisible();
