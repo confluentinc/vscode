@@ -71,4 +71,32 @@ export class View {
     }
     await expect(this.header).toHaveAttribute("aria-expanded", "true");
   }
+
+  /** Get a topic item by its label/name, optionally searching within a specific locator. */
+  async getItemByLabel(label: string, fromLocator?: Locator): Promise<Locator> {
+    await this.ensureExpanded();
+    // filter all tree items in this view unless a specific locator is provided
+    const baseLocator = fromLocator ?? this.treeItems;
+    const itemLocator = baseLocator.filter({ hasText: label });
+
+    await expect
+      .poll(
+        async () => {
+          const visibleCount = await itemLocator.count();
+          if (visibleCount === 0) {
+            // scroll down via mouse because the locator.scrollIntoViewIfNeeded doesn't work within a view
+            await this.body.hover();
+            await this.page.mouse.wheel(0, 100);
+          }
+          return visibleCount > 0;
+        },
+        {
+          intervals: [10],
+        },
+      )
+      .toBeTruthy();
+
+    await expect(itemLocator).toBeVisible();
+    return itemLocator;
+  }
 }
