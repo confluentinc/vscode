@@ -6,6 +6,16 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
+### Changed
+
+### Removed
+
+### Fixed
+
+## 2.1.0
+
+### Added
+
 - New view modes for the Flink Database view:
   - "Flink Database Relations" (now the default mode) displays tables, views, and their columns
   - "Flink AI" displays connections, tools, models, and agents
