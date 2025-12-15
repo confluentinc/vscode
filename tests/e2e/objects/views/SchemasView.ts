@@ -137,7 +137,7 @@ export class SchemasView extends View {
     page: Page,
     schemaType: SchemaType,
     schemaFile: string,
-    subjectName?: string,
+    subjectName: string,
   ): Promise<string> {
     await this.clickCreateNewSchema();
 
@@ -176,10 +176,6 @@ export class SchemasView extends View {
     // enter subject name in the input box and submit
     const subjectInputBox = new InputBox(page);
     await expect(subjectInputBox.input).toBeVisible();
-    if (!subjectName) {
-      const randomValue: string = Math.random().toString(36).substring(2, 15);
-      subjectName = `customer-${randomValue}-value`;
-    }
     await subjectInputBox.input.fill(subjectName);
     await subjectInputBox.confirm();
 
