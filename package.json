@@ -1976,7 +1976,7 @@
         },
         {
           "command": "confluent.artifacts.scaffold",
-          "when": "view == confluent-flink-database && viewItem == flink-database-artifacts-container",
+          "when": "view == confluent-flink-database && viewItem =~ /flink-database-artifacts-container.*/",
           "group": "inline@1"
         },
         {
