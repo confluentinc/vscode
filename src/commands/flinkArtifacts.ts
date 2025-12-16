@@ -8,20 +8,18 @@ import type {
   CreateArtifactV1FlinkArtifact201Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../clients/flinkArtifacts/models";
-import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
 import { artifactsChanged } from "../emitters";
 import { logError } from "../errors";
-import { FlinkArtifact } from "../models/flinkArtifact";
+import type { FlinkArtifact } from "../models/flinkArtifact";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { CCloudKafkaCluster } from "../models/kafkaCluster";
-import type { EnvironmentId } from "../models/resource";
 import {
   showErrorNotificationWithButtons,
   showInfoNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
+import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import { detectClassesAndRegisterUDFs } from "./utils/udfRegistration";
 import type { ArtifactUploadParams } from "./utils/uploadArtifactOrUDF";
@@ -82,23 +80,16 @@ export async function uploadArtifactCommand(
             },
           };
 
-          const createdArtifact = new FlinkArtifact({
-            connectionId: CCLOUD_CONNECTION_ID,
-            connectionType: ConnectionType.Ccloud,
-            id: response.id!,
-            name: response.display_name!,
-            description: response.description || "",
-            metadata: response.metadata!,
-            documentationLink: response.documentation_link || "",
-            environmentId: params.environment as EnvironmentId,
-            provider: response.cloud,
-            region: response.region,
-          });
-
           // Only show "View Artifact" button when not uploading from a file directly
           if (!isFromJarFile) {
             notificationButtons[viewArtifactButton] = async () => {
-              await focusArtifactsInView(createdArtifact);
+              const flinkDbViewProvider = FlinkDatabaseViewProvider.getInstance();
+              const flinkArtifact = flinkDbViewProvider["artifactsContainer"].children.find(
+                (artifact) => artifact.id === response.id!,
+              );
+              if (flinkArtifact) {
+                await focusArtifactsInView(flinkArtifact);
+              }
             };
           }
 
