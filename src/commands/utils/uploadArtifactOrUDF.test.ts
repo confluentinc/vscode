@@ -11,6 +11,7 @@ import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import {
   createFlinkArtifact,
   TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_FLINK_ARTIFACT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../../tests/unit/testResources";
 import type { PresignedUploadUrlArtifactV1PresignedUrl200Response } from "../../clients/flinkArtifacts";
@@ -412,10 +413,10 @@ describe("commands/utils/uploadArtifact", () => {
     });
   });
   describe("focusArtifactsInView", () => {
-    it("should execute command to set artifacts view mode", async () => {
+    it("should execute command to focus the Flink Database view", async () => {
       const executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
 
-      await uploadArtifactModule.focusArtifactsInView();
+      await uploadArtifactModule.focusArtifactsInView(TEST_CCLOUD_FLINK_ARTIFACT);
 
       sinon.assert.calledOnce(executeCommandStub);
       sinon.assert.calledWith(executeCommandStub, "confluent-flink-database.focus");

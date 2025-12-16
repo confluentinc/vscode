@@ -8,11 +8,14 @@ import type {
   CreateArtifactV1FlinkArtifact201Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../clients/flinkArtifacts/models";
+import { ConnectionType } from "../clients/sidecar";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { artifactsChanged } from "../emitters";
 import { logError } from "../errors";
-import type { FlinkArtifact } from "../models/flinkArtifact";
+import { FlinkArtifact } from "../models/flinkArtifact";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { CCloudKafkaCluster } from "../models/kafkaCluster";
+import type { EnvironmentId } from "../models/resource";
 import {
   showErrorNotificationWithButtons,
   showInfoNotificationWithButtons,
@@ -79,10 +82,23 @@ export async function uploadArtifactCommand(
             },
           };
 
+          const createdArtifact = new FlinkArtifact({
+            connectionId: CCLOUD_CONNECTION_ID,
+            connectionType: ConnectionType.Ccloud,
+            id: response.id!,
+            name: response.display_name!,
+            description: response.description || "",
+            metadata: response.metadata!,
+            documentationLink: response.documentation_link || "",
+            environmentId: params.environment as EnvironmentId,
+            provider: response.cloud,
+            region: response.region,
+          });
+
           // Only show "View Artifact" button when not uploading from a file directly
           if (!isFromJarFile) {
             notificationButtons[viewArtifactButton] = async () => {
-              await focusArtifactsInView();
+              await focusArtifactsInView(createdArtifact);
             };
           }
 
