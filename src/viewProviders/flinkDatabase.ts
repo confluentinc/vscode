@@ -211,7 +211,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
 
   /** Reveal a specific Flink Database resource in the view, if possible. */
   async revealResource(
-    resource: FlinkDatabaseResource | FlinkArtifact,
+    resource: DatabaseChildrenType,
     options?: { select?: boolean; focus?: boolean; expand?: number | boolean },
   ): Promise<void> {
     if (!this.database) {
@@ -222,6 +222,10 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     const focusResource = options?.focus ?? true;
     const expandResource = options?.expand ?? false;
     const revealOptions = { select: selectResource, focus: focusResource, expand: expandResource };
+
+    // just for logging:
+    const resourceLogLabel =
+      resource instanceof FlinkDatabaseResourceContainer ? resource.label : resource.name;
 
     // look up the instance and reveal the item instead of the instance that was passed in since
     // VS Code needs the exact same object reference to find it in the tree
@@ -255,7 +259,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     }
     if (!exactInstance) {
       this.logger.warn(
-        `Could not find resource in Flink Database view to reveal: ${resource.name} (${resource.id})`,
+        `Could not find resource in Flink Database view to reveal: ${resourceLogLabel} (${resource.id})`,
       );
       return;
     }
@@ -265,7 +269,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     } catch (error) {
       logError(
         error,
-        `Failed to reveal resource in Flink Database view: ${resource.name} (${resource.id})`,
+        `Failed to reveal resource in Flink Database view: ${resourceLogLabel} (${resource.id})`,
       );
     }
   }
