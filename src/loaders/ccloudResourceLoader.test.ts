@@ -76,6 +76,7 @@ import {
   CCloudResourceLoader,
   loadArtifactsForProviderRegion,
   loadProviderRegions,
+  SKIP_RESULTS_SQL_KINDS,
 } from "./ccloudResourceLoader";
 import * as aiAgentsQueryUtils from "./utils/flinkAiAgentsQuery";
 import * as aiConnectionsQueryUtils from "./utils/flinkAiConnectionsQuery";
@@ -1872,6 +1873,27 @@ describe("CCloudResourceLoader", () => {
         );
       });
     });
+
+    for (const skipKind of SKIP_RESULTS_SQL_KINDS) {
+      it(`should skip fetching results for sqlKind=${skipKind} statements`, async () => {
+        const completedStatement = createFlinkStatement({
+          phase: Phase.COMPLETED,
+          sqlKind: skipKind,
+        });
+        waitForStatementCompletionStub.resolves(completedStatement);
+
+        const results = await loader.executeBackgroundFlinkStatement<TestResult>(
+          "STATEMENT THAT HAS NO RESULTS",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        );
+
+        assert.deepStrictEqual(results, []);
+        sinon.assert.calledOnce(submitFlinkStatementStub);
+        sinon.assert.calledOnce(waitForStatementCompletionStub);
+        sinon.assert.notCalled(parseAllFlinkStatementResultsStub);
+        sinon.assert.calledOnce(deleteStatementStub);
+      });
+    }
   });
 
   describe("deleteFlinkStatement", () => {
