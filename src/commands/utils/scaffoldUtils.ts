@@ -93,8 +93,9 @@ export const scaffoldProjectRequest = async (
         return tags.includes("producer") || tags.includes("consumer");
       });
     }
-
-    pickedTemplate = await pickTemplate(templateList);
+    if (!pickedTemplate) {
+      pickedTemplate = await pickTemplate(templateList);
+    }
   } catch (err) {
     logError(err, "template picking", { extra: { functionName: "scaffoldProjectRequest" } });
     const baseMessage = await parseErrorMessage(err);
