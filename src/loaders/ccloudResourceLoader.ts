@@ -70,6 +70,9 @@ import {
 
 const logger = new Logger("storage.ccloudResourceLoader");
 
+/** Flink SQL statement kinds for which we skip fetching results */
+const SKIP_RESULTS_KINDS: string[] = ["CREATE_FUNCTION"];
+
 /** Options for executing a background Flink statement. */
 export interface ExecuteBackgroundStatementOptions {
   computePool?: CCloudFlinkComputePool;
@@ -763,6 +766,13 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       throw new Error(
         `Statement did not complete successfully, phase ${statement.phase}. Error detail: ${statement.status.detail}`,
       );
+    }
+
+    if (statement.sqlKind && SKIP_RESULTS_KINDS.includes(statement.sqlKind)) {
+      logger.debug(
+        `Skipping fetching results for statement ${statement.id} of kind ${statement.sqlKind}`,
+      );
+      return [];
     }
 
     // Consume all results.
