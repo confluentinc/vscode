@@ -20,6 +20,9 @@ export enum FlinkDatabaseContainerLabel {
 /** Error icon to use for Flink Database resource containers items if fetching resources fails. */
 export const ERROR_ICON = new ThemeIcon("warning", new ThemeColor("problemsErrorIcon.foreground"));
 
+/** Poll interval to use when waiting for a container to finish loading. */
+export const LOADING_POLL_INTERVAL_MS = 100;
+
 /** A container {@link TreeItem} for resources to display in the Flink Database view. */
 export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | FlinkArtifact>
   extends TreeItem
@@ -109,14 +112,13 @@ export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | Fl
 
   /** Wait until the container is no longer in a loading state, or timeout after `timeoutMs`. */
   async ensureDoneLoading(timeoutMs: number = 10000): Promise<void> {
-    const pollIntervalMs = 100;
     const startTime = Date.now();
 
     while (this.isLoading) {
       if (Date.now() - startTime >= timeoutMs) {
         throw new Error("Timeout waiting for container to finish loading");
       }
-      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+      await new Promise((resolve) => setTimeout(resolve, LOADING_POLL_INTERVAL_MS));
     }
   }
 
