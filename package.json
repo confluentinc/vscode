@@ -444,9 +444,9 @@
         "category": "Confluent: Flink Statements View"
       },
       {
-        "command": "confluent.flinkdatabase.createTopic",
+        "command": "confluent.flinkdatabase.createRelation",
         "icon": "$(plus)",
-        "title": "Create Flink Database Topic",
+        "title": "Create Table or View",
         "category": "Confluent: Flink Database View"
       },
       {
@@ -1412,7 +1412,7 @@
           "when": "confluent.flinkStatementsSearchApplied"
         },
         {
-          "command": "confluent.flinkdatabase.createTopic",
+          "command": "confluent.flinkdatabase.createRelation",
           "when": "false"
         },
         {
@@ -1970,7 +1970,7 @@
           "group": "inline@2"
         },
         {
-          "command": "confluent.flinkdatabase.createTopic",
+          "command": "confluent.flinkdatabase.createRelation",
           "when": "view == confluent-flink-database && viewItem == flink-database-relations-container",
           "group": "inline@1"
         },
