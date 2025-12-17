@@ -102,13 +102,13 @@ describe("viewProviders/flinkDatabase.ts", () => {
       it("should return container items when a database is set", () => {
         viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
         const testContainers = [
-          viewProvider["relationsContainer"],
-          viewProvider["artifactsContainer"],
-          viewProvider["udfsContainer"],
-          viewProvider["aiConnectionsContainer"],
-          viewProvider["aiToolsContainer"],
-          viewProvider["aiModelsContainer"],
-          viewProvider["aiAgentsContainer"],
+          viewProvider.relationsContainer,
+          viewProvider.artifactsContainer,
+          viewProvider.udfsContainer,
+          viewProvider.aiConnectionsContainer,
+          viewProvider.aiToolsContainer,
+          viewProvider.aiModelsContainer,
+          viewProvider.aiAgentsContainer,
         ];
         filterChildrenStub.returns(testContainers);
 
@@ -257,7 +257,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
       it("should return the FlinkRelation parent for a FlinkRelationColumn", () => {
         const testRelation = TEST_FLINK_RELATION;
         const testColumn = TEST_VARCHAR_COLUMN;
-        viewProvider["relationsContainer"].children = [testRelation];
+        viewProvider.relationsContainer.children = [testRelation];
 
         const parent = viewProvider.getParent(testColumn);
 
@@ -266,7 +266,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should return undefined when a FlinkRelationColumn parent is not found", () => {
         const testColumn = TEST_VARCHAR_COLUMN;
-        viewProvider["relationsContainer"].children = [];
+        viewProvider.relationsContainer.children = [];
 
         const parent = viewProvider.getParent(testColumn);
 
@@ -278,7 +278,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         const parent = viewProvider.getParent(testRelation);
 
-        assert.strictEqual(parent, viewProvider["relationsContainer"]);
+        assert.strictEqual(parent, viewProvider.relationsContainer);
       });
 
       it("should return the artifacts container for a FlinkArtifact", () => {
@@ -286,7 +286,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         const parent = viewProvider.getParent(testArtifact);
 
-        assert.strictEqual(parent, viewProvider["artifactsContainer"]);
+        assert.strictEqual(parent, viewProvider.artifactsContainer);
       });
 
       it("should return the UDFs container for a FlinkUdf", () => {
@@ -294,7 +294,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         const parent = viewProvider.getParent(testUdf);
 
-        assert.strictEqual(parent, viewProvider["udfsContainer"]);
+        assert.strictEqual(parent, viewProvider.udfsContainer);
       });
 
       it("should return the AI connections container for a FlinkAIConnection", () => {
@@ -302,7 +302,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         const parent = viewProvider.getParent(testConnection);
 
-        assert.strictEqual(parent, viewProvider["aiConnectionsContainer"]);
+        assert.strictEqual(parent, viewProvider.aiConnectionsContainer);
       });
 
       it("should return the AI tools container for a FlinkAITool", () => {
@@ -310,7 +310,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         const parent = viewProvider.getParent(testTool);
 
-        assert.strictEqual(parent, viewProvider["aiToolsContainer"]);
+        assert.strictEqual(parent, viewProvider.aiToolsContainer);
       });
 
       it("should return the AI models container for a FlinkAIModel", () => {
@@ -318,7 +318,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         const parent = viewProvider.getParent(testModel);
 
-        assert.strictEqual(parent, viewProvider["aiModelsContainer"]);
+        assert.strictEqual(parent, viewProvider.aiModelsContainer);
       });
 
       it("should return the AI agents container for a FlinkAIAgent", () => {
@@ -326,7 +326,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         const parent = viewProvider.getParent(testAgent);
 
-        assert.strictEqual(parent, viewProvider["aiAgentsContainer"]);
+        assert.strictEqual(parent, viewProvider.aiAgentsContainer);
       });
     });
 
@@ -348,7 +348,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
       });
 
       it("should reveal a FlinkDatabaseResourceContainer directly", async () => {
-        const testContainer = viewProvider["artifactsContainer"];
+        const testContainer = viewProvider.artifactsContainer;
 
         await viewProvider.revealResource(testContainer);
 
@@ -358,7 +358,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkArtifact by finding it in the artifacts container", async () => {
         const testArtifact = createFlinkArtifact({ id: "art1", name: "TestArtifact" });
-        viewProvider["artifactsContainer"].children = [testArtifact];
+        viewProvider.artifactsContainer.children = [testArtifact];
 
         await viewProvider.revealResource(testArtifact);
 
@@ -368,7 +368,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkUdf by finding it in the UDFs container", async () => {
         const testUdf = createFlinkUDF("TestUDF");
-        viewProvider["udfsContainer"].children = [testUdf];
+        viewProvider.udfsContainer.children = [testUdf];
 
         await viewProvider.revealResource(testUdf);
 
@@ -378,7 +378,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkRelation by finding it in the relations container", async () => {
         const testRelation = TEST_FLINK_RELATION;
-        viewProvider["relationsContainer"].children = [testRelation];
+        viewProvider.relationsContainer.children = [testRelation];
 
         await viewProvider.revealResource(testRelation);
 
@@ -389,7 +389,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
       it("should reveal a FlinkRelationColumn by finding its parent relation", async () => {
         const testRelation = TEST_FLINK_RELATION;
         const testColumn = TEST_VARCHAR_COLUMN;
-        viewProvider["relationsContainer"].children = [testRelation];
+        viewProvider.relationsContainer.children = [testRelation];
 
         await viewProvider.revealResource(testColumn);
 
@@ -400,7 +400,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkAIConnection by finding it in the AI connections container", async () => {
         const testConnection = createFlinkAIConnection("TestConnection");
-        viewProvider["aiConnectionsContainer"].children = [testConnection];
+        viewProvider.aiConnectionsContainer.children = [testConnection];
 
         await viewProvider.revealResource(testConnection);
 
@@ -410,7 +410,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkAITool by finding it in the AI tools container", async () => {
         const testTool = createFlinkAITool("TestTool");
-        viewProvider["aiToolsContainer"].children = [testTool];
+        viewProvider.aiToolsContainer.children = [testTool];
 
         await viewProvider.revealResource(testTool);
 
@@ -420,7 +420,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkAIModel by finding it in the AI models container", async () => {
         const testModel = createFlinkAIModel("TestModel");
-        viewProvider["aiModelsContainer"].children = [testModel];
+        viewProvider.aiModelsContainer.children = [testModel];
 
         await viewProvider.revealResource(testModel);
 
@@ -430,7 +430,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkAIAgent by finding it in the AI agents container", async () => {
         const testAgent = createFlinkAIAgent("TestAgent");
-        viewProvider["aiAgentsContainer"].children = [testAgent];
+        viewProvider.aiAgentsContainer.children = [testAgent];
 
         await viewProvider.revealResource(testAgent);
 
@@ -443,7 +443,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
           id: "nope-this-belongs-somewhere-else",
           name: "TestArtifact",
         });
-        viewProvider["artifactsContainer"].children = [];
+        viewProvider.artifactsContainer.children = [];
 
         await viewProvider.revealResource(testArtifact);
 
@@ -452,7 +452,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should use custom options when provided", async () => {
         const testArtifact = createFlinkArtifact({ id: "art1", name: "TestArtifact" });
-        viewProvider["artifactsContainer"].children = [testArtifact];
+        viewProvider.artifactsContainer.children = [testArtifact];
 
         const customOptions = {
           select: false,
@@ -467,7 +467,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should handle treeView.reveal errors gracefully", async () => {
         const testArtifact = createFlinkArtifact({ id: "art1", name: "TestArtifact" });
-        viewProvider["artifactsContainer"].children = [testArtifact];
+        viewProvider.artifactsContainer.children = [testArtifact];
         const error = new Error("TreeView reveal failed");
         treeViewRevealStub.rejects(error);
 
@@ -688,7 +688,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
           sinon.assert.calledOnceWithExactly(
             refreshResourceContainerStub,
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-            viewProvider["artifactsContainer"],
+            viewProvider.artifactsContainer,
             sinon.match.func, // loader methods tested separately
             forceDeepRefresh,
           );
@@ -705,7 +705,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
           sinon.assert.calledOnceWithExactly(
             refreshResourceContainerStub,
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-            viewProvider["relationsContainer"],
+            viewProvider.relationsContainer,
             sinon.match.func,
             forceDeepRefresh,
           );
@@ -722,7 +722,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
           sinon.assert.calledOnceWithExactly(
             refreshResourceContainerStub,
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-            viewProvider["udfsContainer"],
+            viewProvider.udfsContainer,
             sinon.match.func,
             forceDeepRefresh,
           );
@@ -739,7 +739,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
           sinon.assert.calledOnceWithExactly(
             refreshResourceContainerStub,
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-            viewProvider["aiConnectionsContainer"],
+            viewProvider.aiConnectionsContainer,
             sinon.match.func,
             forceDeepRefresh,
           );
@@ -756,7 +756,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
           sinon.assert.calledOnceWithExactly(
             refreshResourceContainerStub,
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-            viewProvider["aiToolsContainer"],
+            viewProvider.aiToolsContainer,
             sinon.match.func,
             forceDeepRefresh,
           );
@@ -773,7 +773,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
           sinon.assert.calledOnceWithExactly(
             refreshResourceContainerStub,
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-            viewProvider["aiModelsContainer"],
+            viewProvider.aiModelsContainer,
             sinon.match.func,
             forceDeepRefresh,
           );
@@ -790,7 +790,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
           sinon.assert.calledOnceWithExactly(
             refreshResourceContainerStub,
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-            viewProvider["aiAgentsContainer"],
+            viewProvider.aiAgentsContainer,
             sinon.match.func,
             forceDeepRefresh,
           );
