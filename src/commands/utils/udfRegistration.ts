@@ -298,16 +298,39 @@ export function reportRegistrationResults(
   { successes, failures }: RegistrationResults,
 ) {
   if (successes.length > 0) {
-    const allSuccessful = successes.length === requestedCount;
     let successMessage;
+    let notificationButtons: Record<string, () => void> = {};
+
+    const allSuccessful = successes.length === requestedCount;
     if (allSuccessful) {
+      const flinkDbViewProvider = FlinkDatabaseViewProvider.getInstance();
       if (requestedCount === 1) {
         successMessage = `UDF registered successfully!`;
-      } else successMessage = `All ${successes.length} UDF(s) registered successfully!`;
+        notificationButtons["View UDF"] = async () => {
+          // reveal a single UDF
+          const flinkUdf = flinkDbViewProvider["udfsContainer"].children.find(
+            (udf) => udf.name === successes[0],
+          );
+          if (flinkUdf) {
+            await flinkDbViewProvider.revealResource(flinkUdf);
+          }
+        };
+      } else {
+        successMessage = `All ${successes.length} UDF(s) registered successfully!`;
+        notificationButtons["View UDFs"] = async () => {
+          // reveal the UDFs container
+          await flinkDbViewProvider.revealResource(flinkDbViewProvider["udfsContainer"], {
+            expand: true,
+          });
+        };
+      }
     } else {
       successMessage = `${successes.length} of ${requestedCount} UDF(s) registered successfully.`;
     }
-    void showInfoNotificationWithButtons(`${successMessage} Functions: ${successes.join(", ")}`);
+    void showInfoNotificationWithButtons(
+      `${successMessage} Functions: ${successes.join(", ")}`,
+      notificationButtons,
+    );
   }
 
   if (failures.length > 0) {
