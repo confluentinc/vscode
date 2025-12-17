@@ -1,6 +1,7 @@
 import { ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { Logger } from "../logging";
 import type { FlinkArtifact } from "./flinkArtifact";
 import type { FlinkDatabaseResource } from "./flinkDatabaseResource";
 import type { ConnectionId, ISearchable } from "./resource";
@@ -37,6 +38,8 @@ export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | Fl
   private readonly _defaultContextValue: string | undefined;
   private readonly _defaultIcon: ThemeIcon | undefined;
 
+  private logger: Logger;
+
   constructor(label: string, children: T[], contextValue?: string, icon?: ThemeIcon) {
     const collapsibleState = TreeItemCollapsibleState.Collapsed;
     super(label, collapsibleState);
@@ -50,6 +53,8 @@ export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | Fl
     }
     this._defaultIcon = icon;
     this.iconPath = this._defaultIcon;
+
+    this.logger = new Logger(`models.FlinkDatabaseResourceContainer(${this.label})`);
   }
 
   /**
@@ -100,5 +105,31 @@ export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | Fl
     // label is required to be a string in the constructor, so we don't support the TreeItem
     // label being undefined or a TreeItemLabel object here
     return this.label as string;
+  }
+
+  /** Wait until the container is no longer in a loading state, or timeout after `timeoutMs`. */
+  async ensureDoneLoading(timeoutMs: number = 10000): Promise<void> {
+    const pollIntervalMs = 100;
+    const startTime = Date.now();
+
+    while (this.isLoading) {
+      if (Date.now() - startTime >= timeoutMs) {
+        throw new Error("Timeout waiting for container to finish loading");
+      }
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+    }
+  }
+
+  /** Get the container's {@link children resources}, waiting for loading to complete if necessary. */
+  async gatherResources(timeoutMs: number = 10000): Promise<T[]> {
+    let resources: T[] = [];
+    try {
+      await this.ensureDoneLoading(timeoutMs);
+      resources = this.children;
+    } catch (error) {
+      // should only be a timeout error:
+      this.logger.error(`Error getting resources: ${error}`);
+    }
+    return resources;
   }
 }
