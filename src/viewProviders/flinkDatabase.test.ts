@@ -242,6 +242,242 @@ describe("viewProviders/flinkDatabase.ts", () => {
       });
     });
 
+    describe("getParent()", () => {
+      it("should return undefined for FlinkDatabaseResourceContainers (root-level items)", () => {
+        const testContainer = new FlinkDatabaseResourceContainer(
+          FlinkDatabaseContainerLabel.RELATIONS,
+          [],
+        );
+
+        const parent = viewProvider.getParent(testContainer);
+
+        assert.strictEqual(parent, undefined);
+      });
+
+      it("should return the FlinkRelation parent for a FlinkRelationColumn", () => {
+        const testRelation = TEST_FLINK_RELATION;
+        const testColumn = TEST_VARCHAR_COLUMN;
+        viewProvider["relationsContainer"].children = [testRelation];
+
+        const parent = viewProvider.getParent(testColumn);
+
+        assert.strictEqual(parent, testRelation);
+      });
+
+      it("should return undefined when a FlinkRelationColumn parent is not found", () => {
+        const testColumn = TEST_VARCHAR_COLUMN;
+        viewProvider["relationsContainer"].children = [];
+
+        const parent = viewProvider.getParent(testColumn);
+
+        assert.strictEqual(parent, undefined);
+      });
+
+      it("should return the relations container for a FlinkRelation", () => {
+        const testRelation = TEST_FLINK_RELATION;
+
+        const parent = viewProvider.getParent(testRelation);
+
+        assert.strictEqual(parent, viewProvider["relationsContainer"]);
+      });
+
+      it("should return the artifacts container for a FlinkArtifact", () => {
+        const testArtifact = createFlinkArtifact({ id: "art1", name: "TestArtifact" });
+
+        const parent = viewProvider.getParent(testArtifact);
+
+        assert.strictEqual(parent, viewProvider["artifactsContainer"]);
+      });
+
+      it("should return the UDFs container for a FlinkUdf", () => {
+        const testUdf = createFlinkUDF("TestUDF");
+
+        const parent = viewProvider.getParent(testUdf);
+
+        assert.strictEqual(parent, viewProvider["udfsContainer"]);
+      });
+
+      it("should return the AI connections container for a FlinkAIConnection", () => {
+        const testConnection = createFlinkAIConnection("TestConnection");
+
+        const parent = viewProvider.getParent(testConnection);
+
+        assert.strictEqual(parent, viewProvider["aiConnectionsContainer"]);
+      });
+
+      it("should return the AI tools container for a FlinkAITool", () => {
+        const testTool = createFlinkAITool("TestTool");
+
+        const parent = viewProvider.getParent(testTool);
+
+        assert.strictEqual(parent, viewProvider["aiToolsContainer"]);
+      });
+
+      it("should return the AI models container for a FlinkAIModel", () => {
+        const testModel = createFlinkAIModel("TestModel");
+
+        const parent = viewProvider.getParent(testModel);
+
+        assert.strictEqual(parent, viewProvider["aiModelsContainer"]);
+      });
+
+      it("should return the AI agents container for a FlinkAIAgent", () => {
+        const testAgent = createFlinkAIAgent("TestAgent");
+
+        const parent = viewProvider.getParent(testAgent);
+
+        assert.strictEqual(parent, viewProvider["aiAgentsContainer"]);
+      });
+    });
+
+    describe("revealResource()", () => {
+      let treeViewRevealStub: sinon.SinonStub;
+      const defaultOptions = { select: true, focus: true, expand: false };
+
+      beforeEach(() => {
+        treeViewRevealStub = sandbox.stub(viewProvider["treeView"], "reveal").resolves();
+      });
+
+      it("should do nothing when no database is selected", async () => {
+        viewProvider["resource"] = null;
+        const testArtifact = createFlinkArtifact({ id: "art1", name: "TestArtifact" });
+
+        await viewProvider.revealResource(testArtifact);
+
+        sinon.assert.notCalled(treeViewRevealStub);
+      });
+
+      it("should reveal a FlinkDatabaseResourceContainer directly", async () => {
+        const testContainer = viewProvider["artifactsContainer"];
+
+        await viewProvider.revealResource(testContainer);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, testContainer, defaultOptions);
+      });
+
+      it("should reveal a FlinkArtifact by finding it in the artifacts container", async () => {
+        const testArtifact = createFlinkArtifact({ id: "art1", name: "TestArtifact" });
+        viewProvider["artifactsContainer"].children = [testArtifact];
+
+        await viewProvider.revealResource(testArtifact);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, testArtifact, defaultOptions);
+      });
+
+      it("should reveal a FlinkUdf by finding it in the UDFs container", async () => {
+        const testUdf = createFlinkUDF("TestUDF");
+        viewProvider["udfsContainer"].children = [testUdf];
+
+        await viewProvider.revealResource(testUdf);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, testUdf, defaultOptions);
+      });
+
+      it("should reveal a FlinkRelation by finding it in the relations container", async () => {
+        const testRelation = TEST_FLINK_RELATION;
+        viewProvider["relationsContainer"].children = [testRelation];
+
+        await viewProvider.revealResource(testRelation);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, testRelation, defaultOptions);
+      });
+
+      it("should reveal a FlinkRelationColumn by finding its parent relation", async () => {
+        const testRelation = TEST_FLINK_RELATION;
+        const testColumn = TEST_VARCHAR_COLUMN;
+        viewProvider["relationsContainer"].children = [testRelation];
+
+        await viewProvider.revealResource(testColumn);
+
+        // should reveal the parent relation, not the column directly
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, testRelation, defaultOptions);
+      });
+
+      it("should reveal a FlinkAIConnection by finding it in the AI connections container", async () => {
+        const testConnection = createFlinkAIConnection("TestConnection");
+        viewProvider["aiConnectionsContainer"].children = [testConnection];
+
+        await viewProvider.revealResource(testConnection);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, testConnection, defaultOptions);
+      });
+
+      it("should reveal a FlinkAITool by finding it in the AI tools container", async () => {
+        const testTool = createFlinkAITool("TestTool");
+        viewProvider["aiToolsContainer"].children = [testTool];
+
+        await viewProvider.revealResource(testTool);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, testTool, defaultOptions);
+      });
+
+      it("should reveal a FlinkAIModel by finding it in the AI models container", async () => {
+        const testModel = createFlinkAIModel("TestModel");
+        viewProvider["aiModelsContainer"].children = [testModel];
+
+        await viewProvider.revealResource(testModel);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, testModel, defaultOptions);
+      });
+
+      it("should reveal a FlinkAIAgent by finding it in the AI agents container", async () => {
+        const testAgent = createFlinkAIAgent("TestAgent");
+        viewProvider["aiAgentsContainer"].children = [testAgent];
+
+        await viewProvider.revealResource(testAgent);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, testAgent, defaultOptions);
+      });
+
+      it("should not call reveal when resource is not found in containers", async () => {
+        const testArtifact = createFlinkArtifact({
+          id: "nope-this-belongs-somewhere-else",
+          name: "TestArtifact",
+        });
+        viewProvider["artifactsContainer"].children = [];
+
+        await viewProvider.revealResource(testArtifact);
+
+        sinon.assert.notCalled(treeViewRevealStub);
+      });
+
+      it("should use custom options when provided", async () => {
+        const testArtifact = createFlinkArtifact({ id: "art1", name: "TestArtifact" });
+        viewProvider["artifactsContainer"].children = [testArtifact];
+
+        const customOptions = {
+          select: false,
+          focus: false,
+          expand: 2,
+        };
+        await viewProvider.revealResource(testArtifact, customOptions);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, testArtifact, customOptions);
+      });
+
+      it("should handle treeView.reveal errors gracefully", async () => {
+        const testArtifact = createFlinkArtifact({ id: "art1", name: "TestArtifact" });
+        viewProvider["artifactsContainer"].children = [testArtifact];
+        const error = new Error("TreeView reveal failed");
+        treeViewRevealStub.rejects(error);
+
+        // should not throw
+        await viewProvider.revealResource(testArtifact);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+      });
+    });
+
     describe("refresh()", () => {
       let withProgressStub: sinon.SinonStub;
 
