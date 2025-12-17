@@ -418,7 +418,7 @@ describe("commands/utils/uploadArtifact", () => {
       await uploadArtifactModule.focusArtifactsInView();
 
       sinon.assert.calledOnce(executeCommandStub);
-      sinon.assert.calledWith(executeCommandStub, "confluent.flinkdatabase.setArtifactsViewMode");
+      sinon.assert.calledWith(executeCommandStub, "confluent-flink-database.focus");
     });
   });
 });
