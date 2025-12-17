@@ -147,7 +147,9 @@ export const test = testBase.extend<VSCodeFixtures>({
         ),
       ]);
     } catch {
-      console.warn("Timed out waiting for Electron to close");
+      // we frequently see timeouts with Electron not closing properly, so just log and move on
+      // (even though we see it shut down as expected locally)
+      console.debug("Timed out waiting for Electron to close");
     }
   },
 
