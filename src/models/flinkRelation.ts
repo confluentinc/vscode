@@ -253,7 +253,15 @@ export class FlinkRelation implements IResourceBase, IdItem, ISearchable {
   /** Columns of the relation */
   columns: FlinkRelationColumn[];
 
-  iconName = IconNames.TOPIC; // topic = table
+  /** Determine the icon to use based on the kind of relation. */
+  get iconName(): IconNames {
+    // We really need table and view specific icons here, but for now we map to function and topic respectively.
+    if (this.type === FlinkRelationType.View) {
+      return IconNames.FLINK_FUNCTION; // need something better here, but at least this is visually distinct
+    } else {
+      return IconNames.TOPIC; // topic = table
+    }
+  }
 
   constructor(
     props: Pick<

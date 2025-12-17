@@ -5,7 +5,7 @@ import {
   TEST_VARCHAR_COLUMN,
 } from "../../tests/unit/testResources/flinkRelation";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
+import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import {
   FlinkRelation,
   FlinkRelationColumn,
@@ -13,8 +13,8 @@ import {
   toRelationType,
 } from "./flinkRelation";
 
-describe("flinkSystemCatalogs.ts", () => {
-  describe("toRelationType", () => {
+describe("flinkRelation.ts", () => {
+  describe("FlinkRelationType.toRelationType", () => {
     it("should convert valid strings to FlinkRelationType enum", () => {
       assert.strictEqual(toRelationType("BASE TABLE"), FlinkRelationType.BaseTable);
       assert.strictEqual(toRelationType("VIEW"), FlinkRelationType.View);
@@ -296,6 +296,29 @@ describe("flinkSystemCatalogs.ts", () => {
         // Skips the hidden column.
         assert.strictEqual(visibleCols.length, TEST_FLINK_RELATION.columns.length);
         assert.ok(visibleCols.every((col) => !col.isHidden));
+      });
+
+      it("iconName varies by relation type", () => {
+        const defaultIcon = IconNames.TOPIC;
+        // Expected to change when we have a dedicated view icon.
+        const viewIcon = IconNames.FLINK_FUNCTION;
+
+        const scenarios: Array<[FlinkRelationType, IconNames]> = [
+          [FlinkRelationType.BaseTable, defaultIcon],
+          [FlinkRelationType.ExternalTable, defaultIcon],
+          [FlinkRelationType.SystemTable, defaultIcon],
+
+          [FlinkRelationType.View, viewIcon],
+        ];
+
+        for (const [type, expectedIcon] of scenarios) {
+          const relation = new FlinkRelation({
+            ...TEST_FLINK_RELATION,
+            name: `relationType${type}`,
+            type,
+          });
+          assert.strictEqual(relation.iconName, expectedIcon);
+        }
       });
     });
 
