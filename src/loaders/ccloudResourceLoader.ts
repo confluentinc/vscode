@@ -70,6 +70,9 @@ import {
 
 const logger = new Logger("storage.ccloudResourceLoader");
 
+/** Flink SQL statement kinds for which we skip fetching results */
+export const SKIP_RESULTS_SQL_KINDS: string[] = ["CREATE_FUNCTION"];
+
 /** Options for executing a background Flink statement. */
 export interface ExecuteBackgroundStatementOptions {
   computePool?: CCloudFlinkComputePool;
@@ -765,8 +768,14 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       );
     }
 
-    // Consume all results.
-    const resultRows: Array<RT> = await parseAllFlinkStatementResults<RT>(statement);
+    let resultRows: Array<RT> = [];
+    if (statement.sqlKind && SKIP_RESULTS_SQL_KINDS.includes(statement.sqlKind)) {
+      logger.debug(
+        `Skipping fetching results for statement ${statement.id} of kind ${statement.sqlKind}`,
+      );
+    } else {
+      resultRows = await parseAllFlinkStatementResults<RT>(statement);
+    }
 
     // Delete the now completed statement. Even though is a hidden statement and won't be displayed
     // in the UI, we still want to delete it to avoid accumulating so many completed statements
