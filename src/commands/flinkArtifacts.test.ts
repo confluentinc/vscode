@@ -11,7 +11,11 @@ import type {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrl200Response";
+import type { FlinkArtifact } from "../models/flinkArtifact";
+import { FlinkDatabaseResourceContainer } from "../models/flinkDatabaseResourceContainer";
 import { type EnvironmentId } from "../models/resource";
+import * as notifications from "../notifications";
+import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import {
   registerFlinkArtifactCommands,
   updateArtifactCommand,
@@ -75,10 +79,25 @@ describe("flinkArtifacts", () => {
     };
 
     let showErrorStub: sinon.SinonStub;
+    let showInfoStub: sinon.SinonStub;
+    let stubbedDatabaseViewProvider: sinon.SinonStubbedInstance<FlinkDatabaseViewProvider>;
+    let stubbedArtifactsContainer: sinon.SinonStubbedInstance<
+      FlinkDatabaseResourceContainer<FlinkArtifact>
+    >;
 
     beforeEach(() => {
       sandbox.stub(vscode.window, "showOpenDialog").resolves([mockParams.selectedFile]);
       showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+      showInfoStub = sandbox.stub(notifications, "showInfoNotificationWithButtons");
+
+      stubbedDatabaseViewProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+      sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(stubbedDatabaseViewProvider);
+      stubbedArtifactsContainer = sandbox.createStubInstance(
+        FlinkDatabaseResourceContainer<FlinkArtifact>,
+      );
+      // no preloaded artifacts in the view's Artifacts container by default
+      stubbedArtifactsContainer.gatherResources.resolves([]);
+      stubbedDatabaseViewProvider.artifactsContainer = stubbedArtifactsContainer;
     });
 
     it("should fail if there is no params", async () => {
@@ -93,8 +112,6 @@ describe("flinkArtifacts", () => {
       sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
       sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
       sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").resolves(mockCreateResponse);
-
-      const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
 
       await uploadArtifactCommand();
 
@@ -184,6 +201,43 @@ describe("flinkArtifacts", () => {
 
       sinon.assert.calledOnce(createArtifactStub);
       sinon.assert.calledWithExactly(createArtifactStub, mockParams, mockUploadId);
+    });
+
+    it("should include the 'View Artifact' notification button when the uploaded artifact is in the Flink Database view", async () => {
+      sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(mockParams);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
+      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
+      sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").resolves(mockCreateResponse);
+      const testArtifact = createFlinkArtifact({
+        id: mockCreateResponse.id,
+        name: "test-artifact",
+      });
+      stubbedArtifactsContainer.gatherResources.resolves([testArtifact]);
+
+      await uploadArtifactCommand();
+
+      sinon.assert.calledOnce(showInfoStub);
+      const message = showInfoStub.firstCall.args[0] as string;
+      const buttons = showInfoStub.firstCall.args[1] as Record<string, () => void>;
+      assert.ok(message.includes("uploaded successfully"), "Should show success message");
+      assert.ok(buttons["View Artifact"]);
+    });
+
+    it("should not include the 'View Artifact' notification button if the uploaded artifact is not in the Flink Database view", async () => {
+      sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(mockParams);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
+      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
+      sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").resolves(mockCreateResponse);
+      // simulate timeout loading artifacts, or some other database (env/provider/region) is focused
+      stubbedArtifactsContainer.gatherResources.resolves([]);
+
+      await uploadArtifactCommand();
+
+      sinon.assert.calledOnce(showInfoStub);
+      const message = showInfoStub.firstCall.args[0] as string;
+      const buttons = showInfoStub.firstCall.args[1] as Record<string, () => void>;
+      assert.ok(message.includes("uploaded successfully"), "Should show success message");
+      assert.strictEqual(buttons["View Artifact"], undefined);
     });
   });
 

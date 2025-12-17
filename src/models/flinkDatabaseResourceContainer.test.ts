@@ -1,12 +1,27 @@
 import * as assert from "assert";
+import * as sinon from "sinon";
 import { ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { createFakeFlinkDatabaseResource } from "../../tests/unit/testResources/flinkDatabaseResource";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import type { FlinkDatabaseResource } from "./flinkDatabaseResource";
-import { ERROR_ICON, FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
+import {
+  ERROR_ICON,
+  FlinkDatabaseResourceContainer,
+  LOADING_POLL_INTERVAL_MS,
+} from "./flinkDatabaseResourceContainer";
 
 describe("models/flinkDatabaseResourceContainer", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
   describe("FlinkDatabaseResourceContainer", () => {
     describe("constructor", () => {
       const testResources: FlinkDatabaseResource[] = [
@@ -291,6 +306,80 @@ describe("models/flinkDatabaseResourceContainer", () => {
         container.children = [createFakeFlinkDatabaseResource()];
         assert.strictEqual(container.hasError, false);
         assert.strictEqual(container.contextValue, contextValue);
+      });
+    });
+
+    describe("ensureDoneLoading", () => {
+      let clock: sinon.SinonFakeTimers;
+      let container: FlinkDatabaseResourceContainer<FlinkDatabaseResource>;
+
+      beforeEach(() => {
+        clock = sandbox.useFakeTimers();
+        container = new FlinkDatabaseResourceContainer<FlinkDatabaseResource>("Test", []);
+      });
+
+      it("should resolve immediately when not loading", async () => {
+        container.isLoading = false;
+
+        await container.ensureDoneLoading();
+
+        assert.strictEqual(container.isLoading, false);
+      });
+
+      it("should wait for loading to complete", async () => {
+        container.isLoading = true;
+
+        const waitPromise = container.ensureDoneLoading();
+
+        // simulate loading completing after 200ms
+        await clock.tickAsync(200);
+        container.isLoading = false;
+        // one more iteration to let the polling check run
+        await clock.tickAsync(LOADING_POLL_INTERVAL_MS + 1);
+
+        await waitPromise;
+        assert.strictEqual(container.isLoading, false);
+      });
+
+      it("should timeout if loading never completes", async () => {
+        container.isLoading = true;
+
+        const timeoutMs = 500;
+        const waitPromise = container.ensureDoneLoading(timeoutMs);
+        // fast forward past the timeout
+        await clock.tickAsync(timeoutMs + 10);
+
+        await assert.rejects(waitPromise, /Timeout waiting for container to finish loading/);
+      });
+    });
+
+    describe("gatherResources", () => {
+      let ensureDoneLoadingStub: sinon.SinonStub;
+      let container: FlinkDatabaseResourceContainer<FlinkDatabaseResource>;
+
+      beforeEach(() => {
+        container = new FlinkDatabaseResourceContainer<FlinkDatabaseResource>("Test", []);
+        // no need to handle FakeTimers here since we've tested ensureDoneLoading above
+        ensureDoneLoadingStub = sandbox.stub(container, "ensureDoneLoading");
+      });
+
+      it("should return children after calling ensureDoneLoading", async () => {
+        const resources = [createFakeFlinkDatabaseResource()];
+        container.children = resources;
+
+        const result = await container.gatherResources();
+
+        assert.deepStrictEqual(result, resources);
+        sinon.assert.calledOnce(ensureDoneLoadingStub);
+      });
+
+      it("should return an empty array if ensureDoneLoading times out", async () => {
+        ensureDoneLoadingStub.rejects(new Error("Timeout waiting for container to finish loading"));
+
+        const result = await container.gatherResources();
+
+        assert.deepStrictEqual(result, []);
+        sinon.assert.calledOnce(ensureDoneLoadingStub);
       });
     });
   });
