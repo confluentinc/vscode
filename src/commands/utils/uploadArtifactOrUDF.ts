@@ -19,6 +19,7 @@ import { type QuickPickItemWithValue } from "../../quickpicks/types";
 import { getSidecar } from "../../sidecar";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { readFileBuffer } from "../../utils/fsWrappers";
+import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
 export { uploadFileToAzure };
 
@@ -459,7 +460,7 @@ export function makeMenuItems(
   ];
 }
 
-export async function focusArtifactsInView(): Promise<void> {
-  // Focus on the artifacts view specifically
-  await vscode.commands.executeCommand("confluent.flinkdatabase.setArtifactsViewMode");
+export async function focusArtifactsInView(artifact: FlinkArtifact): Promise<void> {
+  await vscode.commands.executeCommand("confluent-flink-database.focus");
+  await FlinkDatabaseViewProvider.getInstance().revealResource(artifact);
 }

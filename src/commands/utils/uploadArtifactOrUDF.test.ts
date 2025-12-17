@@ -11,6 +11,7 @@ import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import {
   createFlinkArtifact,
   TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_FLINK_ARTIFACT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../../tests/unit/testResources";
 import type { PresignedUploadUrlArtifactV1PresignedUrl200Response } from "../../clients/flinkArtifacts";
@@ -27,6 +28,7 @@ import type { EnvironmentId } from "../../models/resource";
 import * as notifications from "../../notifications";
 import type { SidecarHandle } from "../../sidecar";
 import * as fsWrappers from "../../utils/fsWrappers";
+import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import * as uploadArtifactModule from "./uploadArtifactOrUDF";
 import {
   buildCreateArtifactRequest,
@@ -411,14 +413,30 @@ describe("commands/utils/uploadArtifact", () => {
       });
     });
   });
-  describe("focusArtifactsInView", () => {
-    it("should execute command to set artifacts view mode", async () => {
-      const executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
 
-      await uploadArtifactModule.focusArtifactsInView();
+  describe("focusArtifactsInView", () => {
+    let executeCommandStub: sinon.SinonStub;
+    let stubbedViewProvider: sinon.SinonStubbedInstance<FlinkDatabaseViewProvider>;
+
+    beforeEach(() => {
+      executeCommandStub = sandbox.stub(vscode.commands, "executeCommand");
+
+      stubbedViewProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+      sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(stubbedViewProvider);
+    });
+
+    it("should execute command to focus the Flink Database view", async () => {
+      await uploadArtifactModule.focusArtifactsInView(TEST_CCLOUD_FLINK_ARTIFACT);
 
       sinon.assert.calledOnce(executeCommandStub);
-      sinon.assert.calledWith(executeCommandStub, "confluent.flinkdatabase.setArtifactsViewMode");
+      sinon.assert.calledWith(executeCommandStub, "confluent-flink-database.focus");
+    });
+
+    it("should call revealResource on the FlinkDatabaseViewProvider with the provided artifact", async () => {
+      await uploadArtifactModule.focusArtifactsInView(TEST_CCLOUD_FLINK_ARTIFACT);
+
+      sinon.assert.calledOnce(stubbedViewProvider.revealResource);
+      sinon.assert.calledWith(stubbedViewProvider.revealResource, TEST_CCLOUD_FLINK_ARTIFACT);
     });
   });
 });

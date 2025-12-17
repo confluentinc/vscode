@@ -19,8 +19,7 @@ import {
   FlinkDatabaseContainerLabel,
   FlinkDatabaseResourceContainer,
 } from "../models/flinkDatabaseResourceContainer";
-import type { FlinkRelationColumn } from "../models/flinkRelation";
-import { FlinkRelation } from "../models/flinkRelation";
+import { FlinkRelation, FlinkRelationColumn } from "../models/flinkRelation";
 import { FlinkUdf, FlinkUdfTreeItem } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CustomMarkdownString } from "../models/main";
@@ -101,13 +100,13 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
   searchChangedEmitter = flinkDatabaseViewSearchSet;
   searchContextValue = ContextValues.flinkDatabaseSearchApplied;
 
-  private readonly relationsContainer = RELATIONS_CONTAINER;
-  private readonly artifactsContainer = ARTIFACTS_CONTAINER;
-  private readonly udfsContainer = UDFS_CONTAINER;
-  private readonly aiConnectionsContainer = AI_CONNECTIONS_CONTAINER;
-  private readonly aiToolsContainer = AI_TOOLS_CONTAINER;
-  private readonly aiModelsContainer = AI_MODELS_CONTAINER;
-  private readonly aiAgentsContainer = AI_AGENTS_CONTAINER;
+  private relationsContainer = RELATIONS_CONTAINER;
+  private artifactsContainer = ARTIFACTS_CONTAINER;
+  private udfsContainer = UDFS_CONTAINER;
+  private aiConnectionsContainer = AI_CONNECTIONS_CONTAINER;
+  private aiToolsContainer = AI_TOOLS_CONTAINER;
+  private aiModelsContainer = AI_MODELS_CONTAINER;
+  private aiAgentsContainer = AI_AGENTS_CONTAINER;
 
   get database(): CCloudFlinkDbKafkaCluster | null {
     return this.resource;
@@ -171,6 +170,108 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     this.adjustTreeItemForSearch(element, treeItem);
 
     return treeItem;
+  }
+
+  /** Get the parent of the given element, or `undefined` if it's a root-level item. */
+  getParent(element: DatabaseChildrenType): DatabaseChildrenType | undefined {
+    if (element instanceof FlinkDatabaseResourceContainer) {
+      // root-level item
+      return;
+    }
+    if (element instanceof FlinkRelationColumn) {
+      // look up the FlinkRelation parent
+      return this.relationsContainer.children.find((relation) =>
+        relation.columns.includes(element),
+      );
+    }
+    // the rest of these don't have nested hierarchies, so return their container
+    if (element instanceof FlinkRelation) {
+      return this.relationsContainer;
+    }
+    if (element instanceof FlinkArtifact) {
+      return this.artifactsContainer;
+    }
+    if (element instanceof FlinkUdf) {
+      return this.udfsContainer;
+    }
+    if (element instanceof FlinkAIConnection) {
+      return this.aiConnectionsContainer;
+    }
+    if (element instanceof FlinkAITool) {
+      return this.aiToolsContainer;
+    }
+    if (element instanceof FlinkAIModel) {
+      return this.aiModelsContainer;
+    }
+    if (element instanceof FlinkAIAgent) {
+      return this.aiAgentsContainer;
+    }
+    return;
+  }
+
+  /** Reveal a specific Flink Database resource in the view, if possible. */
+  async revealResource(
+    resource: DatabaseChildrenType,
+    options?: { select?: boolean; focus?: boolean; expand?: number | boolean },
+  ): Promise<void> {
+    if (!this.database) {
+      return;
+    }
+
+    const selectResource = options?.select ?? true;
+    const focusResource = options?.focus ?? true;
+    const expandResource = options?.expand ?? false;
+    const revealOptions = { select: selectResource, focus: focusResource, expand: expandResource };
+
+    // just for logging:
+    const resourceLogLabel =
+      resource instanceof FlinkDatabaseResourceContainer ? resource.label : resource.name;
+
+    // look up the instance and reveal the item instead of the instance that was passed in since
+    // VS Code needs the exact same object reference to find it in the tree
+    let exactInstance: DatabaseChildrenType | undefined;
+    if (resource instanceof FlinkDatabaseResourceContainer) {
+      // reveal the container directly
+      exactInstance = resource;
+    } else if (resource instanceof FlinkRelationColumn) {
+      // look up the FlinkRelation parent
+      exactInstance = this.relationsContainer.children.find((relation) =>
+        relation.columns.includes(resource),
+      );
+    } else if (resource instanceof FlinkRelation) {
+      exactInstance = this.relationsContainer.children.find(
+        (relation) => relation.id === resource.id,
+      );
+    } else if (resource instanceof FlinkArtifact) {
+      exactInstance = this.artifactsContainer.children.find(
+        (artifact) => artifact.id === resource.id,
+      );
+    } else if (resource instanceof FlinkUdf) {
+      exactInstance = this.udfsContainer.children.find((udf) => udf.id === resource.id);
+    } else if (resource instanceof FlinkAIConnection) {
+      exactInstance = this.aiConnectionsContainer.children.find((conn) => conn.id === resource.id);
+    } else if (resource instanceof FlinkAITool) {
+      exactInstance = this.aiToolsContainer.children.find((tool) => tool.id === resource.id);
+    } else if (resource instanceof FlinkAIModel) {
+      exactInstance = this.aiModelsContainer.children.find((model) => model.id === resource.id);
+    } else if (resource instanceof FlinkAIAgent) {
+      exactInstance = this.aiAgentsContainer.children.find((agent) => agent.id === resource.id);
+    }
+    if (!exactInstance) {
+      this.logger.warn(
+        `Could not find resource in Flink Database view to reveal: ${resourceLogLabel} (${resource.id})`,
+      );
+      return;
+    }
+
+    try {
+      await this.treeView.reveal(exactInstance, revealOptions);
+    } catch (error) {
+      logError(
+        error,
+        `Failed to reveal resource in Flink Database view: ${resourceLogLabel} (${resource.id})`,
+      );
+    }
   }
 
   /** Refresh all top-level resource containers. */
