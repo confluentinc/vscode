@@ -225,7 +225,7 @@ describe("commands/flinkDatabaseView.ts", () => {
       sinon.assert.notCalled(refreshAIAgentsStub);
     });
 
-    it("should call refreshRelationsContainer when the Table/View Relations container is provided", async () => {
+    it("should call refreshRelationsContainer when the Tables and Views container is provided", async () => {
       const container = new FlinkDatabaseResourceContainer(
         FlinkDatabaseContainerLabel.RELATIONS,
         [],
