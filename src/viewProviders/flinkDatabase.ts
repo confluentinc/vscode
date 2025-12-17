@@ -100,13 +100,13 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
   searchChangedEmitter = flinkDatabaseViewSearchSet;
   searchContextValue = ContextValues.flinkDatabaseSearchApplied;
 
-  private readonly relationsContainer = RELATIONS_CONTAINER;
-  private readonly artifactsContainer = ARTIFACTS_CONTAINER;
-  private readonly udfsContainer = UDFS_CONTAINER;
-  private readonly aiConnectionsContainer = AI_CONNECTIONS_CONTAINER;
-  private readonly aiToolsContainer = AI_TOOLS_CONTAINER;
-  private readonly aiModelsContainer = AI_MODELS_CONTAINER;
-  private readonly aiAgentsContainer = AI_AGENTS_CONTAINER;
+  private relationsContainer = RELATIONS_CONTAINER;
+  private artifactsContainer = ARTIFACTS_CONTAINER;
+  private udfsContainer = UDFS_CONTAINER;
+  private aiConnectionsContainer = AI_CONNECTIONS_CONTAINER;
+  private aiToolsContainer = AI_TOOLS_CONTAINER;
+  private aiModelsContainer = AI_MODELS_CONTAINER;
+  private aiAgentsContainer = AI_AGENTS_CONTAINER;
 
   get database(): CCloudFlinkDbKafkaCluster | null {
     return this.resource;
