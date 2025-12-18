@@ -16,8 +16,8 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
-- The Flink Database view now displays additional Flink resources including tables & views,
-  connections, and AI tools, models, & agents
+- The Flink Artifacts/UDFs view has been upgraded to a "Flink Database" view, and now displays
+  additional Flink resources including tables & views, connections, and AI tools, models, & agents
 - "Join Confluent Community Slack" link in the Help Center view to connect with the Confluent
   community on Slack.
 - Support for custom TLS configuration for Confluent Cloud Schema Registries in the direct
