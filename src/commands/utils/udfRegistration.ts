@@ -39,19 +39,21 @@ export interface RegistrationResults {
  * and calls the appropriate methods to register each one as a UDF.
  * @param artifactFile The selected JAR file URI
  * @param artifactId The artifact ID where the UDFs originate
+ * @param cloud The cloud provider where the artifact was uploaded
+ * @param region The region where the artifact was uploaded
  */
-export async function detectClassesAndRegisterUDFs(artifactFile: Uri, artifactId?: string) {
+export async function detectClassesAndRegisterUDFs(
+  artifactFile: Uri,
+  artifactId: string,
+  cloud: string,
+  region: string,
+) {
   logUsage(UserEvent.FlinkUDFAction, {
     action: "created",
     status: "started",
     kind: "quick-register",
   });
   try {
-    if (!artifactId) {
-      logger.error("Could not auto-register UDFs, no artifact ID provided in upload response.");
-      throw new Error("Unable to find artifact ID");
-    }
-
     const classNames = await inspectJarClasses(artifactFile);
     if (!classNames || classNames.length === 0) {
       logger.debug("No Java classes found in JAR file.");
@@ -83,7 +85,7 @@ export async function detectClassesAndRegisterUDFs(artifactFile: Uri, artifactId
     }
     logger.trace(`Prepared ${registrations.length} UDF registration(s).`);
 
-    const results = await registerMultipleUdfs(registrations, artifactId);
+    const results = await registerMultipleUdfs(registrations, artifactId, cloud, region);
     if (!results) {
       logUsage(UserEvent.FlinkUDFAction, {
         action: "created",
@@ -178,15 +180,27 @@ export async function promptForFunctionNames(
  * Opens a progress notification during the process and displays progress updates from inner `executeUdfRegistrations`
  * @param artifact The artifact containing the UDF implementations
  * @param registrations Array of UDF registration information
+ * @param cloud The cloud provider where the artifact was uploaded
+ * @param region The region where the artifact was uploaded
  * @returns RegistrationResults containing successes and failures, or undefined if user cancelled database selection
  */
 export async function registerMultipleUdfs(
   registrations: UdfRegistrationData[],
   artifactId: string,
+  cloud: string,
+  region: string,
 ): Promise<RegistrationResults | undefined> {
   let selectedFlinkDatabase = FlinkDatabaseViewProvider.getInstance().database;
-  if (!selectedFlinkDatabase) {
-    let pickedDB = await flinkDatabaseQuickpick(
+
+  // Check if the selected database matches the artifact's cloud/region
+  const databaseMatchesContext =
+    selectedFlinkDatabase &&
+    selectedFlinkDatabase.provider === cloud &&
+    selectedFlinkDatabase.region === region;
+
+  // Only show quickpick if no selected database or it doesn't match cloud/region
+  if (!databaseMatchesContext) {
+    const pickedDB = await flinkDatabaseQuickpick(
       undefined,
       "Select the Flink database (Kafka cluster) where you want to register the UDFs",
     );
@@ -206,7 +220,7 @@ export async function registerMultipleUdfs(
       return await executeUdfRegistrations(
         registrations,
         artifactId,
-        selectedFlinkDatabase,
+        selectedFlinkDatabase!,
         progress,
       );
     },
