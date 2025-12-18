@@ -304,7 +304,7 @@ export async function reportRegistrationResults(
 
     const allSuccessful = successes.length === requestedCount;
     if (allSuccessful) {
-      // Only show the "View UDF[s]" button the Flink Database view is focused on a database
+      // Only show the "View UDF[s]" button when the Flink Database view is focused on a database
       // that would show the UDF once registered (at least until
       // https://github.com/confluentinc/vscode/issues/3154 is done).
       const flinkDbViewProvider = FlinkDatabaseViewProvider.getInstance();
