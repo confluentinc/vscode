@@ -78,8 +78,8 @@ export async function uploadArtifactCommand(
             },
           };
 
-          // Only show the "View Artifact" button the Flink Database view is focused on a database
-          // that would show the artifact once uploaded, based on the provider's
+          // Only show the "View Artifact" button when the Flink Database view is focused on a
+          // database that would show the artifact once uploaded, based on the provider's
           // `artifactsChangedHandler` matching on environment+provider+region (at least until
           // https://github.com/confluentinc/vscode/issues/3154 is done).
           const flinkDbViewProvider = FlinkDatabaseViewProvider.getInstance();
