@@ -2,6 +2,10 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoaders";
+import {
+  TEST_CCLOUD_PROVIDER,
+  TEST_CCLOUD_REGION,
+} from "../../../tests/unit/testResources/environments";
 import { createFlinkUDF } from "../../../tests/unit/testResources/flinkUDF";
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources/kafkaCluster";
 import * as emitters from "../../emitters";
@@ -31,10 +35,6 @@ function makeUdfReg(name: string): UdfRegistrationData {
   };
 }
 
-// Test constants for cloud/region
-const TEST_CLOUD = "AWS";
-const TEST_REGION = "us-east-1";
-
 describe("commands/utils/udfRegistration", () => {
   let sandbox: sinon.SinonSandbox;
 
@@ -58,7 +58,12 @@ describe("commands/utils/udfRegistration", () => {
         // Simulate user cancelling w/o selection
         .resolves(undefined as any);
 
-      await detectClassesAndRegisterUDFs(testUri, "artifact123", TEST_CLOUD, TEST_REGION);
+      await detectClassesAndRegisterUDFs(
+        testUri,
+        "artifact123",
+        TEST_CCLOUD_PROVIDER,
+        TEST_CCLOUD_REGION,
+      );
 
       sinon.assert.calledOnce(inspectStub);
       sinon.assert.calledOnce(quickPickStub);
@@ -69,7 +74,12 @@ describe("commands/utils/udfRegistration", () => {
       const inspectStub = sandbox.stub(jarInspector, "inspectJarClasses").resolves([]);
       const quickPickStub = sandbox.stub(vscode.window, "showQuickPick").resolves(undefined as any);
 
-      await detectClassesAndRegisterUDFs(testUri, "artifact123", TEST_CLOUD, TEST_REGION);
+      await detectClassesAndRegisterUDFs(
+        testUri,
+        "artifact123",
+        TEST_CCLOUD_PROVIDER,
+        TEST_CCLOUD_REGION,
+      );
 
       sinon.assert.calledOnce(inspectStub);
       sinon.assert.notCalled(quickPickStub);
@@ -96,8 +106,8 @@ describe("commands/utils/udfRegistration", () => {
       const result = await detectClassesAndRegisterUDFs(
         testUri,
         "artifact123",
-        TEST_CLOUD,
-        TEST_REGION,
+        TEST_CCLOUD_PROVIDER,
+        TEST_CCLOUD_REGION,
       );
       sinon.assert.calledOnce(inspectStub);
       sinon.assert.calledOnce(quickPickStub);
@@ -230,8 +240,8 @@ describe("commands/utils/udfRegistration", () => {
       const result = await registerMultipleUdfs(
         [makeUdfReg("foo")],
         "artifact123",
-        TEST_CLOUD,
-        TEST_REGION,
+        TEST_CCLOUD_PROVIDER,
+        TEST_CCLOUD_REGION,
       );
       sinon.assert.calledOnce(qpStub);
       assert.strictEqual(
@@ -242,7 +252,12 @@ describe("commands/utils/udfRegistration", () => {
     });
 
     it("returns empty results when registrations empty", async () => {
-      const result = await registerMultipleUdfs([], "artifact123", TEST_CLOUD, TEST_REGION);
+      const result = await registerMultipleUdfs(
+        [],
+        "artifact123",
+        TEST_CCLOUD_PROVIDER,
+        TEST_CCLOUD_REGION,
+      );
       sinon.assert.calledOnce(withProgressStub);
       assert.deepStrictEqual(result, { successes: [], failures: [] });
       sinon.assert.calledOnce(fireStub);
@@ -252,7 +267,12 @@ describe("commands/utils/udfRegistration", () => {
 
     it("registers each UDF successfully returning successes", async () => {
       const regs = [makeUdfReg("foo"), makeUdfReg("bar")];
-      const result = await registerMultipleUdfs(regs, "artifact123", TEST_CLOUD, TEST_REGION);
+      const result = await registerMultipleUdfs(
+        regs,
+        "artifact123",
+        TEST_CCLOUD_PROVIDER,
+        TEST_CCLOUD_REGION,
+      );
       sinon.assert.calledOnce(withProgressStub);
       sinon.assert.calledTwice(loaderStub.executeBackgroundFlinkStatement);
       sinon.assert.calledOnce(fireStub);
@@ -268,7 +288,12 @@ describe("commands/utils/udfRegistration", () => {
         .onSecondCall()
         .rejects(new Error("boom failure"));
 
-      const result = await registerMultipleUdfs(regs, "artifact123", TEST_CLOUD, TEST_REGION);
+      const result = await registerMultipleUdfs(
+        regs,
+        "artifact123",
+        TEST_CCLOUD_PROVIDER,
+        TEST_CCLOUD_REGION,
+      );
 
       sinon.assert.calledTwice(loaderStub.executeBackgroundFlinkStatement);
       assert.deepStrictEqual(result?.successes, ["okFn"]);
@@ -281,7 +306,12 @@ describe("commands/utils/udfRegistration", () => {
       const qpStub = sandbox
         .stub(kafkaClusterQuickpicks, "flinkDatabaseQuickpick")
         .resolves(exampleDatabase);
-      await registerMultipleUdfs([makeUdfReg("foo")], "artifact123", TEST_CLOUD, TEST_REGION);
+      await registerMultipleUdfs(
+        [makeUdfReg("foo")],
+        "artifact123",
+        TEST_CCLOUD_PROVIDER,
+        TEST_CCLOUD_REGION,
+      );
       sinon.assert.calledOnce(qpStub);
     });
   });
