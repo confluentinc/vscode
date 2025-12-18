@@ -72,11 +72,20 @@ export async function uploadArtifactCommand(
             artifactId: response.id,
           });
 
-          const notificationButtons: Record<string, () => Promise<void>> = {
-            "Register UDFs": async () => {
-              await detectClassesAndRegisterUDFs(params.selectedFile, response.id);
-            },
-          };
+          const notificationButtons: Record<string, () => Promise<void>> = {};
+
+          // Only add the "Register UDFs" button if response.id is defined
+          const artifactId = response.id;
+          if (artifactId) {
+            notificationButtons["Register UDFs"] = async () => {
+              await detectClassesAndRegisterUDFs(
+                params.selectedFile,
+                artifactId,
+                params.cloud,
+                params.region,
+              );
+            };
+          }
 
           // Only show the "View Artifact" button the Flink Database view is focused on a database
           // that would show the artifact once uploaded, based on the provider's
@@ -85,7 +94,7 @@ export async function uploadArtifactCommand(
           const flinkDbViewProvider = FlinkDatabaseViewProvider.getInstance();
           const artifacts: FlinkArtifact[] =
             await flinkDbViewProvider.artifactsContainer.gatherResources();
-          const flinkArtifact = artifacts.find((artifact) => artifact.id === response.id!);
+          const flinkArtifact = artifacts.find((artifact) => artifact.id === artifactId);
           if (flinkArtifact) {
             notificationButtons[viewArtifactButton] = async () =>
               await focusArtifactsInView(flinkArtifact);
