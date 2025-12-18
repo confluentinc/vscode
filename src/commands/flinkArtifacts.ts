@@ -74,7 +74,12 @@ export async function uploadArtifactCommand(
 
           const notificationButtons: Record<string, () => Promise<void>> = {
             "Register UDFs": async () => {
-              await detectClassesAndRegisterUDFs(params.selectedFile, response.id);
+              await detectClassesAndRegisterUDFs(
+                params.selectedFile,
+                response.id!,
+                params.cloud,
+                params.region,
+              );
             },
           };
 
