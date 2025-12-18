@@ -358,6 +358,7 @@ describe("commands/utils/udfRegistration", () => {
     let infoStub: sinon.SinonStub;
     let errStub: sinon.SinonStub;
     let flinkDbViewProviderStub: sinon.SinonStubbedInstance<FlinkDatabaseViewProvider>;
+    let stubbedUdfContainer: sinon.SinonStubbedInstance<FlinkDatabaseResourceContainer<FlinkUdf>>;
 
     beforeEach(() => {
       infoStub = sandbox.stub(notifications, "showInfoNotificationWithButtons").resolves();
@@ -365,10 +366,17 @@ describe("commands/utils/udfRegistration", () => {
 
       flinkDbViewProviderStub = sandbox.createStubInstance(FlinkDatabaseViewProvider);
       sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(flinkDbViewProviderStub);
+      stubbedUdfContainer = sandbox.createStubInstance(FlinkDatabaseResourceContainer<FlinkUdf>);
+      // no preloaded UDFs in the view's UDFs container by default
+      stubbedUdfContainer.gatherResources.resolves([]);
+      flinkDbViewProviderStub.udfsContainer = stubbedUdfContainer;
     });
 
-    it("shows single success message with a 'View UDF' button", () => {
-      reportRegistrationResults(1, { successes: ["fooFn"], failures: [] });
+    it("shows single success message with a 'View UDF' button", async () => {
+      const testUdf = createFlinkUDF("fooFn");
+      stubbedUdfContainer.gatherResources.resolves([testUdf]);
+
+      await reportRegistrationResults(1, { successes: ["fooFn"], failures: [] });
       sinon.assert.calledOnce(infoStub);
       const msg = infoStub.firstCall.args[0] as string;
       assert.ok(msg.includes("UDF registered successfully"), "Should indicate single success");
@@ -381,12 +389,9 @@ describe("commands/utils/udfRegistration", () => {
 
     it("'View UDF' button reveals the UDF in the Flink Database view", async () => {
       const testUdf = createFlinkUDF("fooFn");
-      flinkDbViewProviderStub["udfsContainer"] = new FlinkDatabaseResourceContainer<FlinkUdf>(
-        "UDFs",
-        [testUdf],
-      );
+      stubbedUdfContainer.gatherResources.resolves([testUdf]);
 
-      reportRegistrationResults(1, { successes: ["fooFn"], failures: [] });
+      await reportRegistrationResults(1, { successes: ["fooFn"], failures: [] });
 
       const buttons = infoStub.firstCall.args[1] as Record<string, () => void>;
       await buttons["View UDF"]();
@@ -396,21 +401,20 @@ describe("commands/utils/udfRegistration", () => {
     });
 
     it("'View UDF' button handles when the view provider isn't tracking a UDF", async () => {
-      flinkDbViewProviderStub["udfsContainer"] = new FlinkDatabaseResourceContainer<FlinkUdf>(
-        "UDFs",
-        [],
-      );
+      stubbedUdfContainer.gatherResources.resolves([]);
 
-      reportRegistrationResults(1, { successes: ["nonexistent"], failures: [] });
+      await reportRegistrationResults(1, { successes: ["nonexistent"], failures: [] });
 
       const buttons = infoStub.firstCall.args[1] as Record<string, () => void>;
-      await buttons["View UDF"]();
-
+      assert.strictEqual(buttons["View UDFs"], undefined);
       sinon.assert.notCalled(flinkDbViewProviderStub.revealResource);
     });
 
-    it("shows all success message for multiple UDFs with a 'View UDFs' button", () => {
-      reportRegistrationResults(2, { successes: ["a", "b"], failures: [] });
+    it("shows all success message for multiple UDFs with a 'View UDFs' button", async () => {
+      const testUdfs = [createFlinkUDF("a"), createFlinkUDF("b")];
+      stubbedUdfContainer.gatherResources.resolves(testUdfs);
+
+      await reportRegistrationResults(2, { successes: ["a", "b"], failures: [] });
       sinon.assert.calledOnce(infoStub);
       const msg = infoStub.firstCall.args[0] as string;
       assert.ok(msg.includes("All 2 UDF(s) registered successfully"));
@@ -421,10 +425,13 @@ describe("commands/utils/udfRegistration", () => {
     });
 
     it("'View UDFs' button reveals the UDFs container with expand=true", async () => {
-      const testContainer = new FlinkDatabaseResourceContainer<FlinkUdf>("UDFs", []);
-      flinkDbViewProviderStub["udfsContainer"] = testContainer;
+      const testUdfs = [createFlinkUDF("a"), createFlinkUDF("b")];
+      // separate container since we can't multi-reveal individual UDFs at once
+      const testContainer = new FlinkDatabaseResourceContainer<FlinkUdf>("UDFs", testUdfs);
+      flinkDbViewProviderStub.udfsContainer = testContainer;
+      sandbox.stub(testContainer, "gatherResources").resolves(testUdfs);
 
-      reportRegistrationResults(2, { successes: ["a", "b"], failures: [] });
+      await reportRegistrationResults(2, { successes: ["a", "b"], failures: [] });
 
       const buttons = infoStub.firstCall.args[1] as Record<string, () => void>;
       await buttons["View UDFs"]();
@@ -435,8 +442,8 @@ describe("commands/utils/udfRegistration", () => {
       });
     });
 
-    it("shows partial success message and error details without notification buttons", () => {
-      reportRegistrationResults(3, {
+    it("shows partial success message and error details without notification buttons", async () => {
+      await reportRegistrationResults(3, {
         successes: ["good1", "good2"],
         failures: [{ functionName: "bad1", error: "some error" }],
       });
@@ -455,8 +462,8 @@ describe("commands/utils/udfRegistration", () => {
       );
     });
 
-    it("shows only failure message when all fail", () => {
-      reportRegistrationResults(2, {
+    it("shows only failure message when all fail", async () => {
+      await reportRegistrationResults(2, {
         successes: [],
         failures: [
           { functionName: "x", error: "boom" },
