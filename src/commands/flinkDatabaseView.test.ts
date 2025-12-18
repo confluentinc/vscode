@@ -119,15 +119,13 @@ describe("commands/flinkDatabaseView.ts", () => {
   //     // Have the stubbed command indicate that a topic was created.
   //     createTopicCommandStub.resolves(true);
 
-  //     // Simulate that relations are empty initially, then populated after refresh.
-  //     flinkDatabaseViewProviderInstance["relationsContainer"].children = [];
-  //     // After first refresh, relations are still empty
-  //     refreshRelationsStub.onFirstCall().callsFake(() => {
-  //       flinkDatabaseViewProviderInstance["relationsContainer"].children = [
-  //         { id: "topic1" } as any,
-  //       ];
-  //       return Promise.resolve();
-  //     });
+  // // Simulate that relations are empty initially, then populated after refresh.
+  // flinkDatabaseViewProviderInstance.relationsContainer.children = [];
+  // // After first refresh, relations are still empty
+  // refreshRelationsStub.onFirstCall().callsFake(() => {
+  //   flinkDatabaseViewProviderInstance.relationsContainer.children = [{ id: "topic1" } as any];
+  //   return Promise.resolve();
+  // });
 
   //     await createTopicInFlinkDatabaseViewCommand();
 
@@ -154,10 +152,10 @@ describe("commands/flinkDatabaseView.ts", () => {
   //       .stub(flinkDatabaseViewProviderInstance, "database")
   //       .get(() => TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
 
-  //     // Have the stubbed command indicate that a topic was created.
-  //     createTopicCommandStub.resolves(true);
-  //     // but the relations never populate.
-  //     flinkDatabaseViewProviderInstance["relationsContainer"].children = [];
+  // // Have the stubbed command indicate that a topic was created.
+  // createTopicCommandStub.resolves(true);
+  // // but the relations never populate.
+  // flinkDatabaseViewProviderInstance.relationsContainer.children = [];
 
   //     await createTopicInFlinkDatabaseViewCommand();
 
