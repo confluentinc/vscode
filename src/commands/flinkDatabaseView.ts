@@ -1,13 +1,11 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { uriMetadataSet } from "../emitters";
+import { setFlinkDocumentMetadata } from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
+import { CCloudEnvironment } from "../models/environment";
 import type { FlinkDatabaseResourceContainer } from "../models/flinkDatabaseResourceContainer";
 import { FlinkDatabaseContainerLabel } from "../models/flinkDatabaseResourceContainer";
-import { UriMetadataKeys } from "../storage/constants";
-import { getResourceManager } from "../storage/resourceManager";
-import type { UriMetadata } from "../storage/types";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 
 const logger = new Logger("FlinkDatabaseViewCommands");
@@ -54,8 +52,7 @@ export async function createRelationInFlinkDatabaseViewCommand(): Promise<void> 
   // Open a new Flink SQL document with an informative comment block to create the table or view.
   const documentTemplate = `-- Create a new table or view in Flink database "${selectedFlinkDatabase.name}" in environment "${environment.name}".
 --
--- Write your CREATE TABLE or CREATE VIEW statement below and execute it to create the relation,
--- then use 'Submit Statement' above to execute it.
+-- Write your CREATE TABLE or CREATE VIEW statement below, then use 'Submit Statement' above to execute it.
 -- 
 -- Documentation:
 --    CREATE TABLE: https://docs.confluent.io/cloud/current/flink/reference/statements/create-table.html
@@ -72,32 +69,20 @@ export async function createRelationInFlinkDatabaseViewCommand(): Promise<void> 
   const pool = selectedFlinkDatabase.flinkPools[0];
   const uri = document.uri;
 
-  const metadata: UriMetadata = {
-    [UriMetadataKeys.FLINK_CATALOG_ID]: environment.id,
-    [UriMetadataKeys.FLINK_CATALOG_NAME]: environment.name,
-    [UriMetadataKeys.FLINK_DATABASE_ID]: selectedFlinkDatabase.id,
-    [UriMetadataKeys.FLINK_DATABASE_NAME]: selectedFlinkDatabase.name,
-    [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
-  };
-
-  logger.debug(`setting create relation document Flink database / compute pool metadata for URI`, {
-    uri: uri.toString(),
-    metadata,
+  // Set the codelenses to point to the gestured-upon env, database and its first compute pool.
+  await setFlinkDocumentMetadata(uri, {
+    catalog: environment as CCloudEnvironment,
+    database: selectedFlinkDatabase,
+    computePool: pool,
   });
-
-  await getResourceManager().setUriMetadata(uri, metadata);
-  uriMetadataSet.fire(uri);
 
   // Show the document and position the cursor at the end of the document.
   const editor = await vscode.window.showTextDocument(document);
-
-  // Calculate the position at the end of the document template
   let newlineCount = 0;
   for (let i = 0; i < documentTemplate.length; i++) {
     if (documentTemplate[i] === "\n") newlineCount++;
   }
   const position = new vscode.Position(newlineCount, 0);
-  // Set the cursor position in the editor.
   editor.selection = new vscode.Selection(position, position);
 }
 

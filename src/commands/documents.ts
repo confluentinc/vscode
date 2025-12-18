@@ -9,18 +9,18 @@ import {
   UPDATE_DEFAULT_DATABASE_FROM_LENS,
   UPDATE_DEFAULT_POOL_ID_FROM_LENS,
 } from "../extensionSettings/constants";
+import { setFlinkDocumentMetadata } from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import type { CCloudEnvironment, Environment } from "../models/environment";
+import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import type { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import type { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { showInfoNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
-import type { UriMetadata } from "../storage/types";
 
 const logger = new Logger("commands.documents");
 
@@ -52,16 +52,7 @@ export async function setCCloudComputePoolForUriCommand(uri?: Uri, database?: CC
     return;
   }
 
-  logger.debug(`setting metadata for URI`, {
-    uri: uri.toString(),
-    [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
-  });
-  await getResourceManager().setUriMetadataValue(
-    uri,
-    UriMetadataKeys.FLINK_COMPUTE_POOL_ID,
-    pool.id,
-  );
-  uriMetadataSet.fire(uri);
+  await setFlinkDocumentMetadata(uri, { computePool: pool });
 
   const defaultPoolId: string = FLINK_CONFIG_COMPUTE_POOL.value;
   if (defaultPoolId === pool.id) {
@@ -109,30 +100,18 @@ export async function setCCloudDatabaseForUriCommand(uri?: Uri, pool?: CCloudFli
     return;
   }
 
-  const database: KafkaCluster | undefined = await flinkDatabaseQuickpick(computePool);
+  const database = await flinkDatabaseQuickpick(computePool);
   if (!database) {
     return;
   }
 
   const loader = CCloudResourceLoader.getInstance();
-  const env: Environment | undefined = await loader.getEnvironment(database.environmentId);
+  const env = await loader.getEnvironment(database.environmentId);
   if (!env) {
     return;
   }
-  const catalog = env as CCloudEnvironment;
-  const metadata: UriMetadata = {
-    [UriMetadataKeys.FLINK_CATALOG_ID]: catalog.id,
-    [UriMetadataKeys.FLINK_CATALOG_NAME]: catalog.name,
-    [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
-    [UriMetadataKeys.FLINK_DATABASE_NAME]: database.name,
-  };
 
-  logger.debug("setting metadata for URI", {
-    uri: uri.toString(),
-    ...metadata,
-  });
-  await getResourceManager().setUriMetadata(uri, metadata);
-  uriMetadataSet.fire(uri);
+  await setFlinkDocumentMetadata(uri, { catalog: env as CCloudEnvironment, database: database });
 
   const defaultDatabaseId: string = FLINK_CONFIG_DATABASE.value;
   if (defaultDatabaseId === database.id) {
