@@ -12,6 +12,7 @@ import * as emitters from "../../emitters";
 import { type CCloudResourceLoader } from "../../loaders";
 import { FlinkDatabaseResourceContainer } from "../../models/flinkDatabaseResourceContainer";
 import type { FlinkUdf } from "../../models/flinkUDF";
+import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../../models/kafkaCluster";
 import * as notifications from "../../notifications";
 import * as kafkaClusterQuickpicks from "../../quickpicks/kafkaClusters";
 import * as jarInspector from "../../utils/jarInspector";
@@ -112,6 +113,39 @@ describe("commands/utils/udfRegistration", () => {
       sinon.assert.calledOnce(inspectStub);
       sinon.assert.calledOnce(quickPickStub);
       assert.strictEqual(result, undefined);
+    });
+
+    it("shows quickpick if selected database doesn't match region/provider", async () => {
+      const testUri = vscode.Uri.file("/tmp/example.jar");
+      const jarClasses: jarInspector.JarClassInfo[] = [
+        { className: "org.example.TestFn", simpleName: "TestFn" },
+      ];
+      sandbox.stub(jarInspector, "inspectJarClasses").resolves(jarClasses);
+      sandbox
+        .stub(vscode.window, "showQuickPick")
+        .resolves([
+          { label: "TestFn", description: "org.example.TestFn", classInfo: jarClasses[0] },
+        ] as any);
+      sandbox.stub(vscode.window, "showInputBox").resolves("test_fn");
+
+      const getDbViewStub = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+      sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(getDbViewStub);
+      // Database is selected with different region/provider than the artifact
+      const mismatchedDatabase = CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        region: "us-east-1",
+        provider: "GCP",
+      }) as CCloudFlinkDbKafkaCluster;
+      getDbViewStub.resource = mismatchedDatabase;
+
+      const dbQuickPickStub = sandbox
+        .stub(kafkaClusterQuickpicks, "flinkDatabaseQuickpick")
+        .resolves(undefined); // User cancels database selection
+
+      // Call with different provider/region than the selected database
+      await detectClassesAndRegisterUDFs(testUri, "artifact123", "AWS", "aws-us-west-2");
+
+      sinon.assert.calledOnce(dbQuickPickStub);
     });
   });
 
