@@ -1,11 +1,12 @@
-import type * as vscode from "vscode";
+import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
+import { setFlinkDocumentMetadata } from "../flinkSql/statementUtils";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
+import type { CCloudEnvironment } from "../models/environment";
 import type { FlinkDatabaseResourceContainer } from "../models/flinkDatabaseResourceContainer";
 import { FlinkDatabaseContainerLabel } from "../models/flinkDatabaseResourceContainer";
-import { pause } from "../sidecar/utils";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
-import { createTopicCommand } from "./kafkaClusters";
 
 const logger = new Logger("FlinkDatabaseViewCommands");
 
@@ -13,8 +14,8 @@ export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {
   return [
     // create table/topic command for empty state
     registerCommandWithLogging(
-      "confluent.flinkdatabase.createTopic",
-      createTopicInFlinkDatabaseViewCommand,
+      "confluent.flinkdatabase.createRelation",
+      createRelationFromFlinkDatabaseViewCommand,
     ),
     // refresh resource-specific container items
     registerCommandWithLogging(
@@ -25,32 +26,65 @@ export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {
 }
 
 /**
- * Start the flow to create a new topic in the currently selected Flink database's Kafka cluster.
- * When the topic is created, refresh the view to show the new topic as a (schemaless) table in the
- * relations container.
+ * Open up a new FlinkSQL document inviting the user to create a new table or view.
+ * Sets the document metadata to point the the currently selected Flink database in the view.
  */
-export async function createTopicInFlinkDatabaseViewCommand(): Promise<void> {
+export async function createRelationFromFlinkDatabaseViewCommand(): Promise<void> {
   // get the currently selected Flink database from the view, create a topic in that cluster.
   const flinkDBViewProvider = FlinkDatabaseViewProvider.getInstance();
   const selectedFlinkDatabase = flinkDBViewProvider.database;
   if (!selectedFlinkDatabase) {
     // should never happen if the command is only available when a Flink database is selected.
-    logger.error("No Flink database selected when attempting to create topic.");
+    logger.error("No Flink database selected when attempting to create a relation.");
     return;
   }
 
-  // Directly invoke the command implementation so as to get type safety on parameter.
-  const topicWasCreated = await createTopicCommand(selectedFlinkDatabase);
-
-  if (topicWasCreated) {
-    // Refresh the view to show the new topic in the relations container.
-    // Retry a few times if necessary, as the topic creation may take a moment to propagate.
-    for (let i = 0; i < 5 && flinkDBViewProvider.relationsContainer.children.length === 0; i++) {
-      await pause(500);
-      // Deep refresh the container item to (hopefully) show the new table/topic.
-      await flinkDBViewProvider.refreshRelationsContainer(selectedFlinkDatabase, true);
-    }
+  // Grab the environment name for the Flink database
+  const ccloudLoader = CCloudResourceLoader.getInstance();
+  const environment = await ccloudLoader.getEnvironment(selectedFlinkDatabase.environmentId);
+  if (!environment) {
+    // This is wacky and should never happen, but log an error just in case.
+    logger.error(
+      `Could not find environment with ID ${selectedFlinkDatabase.environmentId} for selected Flink database.`,
+    );
+    return;
   }
+
+  // Open a new Flink SQL document with an informative comment block to create the table or view.
+  const documentTemplate = `-- Create a new table or view in Flink database "${selectedFlinkDatabase.name}" in environment "${environment.name}".
+--
+-- Write your CREATE TABLE or CREATE VIEW statement below, then use 'Submit Statement' above to execute it.
+-- 
+-- Documentation:
+--    CREATE TABLE: https://docs.confluent.io/cloud/current/flink/reference/statements/create-table.html
+--    CREATE VIEW: https://docs.confluent.io/cloud/current/flink/reference/statements/create-view.html
+--
+`;
+  const document = await vscode.workspace.openTextDocument({
+    language: "flinksql",
+    content: documentTemplate,
+  });
+
+  // Set the Flink database and compute pool metadata for the new document
+  // so that when the user runs the statement, we know where to run it.
+  const pool = selectedFlinkDatabase.flinkPools[0];
+  const uri = document.uri;
+
+  // Set the codelenses to point to the gestured-upon env, database and its first compute pool.
+  await setFlinkDocumentMetadata(uri, {
+    catalog: environment as CCloudEnvironment,
+    database: selectedFlinkDatabase,
+    computePool: pool,
+  });
+
+  // Show the document and position the cursor at the end of the document.
+  const editor = await vscode.window.showTextDocument(document);
+  let newlineCount = 0;
+  for (let i = 0; i < documentTemplate.length; i++) {
+    if (documentTemplate[i] === "\n") newlineCount++;
+  }
+  const position = new vscode.Position(newlineCount, 0);
+  editor.selection = new vscode.Selection(position, position);
 }
 
 export async function refreshResourceContainerCommand(

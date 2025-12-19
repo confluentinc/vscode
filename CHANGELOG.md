@@ -8,6 +8,13 @@ All notable changes to this extension will be documented in this file.
 
 ### Changed
 
+- Renamed the Flink Database view's 'Table/View Relations' row to 'Tables and Views'
+- The '+' button on 'Tables and Views' now opens a FlinkSQL statement for the user to create either
+  a table or a view using SQL.
+- Simplified the tooltip for Flink views to omit information only appropriate for Kafka topic-based
+  Flink tables.
+- Flink views are shown with a different icon than Flink tables.
+
 ### Removed
 
 ### Fixed
