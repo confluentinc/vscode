@@ -315,12 +315,12 @@ export async function parseAllFlinkStatementResults<RT>(
 
 /**
  * Set or reset the Flink-related metadata on a document to refer to
- * the given environment, database, and compute pool.
+ * the given environment, database, and/or compute pool. Handles setting
+ * the metadata, then fires uriMetadataSet to notify listeners of the change.
  *
  * @param documentUri: The URI of the document to update.
- * @param environment: The environment to use as the default catalog
- * @param database: The database to use as the default schema
- * @param computePool: Optional, the compute pool to use for executing statements
+ * @param opts: Object holding optional environment to use as the default catalog (if any), database, and/or compute pool to
+ *              associate with the document.
  */
 export async function setFlinkDocumentMetadata(
   documentUri: vscode.Uri,
@@ -348,7 +348,7 @@ export async function setFlinkDocumentMetadata(
     metadata[UriMetadataKeys.FLINK_COMPUTE_POOL_ID] = computePool.id;
   }
 
-  logger.debug(`setting Flink database / compute pool metadata for URI`, {
+  logger.debug(`setting Flink catalog / database / compute pool metadata for URI`, {
     uri: documentUri.toString(),
     metadata,
   });
