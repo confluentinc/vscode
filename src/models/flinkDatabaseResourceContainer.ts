@@ -8,7 +8,7 @@ import type { ConnectionId, ISearchable } from "./resource";
 
 /** Labels for the top-level containers in the Flink Database view. */
 export enum FlinkDatabaseContainerLabel {
-  RELATIONS = "Table/View Relations",
+  RELATIONS = "Tables and Views",
   ARTIFACTS = "Artifacts",
   UDFS = "UDFs",
   AI_CONNECTIONS = "Connections",
