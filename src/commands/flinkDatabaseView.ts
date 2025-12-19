@@ -79,11 +79,7 @@ export async function createRelationFromFlinkDatabaseViewCommand(): Promise<void
 
   // Show the document and position the cursor at the end of the document.
   const editor = await vscode.window.showTextDocument(document);
-  let newlineCount = 0;
-  for (let i = 0; i < documentTemplate.length; i++) {
-    if (documentTemplate[i] === "\n") newlineCount++;
-  }
-  const position = new vscode.Position(newlineCount, 0);
+  const position = new vscode.Position(document.lineCount - 1, 0);
   editor.selection = new vscode.Selection(position, position);
 }
 
