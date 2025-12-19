@@ -12,7 +12,7 @@ import {
 import { setFlinkDocumentMetadata } from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
+import type { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { showInfoNotificationWithButtons } from "../notifications";
