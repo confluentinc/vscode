@@ -11,6 +11,7 @@ import {
   UPDATE_DEFAULT_DATABASE_FROM_LENS,
   UPDATE_DEFAULT_POOL_ID_FROM_LENS,
 } from "../extensionSettings/constants";
+import * as statementUtils from "../flinkSql/statementUtils";
 import type { CCloudResourceLoader } from "../loaders";
 import * as flinkComputePoolsQuickPick from "../quickpicks/flinkComputePools";
 import * as flinkDatabaseQuickpick from "../quickpicks/kafkaClusters";
@@ -28,7 +29,7 @@ const testUri = Uri.parse("file:///path/to/test.sql");
 describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
   let sandbox: sinon.SinonSandbox;
 
-  let stubResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
+  let setFlinkDocumentMetadataStub: sinon.SinonStub;
   let flinkComputePoolQuickPickStub: sinon.SinonStub;
   let uriMetadataSetFireStub: sinon.SinonStub;
   let flinkConfigComputePoolUpdateStub: sinon.SinonStub;
@@ -40,8 +41,10 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    stubResourceManager = sandbox.createStubInstance(ResourceManager);
-    sandbox.stub(ResourceManager, "getInstance").returns(stubResourceManager);
+    setFlinkDocumentMetadataStub = sandbox
+      .stub(statementUtils, "setFlinkDocumentMetadata")
+      .resolves();
+
     flinkComputePoolQuickPickStub = sandbox.stub(
       flinkComputePoolsQuickPick,
       "flinkComputePoolQuickPick",
@@ -72,7 +75,7 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     await setCCloudComputePoolForUriCommand();
 
     sinon.assert.notCalled(flinkComputePoolQuickPickStub);
-    sinon.assert.notCalled(stubResourceManager.setUriMetadataValue);
+    sinon.assert.notCalled(setFlinkDocumentMetadataStub);
     sinon.assert.notCalled(uriMetadataSetFireStub);
   });
 
@@ -83,7 +86,7 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     await setCCloudComputePoolForUriCommand(testUri);
 
     sinon.assert.notCalled(flinkComputePoolQuickPickStub);
-    sinon.assert.notCalled(stubResourceManager.setUriMetadataValue);
+    sinon.assert.notCalled(setFlinkDocumentMetadataStub);
     sinon.assert.notCalled(uriMetadataSetFireStub);
   });
 
@@ -94,7 +97,7 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     await setCCloudComputePoolForUriCommand(testUri);
 
     sinon.assert.called(flinkComputePoolQuickPickStub);
-    sinon.assert.notCalled(stubResourceManager.setUriMetadataValue);
+    sinon.assert.notCalled(setFlinkDocumentMetadataStub);
     sinon.assert.notCalled(uriMetadataSetFireStub);
   });
 
@@ -105,16 +108,11 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     await setCCloudComputePoolForUriCommand(testUri);
 
     sinon.assert.calledOnce(flinkComputePoolQuickPickStub);
-    sinon.assert.calledOnce(stubResourceManager.setUriMetadataValue);
-    // all metadata should be derived from the chosen compute pool
-    sinon.assert.calledWithExactly(
-      stubResourceManager.setUriMetadataValue,
-      testUri,
-      UriMetadataKeys.FLINK_COMPUTE_POOL_ID,
-      TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
-    );
-    sinon.assert.calledOnce(uriMetadataSetFireStub);
-    sinon.assert.calledOnceWithExactly(uriMetadataSetFireStub, testUri);
+
+    sinon.assert.calledOnce(setFlinkDocumentMetadataStub);
+    sinon.assert.calledWithExactly(setFlinkDocumentMetadataStub, testUri, {
+      computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+    });
   });
 
   for (const notificationSetting of ["never", "always"]) {
