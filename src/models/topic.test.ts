@@ -6,7 +6,8 @@ import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources/topic";
-import { CCLOUD_BASE_PATH, IconNames, UTM_SOURCE_VSCODE } from "../constants";
+import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
+import { IconNames } from "../icons";
 import { KafkaTopic, KafkaTopicTreeItem } from "./topic";
 
 describe("Test KafkaTopic properties", () => {

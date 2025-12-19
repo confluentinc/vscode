@@ -7,7 +7,7 @@ import type {
   MaintenanceStatus,
   ScheduledMaintenance,
 } from "../ccloudStatus/types";
-import { IconNames } from "../constants";
+import { IconNames } from "../icons";
 import { CustomMarkdownString } from "../models/main";
 import { titleCase } from "../utils";
 

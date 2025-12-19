@@ -46,7 +46,7 @@ import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
 import { registerUriCommands } from "./commands/uris";
 import { setProjectScaffoldListener } from "./commands/utils/scaffoldUtils";
-import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, IconNames } from "./constants";
+import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
@@ -78,6 +78,7 @@ import {
 import { FLINK_SQL_LANGUAGE_ID } from "./flinkSql/constants";
 import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageClientManager";
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
+import { IconNames } from "./icons";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
 import { FlinkStatementResultsPanelProvider } from "./panelProviders/flinkStatementResults";

@@ -1,5 +1,5 @@
 import { commands, ThemeIcon, window } from "vscode";
-import { IconNames } from "../constants";
+import { IconNames } from "../icons";
 import { ResourceLoader } from "../loaders";
 import type { KafkaCluster } from "../models/kafkaCluster";
 import type { KafkaTopic } from "../models/topic";

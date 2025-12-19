@@ -20,9 +20,10 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/f
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
-import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import * as contextValues from "../context/values";
 import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
+import { IconNames } from "../icons";
 import {
   CCloudResourceLoader,
   DirectResourceLoader,

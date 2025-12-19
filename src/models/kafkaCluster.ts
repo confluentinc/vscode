@@ -4,10 +4,11 @@ import { ConnectionType } from "../clients/sidecar";
 import {
   CCLOUD_BASE_PATH,
   CCLOUD_CONNECTION_ID,
-  IconNames,
   LOCAL_CONNECTION_ID,
   UTM_SOURCE_VSCODE,
 } from "../constants";
+import { IconNames } from "../icons";
+import { containsPrivateNetworkPattern } from "../utils/privateNetworking";
 import { localTimezoneOffset } from "../utils/timezone";
 import type { CCloudFlinkComputePool } from "./flinkComputePool";
 import { FlinkSpecProperties } from "./flinkStatement";
@@ -26,7 +27,6 @@ import type { KafkaTopic } from "./topic";
 export abstract class KafkaCluster extends Data implements IResourceBase, ISearchable {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
-  iconName: IconNames = IconNames.KAFKA_CLUSTER;
 
   abstract environmentId: EnvironmentId;
 
@@ -35,6 +35,10 @@ export abstract class KafkaCluster extends Data implements IResourceBase, ISearc
   id!: Enforced<string>;
   bootstrapServers!: Enforced<string>;
   uri?: string;
+
+  get iconName(): IconNames {
+    return this.isPrivate() ? IconNames.KAFKA_CLUSTER_PRIVATE : IconNames.KAFKA_CLUSTER;
+  }
 
   searchableText(): string {
     return `${this.name} ${this.id}`;
@@ -65,6 +69,10 @@ export abstract class KafkaCluster extends Data implements IResourceBase, ISearc
       this.environmentId === topic.environmentId &&
       this.id === topic.clusterId
     );
+  }
+
+  isPrivate(): boolean {
+    return containsPrivateNetworkPattern(this.bootstrapServers);
   }
 }
 
