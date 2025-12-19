@@ -3,14 +3,22 @@ import * as sinon from "sinon";
 
 import * as indexModule from ".";
 
+import * as statementUtils from "../flinkSql/statementUtils";
+
 import {
-  createRelationInFlinkDatabaseViewCommand,
+  createRelationFromFlinkDatabaseViewCommand,
   refreshResourceContainerCommand,
   registerFlinkDatabaseViewCommands,
 } from "./flinkDatabaseView";
 
-import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../tests/unit/testResources";
+import { Uri, window, workspace } from "vscode";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
+import {
+  TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+} from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import type { CCloudResourceLoader } from "../loaders";
 import {
   FlinkDatabaseContainerLabel,
   FlinkDatabaseResourceContainer,
@@ -46,8 +54,8 @@ describe("commands/flinkDatabaseView.ts", () => {
 
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub,
-        "confluent.flinkdatabase.createTopic",
-        createRelationInFlinkDatabaseViewCommand,
+        "confluent.flinkdatabase.createRelation",
+        createRelationFromFlinkDatabaseViewCommand,
       );
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub,
@@ -56,113 +64,6 @@ describe("commands/flinkDatabaseView.ts", () => {
       );
     });
   });
-
-  // describe("createTopicInFlinkDatabaseViewCommand", () => {
-  //   let flinkDatabaseViewProviderInstance: FlinkDatabaseViewProvider;
-  //   let flinkDatabaseViewProviderGetInstanceStub: sinon.SinonStub;
-  //   let createTopicCommandStub: sinon.SinonStub;
-  //   let refreshRelationsStub: sinon.SinonStub;
-  //   let pauseStub: sinon.SinonStub;
-
-  //   beforeEach(() => {
-  //     flinkDatabaseViewProviderInstance = new FlinkDatabaseViewProvider();
-  //     flinkDatabaseViewProviderGetInstanceStub = sandbox.stub(
-  //       FlinkDatabaseViewProvider,
-  //       "getInstance",
-  //     );
-  //     flinkDatabaseViewProviderGetInstanceStub.returns(flinkDatabaseViewProviderInstance);
-  //     createTopicCommandStub = sandbox.stub(kafkaClusterCommandsModule, "createTopicCommand");
-  //     refreshRelationsStub = sandbox
-  //       .stub(flinkDatabaseViewProviderInstance, "refreshRelationsContainer")
-  //       .resolves();
-  //     pauseStub = sandbox.stub(sidecarUtilsModule, "pause").resolves();
-  //   });
-
-  //   afterEach(() => {
-  //     flinkDatabaseViewProviderInstance.dispose();
-  //   });
-
-  //   it("should bail early if no Flink database is selected", async () => {
-  //     // Mock no selected Flink database
-  //     sinon.stub(flinkDatabaseViewProviderInstance, "database").get(() => undefined);
-  //     await createTopicInFlinkDatabaseViewCommand();
-
-  //     sinon.assert.notCalled(createTopicCommandStub);
-  //   });
-
-  //   it("should start to create a topic in the selected Flink database's Kafka cluster", async () => {
-  //     // Mock a selected Flink database
-  //     sinon
-  //       .stub(flinkDatabaseViewProviderInstance, "database")
-  //       .get(() => TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
-
-  //     // Have the stubbed command indicate that user skipped out of topic creation.
-  //     createTopicCommandStub.resolves(false);
-
-  //     await createTopicInFlinkDatabaseViewCommand();
-
-  //     sinon.assert.calledOnceWithExactly(
-  //       createTopicCommandStub,
-  //       TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-  //     );
-
-  //     // Should not attempt to refresh the view if no topic was created.
-  //     sinon.assert.notCalled(refreshRelationsStub);
-  //   });
-
-  //   it("should refresh the relations container after topic creation", async () => {
-  //     // Mock a selected Flink database
-  //     sinon
-  //       .stub(flinkDatabaseViewProviderInstance, "database")
-  //       .get(() => TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
-
-  //     // Have the stubbed command indicate that a topic was created.
-  //     createTopicCommandStub.resolves(true);
-
-  // // Simulate that relations are empty initially, then populated after refresh.
-  // flinkDatabaseViewProviderInstance.relationsContainer.children = [];
-  // // After first refresh, relations are still empty
-  // refreshRelationsStub.onFirstCall().callsFake(() => {
-  //   flinkDatabaseViewProviderInstance.relationsContainer.children = [{ id: "topic1" } as any];
-  //   return Promise.resolve();
-  // });
-
-  //     await createTopicInFlinkDatabaseViewCommand();
-
-  //     sinon.assert.calledOnceWithExactly(
-  //       createTopicCommandStub,
-  //       TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-  //     );
-
-  //     // Only took one refresh to get relations.
-  //     sinon.assert.calledOnce(refreshRelationsStub);
-  //     sinon.assert.calledOnce(pauseStub);
-
-  //     // Deep refresh.
-  //     sinon.assert.calledWithExactly(
-  //       refreshRelationsStub.firstCall,
-  //       TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-  //       true,
-  //     );
-  //   });
-
-  //   it("should retry several times if relations container stays empty after refresh", async () => {
-  //     // Mock a selected Flink database
-  //     sinon
-  //       .stub(flinkDatabaseViewProviderInstance, "database")
-  //       .get(() => TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
-
-  // // Have the stubbed command indicate that a topic was created.
-  // createTopicCommandStub.resolves(true);
-  // // but the relations never populate.
-  // flinkDatabaseViewProviderInstance.relationsContainer.children = [];
-
-  //     await createTopicInFlinkDatabaseViewCommand();
-
-  //     sinon.assert.called(refreshRelationsStub);
-  //     sinon.assert.callCount(refreshRelationsStub, 5); // 5 attempts in the loop then bailed.
-  //   });
-  // });
 
   describe("refreshResourceContainerCommand", () => {
     let provider: FlinkDatabaseViewProvider;
@@ -359,6 +260,106 @@ describe("commands/flinkDatabaseView.ts", () => {
         TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
         true,
       );
+    });
+  });
+
+  describe("createRelationFromFlinkDatabaseViewCommand", () => {
+    let mockFlinkDatabaseViewProviderInstance: FlinkDatabaseViewProvider;
+    let stubbedCloudResourceLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+    let openTextDocumentStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      mockFlinkDatabaseViewProviderInstance = new FlinkDatabaseViewProvider();
+
+      sandbox
+        .stub(FlinkDatabaseViewProvider, "getInstance")
+        .returns(mockFlinkDatabaseViewProviderInstance);
+
+      stubbedCloudResourceLoader = getStubbedCCloudResourceLoader(sandbox);
+
+      openTextDocumentStub = sandbox.stub(workspace, "openTextDocument");
+    });
+
+    afterEach(() => {
+      mockFlinkDatabaseViewProviderInstance.dispose();
+      FlinkDatabaseViewProvider["instanceMap"].clear();
+    });
+
+    it("bails early if no Flink database is selected", async () => {
+      // Mock no selected Flink database
+      sandbox.stub(mockFlinkDatabaseViewProviderInstance, "database").get(() => undefined);
+
+      await createRelationFromFlinkDatabaseViewCommand();
+
+      // should not attempt to get environment from resource loader.
+      sinon.assert.notCalled(stubbedCloudResourceLoader.getEnvironment);
+    });
+
+    it("bails early if somehow unable to find the environment for the selected Flink database", async () => {
+      // Mock selected Flink database
+      sandbox
+        .stub(mockFlinkDatabaseViewProviderInstance, "database")
+        .get(() => TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+
+      // Mock resource loader to return undefined environment
+      stubbedCloudResourceLoader.getEnvironment.resolves(undefined);
+
+      await createRelationFromFlinkDatabaseViewCommand();
+
+      sinon.assert.calledOnceWithExactly(
+        stubbedCloudResourceLoader.getEnvironment,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.environmentId,
+      );
+
+      // does not progress on to openTextDocument
+      sinon.assert.notCalled(openTextDocumentStub);
+    });
+
+    it("opens a new Flink SQL document with the expected template content", async () => {
+      // Mock selected Flink database
+      sandbox
+        .stub(mockFlinkDatabaseViewProviderInstance, "database")
+        .get(() => TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+
+      stubbedCloudResourceLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
+
+      const newDocumentUri = Uri.parse("untitled://Untitled-1");
+      const mockDocument: any = { uri: newDocumentUri };
+      openTextDocumentStub.resolves(mockDocument);
+
+      const mockEditor: any = { selection: undefined };
+
+      const showTextDocumentStub = sandbox.stub(window, "showTextDocument").resolves(mockEditor);
+
+      const setFlinkDocumentMetadataStub = sandbox
+        .stub(statementUtils, "setFlinkDocumentMetadata")
+        .resolves();
+
+      await createRelationFromFlinkDatabaseViewCommand();
+
+      sinon.assert.calledOnceWithExactly(
+        stubbedCloudResourceLoader.getEnvironment,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.environmentId,
+      );
+
+      sinon.assert.calledOnceWithExactly(openTextDocumentStub, {
+        language: "flinksql",
+        content: sinon.match((value: string) =>
+          value.includes("Write your CREATE TABLE or CREATE VIEW"),
+        ),
+      });
+
+      sinon.assert.calledOnceWithExactly(setFlinkDocumentMetadataStub, newDocumentUri, {
+        catalog: TEST_CCLOUD_ENVIRONMENT,
+        database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        computePool: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.flinkPools[0],
+      });
+
+      sinon.assert.calledOnceWithExactly(showTextDocumentStub, mockDocument);
+
+      // the editor selection should be set to a Selection instance at the end of the document
+      assert.ok(mockEditor.selection.start.line > 0); // should be at least one line down
+      assert.strictEqual(mockEditor.selection.start.character, 0);
     });
   });
 });

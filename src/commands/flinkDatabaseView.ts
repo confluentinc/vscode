@@ -3,7 +3,7 @@ import { registerCommandWithLogging } from ".";
 import { setFlinkDocumentMetadata } from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
+import type { CCloudEnvironment } from "../models/environment";
 import type { FlinkDatabaseResourceContainer } from "../models/flinkDatabaseResourceContainer";
 import { FlinkDatabaseContainerLabel } from "../models/flinkDatabaseResourceContainer";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
@@ -15,7 +15,7 @@ export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {
     // create table/topic command for empty state
     registerCommandWithLogging(
       "confluent.flinkdatabase.createRelation",
-      createRelationInFlinkDatabaseViewCommand,
+      createRelationFromFlinkDatabaseViewCommand,
     ),
     // refresh resource-specific container items
     registerCommandWithLogging(
@@ -29,7 +29,7 @@ export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {
  * Open up a new FlinkSQL document inviting the user to create a new table or view.
  * Sets the document metadata to point the the currently selected Flink database in the view.
  */
-export async function createRelationInFlinkDatabaseViewCommand(): Promise<void> {
+export async function createRelationFromFlinkDatabaseViewCommand(): Promise<void> {
   // get the currently selected Flink database from the view, create a topic in that cluster.
   const flinkDBViewProvider = FlinkDatabaseViewProvider.getInstance();
   const selectedFlinkDatabase = flinkDBViewProvider.database;
@@ -43,6 +43,7 @@ export async function createRelationInFlinkDatabaseViewCommand(): Promise<void> 
   const ccloudLoader = CCloudResourceLoader.getInstance();
   const environment = await ccloudLoader.getEnvironment(selectedFlinkDatabase.environmentId);
   if (!environment) {
+    // This is wacky and should never happen, but log an error just in case.
     logger.error(
       `Could not find environment with ID ${selectedFlinkDatabase.environmentId} for selected Flink database.`,
     );

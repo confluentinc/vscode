@@ -352,7 +352,7 @@ describe("flinkRelation.ts", () => {
   describe("getToolTip()", () => {
     // Refactored: generate one test per expected pattern
     const nonWatermarkedTablePatterns: RegExp[] = [
-      /Flink View/,
+      /Flink Table/,
       /Name: `tooltipRelation`/,
       /Distribution Bucket Count: `4`/,
       /Comment: `Tooltip relation comment`/,
@@ -364,7 +364,7 @@ describe("flinkRelation.ts", () => {
         const relation = new FlinkRelation({
           ...TEST_FLINK_RELATION,
           name: "tooltipRelation",
-          type: FlinkRelationType.View,
+          type: FlinkRelationType.BaseTable,
           comment: "Tooltip relation comment",
           distributionBucketCount: 4,
           columns: [TEST_VARCHAR_COLUMN],
