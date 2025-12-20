@@ -11,7 +11,7 @@ import type {
   Incident,
   IncidentStatus,
 } from "../ccloudStatus/types";
-import { IconNames } from "../constants";
+import { IconNames } from "../icons";
 import { titleCase } from "../utils";
 import {
   createStatusSummaryMarkdown,
