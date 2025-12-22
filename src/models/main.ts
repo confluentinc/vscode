@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IconNames } from "../constants";
+import { IconNames } from "../icons";
 
 /** Anything with an `id` string property */
 export interface IdItem {

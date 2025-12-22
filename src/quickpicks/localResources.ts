@@ -1,6 +1,5 @@
 import type { QuickPickItem } from "vscode";
 import { commands, ThemeIcon, window } from "vscode";
-import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { LocalResourceKind } from "../docker/constants";
 import {
@@ -12,6 +11,7 @@ import {
   LOCAL_SCHEMA_REGISTRY_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../extensionSettings/constants";
+import { IconNames } from "../icons";
 import { Logger } from "../logging";
 import { createEnhancedQuickPick } from "./utils/quickPickUtils";
 

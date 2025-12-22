@@ -6,7 +6,8 @@ import {
   TEST_CCLOUD_FLINK_STATEMENT,
 } from "../../tests/unit/testResources/flinkStatement";
 import type { SqlV1StatementStatus } from "../clients/flinkSql";
-import { CCLOUD_BASE_PATH, IconNames } from "../constants";
+import { CCLOUD_BASE_PATH } from "../constants";
+import { IconNames } from "../icons";
 import {
   FlinkStatement,
   FlinkStatementTreeItem,

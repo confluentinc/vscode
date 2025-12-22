@@ -1,6 +1,6 @@
 import { ThemeIcon, window } from "vscode";
-import { IconNames } from "../constants";
 import { getOrganizations } from "../graphql/organizations";
+import { IconNames } from "../icons";
 import type { CCloudOrganization } from "../models/organization";
 import type { QuickPickItemWithValue } from "./types";
 

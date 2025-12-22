@@ -3,12 +3,12 @@ import { ConnectionType } from "../clients/sidecar";
 import {
   CCLOUD_BASE_PATH,
   CCLOUD_CONNECTION_ID,
-  IconNames,
   LOCAL_CONNECTION_ID,
   LOCAL_ENVIRONMENT_NAME,
   UTM_SOURCE_VSCODE,
 } from "../constants";
 import type { FormConnectionType } from "../directConnections/types";
+import { IconNames } from "../icons";
 import type { FlinkComputePool } from "./flinkComputePool";
 import { CCloudFlinkComputePool } from "./flinkComputePool";
 import type { CCloudFlinkDbKafkaCluster, KafkaCluster } from "./kafkaCluster";

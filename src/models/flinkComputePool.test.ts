@@ -1,7 +1,8 @@
 import * as assert from "assert";
 import { ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { CCLOUD_BASE_PATH, IconNames, UTM_SOURCE_VSCODE } from "../constants";
+import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
+import { IconNames } from "../icons";
 import type { CCloudFlinkComputePool } from "./flinkComputePool";
 import { FlinkComputePoolTreeItem, createFlinkComputePoolTooltip } from "./flinkComputePool";
 

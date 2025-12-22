@@ -1,7 +1,8 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import type { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_BASE_PATH, IconNames, UTM_SOURCE_VSCODE } from "../constants";
+import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
+import { IconNames } from "../icons";
 import { CustomMarkdownString } from "./main";
 import type {
   ConnectionId,

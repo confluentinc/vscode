@@ -1,9 +1,11 @@
 import { Data, type Require as Enforced } from "dataclass";
-import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import type { MarkdownString } from "vscode";
+import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { LOCAL_CONNECTION_ID } from "../constants";
+import { IconNames } from "../icons";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, IResourceBase, ISearchable } from "./resource";
+import type { ConnectionId, IResourceBase, ISearchable } from "./resource";
 
 export class LocalMedusa extends Data implements IResourceBase, ISearchable {
   connectionId: ConnectionId = LOCAL_CONNECTION_ID;

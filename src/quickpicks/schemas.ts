@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { IconNames } from "../constants";
 import { SubjectNameStrategy } from "../diagnostics/produceMessage";
+import { IconNames } from "../icons";
 import { ResourceLoader } from "../loaders/";
 import { Logger } from "../logging";
 import { getConnectionLabel } from "../models/resource";
