@@ -8,13 +8,19 @@ import {
   CreateSqlv1StatementRequestApiVersionEnum,
   CreateSqlv1StatementRequestKindEnum,
 } from "../clients/flinkSql";
+import { uriMetadataSet } from "../emitters";
 import { isResponseErrorWithStatus } from "../errors";
 import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
 import { Logger } from "../logging";
+import type { CCloudEnvironment } from "../models/environment";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
 import { restFlinkStatementToModel, TERMINAL_PHASES } from "../models/flinkStatement";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { getSidecar } from "../sidecar";
+import { UriMetadataKeys } from "../storage/constants";
+import { getResourceManager } from "../storage/resourceManager";
+import type { UriMetadata } from "../storage/types";
 import { raceWithTimeout } from "../utils/timing";
 import { WebviewPanelCache } from "../webview-cache";
 import flinkStatementResults from "../webview/flink-statement-results.html";
@@ -305,4 +311,50 @@ export async function parseAllFlinkStatementResults<RT>(
   const results = Array.from(resultsMap.values()).map(Object.fromEntries);
 
   return results as Array<RT>;
+}
+
+/**
+ * Set or reset the Flink-related metadata on a document to refer to
+ * the given environment, database, and/or compute pool. Handles setting
+ * the metadata, then fires uriMetadataSet to notify listeners of the change.
+ *
+ * @param documentUri: The URI of the document to update.
+ * @param opts: Object holding optional environment to use as the default catalog (if any), database, and/or compute pool to
+ *              associate with the document.
+ */
+export async function setFlinkDocumentMetadata(
+  documentUri: vscode.Uri,
+  opts: {
+    catalog?: CCloudEnvironment;
+    database?: CCloudFlinkDbKafkaCluster;
+    computePool?: CCloudFlinkComputePool;
+  },
+): Promise<void> {
+  const metadata: UriMetadata = {};
+
+  const { catalog: environment, database, computePool } = opts;
+
+  if (environment) {
+    metadata[UriMetadataKeys.FLINK_CATALOG_ID] = environment.id;
+    metadata[UriMetadataKeys.FLINK_CATALOG_NAME] = environment.name;
+  }
+
+  if (database) {
+    metadata[UriMetadataKeys.FLINK_DATABASE_ID] = database.id;
+    metadata[UriMetadataKeys.FLINK_DATABASE_NAME] = database.name;
+  }
+
+  if (computePool) {
+    metadata[UriMetadataKeys.FLINK_COMPUTE_POOL_ID] = computePool.id;
+  }
+
+  logger.debug(`setting Flink catalog / database / compute pool metadata for URI`, {
+    uri: documentUri.toString(),
+    metadata,
+  });
+
+  await getResourceManager().setUriMetadata(documentUri, metadata);
+
+  // Notify listeners that the metadata for this URI has been set/updated.
+  uriMetadataSet.fire(documentUri);
 }

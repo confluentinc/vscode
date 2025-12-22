@@ -6,6 +6,7 @@ import {
 } from "../../tests/unit/testResources/flinkRelation";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
+import { IconNames } from "../icons";
 import {
   FlinkRelation,
   FlinkRelationColumn,
@@ -13,8 +14,8 @@ import {
   toRelationType,
 } from "./flinkRelation";
 
-describe("flinkSystemCatalogs.ts", () => {
-  describe("toRelationType", () => {
+describe("flinkRelation.ts", () => {
+  describe("FlinkRelationType.toRelationType", () => {
     it("should convert valid strings to FlinkRelationType enum", () => {
       assert.strictEqual(toRelationType("BASE TABLE"), FlinkRelationType.BaseTable);
       assert.strictEqual(toRelationType("VIEW"), FlinkRelationType.View);
@@ -297,6 +298,25 @@ describe("flinkSystemCatalogs.ts", () => {
         assert.strictEqual(visibleCols.length, TEST_FLINK_RELATION.columns.length);
         assert.ok(visibleCols.every((col) => !col.isHidden));
       });
+
+      const defaultIcon = IconNames.TOPIC;
+      const viewIcon = IconNames.FLINK_VIEW;
+      const scenarios: Array<[FlinkRelationType, IconNames]> = [
+        [FlinkRelationType.BaseTable, defaultIcon],
+        [FlinkRelationType.ExternalTable, defaultIcon],
+        [FlinkRelationType.SystemTable, defaultIcon],
+        [FlinkRelationType.View, viewIcon],
+      ];
+      for (const [type, expectedIcon] of scenarios) {
+        it(`iconName varies by relation type: ${type}`, () => {
+          const relation = new FlinkRelation({
+            ...TEST_FLINK_RELATION,
+            name: `relationType${type}`,
+            type,
+          });
+          assert.strictEqual(relation.iconName, expectedIcon);
+        });
+      }
     });
 
     it("searchableText()", () => {
@@ -332,7 +352,7 @@ describe("flinkSystemCatalogs.ts", () => {
   describe("getToolTip()", () => {
     // Refactored: generate one test per expected pattern
     const nonWatermarkedTablePatterns: RegExp[] = [
-      /Flink View/,
+      /Flink Table/,
       /Name: `tooltipRelation`/,
       /Distribution Bucket Count: `4`/,
       /Comment: `Tooltip relation comment`/,
@@ -344,7 +364,7 @@ describe("flinkSystemCatalogs.ts", () => {
         const relation = new FlinkRelation({
           ...TEST_FLINK_RELATION,
           name: "tooltipRelation",
-          type: FlinkRelationType.View,
+          type: FlinkRelationType.BaseTable,
           comment: "Tooltip relation comment",
           distributionBucketCount: 4,
           columns: [TEST_VARCHAR_COLUMN],
@@ -386,6 +406,27 @@ describe("flinkSystemCatalogs.ts", () => {
       const tooltip = relation.getToolTip();
 
       assert.doesNotMatch(tooltip.value, /View Definition:/);
+    });
+
+    it("Views omit watermark and distribution info", () => {
+      const relation = new FlinkRelation({
+        ...TEST_FLINK_RELATION,
+        name: "viewRelationNoWatermarkDist",
+        type: FlinkRelationType.View,
+        columns: [TEST_VARCHAR_COLUMN],
+      });
+      const tooltip = relation.getToolTip();
+
+      const absentPatterns: RegExp[] = [
+        /Distribution:/,
+        /Watermarked:/,
+        /Watermark Column:/,
+        /Watermark Expression:/,
+      ];
+
+      for (const pattern of absentPatterns) {
+        assert.doesNotMatch(tooltip.value, pattern);
+      }
     });
 
     it("Formats non-distributed, watermarked table", () => {

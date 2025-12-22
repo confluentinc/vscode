@@ -1,6 +1,11 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import { Uri } from "vscode";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
+import {
+  TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+} from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import {
   createFlinkStatement,
@@ -13,10 +18,13 @@ import type {
   GetSqlv1StatementResult200Response,
 } from "../clients/flinkSql";
 import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "../clients/flinkSql";
+import { uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
 import * as flinkStatementModels from "../models/flinkStatement";
 import { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
 import type * as sidecar from "../sidecar";
+import { UriMetadataKeys } from "../storage/constants";
+import { getResourceManager } from "../storage/resourceManager";
 import { localTimezoneOffset } from "../utils/timezone";
 import { Operation } from "./flinkStatementResults";
 import type { IFlinkStatementSubmitParameters } from "./statementUtils";
@@ -27,6 +35,7 @@ import {
   parseAllFlinkStatementResults,
   REFRESH_STATEMENT_MAX_WAIT_MS,
   refreshFlinkStatement,
+  setFlinkDocumentMetadata,
   submitFlinkStatement,
   waitForResultsFetchable,
   waitForStatementCompletion,
@@ -422,6 +431,56 @@ describe("flinkSql/statementUtils.ts", function () {
       ]);
 
       sinon.assert.calledTwice(stubbedResultsApi.getSqlv1StatementResult);
+    });
+  });
+
+  describe("setFlinkDocumentMetadata()", function () {
+    let rmSetUriMetadataStub: sinon.SinonStub;
+    let uriMetadataSetFireStub: sinon.SinonStub;
+
+    const uri = Uri.parse("file:///test/flink_statement.flink.sql");
+
+    beforeEach(() => {
+      rmSetUriMetadataStub = sandbox.stub(getResourceManager(), "setUriMetadata");
+      uriMetadataSetFireStub = sandbox.stub(uriMetadataSet, "fire");
+    });
+
+    it("should set the catalog metadata from environment when provided", async () => {
+      await setFlinkDocumentMetadata(uri, {
+        catalog: TEST_CCLOUD_ENVIRONMENT,
+      });
+
+      sinon.assert.calledWith(rmSetUriMetadataStub, uri, {
+        [UriMetadataKeys.FLINK_CATALOG_ID]: TEST_CCLOUD_ENVIRONMENT.id,
+        [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT.name,
+      });
+
+      sinon.assert.calledWith(uriMetadataSetFireStub, uri);
+    });
+
+    it("should set the database metadata from kafka cluster when provided", async () => {
+      await setFlinkDocumentMetadata(uri, {
+        database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+      });
+
+      sinon.assert.calledWith(rmSetUriMetadataStub, uri, {
+        [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id,
+        [UriMetadataKeys.FLINK_DATABASE_NAME]: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name,
+      });
+
+      sinon.assert.calledWith(uriMetadataSetFireStub, uri);
+    });
+
+    it("should set the compute pool id when compute pool provided", async () => {
+      await setFlinkDocumentMetadata(uri, {
+        computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      });
+
+      sinon.assert.calledWith(rmSetUriMetadataStub, uri, {
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+      });
+
+      sinon.assert.calledWith(uriMetadataSetFireStub, uri);
     });
   });
 });
