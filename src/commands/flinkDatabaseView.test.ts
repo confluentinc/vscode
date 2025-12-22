@@ -324,7 +324,7 @@ describe("commands/flinkDatabaseView.ts", () => {
       stubbedCloudResourceLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
 
       const newDocumentUri = Uri.parse("untitled://Untitled-1");
-      const mockDocument: any = { uri: newDocumentUri };
+      const mockDocument: any = { uri: newDocumentUri, lineCount: 10 };
       openTextDocumentStub.resolves(mockDocument);
 
       const mockEditor: any = { selection: undefined };
@@ -358,7 +358,12 @@ describe("commands/flinkDatabaseView.ts", () => {
       sinon.assert.calledOnceWithExactly(showTextDocumentStub, mockDocument);
 
       // the editor selection should be set to a Selection instance at the end of the document
-      assert.ok(mockEditor.selection.start.line > 0); // should be at least one line down
+
+      assert.strictEqual(
+        mockEditor.selection.start.line,
+        mockDocument.lineCount - 1, // -1 'cause is 0 based line count
+        mockEditor.selection.start.line,
+      );
       assert.strictEqual(mockEditor.selection.start.character, 0);
     });
   });
