@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
+import { InputBox } from "../quickInputs/InputBox";
 
 /**
  * Object representing a
@@ -26,6 +27,11 @@ export class View {
    */
   get header(): Locator {
     return this.locator.locator(".pane-header");
+  }
+
+  /** Get the progress indicator shown in the header when the view is loading. */
+  get progressIndicator(): Locator {
+    return this.header.locator(".monaco-progress-container");
   }
 
   /** Get the body section of this view containing the tree items and content. */
@@ -72,29 +78,57 @@ export class View {
     await expect(this.header).toHaveAttribute("aria-expanded", "true");
   }
 
+  /** Wait until the view is no longer in a loading state. */
+  async ensureDoneLoading(): Promise<void> {
+    await expect(this.progressIndicator).toBeHidden();
+  }
+}
+
+export class SearchableView extends View {
+  async clickSearch(): Promise<void> {
+    await this.clickNavAction("Search");
+  }
+
+  /** Search for a tree item by its label/name. */
+  async search(query: string): Promise<void> {
+    await this.ensureExpanded();
+    await this.ensureDoneLoading();
+
+    // clear the "Clear Search" nav action if it's already visible
+    const clearSearchButton = this.header.getByRole("button", { name: "Clear Search" });
+    const isSearching = await clearSearchButton.isVisible();
+    if (isSearching) {
+      await clearSearchButton.click();
+      await expect(clearSearchButton).toBeHidden();
+    }
+
+    await this.clickSearch();
+
+    const inputBox = new InputBox(this.page, /Search items in the .* view/);
+    await expect(inputBox.locator).toBeVisible();
+    await inputBox.input.fill(query);
+    await inputBox.confirm();
+    await expect(inputBox.locator).toBeHidden();
+  }
+
   /** Get a topic item by its label/name, optionally searching within a specific locator. */
   async getItemByLabel(label: string, fromLocator?: Locator): Promise<Locator> {
-    await this.ensureExpanded();
+    await this.ensureDoneLoading();
+
     // filter all tree items in this view unless a specific locator is provided
     const baseLocator = fromLocator ?? this.treeItems;
     const itemLocator = baseLocator.filter({ hasText: label });
 
-    await expect
-      .poll(
-        async () => {
-          const visibleCount = await itemLocator.count();
-          if (visibleCount === 0) {
-            // scroll down via mouse because the locator.scrollIntoViewIfNeeded doesn't work within a view
-            await this.body.hover();
-            await this.page.mouse.wheel(0, 100);
-          }
-          return visibleCount > 0;
-        },
-        {
-          intervals: [10],
-        },
-      )
-      .toBeTruthy();
+    try {
+      await expect(itemLocator, {
+        message: `should check if '${label}' is visible before searching`,
+      }).toBeVisible({ timeout: 1000 });
+      return itemLocator;
+    } catch {
+      // item not found, try searching for it
+    }
+
+    await this.search(label);
 
     await expect(itemLocator).toBeVisible();
     return itemLocator;
