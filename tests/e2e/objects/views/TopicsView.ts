@@ -4,7 +4,7 @@ import type { ConnectionType } from "../../connectionTypes";
 import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
-import { View } from "./View";
+import { SearchableView } from "./View";
 import { TopicItem } from "./viewItems/TopicItem";
 
 export enum SelectKafkaCluster {
@@ -19,7 +19,7 @@ export const DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR = 3;
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  */
-export class TopicsView extends View {
+export class TopicsView extends SearchableView {
   constructor(page: Page) {
     super(page, /Topics.*Section/);
   }

@@ -3,7 +3,7 @@ import { expect } from "@playwright/test";
 import { ConnectionType } from "../../connectionTypes";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { DirectConnectionForm } from "../webviews/DirectConnectionFormWebview";
-import { View } from "./View";
+import { SearchableView } from "./View";
 import { ViewItem } from "./viewItems/ViewItem";
 
 /**
@@ -11,7 +11,7 @@ import { ViewItem } from "./viewItems/ViewItem";
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  */
-export class ResourcesView extends View {
+export class ResourcesView extends SearchableView {
   constructor(page: Page) {
     // we don't need a regex pattern here because we don't update the tree view title/description
     // (unlike the Topics/Schemas/Flink views that show the currently-selected env & focused resource)
