@@ -140,19 +140,16 @@ export const test = testBase.extend<VSCodeFixtures>({
     try {
       // shorten grace period for shutdown to avoid hanging the entire test run
       await Promise.race([
-        electronApp.close(),
+        // electronApp.close() hasn't worked, so we try to use context.close() instead
+        electronApp.context().close(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("electronApp.close() timeout after 10s")), 10000),
+          setTimeout(() => reject(new Error("electronApp.close() timeout after 5s")), 5_000),
         ),
       ]);
-    } catch (error) {
-      console.warn("Error closing electron app:", error);
-      // force-kill if needed
-      try {
-        await electronApp.context().close();
-      } catch (contextError) {
-        console.warn("Error closing electron context:", contextError);
-      }
+    } catch {
+      // we frequently see timeouts with Electron not closing properly, so just log and move on
+      // (even though we see it shut down as expected locally)
+      console.debug("Timed out waiting for Electron to close");
     }
   },
 
@@ -298,8 +295,8 @@ async function globalBeforeEach(page: Page, electronApp: ElectronApplication): P
       timeout: 1000,
     });
     await executeVSCodeCommand(page, "View: Toggle Secondary Side Bar Visibility");
-  } catch (error) {
-    console.warn("Error locating/toggling secondary sidebar:", error);
+  } catch {
+    console.warn("Error locating/toggling secondary sidebar");
   }
 }
 
@@ -341,8 +338,8 @@ async function saveExtensionLogs(
       path: extensionLogPath,
       contentType: "text/plain",
     });
-  } catch (error) {
-    console.error("Error saving extension logs:", error);
+  } catch {
+    console.error("Failed to save extension logs");
   }
 }
 
@@ -375,8 +372,8 @@ async function saveSidecarLogs(
       path: sidecarLogPath,
       contentType: "text/plain",
     });
-  } catch (error) {
-    console.error("Error saving sidecar logs:", error);
+  } catch {
+    console.error("Failed to save sidecar logs");
   }
 }
 
