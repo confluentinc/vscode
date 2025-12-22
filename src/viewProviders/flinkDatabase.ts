@@ -1,5 +1,4 @@
 import { ThemeIcon, type Disposable, type TreeItem } from "vscode";
-import { IconNames } from "../constants";
 import { ContextValues } from "../context/values";
 import {
   artifactsChanged,
@@ -8,6 +7,7 @@ import {
   udfsChanged,
 } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
+import { IconNames } from "../icons";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { FlinkAIAgent, FlinkAIAgentTreeItem } from "../models/flinkAiAgent";
 import { FlinkAIConnection, FlinkAIConnectionTreeItem } from "../models/flinkAiConnection";

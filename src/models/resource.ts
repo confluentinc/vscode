@@ -1,6 +1,6 @@
 import { ConnectionType } from "../clients/sidecar";
-import type { IconNames } from "../constants";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
+import type { IconNames } from "../icons";
 import type { IdItem } from "./main";
 
 /** A uniquely-branded string-type for a connection ID. */

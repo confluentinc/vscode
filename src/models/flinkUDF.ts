@@ -1,6 +1,7 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { CCLOUD_CONNECTION_ID } from "../constants";
+import { IconNames } from "../icons";
 import { formatSqlType } from "../utils/flinkTypes";
 import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";

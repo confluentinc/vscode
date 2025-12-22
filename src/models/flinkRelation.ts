@@ -1,6 +1,7 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { CCLOUD_CONNECTION_ID } from "../constants";
+import { IconNames } from "../icons";
 import { formatSqlType } from "../utils/flinkTypes";
 import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
@@ -253,16 +254,6 @@ export class FlinkRelation implements IResourceBase, IdItem, ISearchable {
   /** Columns of the relation */
   columns: FlinkRelationColumn[];
 
-  /** Determine the icon to use based on the kind of relation. */
-  get iconName(): IconNames {
-    // We really need table and view specific icons here, but for now we map to function and topic respectively.
-    if (this.type === FlinkRelationType.View) {
-      return IconNames.FLINK_FUNCTION; // need something better here, but at least this is visually distinct
-    } else {
-      return IconNames.TOPIC; // topic = table
-    }
-  }
-
   constructor(
     props: Pick<
       FlinkRelation,
@@ -308,6 +299,10 @@ export class FlinkRelation implements IResourceBase, IdItem, ISearchable {
 
   get connectionType(): ConnectionType {
     return ConnectionType.Ccloud;
+  }
+
+  get iconName() {
+    return this.type === FlinkRelationType.View ? IconNames.FLINK_VIEW : IconNames.TOPIC; // topic = table
   }
 
   /** Returns the visible (non-hidden) columns. */

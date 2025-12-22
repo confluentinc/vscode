@@ -5,7 +5,8 @@ import {
   TEST_VARCHAR_COLUMN,
 } from "../../tests/unit/testResources/flinkRelation";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { CCLOUD_CONNECTION_ID } from "../constants";
+import { IconNames } from "../icons";
 import {
   FlinkRelation,
   FlinkRelationColumn,
@@ -299,8 +300,7 @@ describe("flinkRelation.ts", () => {
       });
 
       const defaultIcon = IconNames.TOPIC;
-      // Expected to change when we have a dedicated view icon.
-      const viewIcon = IconNames.FLINK_FUNCTION;
+      const viewIcon = IconNames.FLINK_VIEW;
       const scenarios: Array<[FlinkRelationType, IconNames]> = [
         [FlinkRelationType.BaseTable, defaultIcon],
         [FlinkRelationType.ExternalTable, defaultIcon],

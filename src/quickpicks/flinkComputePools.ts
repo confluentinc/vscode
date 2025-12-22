@@ -1,8 +1,8 @@
 import { commands, QuickPickItemKind, ThemeIcon, window } from "vscode";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
-import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { FLINK_CONFIG_COMPUTE_POOL } from "../extensionSettings/constants";
+import { IconNames } from "../icons";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import type { Environment } from "../models/environment";

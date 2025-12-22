@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IconNames } from "../constants";
+import { IconNames } from "../icons";
 import { CCloudResourceLoader } from "../loaders";
 import type { CCloudEnvironment } from "../models/environment";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";

@@ -3,7 +3,7 @@ import sinon from "sinon";
 import * as vscode from "vscode";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { IconNames } from "../constants";
+import { IconNames } from "../icons";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import type { EnvironmentId } from "../models/resource";

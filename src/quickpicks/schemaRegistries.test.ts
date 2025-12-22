@@ -19,8 +19,8 @@ import {
 } from "../../tests/unit/testResources/schemaRegistry";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
 import { ConnectionType } from "../clients/sidecar";
-import { IconNames } from "../constants";
 import * as contextValues from "../context/values";
+import { IconNames } from "../icons";
 import type { CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader } from "../loaders";
 import { ConnectionLabel } from "../models/resource";
 import type { SchemaRegistry } from "../models/schemaRegistry";
