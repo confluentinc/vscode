@@ -374,28 +374,32 @@ export class FlinkRelation implements IResourceBase, IdItem, ISearchable {
       tooltip.addField("Comment", this.comment);
     }
 
-    // Distribution
-    if (this.isDistributed) {
-      tooltip.addField("Distribution Bucket Count", this.distributionBucketCount.toString());
-    } else {
-      tooltip.addField("Distribution", "Not distributed");
-    }
-
-    // Watermark
-    if (this.isWatermarked) {
-      tooltip.addField("Watermarked", "Yes");
-      if (this.watermarkColumnName) {
-        tooltip.addField(
-          "Watermark Column",
-          `${this.watermarkColumnName}${this.watermarkColumnIsHidden ? " (hidden)" : ""}`,
-        );
+    // Attributes meaningful only for base tables (aka Kafka-topic-backed tables)
+    if (this.type === FlinkRelationType.BaseTable) {
+      // Distribution
+      if (this.isDistributed) {
+        tooltip.addField("Distribution Bucket Count", this.distributionBucketCount.toString());
+      } else {
+        tooltip.addField("Distribution", "Not distributed");
       }
-      tooltip.addField("Watermark Expression", this.watermarkExpression!);
-    } else {
-      tooltip.addField("Watermarked", "No");
+
+      // Watermark
+      if (this.isWatermarked) {
+        tooltip.addField("Watermarked", "Yes");
+        if (this.watermarkColumnName) {
+          tooltip.addField(
+            "Watermark Column",
+            `${this.watermarkColumnName}${this.watermarkColumnIsHidden ? " (hidden)" : ""}`,
+          );
+        }
+        tooltip.addField("Watermark Expression", this.watermarkExpression!);
+      } else {
+        tooltip.addField("Watermarked", "No");
+      }
     }
 
-    // If has a view definition, show it here for the time being.
+    // If has a view definition, show it here for the time being. Needs
+    // to ultimately be openable in a separate tab or similar.
     if (this.type === FlinkRelationType.View && this.viewDefinition) {
       tooltip.addField("View Definition", `\`\`\`\n${this.viewDefinition}\n\`\`\``);
     }
