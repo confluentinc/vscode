@@ -1,6 +1,7 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
+import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { IconNames } from "../icons";
 import { formatSqlType } from "../utils/flinkTypes";
 import type { IdItem } from "./main";
@@ -401,7 +402,8 @@ export class FlinkRelation implements IResourceBase, IdItem, ISearchable {
     // If has a view definition, show it here for the time being. Needs
     // to ultimately be openable in a separate tab or similar.
     if (this.type === FlinkRelationType.View && this.viewDefinition) {
-      tooltip.addField("View Definition", `\`\`\`\n${this.viewDefinition}\n\`\`\``);
+      tooltip.appendMarkdown("\n\nView Definition:");
+      tooltip.addCodeBlock(this.viewDefinition, FLINK_SQL_LANGUAGE_ID);
     }
 
     return tooltip;
