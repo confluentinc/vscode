@@ -138,19 +138,18 @@ export const test = testBase.extend<VSCodeFixtures>({
     await use(electronApp);
 
     try {
-      // shorten grace period for shutdown to avoid hanging the entire test run
+      // shorten grace period for shutdown to avoid hanging the entire test run, but don't SIGKILL
+      // early because we might lose trace/screenshot/snapshot data
       await Promise.race([
-        // electronApp.close() and .context.close() can stall occasionally,
-        // so force-kill to ensure VS Code actually shuts down
-        electronApp.process().kill("SIGKILL"),
+        electronApp.close(),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error("electronApp.close() timeout after 5s")), 5_000),
         ),
       ]);
-    } catch {
-      // we frequently see timeouts with Electron not closing properly, so just log and move on
-      // (even though we see it shut down as expected locally)
-      console.debug("Timed out waiting for Electron to close");
+    } catch (error) {
+      console.warn("Timed out waiting for Electron to close, killing process...");
+      electronApp.process().kill("SIGKILL");
+      console.info("Killed electron process");
     }
   },
 
