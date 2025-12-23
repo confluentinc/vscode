@@ -80,11 +80,6 @@ export class View {
     }
     await expect(this.header).toHaveAttribute("aria-expanded", "true");
   }
-
-  /** Wait until the view is no longer in a loading state. */
-  async ensureDoneLoading(): Promise<void> {
-    await expect(this.progressIndicator).toBeHidden();
-  }
 }
 
 export class SearchableView extends View {
@@ -95,7 +90,7 @@ export class SearchableView extends View {
   /** Search for a tree item by its label/name. */
   async search(query: string): Promise<void> {
     await this.ensureExpanded();
-    await this.ensureDoneLoading();
+    await expect(this.progressIndicator).toBeHidden();
 
     // clear the "Clear Search" nav action if it's already visible
     const clearSearchButton = this.header.getByRole("button", { name: "Clear Search" });
@@ -116,7 +111,7 @@ export class SearchableView extends View {
 
   /** Get a topic item by its label/name, optionally searching within a specific locator. */
   async getItemByLabel(label: string, fromLocator?: Locator): Promise<Locator> {
-    await this.ensureDoneLoading();
+    await expect(this.progressIndicator).toBeHidden();
 
     // filter all tree items in this view unless a specific locator is provided
     const baseLocator = fromLocator ?? this.treeItems;

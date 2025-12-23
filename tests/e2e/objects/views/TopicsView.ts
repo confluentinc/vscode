@@ -45,6 +45,8 @@ export class TopicsView extends SearchableView {
   /** Click the "Refresh" nav action in the view title area. */
   async clickRefresh(): Promise<void> {
     await this.clickNavAction("Refresh");
+    await expect(this.progressIndicator).toBeVisible();
+    await expect(this.progressIndicator).toBeHidden();
   }
 
   /** Get all (root-level) topic items in the view. */
@@ -124,6 +126,7 @@ export class TopicsView extends SearchableView {
     }
     await expect(this.header).toHaveAttribute("aria-expanded", "true");
     await expect(this.body).toBeVisible();
+    await expect(this.progressIndicator).toBeHidden();
   }
 
   /**
@@ -157,6 +160,10 @@ export class TopicsView extends SearchableView {
     await expect(replicationInput.input).toBeVisible();
     await replicationInput.input.fill(replicationFactor.toString());
     await replicationInput.confirm();
+
+    // progress indicator should be visible while the view reloads, then disappear when done
+    await expect(this.progressIndicator).toBeVisible();
+    await expect(this.progressIndicator).toBeHidden();
   }
 
   /**
@@ -171,5 +178,9 @@ export class TopicsView extends SearchableView {
     await expect(deletionConfirmationBox.input).toBeVisible();
     await deletionConfirmationBox.input.fill(topicName);
     await deletionConfirmationBox.confirm();
+
+    // progress indicator should be visible while the view reloads, then disappear when done
+    await expect(this.progressIndicator).toBeVisible();
+    await expect(this.progressIndicator).toBeHidden();
   }
 }
