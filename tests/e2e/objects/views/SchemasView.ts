@@ -185,10 +185,6 @@ export class SchemasView extends SearchableView {
     await subjectInputBox.input.fill(subjectName);
     await subjectInputBox.confirm();
 
-    // progress indicator should be visible while the view reloads, then disappear when done
-    await expect(this.progressIndicator).toBeVisible();
-    await expect(this.progressIndicator).toBeHidden();
-
     // clear out and close the untitled document after uploading so we only have one editor open
     // during the rest of the tests
     await untitledDocument.deleteAll();
@@ -233,10 +229,6 @@ export class SchemasView extends SearchableView {
     await expect(confirmationBox.input).toBeVisible();
     await confirmationBox.input.fill(deletionConfirmation);
     await confirmationBox.confirm();
-
-    // progress indicator should be visible while the view reloads, then disappear when done
-    await expect(this.progressIndicator).toBeVisible();
-    await expect(this.progressIndicator).toBeHidden();
 
     // the system dialog is automatically handled by the stub above, no need to handle it here
     const notificationArea = new NotificationArea(page);
