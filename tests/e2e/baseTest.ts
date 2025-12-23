@@ -140,8 +140,9 @@ export const test = testBase.extend<VSCodeFixtures>({
     try {
       // shorten grace period for shutdown to avoid hanging the entire test run
       await Promise.race([
-        // electronApp.close() hasn't worked, so we try to use context.close() instead
-        electronApp.context().close(),
+        // electronApp.close() and .context.close() can stall occasionally,
+        // so force-kill to ensure VS Code actually shuts down
+        electronApp.process().kill("SIGKILL"),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error("electronApp.close() timeout after 5s")), 5_000),
         ),
