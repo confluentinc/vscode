@@ -215,10 +215,7 @@ export class SchemasView extends SearchableView {
     ]);
 
     // find the schema item in the view and start the deletion from its context menu
-    const subjectLocator: Locator = this.subjects.filter({ hasText: subjectName });
-    const subjectItem = new SubjectItem(page, subjectLocator.first());
-    await subjectItem.locator.scrollIntoViewIfNeeded();
-    await expect(subjectItem.locator).toBeVisible();
+    const subjectItem = await this.getSubjectItem(subjectName);
     await subjectItem.rightClickContextMenuAction("Delete All Schemas in Subject");
 
     // select the Hard Delete option
