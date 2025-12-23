@@ -109,7 +109,7 @@ export class SearchableView extends View {
     await expect(inputBox.locator).toBeHidden();
   }
 
-  /** Get a topic item by its label/name, optionally searching within a specific locator. */
+  /** Get a tree item by its label/name, optionally searching within a specific locator. */
   async getItemByLabel(label: string, fromLocator?: Locator): Promise<Locator> {
     await expect(this.progressIndicator).toBeHidden();
 
