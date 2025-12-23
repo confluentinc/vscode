@@ -146,10 +146,14 @@ export const test = testBase.extend<VSCodeFixtures>({
           setTimeout(() => reject(new Error("electronApp.close() timeout after 5s")), 5_000),
         ),
       ]);
-    } catch (error) {
+    } catch {
       console.warn("Timed out waiting for Electron to close, killing process...");
-      electronApp.process().kill("SIGKILL");
-      console.info("Killed electron process");
+      try {
+        electronApp.process().kill("SIGKILL");
+        console.info("Killed Electron process");
+      } catch (err) {
+        console.warn(`Error killing Electron process: ${err}`);
+      }
     }
   },
 
