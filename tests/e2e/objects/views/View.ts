@@ -29,9 +29,12 @@ export class View {
     return this.locator.locator(".pane-header");
   }
 
-  /** Get the progress indicator shown in the header when the view is loading. */
+  /**
+   * Get the progress indicator shown between the {@link header} and {@link body} when the view is
+   * loading.
+   */
   get progressIndicator(): Locator {
-    return this.header.locator(".monaco-progress-container");
+    return this.locator.locator(".monaco-progress-container.active");
   }
 
   /** Get the body section of this view containing the tree items and content. */
