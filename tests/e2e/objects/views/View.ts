@@ -82,7 +82,13 @@ export class View {
   }
 }
 
+/**
+ * Object representing a
+ * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view}
+ * that supports searching for tree items.
+ */
 export class SearchableView extends View {
+  /** Click the "Search" nav action/button in this view's header. */
   async clickSearch(): Promise<void> {
     await this.clickNavAction("Search");
   }
@@ -111,6 +117,7 @@ export class SearchableView extends View {
 
   /** Get a tree item by its label/name, optionally searching within a specific locator. */
   async getItemByLabel(label: string, fromLocator?: Locator): Promise<Locator> {
+    // make sure we're not in any kind of loading state
     await expect(this.progressIndicator).toBeHidden();
 
     // filter all tree items in this view unless a specific locator is provided

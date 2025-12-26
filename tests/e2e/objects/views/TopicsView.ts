@@ -45,6 +45,7 @@ export class TopicsView extends SearchableView {
   /** Click the "Refresh" nav action in the view title area. */
   async clickRefresh(): Promise<void> {
     await this.clickNavAction("Refresh");
+    // wait for any loading to complete before returning
     await expect(this.progressIndicator).toBeHidden();
   }
 
@@ -160,7 +161,8 @@ export class TopicsView extends SearchableView {
     await replicationInput.input.fill(replicationFactor.toString());
     await replicationInput.confirm();
 
-    // progress indicator should be visible while the view reloads, then disappear when done
+    // progress indicator may be visible while the view reloads, but should not be visible when done
+    // before returning
     await expect(this.progressIndicator).toBeHidden();
   }
 
@@ -177,7 +179,8 @@ export class TopicsView extends SearchableView {
     await deletionConfirmationBox.input.fill(topicName);
     await deletionConfirmationBox.confirm();
 
-    // progress indicator should be visible while the view reloads, then disappear when done
+    // progress indicator may be visible while the view reloads, but should not be visible when done
+    // before returning
     await expect(this.progressIndicator).toBeHidden();
   }
 }
