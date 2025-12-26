@@ -8,7 +8,7 @@ import { NotificationArea } from "../notifications/NotificationArea";
 import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
-import { View } from "./View";
+import { SearchableView } from "./View";
 import { FlinkComputePoolItem } from "./viewItems/FlinkComputePoolItem";
 import { KafkaClusterItem } from "./viewItems/KafkaClusterItem";
 import { ViewItem } from "./viewItems/ViewItem";
@@ -26,7 +26,7 @@ export enum SelectFlinkDatabase {
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  * Provides access to Flink artifact items and actions within the view.
  */
-export class FlinkDatabaseView extends View {
+export class FlinkDatabaseView extends SearchableView {
   constructor(page: Page) {
     super(page, /Flink Database.*Section/);
   }
