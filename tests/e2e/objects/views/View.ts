@@ -100,8 +100,8 @@ export class SearchableView extends View {
 
     // clear the "Clear Search" nav action if it's already visible
     const clearSearchButton = this.header.getByRole("button", { name: "Clear Search" });
-    const isSearching = await clearSearchButton.isVisible();
-    if (isSearching) {
+    const hasActiveSearch = await clearSearchButton.isVisible();
+    if (hasActiveSearch) {
       await clearSearchButton.click();
       await expect(clearSearchButton).toBeHidden();
     }
