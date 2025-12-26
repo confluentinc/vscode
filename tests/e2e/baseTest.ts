@@ -138,20 +138,21 @@ export const test = testBase.extend<VSCodeFixtures>({
     await use(electronApp);
 
     try {
-      // shorten grace period for shutdown to avoid hanging the entire test run
+      // shorten grace period for shutdown to avoid hanging the entire test run, but don't SIGKILL
+      // early because we might lose trace/screenshot/snapshot data
       await Promise.race([
         electronApp.close(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("electronApp.close() timeout after 10s")), 10000),
+          setTimeout(() => reject(new Error("electronApp.close() timeout after 5s")), 5_000),
         ),
       ]);
-    } catch (error) {
-      console.warn("Error closing electron app:", error);
-      // force-kill if needed
+    } catch {
+      console.warn("Timed out waiting for Electron to close, killing process...");
       try {
-        await electronApp.context().close();
-      } catch (contextError) {
-        console.warn("Error closing electron context:", contextError);
+        electronApp.process().kill("SIGKILL");
+        console.info("Killed Electron process");
+      } catch (err) {
+        console.warn(`Error killing Electron process: ${err}`);
       }
     }
   },
@@ -298,8 +299,8 @@ async function globalBeforeEach(page: Page, electronApp: ElectronApplication): P
       timeout: 1000,
     });
     await executeVSCodeCommand(page, "View: Toggle Secondary Side Bar Visibility");
-  } catch (error) {
-    console.warn("Error locating/toggling secondary sidebar:", error);
+  } catch {
+    console.warn("Error locating/toggling secondary sidebar");
   }
 }
 
@@ -341,8 +342,8 @@ async function saveExtensionLogs(
       path: extensionLogPath,
       contentType: "text/plain",
     });
-  } catch (error) {
-    console.error("Error saving extension logs:", error);
+  } catch {
+    console.error("Failed to save extension logs");
   }
 }
 
@@ -375,8 +376,8 @@ async function saveSidecarLogs(
       path: sidecarLogPath,
       contentType: "text/plain",
     });
-  } catch (error) {
-    console.error("Error saving sidecar logs:", error);
+  } catch {
+    console.error("Failed to save sidecar logs");
   }
 }
 
