@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
+import { InputBox } from "../quickInputs/InputBox";
 
 /**
  * Object representing a
@@ -26,6 +27,14 @@ export class View {
    */
   get header(): Locator {
     return this.locator.locator(".pane-header");
+  }
+
+  /**
+   * Get the progress indicator shown between the {@link header} and {@link body} when the view is
+   * loading.
+   */
+  get progressIndicator(): Locator {
+    return this.locator.locator(".monaco-progress-container.active");
   }
 
   /** Get the body section of this view containing the tree items and content. */
@@ -70,5 +79,63 @@ export class View {
       await this.header.click();
     }
     await expect(this.header).toHaveAttribute("aria-expanded", "true");
+  }
+}
+
+/**
+ * Object representing a
+ * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view}
+ * that supports searching for tree items.
+ */
+export class SearchableView extends View {
+  /** Click the "Search" nav action/button in this view's header. */
+  async clickSearch(): Promise<void> {
+    await this.clickNavAction("Search");
+  }
+
+  /** Search for a tree item by its label/name. */
+  async search(query: string): Promise<void> {
+    await this.ensureExpanded();
+    await expect(this.progressIndicator).toBeHidden();
+
+    // clear the "Clear Search" nav action if it's already visible
+    const clearSearchButton = this.header.getByRole("button", { name: "Clear Search" });
+    const hasActiveSearch = await clearSearchButton.isVisible();
+    if (hasActiveSearch) {
+      await clearSearchButton.click();
+      await expect(clearSearchButton).toBeHidden();
+    }
+
+    await this.clickSearch();
+
+    const inputBox = new InputBox(this.page, /Search items in the .* view/);
+    await expect(inputBox.locator).toBeVisible();
+    await inputBox.input.fill(query);
+    await inputBox.confirm();
+    await expect(inputBox.locator).toBeHidden();
+  }
+
+  /** Get a tree item by its label/name, optionally searching within a specific locator. */
+  async getItemByLabel(label: string, fromLocator?: Locator): Promise<Locator> {
+    // make sure we're not in any kind of loading state
+    await expect(this.progressIndicator).toBeHidden();
+
+    // filter all tree items in this view unless a specific locator is provided
+    const baseLocator = fromLocator ?? this.treeItems;
+    const itemLocator = baseLocator.filter({ hasText: label });
+
+    try {
+      await expect(itemLocator, {
+        message: `should check if '${label}' is visible before searching`,
+      }).toBeVisible({ timeout: 1000 });
+      return itemLocator;
+    } catch {
+      // item not found, try searching for it
+    }
+
+    await this.search(label);
+
+    await expect(itemLocator).toBeVisible();
+    return itemLocator;
   }
 }

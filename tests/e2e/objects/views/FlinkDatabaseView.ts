@@ -8,7 +8,7 @@ import { NotificationArea } from "../notifications/NotificationArea";
 import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
-import { View } from "./View";
+import { SearchableView } from "./View";
 import { FlinkComputePoolItem } from "./viewItems/FlinkComputePoolItem";
 import { KafkaClusterItem } from "./viewItems/KafkaClusterItem";
 import { ViewItem } from "./viewItems/ViewItem";
@@ -26,7 +26,7 @@ export enum SelectFlinkDatabase {
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  * Provides access to Flink artifact items and actions within the view.
  */
-export class FlinkDatabaseView extends View {
+export class FlinkDatabaseView extends SearchableView {
   constructor(page: Page) {
     super(page, /Flink Database.*Section/);
   }
@@ -235,7 +235,6 @@ export class FlinkDatabaseView extends View {
     const artifactItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
     await expect(artifactItem).toBeVisible();
     await artifactItem.click();
-
     const baseFileName = path.basename(filePath, ".jar");
     // Although this resource may be cleaned up, we append a random string to avoid name conflicts during development
     const fullArtifactName = `${baseFileName}-${randomHexString(6)}`;

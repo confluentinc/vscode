@@ -10,6 +10,12 @@ import { ConnectionType, FormConnectionType, SupportedAuthType } from "./connect
 import { Notification } from "./objects/notifications/Notification";
 import { NotificationArea } from "./objects/notifications/NotificationArea";
 import { Quickpick } from "./objects/quickInputs/Quickpick";
+import type { TopicConfig } from "./objects/views/TopicsView";
+import {
+  DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
+  SelectKafkaCluster,
+  TopicsView,
+} from "./objects/views/TopicsView";
 import type { CCloudConnectionItem } from "./objects/views/viewItems/CCloudConnectionItem";
 import type { DirectConnectionItem } from "./objects/views/viewItems/DirectConnectionItem";
 import type { LocalConnectionItem } from "./objects/views/viewItems/LocalConnectionItem";
@@ -22,6 +28,7 @@ import {
 } from "./utils/connections";
 import { configureVSCodeSettings } from "./utils/settings";
 import { openConfluentSidebar } from "./utils/sidebarNavigation";
+import { randomHexString } from "./utils/strings";
 
 // NOTE: we can't import these two directly from 'global.setup.ts'
 // cached test setup file path that's shared across worker processes
@@ -76,6 +83,16 @@ interface VSCodeFixtures {
    * connection item ({@link CCloudConnectionItem}, {@link DirectConnectionItem}, or {@link LocalConnectionItem}).
    */
   connectionItem: CCloudConnectionItem | DirectConnectionItem | LocalConnectionItem;
+
+  /**
+   * Configuration options for creating a topic with the {@linkcode topic} fixture.
+   */
+  topicConfig: TopicConfig;
+  /**
+   * Set up a topic based on the {@linkcode topicConfig} option and return the associated topic
+   * `name` for tests to reference.
+   */
+  topic: string;
 }
 
 export const test = testBase.extend<VSCodeFixtures>({
@@ -138,20 +155,21 @@ export const test = testBase.extend<VSCodeFixtures>({
     await use(electronApp);
 
     try {
-      // shorten grace period for shutdown to avoid hanging the entire test run
+      // shorten grace period for shutdown to avoid hanging the entire test run, but don't SIGKILL
+      // early because we might lose trace/screenshot/snapshot data
       await Promise.race([
         electronApp.close(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("electronApp.close() timeout after 10s")), 10000),
+          setTimeout(() => reject(new Error("electronApp.close() timeout after 5s")), 5_000),
         ),
       ]);
-    } catch (error) {
-      console.warn("Error closing electron app:", error);
-      // force-kill if needed
+    } catch {
+      console.warn("Timed out waiting for Electron to close, killing process...");
       try {
-        await electronApp.context().close();
-      } catch (contextError) {
-        console.warn("Error closing electron context:", contextError);
+        electronApp.process().kill("SIGKILL");
+        console.info("Killed Electron process");
+      } catch (err) {
+        console.warn(`Error killing Electron process: ${err}`);
       }
     }
   },
@@ -269,6 +287,52 @@ export const test = testBase.extend<VSCodeFixtures>({
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }
   },
+
+  // no default value, must be provided by test
+  topicConfig: undefined as any,
+
+  topic: async ({ page, connectionType, connectionItem, topicConfig }, use) => {
+    if (!connectionType) {
+      throw new Error(
+        "connectionType must be set, like `test.use({ connectionType: ConnectionType.Ccloud })`",
+      );
+    }
+    if (!topicConfig) {
+      throw new Error(
+        "topicConfig must be set, like `test.use({ topicConfig: { name: 'my-topic' } })`",
+      );
+    }
+
+    // ensure connection has resources available to work with
+    await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+
+    const topicName = `${topicConfig.name}-${randomHexString(6)}`;
+
+    // set default replication factor (if it wasn't provided) based on connection type
+    const replicationFactor =
+      topicConfig.replicationFactor ??
+      (connectionType === ConnectionType.Local ? 1 : DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR);
+
+    const numPartitions = topicConfig.numPartitions ?? 1;
+
+    // setup: create the topic
+    const topicsView = new TopicsView(page);
+    await topicsView.loadTopics(
+      connectionType,
+      SelectKafkaCluster.FromResourcesView,
+      topicConfig.clusterLabel,
+    );
+    await topicsView.createTopic(topicName, numPartitions, replicationFactor);
+
+    await use(topicName);
+
+    // teardown: delete the topic
+    // (explicitly make sure the sidebar is open and we reload the topics view in the event a test
+    // navigated away to a new window or sidebar)
+    await openConfluentSidebar(page);
+    await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
+    await topicsView.deleteTopic(topicName);
+  },
 });
 
 /**
@@ -298,8 +362,8 @@ async function globalBeforeEach(page: Page, electronApp: ElectronApplication): P
       timeout: 1000,
     });
     await executeVSCodeCommand(page, "View: Toggle Secondary Side Bar Visibility");
-  } catch (error) {
-    console.warn("Error locating/toggling secondary sidebar:", error);
+  } catch {
+    console.warn("Error locating/toggling secondary sidebar");
   }
 }
 
@@ -341,8 +405,8 @@ async function saveExtensionLogs(
       path: extensionLogPath,
       contentType: "text/plain",
     });
-  } catch (error) {
-    console.error("Error saving extension logs:", error);
+  } catch {
+    console.error("Failed to save extension logs");
   }
 }
 
@@ -375,8 +439,8 @@ async function saveSidecarLogs(
       path: sidecarLogPath,
       contentType: "text/plain",
     });
-  } catch (error) {
-    console.error("Error saving sidecar logs:", error);
+  } catch {
+    console.error("Failed to save sidecar logs");
   }
 }
 

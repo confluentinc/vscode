@@ -4,12 +4,20 @@ import type { ConnectionType } from "../../connectionTypes";
 import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
-import { View } from "./View";
+import { SearchableView } from "./View";
 import { TopicItem } from "./viewItems/TopicItem";
 
 export enum SelectKafkaCluster {
   FromResourcesView = "Kafka cluster action from the Resources view",
   FromTopicsViewButton = "Topics view nav action",
+}
+
+/** Configuration options for creating a topic. */
+export interface TopicConfig {
+  name: string;
+  numPartitions?: number;
+  replicationFactor?: number;
+  clusterLabel?: string | RegExp;
 }
 
 export const DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR = 3;
@@ -19,7 +27,7 @@ export const DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR = 3;
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  */
-export class TopicsView extends View {
+export class TopicsView extends SearchableView {
   constructor(page: Page) {
     super(page, /Topics.*Section/);
   }
@@ -45,11 +53,19 @@ export class TopicsView extends View {
   /** Click the "Refresh" nav action in the view title area. */
   async clickRefresh(): Promise<void> {
     await this.clickNavAction("Refresh");
+    // wait for any loading to complete before returning
+    await expect(this.progressIndicator).toBeHidden();
   }
 
   /** Get all (root-level) topic items in the view. */
   get topics(): Locator {
     return this.body.locator("[role='treeitem'][aria-level='1']");
+  }
+
+  /** Get a topic item by its label/name. */
+  async getTopicItem(topicName: string): Promise<TopicItem> {
+    const item = await this.getItemByLabel(topicName, this.topics);
+    return new TopicItem(this.page, item);
   }
 
   /** Get all {@link topics topic items} with schemas in the view. */
@@ -118,6 +134,7 @@ export class TopicsView extends View {
     }
     await expect(this.header).toHaveAttribute("aria-expanded", "true");
     await expect(this.body).toBeVisible();
+    await expect(this.progressIndicator).toBeHidden();
   }
 
   /**
@@ -151,6 +168,10 @@ export class TopicsView extends View {
     await expect(replicationInput.input).toBeVisible();
     await replicationInput.input.fill(replicationFactor.toString());
     await replicationInput.confirm();
+
+    // progress indicator may be visible while the view reloads, but should not be visible when done
+    // before returning
+    await expect(this.progressIndicator).toBeHidden();
   }
 
   /**
@@ -158,16 +179,16 @@ export class TopicsView extends View {
    * topic item.
    */
   async deleteTopic(topicName: string): Promise<void> {
-    const topicLocator: Locator = this.topics.filter({ hasText: topicName });
-    await expect(topicLocator).toHaveCount(1);
-    const topicItem = new TopicItem(this.page, topicLocator.first());
-    await topicItem.locator.scrollIntoViewIfNeeded();
-    await expect(topicItem.locator).toBeVisible();
+    const topicItem = await this.getTopicItem(topicName);
     await topicItem.rightClickContextMenuAction("Delete Topic");
 
     const deletionConfirmationBox = new InputBox(this.page);
     await expect(deletionConfirmationBox.input).toBeVisible();
     await deletionConfirmationBox.input.fill(topicName);
     await deletionConfirmationBox.confirm();
+
+    // progress indicator may be visible while the view reloads, but should not be visible when done
+    // before returning
+    await expect(this.progressIndicator).toBeHidden();
   }
 }

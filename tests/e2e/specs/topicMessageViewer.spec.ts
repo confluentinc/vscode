@@ -1,15 +1,10 @@
 import { expect } from "@playwright/test";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
-import {
-  DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
-  SelectKafkaCluster,
-  TopicsView,
-} from "../objects/views/TopicsView";
-import { TopicItem } from "../objects/views/viewItems/TopicItem";
+import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
+import type { TopicItem } from "../objects/views/viewItems/TopicItem";
 import type { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { Tag } from "../tags";
-import { randomHexString } from "../utils/strings";
 
 /**
  * E2E test suite for testing the Topics view and Message Viewer functionality.
@@ -27,56 +22,44 @@ import { randomHexString } from "../utils/strings";
  */
 
 test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer] }, () => {
-  let topicName: string = `e2e-topic-message-viewer-${randomHexString(6)}`;
-
-  test.afterEach(async ({ page }) => {
-    const topicView = new TopicsView(page);
-    await topicView.deleteTopic(topicName);
-  });
-
   // test dimensions:
-  const connectionTypes: Array<[ConnectionType, Tag, number]> = [
-    [ConnectionType.Ccloud, Tag.CCloud, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
-    [ConnectionType.Direct, Tag.Direct, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
-    [ConnectionType.Local, Tag.Local, 1],
+  const connectionTypes: Array<[ConnectionType, Tag]> = [
+    [ConnectionType.Ccloud, Tag.CCloud],
+    [ConnectionType.Direct, Tag.Direct],
+    [ConnectionType.Local, Tag.Local],
   ];
   const entrypoints = [
     SelectKafkaCluster.FromResourcesView,
     SelectKafkaCluster.FromTopicsViewButton,
   ];
 
-  for (const [connectionType, connectionTag, replicationFactor] of connectionTypes) {
+  for (const [connectionType, connectionTag] of connectionTypes) {
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
-      // tell the `connectionItem` fixture which connection type to set up
-      test.use({ connectionType });
+      // specify the connection type to use with the `connectionItem` fixture, and the topic to
+      // create with the `topic` fixture
+      test.use({
+        connectionType,
+        topicConfig: { name: "e2e-topic-message-viewer" },
+      });
 
       for (const entrypoint of entrypoints) {
-        test(`should select a Kafka cluster from the ${entrypoint}, list topics, and open message viewer`, async ({
-          page,
-          connectionItem,
-        }) => {
-          // ensure connection has resources available to work with
-          await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+        test(
+          `should select a Kafka cluster from the ${entrypoint}, list topics, and open message viewer`,
+          { tag: [Tag.RequiresTopic] },
+          async ({ page, topic: topicName }) => {
+            const topicsView = new TopicsView(page);
+            await topicsView.loadTopics(connectionType, entrypoint);
 
-          // create a new topic
-          const topicsView = new TopicsView(page);
-          await topicsView.loadTopics(connectionType, entrypoint);
-          await topicsView.createTopic(topicName, 1, replicationFactor);
+            // open the message viewer for the topic
+            const topicItem: TopicItem = await topicsView.getTopicItem(topicName);
+            const messageViewer: MessageViewerWebview = await topicItem.clickViewMessages();
 
-          // verify it shows up in the Topics view
-          let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
-          await targetTopic.scrollIntoViewIfNeeded();
-          await expect(targetTopic).toBeVisible();
-
-          // open the message viewer for the topic
-          const topic = new TopicItem(page, targetTopic);
-          const messageViewer: MessageViewerWebview = await topic.clickViewMessages();
-
-          // the message viewer webview should now be visible in the editor area
-          await expect(messageViewer.messageViewerSettings).toBeVisible();
-          await expect(messageViewer.content).toBeVisible();
-          await expect(messageViewer.paginationControls).toBeVisible();
-        });
+            // the message viewer webview should now be visible in the editor area
+            await expect(messageViewer.messageViewerSettings).toBeVisible();
+            await expect(messageViewer.content).toBeVisible();
+            await expect(messageViewer.paginationControls).toBeVisible();
+          },
+        );
       }
     });
   }
