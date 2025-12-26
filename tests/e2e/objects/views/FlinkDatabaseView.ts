@@ -243,6 +243,7 @@ export class FlinkDatabaseView extends SearchableView {
     const artifactItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
     await expect(artifactItem).toBeVisible();
     await artifactItem.click();
+
     const baseFileName = path.basename(filePath, ".jar");
     // Although this resource may be cleaned up, we append a random string to avoid name conflicts during development
     const fullArtifactName = `${baseFileName}-${randomHexString(6)}`;
