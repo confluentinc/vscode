@@ -1,12 +1,12 @@
 import { KafkaJS } from "@confluentinc/kafka-javascript";
-import type { ProducerConstructorConfig } from "@confluentinc/kafka-javascript/types/kafkajs";
+import type { KafkaConfig, SASLOptions } from "@confluentinc/kafka-javascript/types/kafkajs";
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
 import type { DirectConnectionOptions } from "../types/connection";
 import { ConnectionType, SupportedAuthType } from "../types/connection";
-import type { ProducerOptions } from "../types/topic";
+import { CompressionType, type ProducerOptions } from "../types/topic";
 
 /**
  * Produces messages to a Kafka topic using the JavaScript Kafka client based on the connection type.
@@ -33,7 +33,7 @@ export async function produceMessages(
 ): Promise<void> {
   const {
     numMessages = 10,
-    compressionType,
+    compressionType = CompressionType.None,
     keyPrefix = "test-key",
     valuePrefix = "test-value",
   } = options;
@@ -44,87 +44,59 @@ export async function produceMessages(
   }));
 
   let bootstrapServers: string;
-  let saslConfig: { mechanism?: string; username?: string; password?: string } = {};
-
-  // get connection details based on connection type
-  switch (connectionType) {
-    case ConnectionType.Ccloud:
-      // use the predefined CCloud username/password for SASL/PLAIN
-      if (!process.env.E2E_USERNAME || !process.env.E2E_PASSWORD) {
-        throw new Error(
-          "E2E_USERNAME and E2E_PASSWORD environment variables must be set for CCloud producer",
-        );
-      }
-      if (!process.env.E2E_KAFKA_BOOTSTRAP_SERVERS) {
-        throw new Error(
-          "E2E_KAFKA_BOOTSTRAP_SERVERS environment variable must be set for CCloud producer",
-        );
-      }
-      bootstrapServers = process.env.E2E_KAFKA_BOOTSTRAP_SERVERS;
+  let saslConfig: SASLOptions | undefined;
+  if (connectionType === ConnectionType.Local) {
+    // copy the bootstrap server from the Resources view for LOCAL connections since we don't have
+    // to set up any local credentials
+    const resourcesView = new ResourcesView(page);
+    const localKafka = await resourcesView.getKafkaCluster(ConnectionType.Local);
+    await expect(localKafka).not.toHaveCount(0);
+    const localKafkaItem = new KafkaClusterItem(page, localKafka.first());
+    await localKafkaItem.copyBootstrapServers();
+    bootstrapServers = await page.evaluate(async () => await navigator.clipboard.readText());
+  } else {
+    // CCLOUD and DIRECT connections will use the same bootstrap servers and auth mechanism unless
+    // otherwise specified by the tests
+    bootstrapServers =
+      directConnectionConfig?.kafkaConfig?.bootstrapServers ??
+      process.env.E2E_KAFKA_BOOTSTRAP_SERVERS!;
+    if (
+      directConnectionConfig?.kafkaConfig &&
+      directConnectionConfig.kafkaConfig.authType !== SupportedAuthType.None
+    ) {
+      const credentials = directConnectionConfig.kafkaConfig.credentials;
       saslConfig = {
         mechanism: "plain",
-        username: process.env.E2E_USERNAME,
-        password: process.env.E2E_PASSWORD,
+        username: credentials.api_key || credentials.username,
+        password: credentials.api_secret || credentials.password,
       };
-      break;
-
-    case ConnectionType.Direct:
-      // use the predefined Kafka config from the direct connection setup
-      if (!directConnectionConfig || !directConnectionConfig.kafkaConfig) {
-        throw new Error("Direct connection config with Kafka config must be provided");
-      }
-      bootstrapServers = directConnectionConfig.kafkaConfig.bootstrapServers;
-
-      if (directConnectionConfig.kafkaConfig.authType !== SupportedAuthType.None) {
-        const credentials = directConnectionConfig.kafkaConfig.credentials;
-        saslConfig = {
-          mechanism: "plain",
-          username: credentials.api_key || credentials.username,
-          password: credentials.api_secret || credentials.password,
-        };
-      }
-      break;
-
-    case ConnectionType.Local:
-      // just copy the bootstrap server from the UI for local connections since we don't set up auth
-      const resourcesView = new ResourcesView(page);
-      const localKafka = await resourcesView.getKafkaCluster(ConnectionType.Local);
-      await expect(localKafka).not.toHaveCount(0);
-      const localKafkaItem = new KafkaClusterItem(page, localKafka.first());
-      await localKafkaItem.copyBootstrapServers();
-      bootstrapServers = await page.evaluate(async () => await navigator.clipboard.readText());
-      break;
-
-    default:
-      throw new Error(`Unsupported connection type: ${connectionType}`);
+    }
   }
 
-  const producerConfig: ProducerConstructorConfig = {
-    "bootstrap.servers": bootstrapServers,
+  const kafkaConfig: KafkaConfig = {
+    ssl: connectionType !== ConnectionType.Local,
+    sasl: saslConfig,
+    brokers: bootstrapServers.split(","),
+    logLevel: KafkaJS.logLevel.ERROR, // silence non-error logging
   };
 
-  if (compressionType) {
-    producerConfig["compression.codec"] = compressionType;
-  }
-
-  // set up credentials for CCLOUD/DIRECT connections
-  if (Object.keys(saslConfig).length > 0) {
-    producerConfig["security.protocol"] = "sasl_ssl";
-    producerConfig["sasl.mechanisms"] = saslConfig.mechanism?.toUpperCase();
-    producerConfig["sasl.username"] = saslConfig.username;
-    producerConfig["sasl.password"] = saslConfig.password;
-  }
-
-  const kafka = new KafkaJS.Kafka();
-  const producer = kafka.producer(producerConfig);
+  const kafka = new KafkaJS.Kafka({ kafkaJS: kafkaConfig });
+  const producer = kafka.producer({ "compression.codec": compressionType });
 
   try {
     await producer.connect();
+    console.info(
+      `Connected to Kafka, producing ${numMessages} messages to topic '${topicName}'...`,
+    );
     await producer.send({
       topic: topicName,
       messages,
     });
+    console.info(`Successfully produced ${numMessages} messages to topic '${topicName}'`);
     await producer.flush({ timeout: 5000 });
+  } catch (error) {
+    console.error("Error producing messages:", error);
+    throw error;
   } finally {
     await producer.disconnect();
   }
