@@ -232,6 +232,7 @@ export class FlinkDatabaseView extends View {
    */
   private async enterArtifactName(filePath: string): Promise<string> {
     const quickpick = new Quickpick(this.page);
+    /** Get a topic item by its label/name. */
     const artifactItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
     await expect(artifactItem).toBeVisible();
     await artifactItem.click();
