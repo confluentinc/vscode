@@ -69,11 +69,11 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
             artifactsView,
             providerRegion,
           );
-          // async getTopicItem(topicName: string): Promise<TopicItem> {
-          //   const item = await this.getItemByLabel(topicName, this.topics);
-          //   return new TopicItem(this.page, item);
-          // }
-          // await artifactsView.getItemByLabel(uploadedArtifactName);
+          const artifactViewItem = await artifactsView.getDatabaseResourceByLabel(
+            uploadedArtifactName,
+            artifactsView.artifactsContainer,
+          );
+          await expect(artifactViewItem).toBeVisible();
           await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
           await expect(
             artifactsView.artifacts.filter({ hasText: uploadedArtifactName }),
