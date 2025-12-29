@@ -62,12 +62,15 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
           await artifactsView.ensureExpanded();
           await artifactsView.loadArtifacts(config.entrypoint);
 
+          const [provider, region] = providerRegion.split("/");
+
           const uploadedArtifactName = await startUploadFlow(
             config.entrypoint,
             page,
             electronApp,
             artifactsView,
-            providerRegion,
+            provider,
+            region,
           );
           const artifactViewItem = await artifactsView.getDatabaseResourceByLabel(
             uploadedArtifactName,
@@ -111,7 +114,8 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     page: Page,
     electronApp: ElectronApplication,
     artifactsView: FlinkDatabaseView,
-    providerRegion?: string,
+    provider: string,
+    region: string,
   ): Promise<string> {
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
@@ -119,16 +123,14 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       case SelectFlinkDatabase.FromDatabaseViewButton:
         return await completeArtifactUploadFlow(electronApp, artifactPath, artifactsView);
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
-        if (!providerRegion) {
-          throw new Error("providerRegion is required for ComputePoolFromResourcesView");
-        }
-        return await completeUploadFlowForComputePool(electronApp, artifactsView, providerRegion);
+        return await completeUploadFlowForComputePool(electronApp, artifactsView, provider, region);
       case SelectFlinkDatabase.JarFile:
         return await completeArtifactUploadFlowForJAR(
           page,
           artifactPath,
           artifactsView,
-          providerRegion,
+          provider,
+          region,
         );
     }
   }
@@ -136,10 +138,9 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   async function completeUploadFlowForComputePool(
     electronApp: ElectronApplication,
     artifactsView: FlinkDatabaseView,
-    providerRegion: string,
+    provider: string,
+    region: string,
   ): Promise<string> {
-    // Parse provider/region from format "PROVIDER/region" (e.g., "AWS/us-east-2")
-    const [provider, region] = providerRegion!.split("/");
     await artifactsView.clickUploadFromComputePool(provider, region);
     // Skip initiation since the upload modal was already opened via the compute pool context menu
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
@@ -172,7 +173,8 @@ async function completeArtifactUploadFlowForJAR(
   page: Page,
   artifactPath: string,
   artifactsView: FlinkDatabaseView,
-  providerRegion?: string,
+  provider: string,
+  region: string,
 ): Promise<string> {
   // Use the artifact file name (without extension) as the artifact name
   const baseFileName = path.basename(artifactPath, ".jar");
@@ -187,7 +189,7 @@ async function completeArtifactUploadFlowForJAR(
   const fileItem = new ViewItem(page, jarFile);
   await fileItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
 
-  await artifactsView.uploadFlinkArtifactFromJAR(artifactName, providerRegion);
+  await artifactsView.uploadFlinkArtifactFromJAR(artifactName, `${provider}/${region}`);
 
   // Switch back to the Confluent extension sidebar from the file explorer
   await openConfluentSidebar(page);
@@ -196,7 +198,6 @@ async function completeArtifactUploadFlowForJAR(
   const kafkaClusterQuickpick = new Quickpick(page);
   await expect(kafkaClusterQuickpick.locator).toBeVisible();
   await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
-  const [provider, region] = providerRegion!.split("/");
   const matchingCluster = kafkaClusterQuickpick.items
     .filter({ hasText: `${provider}/${region}` })
     .first();
