@@ -33,7 +33,7 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
     SelectKafkaCluster.FromResourcesView,
     SelectKafkaCluster.FromTopicsViewButton,
   ];
-  const compressionTypes: (CompressionType | undefined)[] = [
+  const compressionTypes: CompressionType[] = [
     CompressionType.None,
     CompressionType.Gzip,
     CompressionType.Snappy,
@@ -47,16 +47,14 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
   for (const [connectionType, connectionTag] of connectionTypes) {
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
       for (const compressionType of compressionTypes) {
-        test.describe(compressionType ? `${compressionType} compression` : "no compression", () => {
+        test.describe(`${compressionType} compression`, () => {
           // specify the connection type to use with the `connectionItem` fixture, and the topic to
           // create with the `topic` fixture
           test.use({
             connectionType,
             topicConfig: {
               clusterLabel,
-              name: compressionType
-                ? `e2e-topic-message-viewer-${compressionType}`
-                : "e2e-topic-message-viewer",
+              name: `e2e-topic-message-viewer-${compressionType}`,
               produce: { compressionType },
             },
           });
