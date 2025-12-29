@@ -303,10 +303,9 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     // if we need to produce messages, we likely have an API key/secret we need to match to a
     // specific cluster, so we can't just use the first one that shows up in the resources view
+    // (unless this is for LOCAL/DIRECT connections, which don't have multiple clusters)
     const clusterLabel =
-      topicConfig.produce &&
-      (connectionType === ConnectionType.Ccloud ||
-        directConnectionConfig.kafkaConfig?.authType !== SupportedAuthType.None)
+      topicConfig.produce && connectionType === ConnectionType.Ccloud
         ? process.env.E2E_KAFKA_CLUSTER_NAME!
         : topicConfig.clusterLabel;
     console.debug(`Using cluster label "${clusterLabel}" for creating topic`, { topicConfig });
