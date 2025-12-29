@@ -50,6 +50,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     },
   ];
 
+  // Todo: add GCP, see https://github.com/confluentinc/vscode/issues/2817
   const providersWithRegions = ["AWS/us-east-2", "AZURE/eastus"];
 
   for (const config of entrypoints) {
