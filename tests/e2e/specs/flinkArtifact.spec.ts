@@ -59,11 +59,11 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
         test(`with ${providerRegion}`, async ({ page, electronApp }) => {
           await setupTestEnvironment(config.entrypoint, page, electronApp);
 
+          const [provider, region] = providerRegion.split("/");
           const artifactsView = new FlinkDatabaseView(page);
+
           await artifactsView.ensureExpanded();
           await artifactsView.loadArtifacts(config.entrypoint);
-
-          const [provider, region] = providerRegion.split("/");
 
           const uploadedArtifactName = await startUploadFlow(
             config.entrypoint,
@@ -73,10 +73,12 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
             provider,
             region,
           );
+
           const artifactViewItem = await artifactsView.getDatabaseResourceByLabel(
             uploadedArtifactName,
             artifactsView.artifactsContainer,
           );
+
           await expect(artifactViewItem).toBeVisible();
           await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
           await expect(
