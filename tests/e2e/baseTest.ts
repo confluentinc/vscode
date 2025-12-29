@@ -293,7 +293,7 @@ export const test = testBase.extend<VSCodeFixtures>({
   topicConfig: undefined as any,
 
   topic: async (
-    { page, connectionType, connectionItem, topicConfig, directConnectionConfig },
+    { electronApp, page, connectionType, connectionItem, topicConfig, directConnectionConfig },
     use,
   ) => {
     if (!connectionType) {
@@ -320,12 +320,12 @@ export const test = testBase.extend<VSCodeFixtures>({
     const numPartitions = topicConfig.numPartitions ?? 1;
 
     // if we need to produce messages, we likely have an API key/secret we need to match to a
-    // specific cluster, so we can't just use the first one that shows up in the resources view
-    // (unless this is for LOCAL/DIRECT connections, which don't have multiple clusters)
-    const clusterLabel =
-      topicConfig.produce && connectionType === ConnectionType.Ccloud
-        ? process.env.E2E_KAFKA_CLUSTER_NAME!
-        : topicConfig.clusterLabel;
+    // specific CCloud cluster, so we can't use the first one that shows up in the resources view
+    // (LOCAL/DIRECT connections don't have multiple clusters, so we can just skip this)
+    let clusterLabel;
+    if (connectionType === ConnectionType.Ccloud) {
+      clusterLabel = topicConfig.clusterLabel ?? process.env.E2E_KAFKA_CLUSTER_NAME!;
+    }
     console.debug(`Using cluster label "${clusterLabel}" for creating topic`, { topicConfig });
 
     // setup: create the topic
@@ -336,6 +336,8 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     // produce messages to the topic if specified
     if (topicConfig.produce) {
+      // grant clipboard access to read the copied bootstrap servers for LOCAL connections
+      await electronApp.context().grantPermissions(["clipboard-read"]);
       await produceMessages(
         page,
         connectionType,

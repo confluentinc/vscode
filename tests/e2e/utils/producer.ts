@@ -75,10 +75,12 @@ export async function produceMessages(
 
   const kafkaConfig: KafkaConfig = {
     ssl: connectionType !== ConnectionType.Local,
-    sasl: saslConfig,
     brokers: bootstrapServers.split(","),
     logLevel: KafkaJS.logLevel.ERROR, // silence non-error logging
   };
+  if (saslConfig) {
+    kafkaConfig.sasl = saslConfig;
+  }
 
   const kafka = new KafkaJS.Kafka({ kafkaJS: kafkaConfig });
   const producer = kafka.producer({ "compression.codec": compressionType });
