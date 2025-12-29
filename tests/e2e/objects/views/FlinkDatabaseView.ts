@@ -87,9 +87,7 @@ export class FlinkDatabaseView extends SearchableView {
   }
 
   /**
-   * Load artifacts by selecting a compute pool from the Resources view.
-   * @param clusterLabel - Optional label or regex to identify the Kafka cluster
-   * @returns The provider/region string of the selected compute pool (e.g., "AWS/us-east-2")
+   * Clicks the upload action from a Flink Compute Pool item in the Resources view.
    */
   async clickUploadFromComputePool(provider: string, region: string): Promise<void> {
     const resourcesView = new ResourcesView(this.page);
