@@ -34,12 +34,15 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
     SelectKafkaCluster.FromTopicsViewButton,
   ];
   const compressionTypes: (CompressionType | undefined)[] = [
-    undefined,
+    CompressionType.None,
     CompressionType.Gzip,
     CompressionType.Snappy,
     CompressionType.Lz4,
     CompressionType.Zstd,
   ];
+  // specify the cluster label to use for all topics created in this suite so we can match it to the
+  // API key/secret used for producing messages
+  const clusterLabel = String(process.env.E2E_KAFKA_CLUSTER_NAME!);
 
   for (const [connectionType, connectionTag] of connectionTypes) {
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
@@ -50,6 +53,7 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
           test.use({
             connectionType,
             topicConfig: {
+              clusterLabel,
               name: compressionType
                 ? `e2e-topic-message-viewer-${compressionType}`
                 : "e2e-topic-message-viewer",
@@ -63,7 +67,7 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
               { tag: [Tag.RequiresTopic] },
               async ({ page, topic: topicName }) => {
                 const topicsView = new TopicsView(page);
-                await topicsView.loadTopics(connectionType, entrypoint);
+                await topicsView.loadTopics(connectionType, entrypoint, clusterLabel);
 
                 // open the message viewer for the topic
                 const topicItem: TopicItem = await topicsView.getTopicItem(topicName);
