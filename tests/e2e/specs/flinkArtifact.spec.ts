@@ -138,6 +138,9 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     artifactsView: FlinkDatabaseView,
     providerRegion: string,
   ): Promise<string> {
+    // Parse provider/region from format "PROVIDER/region" (e.g., "AWS/us-east-2")
+    const [provider, region] = providerRegion!.split("/");
+    await artifactsView.clickUploadFromComputePool(provider, region);
     // Skip initiation since the upload modal was already opened via the compute pool context menu
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
       electronApp,
@@ -145,8 +148,6 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       true,
     );
 
-    // Parse provider/region from format "PROVIDER/region" (e.g., "AWS/us-east-2")
-    const [provider, region] = providerRegion!.split("/");
     await artifactsView.selectKafkaClusterByProviderRegion(provider, region);
     // a Flink database is selected, so yield back to the test to expand the container and check
     // for the uploaded artifact

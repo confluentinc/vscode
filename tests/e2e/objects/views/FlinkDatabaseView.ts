@@ -60,7 +60,7 @@ export class FlinkDatabaseView extends SearchableView {
         await this.loadArtifactsFromButton(clusterLabel);
         break;
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
-        return await this.clickUploadFromComputePool(clusterLabel);
+        return;
       case SelectFlinkDatabase.JarFile:
         return;
       default:
@@ -91,20 +91,20 @@ export class FlinkDatabaseView extends SearchableView {
    * @param clusterLabel - Optional label or regex to identify the Kafka cluster
    * @returns The provider/region string of the selected compute pool (e.g., "AWS/us-east-2")
    */
-  private async clickUploadFromComputePool(clusterLabel?: string | RegExp): Promise<string> {
+  async clickUploadFromComputePool(provider: string, region: string): Promise<void> {
     const resourcesView = new ResourcesView(this.page);
     await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
 
     const computePools = resourcesView.ccloudFlinkComputePools;
     await expect(computePools).not.toHaveCount(0);
 
+    const clusterLabel = `${provider}/${region}`;
+
     const computePoolLocator = clusterLabel
       ? computePools.filter({ hasText: clusterLabel }).first()
       : computePools.first();
     const computePoolItem = new FlinkComputePoolItem(this.page, computePoolLocator);
-    const providerRegion = await computePoolItem.getProviderRegion();
     await computePoolItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
-    return providerRegion;
   }
 
   /**
