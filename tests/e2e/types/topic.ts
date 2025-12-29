@@ -13,6 +13,7 @@ export interface TopicConfig {
  * @see https://docs.confluent.io/kafka-clients/javascript/current/overview.html#javascript-cb-produce
  */
 export enum CompressionType {
+  None = "none",
   Gzip = "gzip",
   Snappy = "snappy",
   Lz4 = "lz4",
