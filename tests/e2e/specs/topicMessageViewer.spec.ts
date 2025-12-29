@@ -40,11 +40,13 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
     CompressionType.Lz4,
     CompressionType.Zstd,
   ];
-  // specify the cluster label to use for all topics created in this suite so we can match it to the
-  // API key/secret used for producing messages
-  const clusterLabel = String(process.env.E2E_KAFKA_CLUSTER_NAME!);
 
   for (const [connectionType, connectionTag] of connectionTypes) {
+    // specify the cluster label to use for all topics created in this suite so we can match it to
+    // the API key/secret used for producing messages, but only for CCLOUD connections
+    const clusterLabel =
+      connectionType === ConnectionType.Ccloud ? process.env.E2E_KAFKA_CLUSTER_NAME! : undefined;
+
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
       for (const compressionType of compressionTypes) {
         test.describe(`${compressionType} compression`, () => {
