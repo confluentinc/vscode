@@ -50,36 +50,36 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     },
   ];
 
+  const providersWithRegions = ["AWS/us-east-2", "AZURE/eastus"];
+
   for (const config of entrypoints) {
-    test(config.testName, async ({ page, electronApp }) => {
-      await setupTestEnvironment(config.entrypoint, page, electronApp);
+    test.describe(config.testName, () => {
+      for (const providerRegion of providersWithRegions) {
+        test(`with ${providerRegion}`, async ({ page, electronApp }) => {
+          await setupTestEnvironment(config.entrypoint, page, electronApp);
 
-      const artifactsView = new FlinkDatabaseView(page);
-      await artifactsView.ensureExpanded();
+          const artifactsView = new FlinkDatabaseView(page);
+          await artifactsView.ensureExpanded();
+          await artifactsView.loadArtifacts(config.entrypoint);
 
-      const providerRegion = await artifactsView.loadArtifacts(config.entrypoint);
-
-      const uploadedArtifactName = await startUploadFlow(
-        config.entrypoint,
-        page,
-        electronApp,
-        artifactsView,
-        providerRegion,
-      );
-
-      // make sure Artifacts container is expanded before we check that it's uploaded (and then deleted)
-      await artifactsView.expandArtifactsContainer();
-
-      // make sure Artifacts container is expanded before we check that it's uploaded (and then deleted)
-      await artifactsView.expandArtifactsContainer();
-      await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
-        1,
-      );
-
-      await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
-      await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
-        0,
-      );
+          const uploadedArtifactName = await startUploadFlow(
+            config.entrypoint,
+            page,
+            electronApp,
+            artifactsView,
+            providerRegion,
+          );
+          const artifactViewItem = await artifactsView.getDatabaseResourceByLabel(
+            uploadedArtifactName,
+            artifactsView.artifactsContainer,
+          );
+          await expect(artifactViewItem).toBeVisible();
+          await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
+          await expect(
+            artifactsView.artifacts.filter({ hasText: uploadedArtifactName }),
+          ).toHaveCount(0);
+        });
+      }
     });
   }
 
@@ -138,6 +138,9 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     artifactsView: FlinkDatabaseView,
     providerRegion: string,
   ): Promise<string> {
+    // Parse provider/region from format "PROVIDER/region" (e.g., "AWS/us-east-2")
+    const [provider, region] = providerRegion!.split("/");
+    await artifactsView.clickUploadFromComputePool(provider, region);
     // Skip initiation since the upload modal was already opened via the compute pool context menu
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
       electronApp,
@@ -145,8 +148,6 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       true,
     );
 
-    // Parse provider/region from format "PROVIDER/region" (e.g., "AWS/us-east-2")
-    const [provider, region] = providerRegion.split("/");
     await artifactsView.selectKafkaClusterByProviderRegion(provider, region);
     // a Flink database is selected, so yield back to the test to expand the container and check
     // for the uploaded artifact
@@ -195,7 +196,12 @@ async function completeArtifactUploadFlowForJAR(
   const kafkaClusterQuickpick = new Quickpick(page);
   await expect(kafkaClusterQuickpick.locator).toBeVisible();
   await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
-  await kafkaClusterQuickpick.items.first().click();
+  const [provider, region] = providerRegion!.split("/");
+  const matchingCluster = kafkaClusterQuickpick.items
+    .filter({ hasText: `${provider}/${region}` })
+    .first();
+  await expect(matchingCluster).toBeVisible();
+  await matchingCluster.click();
 
   return artifactName;
 }
