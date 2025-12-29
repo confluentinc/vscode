@@ -60,7 +60,7 @@ export class FlinkDatabaseView extends SearchableView {
         await this.loadArtifactsFromButton(clusterLabel);
         break;
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
-        return await this.clickUploadFromComputePool(clusterLabel);
+        return;
       case SelectFlinkDatabase.JarFile:
         return;
       default:
@@ -87,24 +87,22 @@ export class FlinkDatabaseView extends SearchableView {
   }
 
   /**
-   * Load artifacts by selecting a compute pool from the Resources view.
-   * @param clusterLabel - Optional label or regex to identify the Kafka cluster
-   * @returns The provider/region string of the selected compute pool (e.g., "AWS/us-east-2")
+   * Clicks the upload action from a Flink Compute Pool item in the Resources view.
    */
-  private async clickUploadFromComputePool(clusterLabel?: string | RegExp): Promise<string> {
+  async clickUploadFromComputePool(provider: string, region: string): Promise<void> {
     const resourcesView = new ResourcesView(this.page);
     await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
 
     const computePools = resourcesView.ccloudFlinkComputePools;
     await expect(computePools).not.toHaveCount(0);
 
+    const clusterLabel = `${provider}/${region}`;
+
     const computePoolLocator = clusterLabel
       ? computePools.filter({ hasText: clusterLabel }).first()
       : computePools.first();
     const computePoolItem = new FlinkComputePoolItem(this.page, computePoolLocator);
-    const providerRegion = await computePoolItem.getProviderRegion();
     await computePoolItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
-    return providerRegion;
   }
 
   /**
@@ -176,6 +174,16 @@ export class FlinkDatabaseView extends SearchableView {
       .first();
     await expect(matchingCluster).toBeVisible();
     await matchingCluster.click();
+  }
+
+  /** Get a database resource item by its label/name, optionally within a given container. */
+  async getDatabaseResourceByLabel(label: string, container?: Locator) {
+    if (container) {
+      // wait for container to be in a non-loading state before searching resources by checking its icon
+      const containerItem = new ViewItem(this.page, container.first());
+      await expect(containerItem.icon).not.toHaveClass(/codicon-loading/);
+    }
+    return await this.getItemByLabel(label);
   }
 
   /** Expand a given container item if it is not already expanded. */
