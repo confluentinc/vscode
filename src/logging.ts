@@ -413,24 +413,55 @@ export function cleanupOldLogFiles() {
   const cutoffDate = new Date(now);
   cutoffDate.setDate(now.getDate() - 3);
 
-  const logFiles: string[] = readdirSync(logfileDir).filter((file) => {
-    // any `vscode-confluent*.log` files, excluding the sidecar log file
-    return (
-      file.startsWith(`${BASEFILE_PREFIX}-`) &&
-      file.endsWith(".log") &&
-      file !== SIDECAR_LOGFILE_NAME
+  let logFiles: string[];
+  try {
+    logFiles = readdirSync(logfileDir).filter((file) => {
+      // any `vscode-confluent*.log` files, excluding the sidecar log file
+      return (
+        file.startsWith(`${BASEFILE_PREFIX}-`) &&
+        file.endsWith(".log") &&
+        file !== SIDECAR_LOGFILE_NAME
+      );
+    });
+    logger.debug(
+      `found ${logFiles.length} extension log file(s) in "${logfileDir}":`,
+      logFiles.slice(0, 5),
     );
-  });
-  logger.debug(
-    `found ${logFiles.length} extension log file(s) in "${logfileDir}":`,
-    logFiles.slice(0, 5),
-  );
-  if (!logFiles.length) {
+    if (!logFiles.length) {
+      return;
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorCode = (error as NodeJS.ErrnoException)?.code;
+
+    let permissionDetails = "";
+    try {
+      const stats = statSync(logfileDir);
+      const permissions = stats.mode & 0o777;
+      const ownerRead = (permissions & 0o400) !== 0;
+      const ownerWrite = (permissions & 0o200) !== 0;
+      const ownerExecute = (permissions & 0o100) !== 0;
+      permissionDetails = ` Directory permissions: ${permissions.toString(8)} (r=${ownerRead}, w=${ownerWrite}, x=${ownerExecute})`;
+    } catch {
+      permissionDetails = " Unable to read directory permissions";
+    }
+
+    logger.error(
+      `Error reading log directory: ${logfileDir}. Error: ${errorMessage} (code: ${errorCode}).${permissionDetails}`,
+      error,
+    );
+
+    const isPermissionError = errorCode === "EACCES" || errorCode === "EPERM";
+    const userMessage = isPermissionError
+      ? `Unable to read log directory: ${logfileDir}. Permission denied.${permissionDetails} Please check directory permissions.`
+      : `Unable to read log directory: ${logfileDir}. Error: ${errorMessage}${permissionDetails}`;
+
+    window.showErrorMessage(userMessage);
     return;
   }
 
   // filter out any log files that were last modified before the cutoff date
-  const oldLogFiles = logFiles.filter((file) => {
+  const oldLogFiles = logFiles.filter((file: string) => {
     const filePath = `${logfileDir}/${file}`;
     const stats = statSync(filePath);
     return stats.mtime < cutoffDate;
