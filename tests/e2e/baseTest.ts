@@ -327,7 +327,7 @@ export const test = testBase.extend<VSCodeFixtures>({
         directConnectionConfig.kafkaConfig?.authType !== SupportedAuthType.None)
         ? process.env.E2E_KAFKA_CLUSTER_NAME!
         : topicConfig.clusterLabel;
-    console.info(`Using cluster label "${clusterLabel}" for creating topic`, { topicConfig });
+    console.debug(`Using cluster label "${clusterLabel}" for creating topic`, { topicConfig });
 
     // setup: create the topic
     const topicsView = new TopicsView(page);
