@@ -106,7 +106,7 @@ export class TopicsView extends SearchableView {
     switch (entrypoint) {
       case SelectKafkaCluster.FromResourcesView: {
         const resourcesView = new ResourcesView(this.page);
-        const cluster = await resourcesView.getKafkaCluster(connectionType);
+        const cluster = await resourcesView.getKafkaCluster(connectionType, clusterLabel);
         await cluster.click();
         break;
       }
