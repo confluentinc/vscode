@@ -85,14 +85,14 @@ export async function produceMessages(
 
   try {
     await producer.connect();
-    console.info(
+    console.debug(
       `Connected to Kafka, producing ${numMessages} messages to topic '${topicName}'...`,
     );
     await producer.send({
       topic: topicName,
       messages,
     });
-    console.info(`Successfully produced ${numMessages} messages to topic '${topicName}'`);
+    console.debug(`Successfully produced ${numMessages} messages to topic '${topicName}'`);
     await producer.flush({ timeout: 5000 });
   } catch (error) {
     console.error("Error producing messages:", error);
