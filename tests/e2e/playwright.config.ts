@@ -42,7 +42,7 @@ export default defineConfig({
       ]
     : [["list"], ["html"]],
   use: {
-    trace: "retain-on-failure",
+    trace: "off", // manually configured in baseTest.ts
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
