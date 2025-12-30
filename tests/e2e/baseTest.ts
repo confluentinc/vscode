@@ -85,7 +85,7 @@ export const test = testBase.extend<VSCodeFixtures>({
     await use(tempDir);
   },
 
-  electronApp: async ({ trace, testTempDir }, use, testInfo) => {
+  electronApp: async ({ testTempDir }, use, testInfo) => {
     const testConfigs = getTestSetupCache();
 
     // launch VS Code with Electron using args pattern from vscode-test
@@ -106,67 +106,70 @@ export const test = testBase.extend<VSCodeFixtures>({
         `--extensionDevelopmentPath=${testConfigs.outPath}`,
       ],
     });
-
     if (!electronApp) {
       throw new Error("Failed to launch VS Code electron app");
     }
 
-    // wait for VS Code to be ready before trying to stub dialogs
-    const page = await electronApp.firstWindow();
-    if (!page) {
-      // usually this means the launch args were incorrect and/or the app didn't start correctly
-      throw new Error("Failed to get first window from VS Code");
-    }
-    await page.waitForLoadState("domcontentloaded");
-    await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
-
-    // Stub all dialogs by default; tests can still override as needed.
-    // For available `method` values to use with `stubMultipleDialogs`, see:
-    // https://www.electronjs.org/docs/latest/api/dialog
-    await stubAllDialogs(electronApp);
-
-    // on*, retain-on*
-    if (trace.toString().includes("on")) {
-      await electronApp.context().tracing.start({
-        screenshots: true,
-        snapshots: true,
-        sources: true,
-        title: `${process.platform} ${process.arch}: ${testInfo.title} (${testInfo.tags.join(", ")})`,
-      });
-    }
-
-    await use(electronApp);
+    const context = electronApp.context();
+    // always start tracing manually, but decide later whether to save it based on test result
+    await context.tracing.start({
+      screenshots: true,
+      snapshots: true,
+      sources: true,
+      title: `${process.platform} ${process.arch}: ${testInfo.title} (${testInfo.tags.join(", ")})`,
+    });
 
     try {
-      // shorten grace period for shutdown to avoid hanging the entire test run, but don't SIGKILL
-      // early because we might lose trace/screenshot/snapshot data
-      await Promise.race([
-        electronApp.close(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("electronApp.close() timeout after 5s")), 5_000),
-        ),
-      ]);
-    } catch {
-      console.warn("Timed out waiting for Electron to close, killing process...");
+      // wait for VS Code to be ready before trying to stub dialogs
+      const page = await electronApp.firstWindow();
+      await page.waitForLoadState("domcontentloaded");
+      await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
+
+      // Stub all dialogs by default; tests can still override as needed.
+      // For available `method` values to use with `stubMultipleDialogs`, see:
+      // https://www.electronjs.org/docs/latest/api/dialog
+      await stubAllDialogs(electronApp);
+
+      await use(electronApp);
+    } finally {
+      // only save and attach the trace for failed tests
+      if (testInfo.status !== testInfo.expectedStatus) {
+        const tracePath = path.join(testInfo.outputDir, "trace.zip");
+        await context.tracing.stop({ path: tracePath });
+        await testInfo.attach("trace", { path: tracePath, contentType: "application/zip" });
+      } else {
+        await context.tracing.stop();
+      }
+
       try {
-        electronApp.process().kill("SIGKILL");
-        console.info("Killed Electron process");
+        // shorten grace period for shutdown to avoid hanging the entire test run, but don't SIGKILL
+        // early because we might lose trace/screenshot/snapshot data
+        const timeoutMs = 10_000;
+        await Promise.race([
+          electronApp.close(),
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error(`electronApp.close() timeout after ${timeoutMs}ms`)),
+              timeoutMs,
+            ),
+          ),
+        ]);
       } catch (err) {
-        console.warn(`Error killing Electron process: ${err}`);
+        console.warn("Timed out waiting for Electron to close, killing process...", {
+          error: err instanceof Error ? err.message : err,
+        });
+        try {
+          electronApp.process()?.kill(9); // SIGKILL
+          console.info("Killed Electron process");
+        } catch (err) {
+          console.warn(`Error killing Electron process: ${err}`);
+        }
       }
     }
   },
 
   page: async ({ electronApp, testTempDir }, use, testInfo) => {
-    if (!electronApp) {
-      throw new Error("electronApp is null - failed to launch VS Code");
-    }
-
     const page = await electronApp.firstWindow();
-    if (!page) {
-      // shouldn't happen since we waited for the workbench above
-      throw new Error("Failed to get first window from VS Code");
-    }
 
     await globalBeforeEach(page, electronApp);
 
