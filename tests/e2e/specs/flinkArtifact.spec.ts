@@ -51,15 +51,17 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   ];
 
   // Todo: add GCP, see https://github.com/confluentinc/vscode/issues/2817
-  const providersWithRegions = ["AWS/us-east-2", "AZURE/eastus"];
+  const providersWithRegions = [
+    { provider: "AWS", region: "us-east-2" },
+    { provider: "AZURE", region: "eastus" },
+  ];
 
   for (const config of entrypoints) {
-    test.describe(config.testName, () => {
-      for (const providerRegion of providersWithRegions) {
-        test(`with ${providerRegion}`, async ({ page, electronApp }) => {
+    for (const providerRegion of providersWithRegions) {
+      test.describe(`with ${providerRegion.provider}/${providerRegion.region}`, () => {
+        const { provider, region } = providerRegion;
+        test(config.testName, async ({ page, electronApp }) => {
           await setupTestEnvironment(config.entrypoint, page, electronApp);
-
-          const [provider, region] = providerRegion.split("/");
           const artifactsView = new FlinkDatabaseView(page);
 
           await artifactsView.ensureExpanded();
@@ -85,8 +87,8 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
             artifactsView.artifacts.filter({ hasText: uploadedArtifactName }),
           ).toHaveCount(0);
         });
-      }
-    });
+      });
+    }
   }
 
   async function setupTestEnvironment(
