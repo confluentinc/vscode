@@ -401,7 +401,7 @@ export class Logger {
     return `[${this.name}] ${message}`;
   }
 }
-/** Utility function to return permissions for a given file */
+/** Utility function to return permissions for a given file path */
 function getFilePermissions(filePath: string): {
   permissions: string;
   readable?: boolean;
