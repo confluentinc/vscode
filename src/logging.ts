@@ -4,7 +4,6 @@ import type { RotatingFileStream } from "rotating-file-stream";
 import { createStream } from "rotating-file-stream";
 import type { Event, LogLevel, LogOutputChannel } from "vscode";
 import { Uri, window } from "vscode";
-import { showErrorNotificationWithButtons } from "./notifications";
 import { SIDECAR_LOGFILE_NAME } from "./sidecar/constants";
 import { WriteableTmpDir } from "./utils/file";
 import { existsSync } from "./utils/fsWrappers";
@@ -455,7 +454,7 @@ export function cleanupOldLogFiles() {
       ? `Unable to read log directory: ${logfileDir}. Permission denied.${permissionDetails} Please check directory permissions.`
       : `Unable to read log directory: ${logfileDir}. Error: ${errorMessage}${permissionDetails}`;
 
-    void showErrorNotificationWithButtons(userMessage);
+    window.showErrorMessage(userMessage);
     return;
   }
 
