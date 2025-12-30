@@ -4,6 +4,7 @@ import type { RotatingFileStream } from "rotating-file-stream";
 import { createStream } from "rotating-file-stream";
 import type { Event, LogLevel, LogOutputChannel } from "vscode";
 import { Uri, window } from "vscode";
+import { showErrorNotificationWithButtons } from "./notifications";
 import { SIDECAR_LOGFILE_NAME } from "./sidecar/constants";
 import { WriteableTmpDir } from "./utils/file";
 import { existsSync } from "./utils/fsWrappers";
@@ -438,10 +439,8 @@ export function cleanupOldLogFiles() {
     try {
       const stats = statSync(logfileDir);
       const permissions = stats.mode & 0o777;
-      const ownerRead = (permissions & 0o400) !== 0;
-      const ownerWrite = (permissions & 0o200) !== 0;
-      const ownerExecute = (permissions & 0o100) !== 0;
-      permissionDetails = ` Directory permissions: ${permissions.toString(8)} (r=${ownerRead}, w=${ownerWrite}, x=${ownerExecute})`;
+      // Create string with permissions for file: read, write, execute
+      permissionDetails = ` Directory permissions: ${permissions.toString(8)} (r=${(permissions & 0o400) !== 0}, w=${(permissions & 0o200) !== 0}, x=${(permissions & 0o100) !== 0})`;
     } catch {
       permissionDetails = " Unable to read directory permissions";
     }
@@ -456,12 +455,12 @@ export function cleanupOldLogFiles() {
       ? `Unable to read log directory: ${logfileDir}. Permission denied.${permissionDetails} Please check directory permissions.`
       : `Unable to read log directory: ${logfileDir}. Error: ${errorMessage}${permissionDetails}`;
 
-    window.showErrorMessage(userMessage);
+    void showErrorNotificationWithButtons(userMessage);
     return;
   }
 
   // filter out any log files that were last modified before the cutoff date
-  const oldLogFiles = logFiles.filter((file: string) => {
+  const oldLogFiles = logFiles.filter((file) => {
     const filePath = `${logfileDir}/${file}`;
     const stats = statSync(filePath);
     return stats.mtime < cutoffDate;
