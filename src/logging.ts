@@ -401,6 +401,26 @@ export class Logger {
     return `[${this.name}] ${message}`;
   }
 }
+/** Utility function to return permissions for a given file */
+function getFilePermissions(filePath: string): {
+  permissions: string;
+  readable?: boolean;
+  writable?: boolean;
+  executable?: boolean;
+} {
+  try {
+    const stats = statSync(filePath);
+    const permissions = stats.mode & 0o777;
+    return {
+      permissions: permissions.toString(8),
+      readable: (permissions & 0o400) !== 0,
+      writable: (permissions & 0o200) !== 0,
+      executable: (permissions & 0o100) !== 0,
+    };
+  } catch {
+    return { permissions: "unknown" };
+  }
+}
 
 /** Helper function to clean up older log files that weren't picked up by the rotating file stream. */
 export function cleanupOldLogFiles() {
@@ -434,25 +454,24 @@ export function cleanupOldLogFiles() {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorCode = (error as NodeJS.ErrnoException)?.code;
 
-    let permissionDetails = "";
+    let permissionDetails = getFilePermissions(logfileDir);
+    let permissionDetailsString: string;
     try {
-      const stats = statSync(logfileDir);
-      const permissions = stats.mode & 0o777;
       // Create string with permissions for file: read, write, execute
-      permissionDetails = ` Directory permissions: ${permissions.toString(8)} (r=${(permissions & 0o400) !== 0}, w=${(permissions & 0o200) !== 0}, x=${(permissions & 0o100) !== 0})`;
+      permissionDetailsString = ` Directory permissions: ${permissionDetails.permissions} (r=${permissionDetails.readable}, w=${permissionDetails.writable}, x=${permissionDetails.executable})`;
     } catch {
-      permissionDetails = " Unable to read directory permissions";
+      permissionDetailsString = " Unable to read directory permissions";
     }
 
     logger.error(
-      `Error reading log directory: ${logfileDir}. Error: ${errorMessage} (code: ${errorCode}).${permissionDetails}`,
+      `Error reading log directory: ${logfileDir}. Error: ${errorMessage} (code: ${errorCode}).${permissionDetailsString}`,
       error,
     );
 
     const isPermissionError = errorCode === "EACCES" || errorCode === "EPERM";
     const userMessage = isPermissionError
-      ? `Unable to read log directory: ${logfileDir}. Permission denied.${permissionDetails} Please check directory permissions.`
-      : `Unable to read log directory: ${logfileDir}. Error: ${errorMessage}${permissionDetails}`;
+      ? `Unable to read log directory: ${logfileDir}. Permission denied.${permissionDetailsString} Please check directory permissions.`
+      : `Unable to read log directory: ${logfileDir}. Error: ${errorMessage}${permissionDetailsString}`;
 
     window.showErrorMessage(userMessage);
     return;
