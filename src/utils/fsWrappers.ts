@@ -86,3 +86,16 @@ export function closeSync(fd: number): void {
 export function existsSync(uri: vscode.Uri): boolean {
   return fs.existsSync(uri.fsPath);
 }
+
+/**
+ * Wrapper for fs.readdirSync()
+ * Return the list of files in the directory, or an empty array on error.
+ */
+
+export function readdirSync(path: fs.PathLike): string[] {
+  try {
+    return fs.readdirSync(path);
+  } catch {
+    return [];
+  }
+}
