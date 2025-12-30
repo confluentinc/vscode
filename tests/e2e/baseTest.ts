@@ -144,16 +144,7 @@ export const test = testBase.extend<VSCodeFixtures>({
       try {
         // shorten grace period for shutdown to avoid hanging the entire test run, but don't SIGKILL
         // early because we might lose trace/screenshot/snapshot data
-        const timeoutMs = 10_000;
-        await Promise.race([
-          electronApp.close(),
-          new Promise((_, reject) =>
-            setTimeout(
-              () => reject(new Error(`electronApp.close() timeout after ${timeoutMs}ms`)),
-              timeoutMs,
-            ),
-          ),
-        ]);
+        await withTimeout("electronApp.close()", electronApp.close(), 10_000);
       } catch (err) {
         console.warn("Timed out waiting for Electron to close, killing process...", {
           error: err instanceof Error ? err.message : err,
@@ -318,7 +309,17 @@ async function globalAfterEach(
   await saveExtensionLogs(testTempDir, electronApp, page, testInfo);
   await saveSidecarLogs(testTempDir, electronApp, page, testInfo);
   // also include any additional logs from the VS Code window itself (main, window, extension host, etc)
-  await saveVSCodeWindowLogs(testTempDir, testInfo);
+  try {
+    await withTimeout(
+      "saveVSCodeWindowLogs()",
+      saveVSCodeWindowLogs(testTempDir, testInfo),
+      10_000,
+    );
+  } catch (err) {
+    console.warn("Failed to save VS Code window logs:", {
+      error: err instanceof Error ? err.message : err,
+    });
+  }
 }
 
 async function saveExtensionLogs(
@@ -415,4 +416,28 @@ async function saveVSCodeWindowLogs(testTempDir: string, testInfo: TestInfo): Pr
   } catch (error) {
     console.error("Error zipping VS Code logs directory:", error);
   }
+}
+
+/**
+ * Wraps an async operation with a timeout, rejecting if the operation takes longer than the specified time.
+ * @param operation The promise to execute
+ * @param timeoutMs Timeout in milliseconds
+ * @param operationName Name of the operation for error messages
+ * @returns The result of the operation if it completes in time
+ * @throws Error if the operation times out
+ */
+async function withTimeout<T>(
+  operationName: string,
+  operation: Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
+  return Promise.race([
+    operation,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`${operationName} timeout after ${timeoutMs}ms`)),
+        timeoutMs,
+      ),
+    ),
+  ]);
 }
