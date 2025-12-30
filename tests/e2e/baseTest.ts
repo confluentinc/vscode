@@ -137,6 +137,8 @@ export const test = testBase.extend<VSCodeFixtures>({
         const tracePath = path.join(testInfo.outputDir, "trace.zip");
         await context.tracing.stop({ path: tracePath });
         await testInfo.attach("trace", { path: tracePath, contentType: "application/zip" });
+      } else {
+        await context.tracing.stop();
       }
 
       try {
