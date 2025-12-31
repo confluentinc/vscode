@@ -34,6 +34,8 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   );
 
   // File size dimension for testing both valid and oversized artifacts
+  const fixturesDir = path.join(__dirname, "..", "..", "fixtures", "flink-artifacts");
+
   const fileSizes = [
     {
       size: "normal",
@@ -47,7 +49,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     {
       size: "oversized",
       description: "oversized artifact (>100MB)",
-      setupFile: async () => await createLargeFile({ sizeInMB: 150 }),
+      setupFile: async () => await createLargeFile({ sizeInMB: 150, directory: fixturesDir }),
       cleanupFile: async (filePath: string) => await cleanupLargeFile(filePath),
       shouldSucceed: false,
     },
@@ -148,9 +150,12 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
         await artifactsView.ensureExpanded();
         await artifactsView.loadArtifacts(entrypoint);
-        let uploadedArtifactName = "";
+
+        // Capture artifact count before upload attempt
+        const initialArtifactCount = await artifactsView.artifacts.count();
+
         try {
-          uploadedArtifactName = await startUploadFlow(
+          await startUploadFlow(
             entrypoint,
             page,
             electronApp,
@@ -163,9 +168,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
           // Swallow any errors from the upload flow since we expect failure
         }
 
-        await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
-          0,
-        );
+        await expect(artifactsView.artifacts).toHaveCount(initialArtifactCount);
 
         const notificationArea = new NotificationArea(page);
         const failureNotifications: Locator = notificationArea.errorNotifications.filter({
@@ -185,8 +188,6 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   ): Promise<void> {
     // JAR file test requires opening the fixtures folder as a workspace
     if (entrypoint === SelectFlinkDatabase.JarFile) {
-      const fixturesDir = path.join(__dirname, "..", "..", "fixtures", "flink-artifacts");
-
       await stubDialog(electronApp, "showOpenDialog", {
         filePaths: [fixturesDir],
       });
