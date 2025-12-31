@@ -160,7 +160,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
             region,
             testFilePath,
           );
-        } catch (e) {
+        } catch (error) {
           // Swallow any errors from the upload flow since we expect failure
         }
 

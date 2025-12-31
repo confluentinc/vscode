@@ -18,7 +18,7 @@ export interface LargeFileOptions {
  * @param options - Configuration options for the large file
  * @returns The absolute path to the created file
  */
-export async function createLargeFile(options: LargeFileOptions = {}): Promise<string> {
+export function createLargeFile(options: LargeFileOptions = {}): string {
   const {
     sizeInMB = 101,
     filename = `test-large-artifact-${Date.now()}.jar`,
@@ -47,7 +47,7 @@ export async function createLargeFile(options: LargeFileOptions = {}): Promise<s
  * Cleans up (deletes) a large test file.
  * @param filePath - The absolute path to the file to delete
  */
-export async function cleanupLargeFile(filePath: string): Promise<void> {
+export function cleanupLargeFile(filePath: string): void {
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
