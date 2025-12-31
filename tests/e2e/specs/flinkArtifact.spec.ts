@@ -12,7 +12,7 @@ import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDa
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
 import { Tag } from "../tags";
 import { executeVSCodeCommand } from "../utils/commands";
-import { cleanupLargeFile, createLargeFile } from "../utils/flinkDatabase";
+import { cleanupLargeFile, createLargeFile, createNonJavaJarFile } from "../utils/flinkDatabase";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 import { randomHexString } from "../utils/strings";
 
@@ -50,6 +50,12 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       cleanupFile: (filePath: string) => cleanupLargeFile(filePath),
       shouldSucceed: false,
     },
+    {
+      description: "invalid JAR file",
+      setupFile: () => createNonJavaJarFile("invalid.jar", fixturesDir),
+      cleanupFile: (filePath: string) => cleanupLargeFile(filePath),
+      shouldSucceed: false,
+    },
   ];
 
   const entrypoints = [
@@ -84,7 +90,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       entrypoint: config.entrypoint,
       provider,
       region,
-      description: "valid size artifact",
+      description: "valid artifact",
       filePath: artifactPath,
     })),
   );
