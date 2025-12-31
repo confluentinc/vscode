@@ -54,10 +54,10 @@ export class FlinkDatabaseView extends SearchableView {
   ): Promise<string | undefined> {
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
-        await this.loadArtifactsFromResourcesView(clusterLabel);
+        await this.selectFlinkDBFromResourcesView(clusterLabel);
         break;
       case SelectFlinkDatabase.FromDatabaseViewButton:
-        await this.loadArtifactsFromButton(clusterLabel);
+        await this.clickClusterItemFromSelectedDB(clusterLabel);
         break;
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
         return;
@@ -72,7 +72,7 @@ export class FlinkDatabaseView extends SearchableView {
    * Load artifacts by selecting a Kafka cluster from the Resources view.
    * @param clusterLabel - Optional label or regex to identify the Kafka cluster
    */
-  private async loadArtifactsFromResourcesView(clusterLabel?: string | RegExp): Promise<void> {
+  private async selectFlinkDBFromResourcesView(clusterLabel?: string | RegExp): Promise<void> {
     const resourcesView = new ResourcesView(this.page);
     await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
 
@@ -96,20 +96,22 @@ export class FlinkDatabaseView extends SearchableView {
     const computePools = resourcesView.ccloudFlinkComputePools;
     await expect(computePools).not.toHaveCount(0);
 
-    const clusterLabel = `${provider}/${region}`;
+    const poolDescription = `${provider}/${region}`;
 
-    const computePoolLocator = clusterLabel
-      ? computePools.filter({ hasText: clusterLabel }).first()
+    const computePoolLocator = poolDescription
+      ? computePools.filter({ hasText: poolDescription }).first()
       : computePools.first();
     const computePoolItem = new FlinkComputePoolItem(this.page, computePoolLocator);
     await computePoolItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
   }
 
   /**
-   * Load artifacts by selecting a Kafka cluster from the Artifacts view button.
+   * Click the "Select Kafka Cluster as Flink Database" nav action in the view title area,
+   * which will show a quickpick with a list of Kafka cluster items,
+   * the first item in that list is clicked.
    * @param clusterLabel - Optional label or regex to identify the Kafka cluster
    */
-  private async loadArtifactsFromButton(clusterLabel?: string | RegExp): Promise<void> {
+  private async clickClusterItemFromSelectedDB(clusterLabel?: string | RegExp): Promise<void> {
     await this.clickSelectKafkaClusterAsFlinkDatabase();
 
     const kafkaClusterQuickpick = new Quickpick(this.page);
