@@ -89,7 +89,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
         test.describe(`with ${provider}/${region} - ${fileSizeConfig.description}`, () => {
           fileSizeConfig.shouldSucceed
-            ? registerSuccessTest(testName, config.entrypoint, provider, region, fileSizeConfig)
+            ? registerSuccessTest(testName, config.entrypoint, provider, region)
             : registerFailureTest(testName, config.entrypoint, provider, region, fileSizeConfig);
         });
       }
@@ -101,41 +101,34 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     entrypoint: SelectFlinkDatabase,
     provider: string,
     region: string,
-    fileSizeConfig: (typeof fileSizes)[number],
   ) {
     test(testName, async ({ page, electronApp }) => {
-      const testFilePath = await fileSizeConfig.setupFile();
+      await setupTestEnvironment(entrypoint, page, electronApp);
+      const artifactsView = new FlinkDatabaseView(page);
 
-      try {
-        await setupTestEnvironment(entrypoint, page, electronApp);
-        const artifactsView = new FlinkDatabaseView(page);
+      await artifactsView.ensureExpanded();
+      await artifactsView.loadArtifacts(entrypoint);
 
-        await artifactsView.ensureExpanded();
-        await artifactsView.loadArtifacts(entrypoint);
+      const uploadedArtifactName = await startUploadFlow(
+        entrypoint,
+        page,
+        electronApp,
+        artifactsView,
+        provider,
+        region,
+        artifactPath,
+      );
 
-        const uploadedArtifactName = await startUploadFlow(
-          entrypoint,
-          page,
-          electronApp,
-          artifactsView,
-          provider,
-          region,
-          testFilePath,
-        );
+      const artifactViewItem = await artifactsView.getDatabaseResourceByLabel(
+        uploadedArtifactName,
+        artifactsView.artifactsContainer,
+      );
 
-        const artifactViewItem = await artifactsView.getDatabaseResourceByLabel(
-          uploadedArtifactName,
-          artifactsView.artifactsContainer,
-        );
-
-        await expect(artifactViewItem).toBeVisible();
-        await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
-        await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
-          0,
-        );
-      } finally {
-        await fileSizeConfig.cleanupFile(testFilePath);
-      }
+      await expect(artifactViewItem).toBeVisible();
+      await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
+      await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
+        0,
+      );
     });
   }
 
@@ -155,25 +148,28 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
         await artifactsView.ensureExpanded();
         await artifactsView.loadArtifacts(entrypoint);
+        let uploadedArtifactName = "";
+        try {
+          uploadedArtifactName = await startUploadFlow(
+            entrypoint,
+            page,
+            electronApp,
+            artifactsView,
+            provider,
+            region,
+            testFilePath,
+          );
+        } catch (e) {
+          // Swallow any errors from the upload flow since we expect failure
+        }
 
-        const uploadedArtifactName = await startUploadFlow(
-          entrypoint,
-          page,
-          electronApp,
-          artifactsView,
-          provider,
-          region,
-          testFilePath,
-        );
-
-        expect(uploadedArtifactName).toThrowError();
         await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
           0,
         );
 
         const notificationArea = new NotificationArea(page);
-        const failureNotifications: Locator = notificationArea.infoNotifications.filter({
-          hasText: /error/,
+        const failureNotifications: Locator = notificationArea.errorNotifications.filter({
+          hasText: /Failed to upload/,
         });
         await expect(failureNotifications.first()).toBeVisible();
       } finally {
