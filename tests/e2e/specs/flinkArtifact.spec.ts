@@ -38,16 +38,16 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   const fileSizes = [
     {
       description: "valid size artifact",
-      setupFile: async () => artifactPath,
-      cleanupFile: async (_path: string) => {
+      setupFile: () => artifactPath,
+      cleanupFile: (_path: string) => {
         /* no cleanup needed for fixture file */
       },
       shouldSucceed: true,
     },
     {
       description: "oversized artifact (>100MB)",
-      setupFile: async () => createLargeFile({ sizeInMB: 150, directory: fixturesDir }),
-      cleanupFile: async (filePath: string) => cleanupLargeFile(filePath),
+      setupFile: () => createLargeFile({ sizeInMB: 150, directory: fixturesDir }),
+      cleanupFile: (filePath: string) => cleanupLargeFile(filePath),
       shouldSucceed: false,
     },
   ];
