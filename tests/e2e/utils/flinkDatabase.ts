@@ -45,7 +45,6 @@ export async function createLargeFile(options: LargeFileOptions = {}): Promise<s
 
 /**
  * Cleans up (deletes) a large test file.
- *
  * @param filePath - The absolute path to the file to delete
  */
 export async function cleanupLargeFile(filePath: string): Promise<void> {

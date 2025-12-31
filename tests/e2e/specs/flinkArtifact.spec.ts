@@ -3,7 +3,6 @@ import { expect } from "@playwright/test";
 import { stubDialog } from "electron-playwright-helpers";
 import * as path from "path";
 import { fileURLToPath } from "url";
-import { cleanupLargeFile, createLargeFile } from "../../fixtures/flink-artifacts/largeFileFixture";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
 import { FileExplorer } from "../objects/FileExplorer";
@@ -13,6 +12,7 @@ import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDa
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
 import { Tag } from "../tags";
 import { executeVSCodeCommand } from "../utils/commands";
+import { cleanupLargeFile, createLargeFile } from "../utils/flinkDatabase";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 import { randomHexString } from "../utils/strings";
 
@@ -33,12 +33,10 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     "udfs-simple.jar",
   );
 
-  // File size dimension for testing both valid and oversized artifacts
   const fixturesDir = path.join(__dirname, "..", "..", "fixtures", "flink-artifacts");
 
   const fileSizes = [
     {
-      size: "normal",
       description: "valid size artifact",
       setupFile: async () => artifactPath,
       cleanupFile: async (_path: string) => {
@@ -47,10 +45,9 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       shouldSucceed: true,
     },
     {
-      size: "oversized",
       description: "oversized artifact (>100MB)",
-      setupFile: async () => await createLargeFile({ sizeInMB: 150, directory: fixturesDir }),
-      cleanupFile: async (filePath: string) => await cleanupLargeFile(filePath),
+      setupFile: async () => createLargeFile({ sizeInMB: 150, directory: fixturesDir }),
+      cleanupFile: async (filePath: string) => cleanupLargeFile(filePath),
       shouldSucceed: false,
     },
   ];
@@ -151,7 +148,6 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
         await artifactsView.ensureExpanded();
         await artifactsView.loadArtifacts(entrypoint);
 
-        // Capture artifact count before upload attempt
         const initialArtifactCount = await artifactsView.artifacts.count();
 
         try {
@@ -262,8 +258,7 @@ async function completeArtifactUploadFlow(
   artifactPath: string,
   artifactsView: FlinkDatabaseView,
 ): Promise<string> {
-  const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
-  return uploadedArtifactName;
+  return await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
 }
 
 /**
