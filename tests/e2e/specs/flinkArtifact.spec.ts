@@ -1,4 +1,4 @@
-import type { ElectronApplication, Page } from "@playwright/test";
+import type { ElectronApplication, Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { stubDialog } from "electron-playwright-helpers";
 import * as path from "path";
@@ -6,11 +6,13 @@ import { fileURLToPath } from "url";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
 import { FileExplorer } from "../objects/FileExplorer";
+import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDatabaseView";
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
 import { Tag } from "../tags";
 import { executeVSCodeCommand } from "../utils/commands";
+import { cleanupLargeFile, createLargeFile } from "../utils/flinkDatabase";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 import { randomHexString } from "../utils/strings";
 
@@ -30,6 +32,25 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     "fixtures/flink-artifacts",
     "udfs-simple.jar",
   );
+
+  const fixturesDir = path.join(__dirname, "..", "..", "fixtures", "flink-artifacts");
+
+  const fileSizes = [
+    {
+      description: "valid size artifact",
+      setupFile: () => artifactPath,
+      cleanupFile: (_path: string) => {
+        /* no cleanup needed for fixture file */
+      },
+      shouldSucceed: true,
+    },
+    {
+      description: "oversized artifact (>100MB)",
+      setupFile: () => createLargeFile({ sizeInMB: 150, directory: fixturesDir }),
+      cleanupFile: (filePath: string) => cleanupLargeFile(filePath),
+      shouldSucceed: false,
+    },
+  ];
 
   const entrypoints = [
     {
@@ -51,41 +72,110 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   ];
 
   // Todo: add GCP, see https://github.com/confluentinc/vscode/issues/2817
-  const providersWithRegions = ["AWS/us-east-2", "AZURE/eastus"];
+  const providersWithRegions = [
+    { provider: "AWS", region: "us-east-2" },
+    { provider: "AZURE", region: "eastus" },
+  ];
 
-  for (const config of entrypoints) {
-    test.describe(config.testName, () => {
-      for (const providerRegion of providersWithRegions) {
-        test(`with ${providerRegion}`, async ({ page, electronApp }) => {
-          await setupTestEnvironment(config.entrypoint, page, electronApp);
+  // Test matrix: entrypoint × provider/region × file size
+  const successTestCases = entrypoints.flatMap((config) =>
+    providersWithRegions.flatMap(({ provider, region }) => ({
+      name: config.testName,
+      entrypoint: config.entrypoint,
+      provider,
+      region,
+      description: "valid size artifact",
+      filePath: artifactPath,
+    })),
+  );
 
-          const [provider, region] = providerRegion.split("/");
+  const failureTestCases = entrypoints.flatMap((config) =>
+    providersWithRegions.flatMap(({ provider, region }) =>
+      fileSizes
+        .filter((fileConfig) => !fileConfig.shouldSucceed)
+        .map((fileConfig) => ({
+          name: config.testName.replace("should upload", "should reject upload of"),
+          entrypoint: config.entrypoint,
+          provider,
+          region,
+          description: fileConfig.description,
+          fileConfig,
+        })),
+    ),
+  );
+
+  for (const testCase of successTestCases) {
+    test.describe(`with ${testCase.provider}/${testCase.region} - ${testCase.description}`, () => {
+      test(testCase.name, async ({ page, electronApp }) => {
+        await setupTestEnvironment(testCase.entrypoint, page, electronApp);
+        const artifactsView = new FlinkDatabaseView(page);
+
+        await artifactsView.ensureExpanded();
+        await artifactsView.loadArtifacts(testCase.entrypoint);
+
+        const uploadedArtifactName = await startUploadFlow(
+          testCase.entrypoint,
+          page,
+          electronApp,
+          artifactsView,
+          testCase.provider,
+          testCase.region,
+          testCase.filePath,
+        );
+
+        const artifactViewItem = await artifactsView.getDatabaseResourceByLabel(
+          uploadedArtifactName,
+          artifactsView.artifactsContainer,
+        );
+
+        await expect(artifactViewItem).toBeVisible();
+        await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
+        await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
+          0,
+        );
+      });
+    });
+  }
+
+  for (const testCase of failureTestCases) {
+    test.describe(`with ${testCase.provider}/${testCase.region} - ${testCase.description}`, () => {
+      test(testCase.name, async ({ page, electronApp }) => {
+        const testFilePath = await testCase.fileConfig.setupFile();
+
+        try {
+          await setupTestEnvironment(testCase.entrypoint, page, electronApp);
           const artifactsView = new FlinkDatabaseView(page);
 
           await artifactsView.ensureExpanded();
-          await artifactsView.loadArtifacts(config.entrypoint);
+          await artifactsView.loadArtifacts(testCase.entrypoint);
 
-          const uploadedArtifactName = await startUploadFlow(
-            config.entrypoint,
-            page,
-            electronApp,
-            artifactsView,
-            provider,
-            region,
-          );
+          const initialArtifactCount = await artifactsView.artifacts.count();
 
-          const artifactViewItem = await artifactsView.getDatabaseResourceByLabel(
-            uploadedArtifactName,
-            artifactsView.artifactsContainer,
-          );
+          try {
+            await startUploadFlow(
+              testCase.entrypoint,
+              page,
+              electronApp,
+              artifactsView,
+              testCase.provider,
+              testCase.region,
+              testFilePath,
+            );
+          } catch (error) {
+            // Swallow any errors from the upload flow since we expect failure
+          }
 
-          await expect(artifactViewItem).toBeVisible();
-          await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
-          await expect(
-            artifactsView.artifacts.filter({ hasText: uploadedArtifactName }),
-          ).toHaveCount(0);
-        });
-      }
+          await expect(artifactsView.artifacts).toHaveCount(initialArtifactCount);
+
+          const notificationArea = new NotificationArea(page);
+          const failureNotifications: Locator = notificationArea.errorNotifications.filter({
+            hasText: /Failed to upload/,
+          });
+          await expect(failureNotifications.first()).toBeVisible();
+        } finally {
+          await testCase.fileConfig.cleanupFile(testFilePath);
+        }
+      });
     });
   }
 
@@ -96,8 +186,6 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   ): Promise<void> {
     // JAR file test requires opening the fixtures folder as a workspace
     if (entrypoint === SelectFlinkDatabase.JarFile) {
-      const fixturesDir = path.join(__dirname, "..", "..", "fixtures", "flink-artifacts");
-
       await stubDialog(electronApp, "showOpenDialog", {
         filePaths: [fixturesDir],
       });
@@ -119,18 +207,25 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     artifactsView: FlinkDatabaseView,
     provider: string,
     region: string,
+    filePath: string,
   ): Promise<string> {
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
-        return await completeArtifactUploadFlow(electronApp, artifactPath, artifactsView);
+        return await completeArtifactUploadFlow(electronApp, filePath, artifactsView);
       case SelectFlinkDatabase.FromDatabaseViewButton:
-        return await completeArtifactUploadFlow(electronApp, artifactPath, artifactsView);
+        return await completeArtifactUploadFlow(electronApp, filePath, artifactsView);
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
-        return await completeUploadFlowForComputePool(electronApp, artifactsView, provider, region);
+        return await completeUploadFlowForComputePool(
+          electronApp,
+          artifactsView,
+          provider,
+          region,
+          filePath,
+        );
       case SelectFlinkDatabase.JarFile:
         return await completeArtifactUploadFlowForJAR(
           page,
-          artifactPath,
+          filePath,
           artifactsView,
           provider,
           region,
@@ -143,12 +238,13 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     artifactsView: FlinkDatabaseView,
     provider: string,
     region: string,
+    filePath: string,
   ): Promise<string> {
     await artifactsView.clickUploadFromComputePool(provider, region);
     // Skip initiation since the upload modal was already opened via the compute pool context menu
     const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
       electronApp,
-      artifactPath,
+      filePath,
       true,
     );
 
@@ -164,8 +260,7 @@ async function completeArtifactUploadFlow(
   artifactPath: string,
   artifactsView: FlinkDatabaseView,
 ): Promise<string> {
-  const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
-  return uploadedArtifactName;
+  return await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
 }
 
 /**
