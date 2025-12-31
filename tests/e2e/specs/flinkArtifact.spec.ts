@@ -83,103 +83,105 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     { provider: "AZURE", region: "eastus" },
   ];
 
-  // Test matrix: entrypoint × provider/region × file size/validity
-  for (const config of entrypoints) {
-    for (const providerRegion of providersWithRegions) {
-      for (const fileSizeConfig of fileSizes) {
-        const { provider, region } = providerRegion;
-        const testName = fileSizeConfig.shouldSucceed
-          ? config.testName
-          : config.testName.replace("should upload", "should reject upload of");
+  // Test matrix: entrypoint × provider/region × file size
+  const successTestCases = entrypoints.flatMap((config) =>
+    providersWithRegions.flatMap(({ provider, region }) => ({
+      name: config.testName,
+      entrypoint: config.entrypoint,
+      provider,
+      region,
+      description: "valid artifact",
+      filePath: artifactPath,
+    })),
+  );
 
-        test.describe(`with ${provider}/${region} - ${fileSizeConfig.description}`, () => {
-          fileSizeConfig.shouldSucceed
-            ? registerSuccessTest(testName, config.entrypoint, provider, region)
-            : registerFailureTest(testName, config.entrypoint, provider, region, fileSizeConfig);
-        });
-      }
-    }
-  }
+  const failureTestCases = entrypoints.flatMap((config) =>
+    providersWithRegions.flatMap(({ provider, region }) =>
+      fileSizes
+        .filter((fileConfig) => !fileConfig.shouldSucceed)
+        .map((fileConfig) => ({
+          name: config.testName.replace("should upload", "should reject upload of"),
+          entrypoint: config.entrypoint,
+          provider,
+          region,
+          description: fileConfig.description,
+          fileConfig,
+        })),
+    ),
+  );
 
-  function registerSuccessTest(
-    testName: string,
-    entrypoint: SelectFlinkDatabase,
-    provider: string,
-    region: string,
-  ) {
-    test(testName, async ({ page, electronApp }) => {
-      await setupTestEnvironment(entrypoint, page, electronApp);
-      const artifactsView = new FlinkDatabaseView(page);
-
-      await artifactsView.ensureExpanded();
-      await artifactsView.loadArtifacts(entrypoint);
-
-      const uploadedArtifactName = await startUploadFlow(
-        entrypoint,
-        page,
-        electronApp,
-        artifactsView,
-        provider,
-        region,
-        artifactPath,
-      );
-
-      const artifactViewItem = await artifactsView.getDatabaseResourceByLabel(
-        uploadedArtifactName,
-        artifactsView.artifactsContainer,
-      );
-
-      await expect(artifactViewItem).toBeVisible();
-      await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
-      await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
-        0,
-      );
-    });
-  }
-
-  function registerFailureTest(
-    testName: string,
-    entrypoint: SelectFlinkDatabase,
-    provider: string,
-    region: string,
-    fileSizeConfig: (typeof fileSizes)[number],
-  ) {
-    test(testName, async ({ page, electronApp }) => {
-      const testFilePath = await fileSizeConfig.setupFile();
-
-      try {
-        await setupTestEnvironment(entrypoint, page, electronApp);
+  for (const testCase of successTestCases) {
+    test.describe(`with ${testCase.provider}/${testCase.region} - ${testCase.description}`, () => {
+      test(testCase.name, async ({ page, electronApp }) => {
+        await setupTestEnvironment(testCase.entrypoint, page, electronApp);
         const artifactsView = new FlinkDatabaseView(page);
 
         await artifactsView.ensureExpanded();
-        await artifactsView.loadArtifacts(entrypoint);
+        await artifactsView.loadArtifacts(testCase.entrypoint);
 
-        const initialArtifactCount = await artifactsView.artifacts.count();
+        const uploadedArtifactName = await startUploadFlow(
+          testCase.entrypoint,
+          page,
+          electronApp,
+          artifactsView,
+          testCase.provider,
+          testCase.region,
+          testCase.filePath,
+        );
+
+        const artifactViewItem = await artifactsView.getDatabaseResourceByLabel(
+          uploadedArtifactName,
+          artifactsView.artifactsContainer,
+        );
+
+        await expect(artifactViewItem).toBeVisible();
+        await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
+        await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
+          0,
+        );
+      });
+    });
+  }
+
+  for (const testCase of failureTestCases) {
+    test.describe(`with ${testCase.provider}/${testCase.region} - ${testCase.description}`, () => {
+      test(testCase.name, async ({ page, electronApp }) => {
+        const testFilePath = await testCase.fileConfig.setupFile();
 
         try {
-          await startUploadFlow(
-            entrypoint,
-            page,
-            electronApp,
-            artifactsView,
-            provider,
-            region,
-            testFilePath,
-          );
-        } catch (error) {
-          // Swallow any errors from the upload flow since we expect failure
+          await setupTestEnvironment(testCase.entrypoint, page, electronApp);
+          const artifactsView = new FlinkDatabaseView(page);
+
+          await artifactsView.ensureExpanded();
+          await artifactsView.loadArtifacts(testCase.entrypoint);
+
+          const initialArtifactCount = await artifactsView.artifacts.count();
+
+          try {
+            await startUploadFlow(
+              testCase.entrypoint,
+              page,
+              electronApp,
+              artifactsView,
+              testCase.provider,
+              testCase.region,
+              testFilePath,
+            );
+          } catch (error) {
+            // Swallow any errors from the upload flow since we expect failure
+          }
+
+          await expect(artifactsView.artifacts).toHaveCount(initialArtifactCount);
+
+          const notificationArea = new NotificationArea(page);
+          const failureNotifications: Locator = notificationArea.errorNotifications.filter({
+            hasText: /Failed to upload/,
+          });
+          await expect(failureNotifications.first()).toBeVisible();
+        } finally {
+          await testCase.fileConfig.cleanupFile(testFilePath);
         }
-
-        await expect(artifactsView.artifacts).toHaveCount(initialArtifactCount);
-
-        const notificationArea = new NotificationArea(page);
-        const failureNotifications: Locator = notificationArea.errorNotifications.filter({
-          hasText: /Failed to upload/,
-        });
-        await expect(failureNotifications.first()).toBeVisible();
-      } finally {
-        await fileSizeConfig.cleanupFile(testFilePath);
-      }
+      });
     });
   }
 
