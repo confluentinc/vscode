@@ -84,7 +84,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       entrypoint: config.entrypoint,
       provider,
       region,
-      description: "valid size artifact",
+      description: "valid artifact",
       filePath: artifactPath,
     })),
   );
