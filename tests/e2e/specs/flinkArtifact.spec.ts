@@ -12,7 +12,7 @@ import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDa
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
 import { Tag } from "../tags";
 import { executeVSCodeCommand } from "../utils/commands";
-import { cleanupLargeFile, createLargeFile, createNonJavaJarFile } from "../utils/flinkDatabase";
+import { cleanupLargeFile, createInvalidJarFile, createLargeFile } from "../utils/flinkDatabase";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 import { randomHexString } from "../utils/strings";
 
@@ -52,7 +52,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     },
     {
       description: "invalid JAR file",
-      setupFile: () => createNonJavaJarFile("invalid.jar", fixturesDir),
+      setupFile: () => createInvalidJarFile("invalid.jar", fixturesDir),
       cleanupFile: (filePath: string) => cleanupLargeFile(filePath),
       shouldSucceed: false,
     },
