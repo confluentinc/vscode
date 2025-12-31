@@ -166,6 +166,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
               testCase.provider,
               testCase.region,
               testFilePath,
+              false, // expectSuccess - we expect this upload to fail
             );
           } catch (error) {
             // Swallow any errors from the upload flow since we expect failure
@@ -214,12 +215,23 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     provider: string,
     region: string,
     filePath: string,
+    expectSuccess = true,
   ): Promise<string> {
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
-        return await completeArtifactUploadFlow(electronApp, filePath, artifactsView);
+        return await completeArtifactUploadFlow(
+          electronApp,
+          filePath,
+          artifactsView,
+          expectSuccess,
+        );
       case SelectFlinkDatabase.FromDatabaseViewButton:
-        return await completeArtifactUploadFlow(electronApp, filePath, artifactsView);
+        return await completeArtifactUploadFlow(
+          electronApp,
+          filePath,
+          artifactsView,
+          expectSuccess,
+        );
       case SelectFlinkDatabase.ComputePoolFromResourcesView:
         return await completeUploadFlowForComputePool(
           electronApp,
@@ -227,6 +239,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
           provider,
           region,
           filePath,
+          expectSuccess,
         );
       case SelectFlinkDatabase.JarFile:
         return await completeArtifactUploadFlowForJAR(
@@ -235,6 +248,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
           artifactsView,
           provider,
           region,
+          expectSuccess,
         );
     }
   }
@@ -245,6 +259,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     provider: string,
     region: string,
     filePath: string,
+    expectSuccess = true,
   ): Promise<string> {
     await artifactsView.clickUploadFromComputePool(provider, region);
     // Skip initiation since the upload modal was already opened via the compute pool context menu
@@ -252,6 +267,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       electronApp,
       filePath,
       true,
+      expectSuccess,
     );
 
     await artifactsView.selectKafkaClusterByProviderRegion(provider, region);
@@ -265,8 +281,9 @@ async function completeArtifactUploadFlow(
   electronApp: ElectronApplication,
   artifactPath: string,
   artifactsView: FlinkDatabaseView,
+  expectSuccess = true,
 ): Promise<string> {
-  return await artifactsView.uploadFlinkArtifact(electronApp, artifactPath);
+  return await artifactsView.uploadFlinkArtifact(electronApp, artifactPath, false, expectSuccess);
 }
 
 /**
@@ -279,6 +296,7 @@ async function completeArtifactUploadFlowForJAR(
   artifactsView: FlinkDatabaseView,
   provider: string,
   region: string,
+  expectSuccess = true,
 ): Promise<string> {
   // Use the artifact file name (without extension) as the artifact name
   const baseFileName = path.basename(artifactPath, ".jar");
@@ -293,7 +311,11 @@ async function completeArtifactUploadFlowForJAR(
   const fileItem = new ViewItem(page, jarFile);
   await fileItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
 
-  await artifactsView.uploadFlinkArtifactFromJAR(artifactName, `${provider}/${region}`);
+  await artifactsView.uploadFlinkArtifactFromJAR(
+    artifactName,
+    `${provider}/${region}`,
+    expectSuccess,
+  );
 
   // Switch back to the Confluent extension sidebar from the file explorer
   await openConfluentSidebar(page);
