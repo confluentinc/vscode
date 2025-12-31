@@ -83,7 +83,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     { provider: "AZURE", region: "eastus" },
   ];
 
-  // Test matrix: entrypoint × provider/region × file size
+  // Test matrix: entrypoint × provider/region × file size/validity
   for (const config of entrypoints) {
     for (const providerRegion of providersWithRegions) {
       for (const fileSizeConfig of fileSizes) {
