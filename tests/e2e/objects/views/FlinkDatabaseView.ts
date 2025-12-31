@@ -310,7 +310,7 @@ export class FlinkDatabaseView extends SearchableView {
    * Navigates through the quickpick steps after the upload has been initiated from a JAR file.
    * @param artifactName - The name of the uploaded artifact (for verification)
    * @param providerRegion - Optional provider/region to match (e.g., "AWS/us-east-2")
-   * @param expectSuccess - If true, waits for success notification; if false, caller handles error notification
+   * @param expectSuccess - If true, waits for success notification
    * @returns The name of the uploaded artifact
    */
   async uploadFlinkArtifactFromJAR(
