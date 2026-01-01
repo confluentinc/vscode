@@ -35,7 +35,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
   const fixturesDir = path.join(__dirname, "..", "..", "fixtures", "flink-artifacts");
 
-  const fileSizes = [
+  const invalidFiles = [
     {
       description: "valid size artifact",
       setupFile: () => artifactPath,
@@ -91,7 +91,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
   const failureTestCases = entrypoints.flatMap((config) =>
     providersWithRegions.flatMap(({ provider, region }) =>
-      fileSizes
+      invalidFiles
         .filter((fileConfig) => !fileConfig.shouldSucceed)
         .map((fileConfig) => ({
           name: config.testName.replace("should upload", "should reject upload of"),
