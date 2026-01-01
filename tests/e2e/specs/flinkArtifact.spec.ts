@@ -35,15 +35,15 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
   const fixturesDir = path.join(__dirname, "..", "..", "fixtures", "flink-artifacts");
 
-  const fileSizes = [
-    {
-      description: "valid size artifact",
-      setupFile: () => artifactPath,
-      cleanupFile: (_path: string) => {
-        /* no cleanup needed for fixture file */
-      },
-      shouldSucceed: true,
-    },
+  const invalidFiles = [
+    // {
+    //   description: "valid size artifact",
+    //   setupFile: () => artifactPath,
+    //   cleanupFile: (_path: string) => {
+    //     /* no cleanup needed for fixture file */
+    //   },
+    //   shouldSucceed: true,
+    // },
     {
       description: "oversized artifact (>100MB)",
       setupFile: () => createLargeFile({ sizeInMB: 150, directory: fixturesDir }),
@@ -97,16 +97,14 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
   const failureTestCases = entrypoints.flatMap((config) =>
     providersWithRegions.flatMap(({ provider, region }) =>
-      fileSizes
-        .filter((fileConfig) => !fileConfig.shouldSucceed)
-        .map((fileConfig) => ({
-          name: config.testName.replace("should upload", "should reject upload of"),
-          entrypoint: config.entrypoint,
-          provider,
-          region,
-          description: fileConfig.description,
-          fileConfig,
-        })),
+      invalidFiles.map((fileConfig) => ({
+        name: config.testName.replace("should upload", "should reject upload of"),
+        entrypoint: config.entrypoint,
+        provider,
+        region,
+        description: fileConfig.description,
+        fileConfig,
+      })),
     ),
   );
 
