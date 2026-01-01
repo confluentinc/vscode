@@ -36,14 +36,6 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   const fixturesDir = path.join(__dirname, "..", "..", "fixtures", "flink-artifacts");
 
   const invalidFiles = [
-    // {
-    //   description: "valid size artifact",
-    //   setupFile: () => artifactPath,
-    //   cleanupFile: (_path: string) => {
-    //     /* no cleanup needed for fixture file */
-    //   },
-    //   shouldSucceed: true,
-    // },
     {
       description: "oversized artifact (>100MB)",
       setupFile: () => createLargeFile({ sizeInMB: 150, directory: fixturesDir }),
