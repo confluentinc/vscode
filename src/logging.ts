@@ -1,4 +1,4 @@
-import { readdirSync, statSync, unlinkSync } from "fs";
+import { statSync, unlinkSync } from "fs";
 import { join, normalize } from "path";
 import type { RotatingFileStream } from "rotating-file-stream";
 import { createStream } from "rotating-file-stream";
@@ -6,7 +6,7 @@ import type { Event, LogLevel, LogOutputChannel } from "vscode";
 import { Uri, window } from "vscode";
 import { SIDECAR_LOGFILE_NAME } from "./sidecar/constants";
 import { WriteableTmpDir } from "./utils/file";
-import { existsSync } from "./utils/fsWrappers";
+import { existsSync, readdirSync } from "./utils/fsWrappers";
 
 /** The base file name prefix for the log file. Helps with clean up of old log files. @see {@link cleanupOldLogFiles} */
 export const BASEFILE_PREFIX: string = "vscode-confluent";
