@@ -433,7 +433,7 @@ export function cleanupOldLogFiles() {
 
   // filter out any log files that were last modified before the cutoff date
   const oldLogFiles = logFiles.filter((file) => {
-    const filePath = `${logfileDir}/${file}`;
+    const filePath = join(logfileDir, file);
     const stats = statSync(filePath);
     return stats.mtime < cutoffDate;
   });
@@ -444,7 +444,7 @@ export function cleanupOldLogFiles() {
 
   // delete the old log files
   for (const file of oldLogFiles) {
-    const filePath = `${logfileDir}/${file}`;
+    const filePath = join(logfileDir, file);
     try {
       logger.debug(`Deleting old log file: ${filePath}`);
       unlinkSync(filePath);
