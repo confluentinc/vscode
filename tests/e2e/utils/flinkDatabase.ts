@@ -44,6 +44,20 @@ export function createLargeFile(options: LargeFileOptions = {}): string {
 }
 
 /**
+ * Creates a file with no Java or Python for testing artifact upload rejection.
+ * The file is filled with a string to simulate an invalid JAR file.
+ *
+ * @param filename - The name of the file to create
+ * @param directory - Directory to create the file in. Defaults to system temp directory
+ * @returns The absolute path to the created file
+ */
+export function createInvalidJarFile(filename: string, directory: string = os.tmpdir()): string {
+  const filePath = path.join(directory, filename);
+  fs.writeFileSync(filePath, "This is not a valid Java JAR file.");
+  return filePath;
+}
+
+/**
  * Cleans up (deletes) a large test file.
  * @param filePath - The absolute path to the file to delete
  */
