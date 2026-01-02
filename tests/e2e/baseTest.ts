@@ -131,6 +131,8 @@ export const test = testBase.extend<VSCodeFixtures>({
       await stubAllDialogs(electronApp);
 
       await use(electronApp);
+
+      console.log("electronApp: teardown starting...");
     } finally {
       // only save and attach the trace for failed tests
       if (testInfo.status !== testInfo.expectedStatus) {
@@ -157,6 +159,7 @@ export const test = testBase.extend<VSCodeFixtures>({
         }
       }
     }
+    console.log("electronApp: teardown complete");
   },
 
   page: async ({ electronApp, testTempDir }, use, testInfo) => {
@@ -166,7 +169,9 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     await use(page);
 
+    console.log("page: teardown starting...");
     await globalAfterEach(testTempDir, electronApp, page, testInfo);
+    console.log("page: teardown complete");
   },
 
   openExtensionSidebar: [
@@ -242,6 +247,7 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     await use(connection);
 
+    console.log("connectionItem: teardown starting...", { connectionType });
     // teardown
     switch (connectionType) {
       case ConnectionType.Ccloud:
@@ -263,6 +269,7 @@ export const test = testBase.extend<VSCodeFixtures>({
       default:
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }
+    console.log("connectionItem: teardown complete", { connectionType });
   },
 });
 
