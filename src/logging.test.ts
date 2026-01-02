@@ -1,10 +1,14 @@
 import * as assert from "assert";
+import type { Stats } from "fs";
+import { join } from "path";
 import { RotatingFileStream } from "rotating-file-stream";
 import * as sinon from "sinon";
 import type { LogOutputChannel, Uri } from "vscode";
 import {
   BASEFILE_PREFIX,
+  cleanupOldLogFiles,
   EXTENSION_OUTPUT_CHANNEL,
+  LOG_CLEANUP_DAYS_THRESHOLD,
   Logger,
   MAX_LOGFILES,
   RotatingLogManager,
@@ -462,6 +466,111 @@ describe("logging.ts", () => {
 
       // check that getFileUris() is called
       sinon.assert.calledOnce(getFileUrisStub);
+    });
+  });
+
+  describe("cleanupOldLogFiles()", () => {
+    let readdirSyncStub: sinon.SinonStub;
+    let writeableTmpDirStub: sinon.SinonStub;
+    let statSyncStub: sinon.SinonStub;
+    let unlinkSyncStub: sinon.SinonStub;
+
+    const logfileDir = "/test/logdir";
+    // should be processed:
+    const includedFiles = [`${BASEFILE_PREFIX}-12345.log`, `${BASEFILE_PREFIX}-67890.log`];
+    // should be filtered out:
+    const excludedFiles = ["ide-sidecar.log", "other-file.log", "README.txt"];
+
+    // to help stub statSync return a date older than the threshold
+    const oldDate = new Date(Date.now() - (LOG_CLEANUP_DAYS_THRESHOLD + 1) * 24 * 60 * 60 * 1000);
+
+    beforeEach(() => {
+      readdirSyncStub = sandbox.stub(fsWrappers, "readdirSync");
+      statSyncStub = sandbox.stub(fsWrappers, "statSync");
+      unlinkSyncStub = sandbox.stub(fsWrappers, "unlinkSync");
+
+      writeableTmpDirStub = sandbox.stub(WriteableTmpDir.getInstance(), "get");
+      // default to a fake test log directory
+      writeableTmpDirStub.returns(logfileDir);
+    });
+
+    it("should call readdirSync() with the log dir path", () => {
+      readdirSyncStub.returns([]);
+
+      cleanupOldLogFiles();
+
+      sinon.assert.calledOnce(readdirSyncStub);
+      sinon.assert.calledWith(readdirSyncStub, logfileDir);
+      sinon.assert.notCalled(statSyncStub);
+      sinon.assert.notCalled(unlinkSyncStub);
+    });
+
+    it("should not throw an error if readdirSync() returns an empty array", () => {
+      // might be an error reading the directory, or there are just no files
+      readdirSyncStub.returns([]);
+
+      cleanupOldLogFiles();
+
+      sinon.assert.calledOnce(readdirSyncStub);
+      sinon.assert.notCalled(statSyncStub);
+      sinon.assert.notCalled(unlinkSyncStub);
+    });
+
+    it("should filter and process only extension log files", () => {
+      // some will be processed, some filtered out
+      const files = [...includedFiles, ...excludedFiles];
+      readdirSyncStub.returns(files);
+      statSyncStub.returns({ mtime: oldDate } as unknown as Stats);
+
+      cleanupOldLogFiles();
+
+      sinon.assert.calledOnce(readdirSyncStub);
+      sinon.assert.calledWith(readdirSyncStub, logfileDir);
+      sinon.assert.callCount(statSyncStub, includedFiles.length);
+      sinon.assert.callCount(unlinkSyncStub, includedFiles.length);
+      for (const filename of includedFiles) {
+        sinon.assert.calledWith(statSyncStub, join(logfileDir, filename));
+        sinon.assert.calledWith(unlinkSyncStub, join(logfileDir, filename));
+      }
+    });
+
+    it("should not delete files when no matching log files are found", () => {
+      readdirSyncStub.returns(excludedFiles);
+
+      cleanupOldLogFiles();
+
+      sinon.assert.calledOnce(readdirSyncStub);
+      sinon.assert.notCalled(statSyncStub);
+      // oldLogFiles will be empty, so nothing is deleted
+      sinon.assert.notCalled(unlinkSyncStub);
+    });
+
+    it("should only delete old log files", () => {
+      readdirSyncStub.returns(includedFiles);
+      // first file is old, second is new
+      statSyncStub.onFirstCall().returns({ mtime: oldDate } as unknown as Stats);
+      statSyncStub.onSecondCall().returns({ mtime: new Date() } as unknown as Stats);
+
+      cleanupOldLogFiles();
+
+      sinon.assert.calledOnce(readdirSyncStub);
+      sinon.assert.callCount(statSyncStub, includedFiles.length);
+      sinon.assert.calledWith(statSyncStub, join(logfileDir, includedFiles[0]));
+      sinon.assert.calledWith(statSyncStub, join(logfileDir, includedFiles[1]));
+      // only first file should be deleted
+      sinon.assert.calledOnce(unlinkSyncStub);
+      sinon.assert.calledWith(unlinkSyncStub, join(logfileDir, includedFiles[0]));
+    });
+
+    it("should handle errors when deleting individual log files", () => {
+      readdirSyncStub.returns(includedFiles);
+      statSyncStub.returns({ mtime: oldDate } as unknown as Stats);
+      unlinkSyncStub.throws(new Error("EPERM"));
+
+      // won't throw despite unlinkSync throwing
+      cleanupOldLogFiles();
+
+      sinon.assert.callCount(unlinkSyncStub, includedFiles.length);
     });
   });
 });
