@@ -481,6 +481,11 @@ function listChildProcesses(pid: number | undefined): string[] {
     });
     return output.trim().split("\n").slice(1);
   } catch (err) {
+    // may fail with status=1 when no child processes exist, and will still return output
+    const pidErr = err as { status: number; output: string };
+    if (pidErr.status === 1 && Array.isArray(pidErr.output)) {
+      return pidErr.output;
+    }
     console.warn(`Error listing child processes for PID ${pid}:`, err);
     return [];
   }
