@@ -8,7 +8,7 @@ import { WriteableTmpDir } from "./utils/file";
 import { existsSync, readdirSync, statSync, unlinkSync } from "./utils/fsWrappers";
 
 /** The base file name prefix for the log file. Helps with clean up of old log files. @see {@link cleanupOldLogFiles} */
-export const BASEFILE_PREFIX: string = "vscode-confluent";
+export const BASEFILE_PREFIX = "vscode-confluent";
 
 /** Max size of any log file written to disk.
  * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#size */
