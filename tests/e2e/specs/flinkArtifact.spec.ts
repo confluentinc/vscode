@@ -47,19 +47,19 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   const entrypoints = [
     {
       entrypoint: SelectFlinkDatabase.FromDatabaseViewButton,
-      testName: "should upload Flink Artifact when cluster selected from Artifacts view button",
+      testName: "cluster selected from Artifacts view button",
     },
     {
       entrypoint: SelectFlinkDatabase.DatabaseFromResourcesView,
-      testName: "should upload Flink Artifact when cluster selected from the Resources view",
+      testName: "cluster selected from the Resources view",
     },
     {
       entrypoint: SelectFlinkDatabase.ComputePoolFromResourcesView,
-      testName: "should upload Flink Artifact when cluster selected from Flink Compute Pool",
+      testName: "cluster selected from Flink Compute Pool",
     },
     {
       entrypoint: SelectFlinkDatabase.JarFile,
-      testName: "should upload Flink Artifact when initiated from JAR file in file explorer",
+      testName: "initiated from JAR file in file explorer",
     },
   ];
 
@@ -69,9 +69,12 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     { provider: "AZURE", region: "eastus" },
   ];
 
-  for (const entrypoint of entrypoints) {
+  for (const { entrypoint, testName } of entrypoints) {
     for (const { provider, region } of providersWithRegions) {
-      test("should upload a jar and create an artifact successfully", async (page, electronApp) => {
+      test(`should upload a jar and create an artifact successfully [${provider}/${region}] - ${testName}`, async ({
+        page,
+        electronApp,
+      }) => {
         await setupTestEnvironment(entrypoint, page, electronApp);
         const artifactsView = new FlinkDatabaseView(page);
 
@@ -99,14 +102,17 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
         );
       });
 
-      test("should fail to upload a jar exceeding the file limit", async (page, electronApp) => {
+      test(`should fail to upload a jar exceeding the file limit [${provider}/${region}] - ${testName}`, async ({
+        page,
+        electronApp,
+      }) => {
         await setupTestEnvironment(entrypoint, page, electronApp);
         const artifactsView = new FlinkDatabaseView(page);
 
         await artifactsView.ensureExpanded();
         await artifactsView.loadArtifacts(entrypoint);
         const initialArtifactCount = await artifactsView.artifacts.count();
-
+        const pathToBigArtifact = createLargeFile({ sizeInMB: 150, directory: fixturesDir });
         try {
           await startUploadFlow(
             entrypoint,
@@ -115,7 +121,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
             artifactsView,
             provider,
             region,
-            artifactPath,
+            pathToBigArtifact,
             false, // expectSuccess - we expect this upload to fail
           );
         } catch (error) {
@@ -129,6 +135,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
           hasText: /Failed to upload/,
         });
         await expect(failureNotifications.first()).toBeVisible();
+        cleanupLargeFile(pathToBigArtifact);
       });
     }
   }
