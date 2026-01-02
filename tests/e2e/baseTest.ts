@@ -1,7 +1,6 @@
 import type { ElectronApplication, Page, TestInfo } from "@playwright/test";
 import { _electron as electron, expect, test as testBase } from "@playwright/test";
 import archiver from "archiver";
-import { execSync } from "child_process";
 import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
 import { createWriteStream, existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
@@ -159,34 +158,28 @@ export const test = testBase.extend<VSCodeFixtures, WorkerFixtures>({
         await context.tracing.stop();
       }
 
+      const electronProc = electronApp.process();
       try {
         // shorten grace period for shutdown to avoid hanging the entire test run, but don't SIGKILL
         // early because we might lose trace/screenshot/snapshot data
         await withTimeout("electronApp.close()", electronApp.close(), 10_000);
+
+        await withTimeout(
+          "process exit",
+          new Promise<void>((resolve) => {
+            electronProc.on("exit", () => resolve());
+          }),
+          5_000,
+        );
       } catch (err) {
         console.warn("Timed out waiting for Electron to close, killing process...", {
           error: err instanceof Error ? err.message : err,
         });
         try {
-          const electronPid = electronApp.process()?.pid;
-          if (electronPid !== undefined && electronPid !== 1) {
-            const childrenBefore = listChildProcesses(electronPid);
-            console.log(`before electronApp sigkill, ${childrenBefore.length} child process(es):`, {
-              childrenBefore,
-              electronPid,
-            });
-
+          const electronPid = electronProc.pid;
+          if (electronProc && electronPid !== undefined && electronPid !== 1) {
             process.kill(-electronPid, 9); // SIGKILL the entire process group
             console.info("Killed Electron process");
-
-            // try to wait for processes to die, then check again
-            await new Promise((resolve) => setTimeout(resolve, 500));
-
-            const childrenAfter = listChildProcesses(electronPid);
-            console.log(`after electronApp sigkill, ${childrenAfter.length} child process(es):`, {
-              childrenAfter,
-              electronPid,
-            });
           } else {
             console.warn("no electronApp process, can't sigkill");
           }
@@ -469,41 +462,20 @@ async function withTimeout<T>(
   operation: Promise<T>,
   timeoutMs: number,
 ): Promise<T> {
-  return Promise.race([
-    operation,
-    new Promise<T>((_, reject) =>
-      setTimeout(
-        () => reject(new Error(`${operationName} timeout after ${timeoutMs}ms`)),
-        timeoutMs,
-      ),
-    ),
-  ]);
-}
+  let timeout: NodeJS.Timeout | undefined;
 
-function listChildProcesses(pid: number | undefined): string[] {
-  if (!pid) {
-    return [];
-  }
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeout = setTimeout(
+      () => reject(new Error(`${operationName} timeout after ${timeoutMs}ms`)),
+      timeoutMs,
+    );
+  });
 
   try {
-    let command: string;
-    if (process.platform === "win32") {
-      command = `wmic process where (ParentProcessId=${pid}) get ProcessId,Name`;
-    } else {
-      command = `ps -o pid,command --ppid ${pid}`;
+    return await Promise.race([operation, timeoutPromise]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
     }
-    const output = execSync(command, {
-      encoding: "utf-8",
-      timeout: 2000,
-    });
-    return output.trim().split("\n").slice(1);
-  } catch (err) {
-    // may fail with status=1 when no child processes exist, and will still return output
-    const pidErr = err as { status: number; output: string };
-    if (pidErr.status === 1 && Array.isArray(pidErr.output)) {
-      return pidErr.output;
-    }
-    console.warn(`Error listing child processes for PID ${pid}:`, err);
-    return [];
   }
 }
