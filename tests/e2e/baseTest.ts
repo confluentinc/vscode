@@ -46,6 +46,10 @@ function getTestSetupCache(): TestSetupCache {
   }
 }
 
+interface WorkerFixtures {
+  workerDebug: number;
+}
+
 interface VSCodeFixtures {
   /** Temporary directory for the test to use. */
   testTempDir: string;
@@ -79,12 +83,23 @@ interface VSCodeFixtures {
   connectionItem: CCloudConnectionItem | DirectConnectionItem | LocalConnectionItem;
 }
 
-export const test = testBase.extend<VSCodeFixtures>({
+export const test = testBase.extend<VSCodeFixtures, WorkerFixtures>({
   testTempDir: async ({}, use) => {
     const tempDir = mkdtempSync(path.join(tmpdir(), "vscode-test-"));
 
     await use(tempDir);
   },
+
+  workerDebug: [
+    async ({}, use) => {
+      await use(1);
+
+      // debugging worker teardown
+      const resources = process.getActiveResourcesInfo();
+      console.log("worker teardown: process.getActiveResourcesInfo()", resources);
+    },
+    { scope: "worker", auto: true },
+  ],
 
   electronApp: async ({ testTempDir }, use, testInfo) => {
     const testConfigs = getTestSetupCache();
@@ -134,7 +149,9 @@ export const test = testBase.extend<VSCodeFixtures>({
       await use(electronApp);
     } finally {
       // only save and attach the trace for failed tests
-      if (testInfo.status !== testInfo.expectedStatus) {
+      // const failed = testInfo.status !== testInfo.expectedStatus;
+      const failed = true; // TEMPORARY to get worker teardown in traces
+      if (failed) {
         const tracePath = path.join(testInfo.outputDir, "trace.zip");
         await context.tracing.stop({ path: tracePath });
         await testInfo.attach("trace", { path: tracePath, contentType: "application/zip" });
@@ -151,25 +168,25 @@ export const test = testBase.extend<VSCodeFixtures>({
           error: err instanceof Error ? err.message : err,
         });
         try {
-          const proc = electronApp.process();
-          if (proc) {
-            const childrenBefore = listChildProcesses(proc.pid);
-            console.log(
-              `before electronApp sigkill, ${childrenBefore.length} child process(es):`,
+          const electronPid = electronApp.process()?.pid;
+          if (electronPid !== undefined && electronPid !== 1) {
+            const childrenBefore = listChildProcesses(electronPid);
+            console.log(`before electronApp sigkill, ${childrenBefore.length} child process(es):`, {
               childrenBefore,
-            );
+              electronPid,
+            });
 
-            proc.kill(9); // SIGKILL
+            process.kill(-electronPid, 9); // SIGKILL the entire process group
             console.info("Killed Electron process");
 
             // try to wait for processes to die, then check again
             await new Promise((resolve) => setTimeout(resolve, 500));
 
-            const childrenAfter = listChildProcesses(proc.pid);
-            console.log(
-              `after electronApp sigkill, ${childrenAfter.length} child process(es):`,
+            const childrenAfter = listChildProcesses(electronPid);
+            console.log(`after electronApp sigkill, ${childrenAfter.length} child process(es):`, {
               childrenAfter,
-            );
+              electronPid,
+            });
           } else {
             console.warn("no electronApp process, can't sigkill");
           }
