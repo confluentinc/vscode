@@ -91,11 +91,20 @@ export function existsSync(uri: vscode.Uri): boolean {
  * Wrapper for fs.readdirSync()
  * Return the list of files in the directory, or an empty array on error.
  */
-
 export function readdirSync(path: fs.PathLike): string[] {
   try {
     return fs.readdirSync(path);
   } catch {
     return [];
   }
+}
+
+/** Wrapper for {@link fs.statSync} */
+export function statSync(path: fs.PathLike): fs.Stats {
+  return fs.statSync(path);
+}
+
+/** Wrapper for {@link fs.unlinkSync} */
+export function unlinkSync(path: fs.PathLike): void {
+  fs.unlinkSync(path);
 }
