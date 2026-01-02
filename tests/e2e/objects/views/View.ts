@@ -128,6 +128,9 @@ export class SearchableView extends View {
       await expect(itemLocator, {
         message: `should check if '${label}' is visible before searching`,
       }).toBeVisible({ timeout: 1000 });
+      // item is in the DOM but may be partially out of view, so we may need to scroll to
+      // it before any other actions can happen
+      await itemLocator.scrollIntoViewIfNeeded();
       return itemLocator;
     } catch {
       // item not found, try searching for it
