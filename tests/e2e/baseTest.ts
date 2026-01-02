@@ -1,6 +1,7 @@
 import type { ElectronApplication, Page, TestInfo } from "@playwright/test";
 import { _electron as electron, expect, test as testBase } from "@playwright/test";
 import archiver from "archiver";
+import { execSync } from "child_process";
 import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
 import { createWriteStream, existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
@@ -131,8 +132,6 @@ export const test = testBase.extend<VSCodeFixtures>({
       await stubAllDialogs(electronApp);
 
       await use(electronApp);
-
-      console.log("electronApp: teardown starting...");
     } finally {
       // only save and attach the trace for failed tests
       if (testInfo.status !== testInfo.expectedStatus) {
@@ -152,14 +151,33 @@ export const test = testBase.extend<VSCodeFixtures>({
           error: err instanceof Error ? err.message : err,
         });
         try {
-          electronApp.process()?.kill(9); // SIGKILL
-          console.info("Killed Electron process");
+          const proc = electronApp.process();
+          if (proc) {
+            const childrenBefore = listChildProcesses(proc.pid);
+            console.log(
+              `before electronApp sigkill, ${childrenBefore.length} child process(es):`,
+              childrenBefore,
+            );
+
+            proc.kill(9); // SIGKILL
+            console.info("Killed Electron process");
+
+            // try to wait for processes to die, then check again
+            await new Promise((resolve) => setTimeout(resolve, 500));
+
+            const childrenAfter = listChildProcesses(proc.pid);
+            console.log(
+              `after electronApp sigkill, ${childrenAfter.length} child process(es):`,
+              childrenAfter,
+            );
+          } else {
+            console.warn("no electronApp process, can't sigkill");
+          }
         } catch (err) {
           console.warn(`Error killing Electron process: ${err}`);
         }
       }
     }
-    console.log("electronApp: teardown complete");
   },
 
   page: async ({ electronApp, testTempDir }, use, testInfo) => {
@@ -169,9 +187,7 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     await use(page);
 
-    console.log("page: teardown starting...");
     await globalAfterEach(testTempDir, electronApp, page, testInfo);
-    console.log("page: teardown complete");
   },
 
   openExtensionSidebar: [
@@ -247,7 +263,6 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     await use(connection);
 
-    console.log("connectionItem: teardown starting...", { connectionType });
     // teardown
     switch (connectionType) {
       case ConnectionType.Ccloud:
@@ -269,7 +284,6 @@ export const test = testBase.extend<VSCodeFixtures>({
       default:
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }
-    console.log("connectionItem: teardown complete", { connectionType });
   },
 });
 
@@ -447,4 +461,27 @@ async function withTimeout<T>(
       ),
     ),
   ]);
+}
+
+function listChildProcesses(pid: number | undefined): string[] {
+  if (!pid) {
+    return [];
+  }
+
+  try {
+    let command: string;
+    if (process.platform === "win32") {
+      command = `wmic process where (ParentProcessId=${pid}) get ProcessId,Name`;
+    } else {
+      command = `ps -o pid,command --ppid ${pid}`;
+    }
+    const output = execSync(command, {
+      encoding: "utf-8",
+      timeout: 2000,
+    });
+    return output.trim().split("\n").slice(1);
+  } catch (err) {
+    console.warn(`Error listing child processes for PID ${pid}:`, err);
+    return [];
+  }
 }
