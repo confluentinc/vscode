@@ -1,6 +1,7 @@
 import type { ElectronApplication, Page, TestInfo } from "@playwright/test";
 import { _electron as electron, expect, test as testBase } from "@playwright/test";
 import archiver from "archiver";
+import { execSync } from "child_process";
 import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
 import { createWriteStream, existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
@@ -45,6 +46,10 @@ function getTestSetupCache(): TestSetupCache {
   }
 }
 
+interface WorkerFixtures {
+  workerDebug: number;
+}
+
 interface VSCodeFixtures {
   /** Temporary directory for the test to use. */
   testTempDir: string;
@@ -78,14 +83,25 @@ interface VSCodeFixtures {
   connectionItem: CCloudConnectionItem | DirectConnectionItem | LocalConnectionItem;
 }
 
-export const test = testBase.extend<VSCodeFixtures>({
+export const test = testBase.extend<VSCodeFixtures, WorkerFixtures>({
   testTempDir: async ({}, use) => {
     const tempDir = mkdtempSync(path.join(tmpdir(), "vscode-test-"));
 
     await use(tempDir);
   },
 
-  electronApp: async ({ trace, testTempDir }, use, testInfo) => {
+  workerDebug: [
+    async ({}, use) => {
+      await use(1);
+
+      // debugging worker teardown
+      const resources = process.getActiveResourcesInfo();
+      console.log("worker teardown: process.getActiveResourcesInfo()", resources);
+    },
+    { scope: "worker", auto: true },
+  ],
+
+  electronApp: async ({ testTempDir }, use, testInfo) => {
     const testConfigs = getTestSetupCache();
 
     // launch VS Code with Electron using args pattern from vscode-test
@@ -106,67 +122,83 @@ export const test = testBase.extend<VSCodeFixtures>({
         `--extensionDevelopmentPath=${testConfigs.outPath}`,
       ],
     });
-
     if (!electronApp) {
       throw new Error("Failed to launch VS Code electron app");
     }
 
-    // wait for VS Code to be ready before trying to stub dialogs
-    const page = await electronApp.firstWindow();
-    if (!page) {
-      // usually this means the launch args were incorrect and/or the app didn't start correctly
-      throw new Error("Failed to get first window from VS Code");
-    }
-    await page.waitForLoadState("domcontentloaded");
-    await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
-
-    // Stub all dialogs by default; tests can still override as needed.
-    // For available `method` values to use with `stubMultipleDialogs`, see:
-    // https://www.electronjs.org/docs/latest/api/dialog
-    await stubAllDialogs(electronApp);
-
-    // on*, retain-on*
-    if (trace.toString().includes("on")) {
-      await electronApp.context().tracing.start({
-        screenshots: true,
-        snapshots: true,
-        sources: true,
-        title: `${process.platform} ${process.arch}: ${testInfo.title} (${testInfo.tags.join(", ")})`,
-      });
-    }
-
-    await use(electronApp);
+    const context = electronApp.context();
+    // always start tracing manually, but decide later whether to save it based on test result
+    await context.tracing.start({
+      screenshots: true,
+      snapshots: true,
+      sources: true,
+      title: `${process.platform} ${process.arch}: ${testInfo.title} (${testInfo.tags.join(", ")})`,
+    });
 
     try {
-      // shorten grace period for shutdown to avoid hanging the entire test run, but don't SIGKILL
-      // early because we might lose trace/screenshot/snapshot data
-      await Promise.race([
-        electronApp.close(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("electronApp.close() timeout after 5s")), 5_000),
-        ),
-      ]);
-    } catch {
-      console.warn("Timed out waiting for Electron to close, killing process...");
+      // wait for VS Code to be ready before trying to stub dialogs
+      const page = await electronApp.firstWindow();
+      await page.waitForLoadState("domcontentloaded");
+      await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
+
+      // Stub all dialogs by default; tests can still override as needed.
+      // For available `method` values to use with `stubMultipleDialogs`, see:
+      // https://www.electronjs.org/docs/latest/api/dialog
+      await stubAllDialogs(electronApp);
+
+      await use(electronApp);
+    } finally {
+      // only save and attach the trace for failed tests
+      // const failed = testInfo.status !== testInfo.expectedStatus;
+      const failed = true; // TEMPORARY to get worker teardown in traces
+      if (failed) {
+        const tracePath = path.join(testInfo.outputDir, "trace.zip");
+        await context.tracing.stop({ path: tracePath });
+        await testInfo.attach("trace", { path: tracePath, contentType: "application/zip" });
+      } else {
+        await context.tracing.stop();
+      }
+
       try {
-        electronApp.process().kill("SIGKILL");
-        console.info("Killed Electron process");
+        // shorten grace period for shutdown to avoid hanging the entire test run, but don't SIGKILL
+        // early because we might lose trace/screenshot/snapshot data
+        await withTimeout("electronApp.close()", electronApp.close(), 10_000);
       } catch (err) {
-        console.warn(`Error killing Electron process: ${err}`);
+        console.warn("Timed out waiting for Electron to close, killing process...", {
+          error: err instanceof Error ? err.message : err,
+        });
+        try {
+          const electronPid = electronApp.process()?.pid;
+          if (electronPid !== undefined && electronPid !== 1) {
+            const childrenBefore = listChildProcesses(electronPid);
+            console.log(`before electronApp sigkill, ${childrenBefore.length} child process(es):`, {
+              childrenBefore,
+              electronPid,
+            });
+
+            process.kill(-electronPid, 9); // SIGKILL the entire process group
+            console.info("Killed Electron process");
+
+            // try to wait for processes to die, then check again
+            await new Promise((resolve) => setTimeout(resolve, 500));
+
+            const childrenAfter = listChildProcesses(electronPid);
+            console.log(`after electronApp sigkill, ${childrenAfter.length} child process(es):`, {
+              childrenAfter,
+              electronPid,
+            });
+          } else {
+            console.warn("no electronApp process, can't sigkill");
+          }
+        } catch (err) {
+          console.warn(`Error killing Electron process: ${err}`);
+        }
       }
     }
   },
 
   page: async ({ electronApp, testTempDir }, use, testInfo) => {
-    if (!electronApp) {
-      throw new Error("electronApp is null - failed to launch VS Code");
-    }
-
     const page = await electronApp.firstWindow();
-    if (!page) {
-      // shouldn't happen since we waited for the workbench above
-      throw new Error("Failed to get first window from VS Code");
-    }
 
     await globalBeforeEach(page, electronApp);
 
@@ -315,7 +347,17 @@ async function globalAfterEach(
   await saveExtensionLogs(testTempDir, electronApp, page, testInfo);
   await saveSidecarLogs(testTempDir, electronApp, page, testInfo);
   // also include any additional logs from the VS Code window itself (main, window, extension host, etc)
-  await saveVSCodeWindowLogs(testTempDir, testInfo);
+  try {
+    await withTimeout(
+      "saveVSCodeWindowLogs()",
+      saveVSCodeWindowLogs(testTempDir, testInfo),
+      10_000,
+    );
+  } catch (err) {
+    console.warn("Failed to save VS Code window logs:", {
+      error: err instanceof Error ? err.message : err,
+    });
+  }
 }
 
 async function saveExtensionLogs(
@@ -411,5 +453,57 @@ async function saveVSCodeWindowLogs(testTempDir: string, testInfo: TestInfo): Pr
     });
   } catch (error) {
     console.error("Error zipping VS Code logs directory:", error);
+  }
+}
+
+/**
+ * Wraps an async operation with a timeout, rejecting if the operation takes longer than the specified time.
+ * @param operation The promise to execute
+ * @param timeoutMs Timeout in milliseconds
+ * @param operationName Name of the operation for error messages
+ * @returns The result of the operation if it completes in time
+ * @throws Error if the operation times out
+ */
+async function withTimeout<T>(
+  operationName: string,
+  operation: Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
+  return Promise.race([
+    operation,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`${operationName} timeout after ${timeoutMs}ms`)),
+        timeoutMs,
+      ),
+    ),
+  ]);
+}
+
+function listChildProcesses(pid: number | undefined): string[] {
+  if (!pid) {
+    return [];
+  }
+
+  try {
+    let command: string;
+    if (process.platform === "win32") {
+      command = `wmic process where (ParentProcessId=${pid}) get ProcessId,Name`;
+    } else {
+      command = `ps -o pid,command --ppid ${pid}`;
+    }
+    const output = execSync(command, {
+      encoding: "utf-8",
+      timeout: 2000,
+    });
+    return output.trim().split("\n").slice(1);
+  } catch (err) {
+    // may fail with status=1 when no child processes exist, and will still return output
+    const pidErr = err as { status: number; output: string };
+    if (pidErr.status === 1 && Array.isArray(pidErr.output)) {
+      return pidErr.output;
+    }
+    console.warn(`Error listing child processes for PID ${pid}:`, err);
+    return [];
   }
 }
