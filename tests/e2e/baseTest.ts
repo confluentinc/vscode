@@ -45,6 +45,10 @@ function getTestSetupCache(): TestSetupCache {
   }
 }
 
+interface WorkerFixtures {
+  workerDebug: number;
+}
+
 interface VSCodeFixtures {
   /** Temporary directory for the test to use. */
   testTempDir: string;
@@ -78,14 +82,44 @@ interface VSCodeFixtures {
   connectionItem: CCloudConnectionItem | DirectConnectionItem | LocalConnectionItem;
 }
 
-export const test = testBase.extend<VSCodeFixtures>({
+export const test = testBase.extend<VSCodeFixtures, WorkerFixtures>({
   testTempDir: async ({}, use) => {
     const tempDir = mkdtempSync(path.join(tmpdir(), "vscode-test-"));
 
     await use(tempDir);
   },
 
-  electronApp: async ({ trace, testTempDir }, use, testInfo) => {
+  workerDebug: [
+    async ({}, use) => {
+      await use(1);
+
+      // debugging worker teardown - log active resources to identify cleanup issues
+      const resources = process.getActiveResourcesInfo();
+      console.log("worker teardown: process.getActiveResourcesInfo()", resources);
+
+      // Additional debugging: try to identify specific handle types
+      try {
+        const handles = (process as any)._getActiveHandles?.() || [];
+        const requests = (process as any)._getActiveRequests?.() || [];
+        console.log(`Active handles: ${handles.length}, Active requests: ${requests.length}`);
+
+        // Count each type of resource
+        const resourceCounts = resources.reduce(
+          (acc, r) => {
+            acc[r] = (acc[r] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        );
+        console.log("Resource counts:", resourceCounts);
+      } catch (err) {
+        console.warn("Failed to get detailed handle info:", err);
+      }
+    },
+    { scope: "worker", auto: true },
+  ],
+
+  electronApp: async ({ testTempDir }, use, testInfo) => {
     const testConfigs = getTestSetupCache();
 
     // launch VS Code with Electron using args pattern from vscode-test
@@ -106,67 +140,173 @@ export const test = testBase.extend<VSCodeFixtures>({
         `--extensionDevelopmentPath=${testConfigs.outPath}`,
       ],
     });
-
     if (!electronApp) {
       throw new Error("Failed to launch VS Code electron app");
     }
 
-    // wait for VS Code to be ready before trying to stub dialogs
-    const page = await electronApp.firstWindow();
-    if (!page) {
-      // usually this means the launch args were incorrect and/or the app didn't start correctly
-      throw new Error("Failed to get first window from VS Code");
-    }
-    await page.waitForLoadState("domcontentloaded");
-    await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
-
-    // Stub all dialogs by default; tests can still override as needed.
-    // For available `method` values to use with `stubMultipleDialogs`, see:
-    // https://www.electronjs.org/docs/latest/api/dialog
-    await stubAllDialogs(electronApp);
-
-    // on*, retain-on*
-    if (trace.toString().includes("on")) {
-      await electronApp.context().tracing.start({
-        screenshots: true,
-        snapshots: true,
-        sources: true,
-        title: `${process.platform} ${process.arch}: ${testInfo.title} (${testInfo.tags.join(", ")})`,
-      });
-    }
-
-    await use(electronApp);
+    const context = electronApp.context();
+    // always start tracing manually, but decide later whether to save it based on test result
+    await context.tracing.start({
+      screenshots: true,
+      snapshots: true,
+      sources: true,
+      title: `${process.platform} ${process.arch}: ${testInfo.title} (${testInfo.tags.join(", ")})`,
+    });
 
     try {
-      // shorten grace period for shutdown to avoid hanging the entire test run, but don't SIGKILL
-      // early because we might lose trace/screenshot/snapshot data
-      await Promise.race([
-        electronApp.close(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("electronApp.close() timeout after 5s")), 5_000),
-        ),
-      ]);
-    } catch {
-      console.warn("Timed out waiting for Electron to close, killing process...");
+      // wait for VS Code to be ready before trying to stub dialogs
+      const page = await electronApp.firstWindow();
+      await page.waitForLoadState("domcontentloaded");
+      await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
+
+      // Stub all dialogs by default; tests can still override as needed.
+      // For available `method` values to use with `stubMultipleDialogs`, see:
+      // https://www.electronjs.org/docs/latest/api/dialog
+      await stubAllDialogs(electronApp);
+
+      await use(electronApp);
+    } finally {
+      // only save and attach the trace for failed tests
+      // const failed = testInfo.status !== testInfo.expectedStatus;
+      const failed = true; // TEMPORARY to get worker teardown in traces
+      if (failed) {
+        const tracePath = path.join(testInfo.outputDir, "trace.zip");
+        await context.tracing.stop({ path: tracePath });
+        await testInfo.attach("trace", { path: tracePath, contentType: "application/zip" });
+      } else {
+        await context.tracing.stop();
+      }
+
+      // Explicitly close browser context to clean up network connections before Electron shutdown
       try {
-        electronApp.process().kill("SIGKILL");
-        console.info("Killed Electron process");
+        const pages = await context.pages();
+        console.log(`Closing ${pages.length} page(s) before Electron shutdown...`);
+        await Promise.all(
+          pages.map((p) =>
+            p.close().catch((e) => {
+              console.warn("Failed to close page:", e.message);
+            }),
+          ),
+        );
+
+        console.log("Closing browser context...");
+        await withTimeout("context.close()", context.close(), 5_000);
+        console.log("Browser context closed");
       } catch (err) {
-        console.warn(`Error killing Electron process: ${err}`);
+        console.warn("Failed to close browser context:", err instanceof Error ? err.message : err);
+      }
+
+      const electronProc = electronApp.process();
+      try {
+        // Increased timeout from 10s to 20s to allow more time for clean shutdown
+        await withTimeout("electronApp.close()", electronApp.close(), 20_000);
+
+        // Increased timeout from 5s to 10s for process exit
+        await withTimeout(
+          "process exit",
+          new Promise<void>((resolve) => {
+            electronProc.on("exit", () => resolve());
+          }),
+          10_000,
+        );
+      } catch (err) {
+        console.warn("Timed out waiting for Electron to close, killing process...", {
+          error: err instanceof Error ? err.message : err,
+        });
+        try {
+          const electronPid = electronProc.pid;
+          if (electronProc && electronPid !== undefined && electronPid !== 1) {
+            process.kill(-electronPid, 9); // SIGKILL the entire process group
+            console.info("Killed Electron process");
+          } else {
+            console.warn("no electronApp process, can't sigkill");
+          }
+        } catch (err) {
+          console.warn(`Error killing Electron process: ${err}`);
+        }
+      }
+
+      // CRITICAL FIX: Unref all lingering handles to allow Playwright worker to exit
+      // This is necessary because sidecar IPC pipes and network connections may remain
+      // registered in the Node.js event loop even after Electron process dies
+      try {
+        const handles = (process as any)._getActiveHandles?.() || [];
+        const requests = (process as any)._getActiveRequests?.() || [];
+
+        console.log(
+          `Unref'ing ${handles.length} handle(s) and ${requests.length} request(s) to allow worker teardown...`,
+        );
+
+        // Extract useful information about each handle
+        const handleInfo = handles.map((handle: any, index: number) => {
+          const info: any = {
+            index,
+            type: handle?.constructor?.name || "unknown",
+          };
+
+          // For socket/pipe handles, get additional info
+          if (handle?._type) info.handleType = handle._type;
+          if (handle?.fd !== undefined) info.fd = handle.fd;
+          if (handle?._isStdio) info.isStdio = true;
+          if (handle?.remoteAddress) info.remoteAddress = handle.remoteAddress;
+          if (handle?.remotePort) info.remotePort = handle.remotePort;
+          if (handle?.localAddress) info.localAddress = handle.localAddress;
+          if (handle?.localPort) info.localPort = handle.localPort;
+
+          // Check if it's readable/writable
+          if (handle?.readable !== undefined) info.readable = handle.readable;
+          if (handle?.writable !== undefined) info.writable = handle.writable;
+
+          return info;
+        });
+
+        if (handleInfo.length > 0) {
+          console.log("Handle details:", JSON.stringify(handleInfo, null, 2));
+        }
+
+        // Unref all handles so Node.js event loop can exit even if they're still open
+        let unrefCount = 0;
+        handles.forEach((handle: any, index: number) => {
+          if (handle && typeof handle.unref === "function") {
+            try {
+              // Don't unref stdio handles (stdout/stderr) as they're normal
+              if (handle._isStdio) {
+                console.log(`Skipping stdio handle #${index} (fd: ${handle.fd})`);
+                return;
+              }
+              handle.unref();
+              unrefCount++;
+            } catch (err) {
+              console.warn(`Failed to unref handle #${index}:`, err);
+            }
+          }
+        });
+
+        // Also unref active requests
+        let requestUnrefCount = 0;
+        requests.forEach((request: any, index: number) => {
+          if (request && typeof request.unref === "function") {
+            try {
+              request.unref();
+              requestUnrefCount++;
+            } catch (err) {
+              console.warn(`Failed to unref request #${index}:`, err);
+            }
+          }
+        });
+
+        console.log(
+          `Unreferenced ${unrefCount}/${handles.length} handles and ${requestUnrefCount}/${requests.length} requests`,
+        );
+        console.log("Worker should be able to tear down now");
+      } catch (err) {
+        console.warn("Failed to unref handles:", err);
       }
     }
   },
 
   page: async ({ electronApp, testTempDir }, use, testInfo) => {
-    if (!electronApp) {
-      throw new Error("electronApp is null - failed to launch VS Code");
-    }
-
     const page = await electronApp.firstWindow();
-    if (!page) {
-      // shouldn't happen since we waited for the workbench above
-      throw new Error("Failed to get first window from VS Code");
-    }
 
     await globalBeforeEach(page, electronApp);
 
@@ -315,7 +455,17 @@ async function globalAfterEach(
   await saveExtensionLogs(testTempDir, electronApp, page, testInfo);
   await saveSidecarLogs(testTempDir, electronApp, page, testInfo);
   // also include any additional logs from the VS Code window itself (main, window, extension host, etc)
-  await saveVSCodeWindowLogs(testTempDir, testInfo);
+  try {
+    await withTimeout(
+      "saveVSCodeWindowLogs()",
+      saveVSCodeWindowLogs(testTempDir, testInfo),
+      10_000,
+    );
+  } catch (err) {
+    console.warn("Failed to save VS Code window logs:", {
+      error: err instanceof Error ? err.message : err,
+    });
+  }
 }
 
 async function saveExtensionLogs(
@@ -411,5 +561,36 @@ async function saveVSCodeWindowLogs(testTempDir: string, testInfo: TestInfo): Pr
     });
   } catch (error) {
     console.error("Error zipping VS Code logs directory:", error);
+  }
+}
+
+/**
+ * Wraps an async operation with a timeout, rejecting if the operation takes longer than the specified time.
+ * @param operation The promise to execute
+ * @param timeoutMs Timeout in milliseconds
+ * @param operationName Name of the operation for error messages
+ * @returns The result of the operation if it completes in time
+ * @throws Error if the operation times out
+ */
+async function withTimeout<T>(
+  operationName: string,
+  operation: Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
+  let timeout: NodeJS.Timeout | undefined;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeout = setTimeout(
+      () => reject(new Error(`${operationName} timeout after ${timeoutMs}ms`)),
+      timeoutMs,
+    );
+  });
+
+  try {
+    return await Promise.race([operation, timeoutPromise]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
   }
 }
