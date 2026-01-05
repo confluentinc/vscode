@@ -93,9 +93,28 @@ export const test = testBase.extend<VSCodeFixtures, WorkerFixtures>({
     async ({}, use) => {
       await use(1);
 
-      // debugging worker teardown
+      // debugging worker teardown - log active resources to identify cleanup issues
       const resources = process.getActiveResourcesInfo();
       console.log("worker teardown: process.getActiveResourcesInfo()", resources);
+
+      // Additional debugging: try to identify specific handle types
+      try {
+        const handles = (process as any)._getActiveHandles?.() || [];
+        const requests = (process as any)._getActiveRequests?.() || [];
+        console.log(`Active handles: ${handles.length}, Active requests: ${requests.length}`);
+
+        // Count each type of resource
+        const resourceCounts = resources.reduce(
+          (acc, r) => {
+            acc[r] = (acc[r] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        );
+        console.log("Resource counts:", resourceCounts);
+      } catch (err) {
+        console.warn("Failed to get detailed handle info:", err);
+      }
     },
     { scope: "worker", auto: true },
   ],
@@ -158,18 +177,37 @@ export const test = testBase.extend<VSCodeFixtures, WorkerFixtures>({
         await context.tracing.stop();
       }
 
+      // Explicitly close browser context to clean up network connections before Electron shutdown
+      try {
+        const pages = await context.pages();
+        console.log(`Closing ${pages.length} page(s) before Electron shutdown...`);
+        await Promise.all(
+          pages.map((p) =>
+            p.close().catch((e) => {
+              console.warn("Failed to close page:", e.message);
+            }),
+          ),
+        );
+
+        console.log("Closing browser context...");
+        await withTimeout("context.close()", context.close(), 5_000);
+        console.log("Browser context closed");
+      } catch (err) {
+        console.warn("Failed to close browser context:", err instanceof Error ? err.message : err);
+      }
+
       const electronProc = electronApp.process();
       try {
-        // shorten grace period for shutdown to avoid hanging the entire test run, but don't SIGKILL
-        // early because we might lose trace/screenshot/snapshot data
-        await withTimeout("electronApp.close()", electronApp.close(), 10_000);
+        // Increased timeout from 10s to 20s to allow more time for clean shutdown
+        await withTimeout("electronApp.close()", electronApp.close(), 20_000);
 
+        // Increased timeout from 5s to 10s for process exit
         await withTimeout(
           "process exit",
           new Promise<void>((resolve) => {
             electronProc.on("exit", () => resolve());
           }),
-          5_000,
+          10_000,
         );
       } catch (err) {
         console.warn("Timed out waiting for Electron to close, killing process...", {
@@ -186,6 +224,83 @@ export const test = testBase.extend<VSCodeFixtures, WorkerFixtures>({
         } catch (err) {
           console.warn(`Error killing Electron process: ${err}`);
         }
+      }
+
+      // CRITICAL FIX: Unref all lingering handles to allow Playwright worker to exit
+      // This is necessary because sidecar IPC pipes and network connections may remain
+      // registered in the Node.js event loop even after Electron process dies
+      try {
+        const handles = (process as any)._getActiveHandles?.() || [];
+        const requests = (process as any)._getActiveRequests?.() || [];
+
+        console.log(
+          `Unref'ing ${handles.length} handle(s) and ${requests.length} request(s) to allow worker teardown...`,
+        );
+
+        // Extract useful information about each handle
+        const handleInfo = handles.map((handle: any, index: number) => {
+          const info: any = {
+            index,
+            type: handle?.constructor?.name || "unknown",
+          };
+
+          // For socket/pipe handles, get additional info
+          if (handle?._type) info.handleType = handle._type;
+          if (handle?.fd !== undefined) info.fd = handle.fd;
+          if (handle?._isStdio) info.isStdio = true;
+          if (handle?.remoteAddress) info.remoteAddress = handle.remoteAddress;
+          if (handle?.remotePort) info.remotePort = handle.remotePort;
+          if (handle?.localAddress) info.localAddress = handle.localAddress;
+          if (handle?.localPort) info.localPort = handle.localPort;
+
+          // Check if it's readable/writable
+          if (handle?.readable !== undefined) info.readable = handle.readable;
+          if (handle?.writable !== undefined) info.writable = handle.writable;
+
+          return info;
+        });
+
+        if (handleInfo.length > 0) {
+          console.log("Handle details:", JSON.stringify(handleInfo, null, 2));
+        }
+
+        // Unref all handles so Node.js event loop can exit even if they're still open
+        let unrefCount = 0;
+        handles.forEach((handle: any, index: number) => {
+          if (handle && typeof handle.unref === "function") {
+            try {
+              // Don't unref stdio handles (stdout/stderr) as they're normal
+              if (handle._isStdio) {
+                console.log(`Skipping stdio handle #${index} (fd: ${handle.fd})`);
+                return;
+              }
+              handle.unref();
+              unrefCount++;
+            } catch (err) {
+              console.warn(`Failed to unref handle #${index}:`, err);
+            }
+          }
+        });
+
+        // Also unref active requests
+        let requestUnrefCount = 0;
+        requests.forEach((request: any, index: number) => {
+          if (request && typeof request.unref === "function") {
+            try {
+              request.unref();
+              requestUnrefCount++;
+            } catch (err) {
+              console.warn(`Failed to unref request #${index}:`, err);
+            }
+          }
+        });
+
+        console.log(
+          `Unreferenced ${unrefCount}/${handles.length} handles and ${requestUnrefCount}/${requests.length} requests`,
+        );
+        console.log("Worker should be able to tear down now");
+      } catch (err) {
+        console.warn("Failed to unref handles:", err);
       }
     }
   },
