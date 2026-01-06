@@ -45,10 +45,6 @@ function getTestSetupCache(): TestSetupCache {
   }
 }
 
-interface WorkerFixtures {
-  workerDebug: number;
-}
-
 interface VSCodeFixtures {
   /** Temporary directory for the test to use. */
   testTempDir: string;
@@ -82,42 +78,12 @@ interface VSCodeFixtures {
   connectionItem: CCloudConnectionItem | DirectConnectionItem | LocalConnectionItem;
 }
 
-export const test = testBase.extend<VSCodeFixtures, WorkerFixtures>({
+export const test = testBase.extend<VSCodeFixtures>({
   testTempDir: async ({}, use) => {
     const tempDir = mkdtempSync(path.join(tmpdir(), "vscode-test-"));
 
     await use(tempDir);
   },
-
-  workerDebug: [
-    async ({}, use) => {
-      await use(1);
-
-      // debugging worker teardown - log active resources to identify cleanup issues
-      const resources = process.getActiveResourcesInfo();
-      console.log("worker teardown: process.getActiveResourcesInfo()", resources);
-
-      // Additional debugging: try to identify specific handle types
-      try {
-        const handles = (process as any)._getActiveHandles?.() || [];
-        const requests = (process as any)._getActiveRequests?.() || [];
-        console.log(`Active handles: ${handles.length}, Active requests: ${requests.length}`);
-
-        // Count each type of resource
-        const resourceCounts = resources.reduce(
-          (acc, r) => {
-            acc[r] = (acc[r] || 0) + 1;
-            return acc;
-          },
-          {} as Record<string, number>,
-        );
-        console.log("Resource counts:", resourceCounts);
-      } catch (err) {
-        console.warn("Failed to get detailed handle info:", err);
-      }
-    },
-    { scope: "worker", auto: true },
-  ],
 
   electronApp: async ({ testTempDir }, use, testInfo) => {
     const testConfigs = getTestSetupCache();
@@ -167,9 +133,7 @@ export const test = testBase.extend<VSCodeFixtures, WorkerFixtures>({
       await use(electronApp);
     } finally {
       // only save and attach the trace for failed tests
-      // const failed = testInfo.status !== testInfo.expectedStatus;
-      const failed = true; // TEMPORARY to get worker teardown in traces
-      if (failed) {
+      if (testInfo.status !== testInfo.expectedStatus) {
         const tracePath = path.join(testInfo.outputDir, "trace.zip");
         await context.tracing.stop({ path: tracePath });
         await testInfo.attach("trace", { path: tracePath, contentType: "application/zip" });
