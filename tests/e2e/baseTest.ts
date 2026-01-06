@@ -394,33 +394,82 @@ async function saveVSCodeWindowLogs(testTempDir: string, testInfo: TestInfo): Pr
   }
 }
 
+/** Partial type for handles that may have an unref() method. */
+type PartialHandle = { unref?: () => void };
+
 /**
- * Wraps an async operation with a timeout, rejecting if the operation takes longer than the specified time.
- * @param operation The promise to execute
- * @param timeoutMs Timeout in milliseconds
- * @param operationName Name of the operation for error messages
- * @returns The result of the operation if it completes in time
- * @throws Error if the operation times out
+ * Extended type for process with the (deprecated) `_getActiveHandles` method.
+ *
+ * NOTE: https://nodejs.org/api/deprecations.html#DEP0161 suggests using
+ * `process.getActiveResourcesInfo()`, but that only provides the names of active resources,
+ * not the actual handles to unref and allow the process to exit cleanly.
  */
-async function withTimeout<T>(
-  operationName: string,
-  operation: Promise<T>,
-  timeoutMs: number,
-): Promise<T> {
+type NodeProcessWithGetActiveHandles = NodeJS.Process & {
+  _getActiveHandles?: () => PartialHandle[];
+};
+
+/**
+ * Shut down the Electron app and clean up any lingering handles/requests so the Playwright worker
+ * can exit cleanly.
+ *
+ * With Playwright v1.50.0+, the behavior of `electronApp.close()` changes so it waits for the
+ * Electron process to exit, but if there are any lingering handles or requests, that may never
+ * happen, causing the test worker to hang and eventually time out.
+ *
+ * This function attempts to close the app gracefully, but if it doesn't exit within a timeout,
+ * it force kills the process group. It also unrefs any remaining active handles to allow the
+ * worker teardown to complete.
+ */
+async function shutdownElectronApp(electronApp: ElectronApplication): Promise<void> {
+  // 1) wait for close() to complete, but with a short timeout
   let timeout: NodeJS.Timeout | undefined;
-
-  const timeoutPromise = new Promise<T>((_, reject) => {
-    timeout = setTimeout(
-      () => reject(new Error(`${operationName} timeout after ${timeoutMs}ms`)),
-      timeoutMs,
-    );
-  });
-
   try {
-    return await Promise.race([operation, timeoutPromise]);
+    await Promise.race([
+      electronApp.close(),
+      new Promise((resolve) => {
+        timeout = setTimeout(resolve, 1000);
+      }),
+    ]);
+  } catch {
+    // no need to deal with errors when we're trying to shut everything down here
   } finally {
-    if (timeout) {
+    if (timeout !== undefined) {
       clearTimeout(timeout);
     }
+  }
+
+  // 2) check if the Electron process is still running, and force kill if so
+  try {
+    const proc = electronApp.process();
+    const pid = proc?.pid;
+    if (pid && pid > 1) {
+      process.kill(pid, 0); // status check
+      console.warn("Electron still running after close(), force killing process group...");
+      process.kill(-pid, 9); // SIGKILL entire process group (negative PID)
+    }
+  } catch {
+    // process no longer exists, no action needed
+  }
+
+  // 3) unref any remaining handles to allow the worker teardown to complete cleanly
+  try {
+    const handles = (process as NodeProcessWithGetActiveHandles)._getActiveHandles?.() || [];
+    let unrefdHandles = 0;
+    handles.forEach((handle: PartialHandle) => {
+      if (handle && typeof handle.unref === "function") {
+        try {
+          // see description for https://nodejs.org/api/process.html#processunrefmayberefable
+          handle.unref();
+          unrefdHandles++;
+        } catch {
+          // some handles may not support unref, not much we can do
+        }
+      }
+    });
+    if (handles.length) {
+      console.debug(`Unreferenced ${unrefdHandles}/${handles.length} handle(s)`);
+    }
+  } catch {
+    // ignore errors during unref since we can't do much about them
   }
 }
