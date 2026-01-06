@@ -1,4 +1,4 @@
-import type { ElectronApplication, Locator, Page } from "@playwright/test";
+import type { ElectronApplication, Locator, Page, TestInfo } from "@playwright/test";
 import { chromium, expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { readFile, unlink } from "fs/promises";
@@ -29,12 +29,14 @@ export const NOT_CONNECTED_TEXT = "(No connection)";
  * @param electronApp The Electron {@link ElectronApplication app} instance
  * @param username The username to authenticate with
  * @param password The password to authenticate with
+ * @param testInfo {@link TestInfo} instance to attach screenshot for any failure during the browser-based auth flow
  */
 export async function setupCCloudConnection(
   page: Page,
   electronApp: ElectronApplication,
   username: string,
   password: string,
+  testInfo: TestInfo,
 ): Promise<CCloudConnectionItem> {
   // reset the CCloud sign-in file before the sign-in flow even starts so we don't use a stale URL
   try {
@@ -83,6 +85,9 @@ export async function setupCCloudConnection(
 
   // Handle the authentication flow through the browser in a separate context
   const browser = await chromium.launch(); // headless by default
+  // NOTE: since we're using manual tracing for the main Electron app (see baseTest.ts), this
+  // separate Chromium context won't be included in those traces, so we're capturing a screenshot
+  // here to help diagnose any issues in the finally block below
   const context = await browser.newContext();
   const authPage = await context.newPage();
   try {
@@ -98,7 +103,15 @@ export async function setupCCloudConnection(
     await authPage.locator("[name=password]").fill(password);
     await authPage.locator("[type=submit]").click();
     await expect(authPage.locator("text=Authentication Complete")).toBeVisible();
+    expect(1).toBe(2);
   } finally {
+    // capture a screenshot of the auth page, in whatever state it was in before the failed assertion
+    const screenshotPath = join(tmpdir(), `ccloud-auth-failure-${Date.now()}.png`);
+    await authPage.screenshot({ path: screenshotPath, fullPage: true }).catch(() => {});
+    await testInfo
+      .attach("ccloud-auth-failure.png", { path: screenshotPath, contentType: "image/png" })
+      .catch(() => {});
+
     // Ensure browser resources are closed even if there's an error
     await authPage.close().catch(() => {});
     await context.close().catch(() => {});

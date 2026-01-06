@@ -16,6 +16,7 @@ const WINDOWS_FACTOR = process.platform === "win32" ? 2 : 1;
 export default defineConfig({
   testDir: path.normalize(path.join(__dirname, "specs")),
   forbidOnly: !!process.env.CI,
+  // maxFailures: 1, // uncomment for local dev/debugging purposes
   retries: 2,
   timeout: 120000,
   workers: 1,
@@ -42,7 +43,7 @@ export default defineConfig({
       ]
     : [["list"], ["html"]],
   use: {
-    trace: "retain-on-failure",
+    trace: "off", // manually configured in baseTest.ts
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
