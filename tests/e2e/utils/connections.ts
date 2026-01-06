@@ -103,14 +103,14 @@ export async function setupCCloudConnection(
     await authPage.locator("[name=password]").fill(password);
     await authPage.locator("[type=submit]").click();
     await expect(authPage.locator("text=Authentication Complete")).toBeVisible();
-  } finally {
+  } catch (error) {
     // capture a screenshot of the auth page, in whatever state it was in before the failed assertion
     const screenshotPath = join(tmpdir(), `ccloud-auth-failure-${Date.now()}.png`);
     await authPage.screenshot({ path: screenshotPath, fullPage: true }).catch(() => {});
     await testInfo
       .attach("ccloud-auth-failure.png", { path: screenshotPath, contentType: "image/png" })
       .catch(() => {});
-
+  } finally {
     // Ensure browser resources are closed even if there's an error
     await authPage.close().catch(() => {});
     await context.close().catch(() => {});
