@@ -18,12 +18,13 @@ test.describe(() => {
   test(
     "should complete the browser-based Confluent Cloud sign-in flow",
     { tag: [Tag.Smoke, Tag.CCloud] },
-    async ({ page, electronApp, openExtensionSidebar }) => {
+    async ({ page, electronApp }, testInfo) => {
       await setupCCloudConnection(
         page,
         electronApp,
         process.env.E2E_USERNAME!,
         process.env.E2E_PASSWORD!,
+        testInfo,
       );
 
       const resourcesView = new ResourcesView(page);

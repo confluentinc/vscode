@@ -197,6 +197,7 @@ export const test = testBase.extend<VSCodeFixtures>({
   connectionItem: async (
     { electronApp, page, connectionType, directConnectionConfig, localConnectionConfig },
     use,
+    testInfo,
   ) => {
     if (!connectionType) {
       throw new Error(
@@ -214,6 +215,7 @@ export const test = testBase.extend<VSCodeFixtures>({
           electronApp,
           process.env.E2E_USERNAME!,
           process.env.E2E_PASSWORD!,
+          testInfo,
         );
         break;
       case ConnectionType.Direct:
