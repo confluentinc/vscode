@@ -28,6 +28,9 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly page: Signal<number>;
   readonly pageSize: Signal<number>;
   readonly resizeColumnDelta: Signal<number | null> = this.signal<number | null>(null);
+  readonly isResizing: Signal<boolean> = this.signal<boolean>(false);
+  private tempColWidths: number[] | null = null;
+  private tableElement: HTMLElement | null = null;
   readonly stopButtonClicked: Signal<boolean>;
   readonly tablePage: Signal<number>;
   readonly changelogPage: Signal<number>;
@@ -60,7 +63,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly colWidth: Signal<number[]>;
   readonly gridTemplateColumns: Signal<string>;
   readonly pageButtons: Signal<(number | "ldot" | "rdot")[]>;
-
+  readonly detailText: Signal<string | null>;
   readonly pagePersistWatcher: () => void;
 
   /**
@@ -161,7 +164,10 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       const { total, filter } = this.resultCount();
       return filter != null ? filter > 0 : total > 0;
     });
-
+    this.detailText = this.derive(() => {
+      const detail = this.statementMeta().detail;
+      return detail ? detail.replace(/\n/g, "<br>") : null;
+    });
     /**
      * Short list of pages generated based on current results count and current
      * page. Always shows first and last page, current page with two siblings.
@@ -210,7 +216,12 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     /** List of all columns in the grid, with their content definition. */
     this.columns = this.derive(() => {
       const schema: SqlV1ResultSchema = this.schema();
-      return createColumnDefinitions(schema, this.viewMode());
+      return createColumnDefinitions(
+        schema,
+        this.viewMode(),
+        this.searchRegexp(),
+        (value, search) => this.formatResultValue(value, search),
+      );
     });
 
     /** Static list of all columns in order shown in the UI. */
@@ -243,6 +254,11 @@ export class FlinkStatementResultsViewModel extends ViewModel {
      */
     this.colWidth = this.derive(
       () => {
+        // During active resize, use temporary widths to avoid reactive conflicts
+        if (this.isResizing() && this.tempColWidths != null) {
+          return this.tempColWidths;
+        }
+
         const columnsLength = this.allColumns().length;
         const storedWidths = this.storage.get()?.colWidths;
         if (!storedWidths) {
@@ -272,16 +288,8 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       const widths = this.colWidth();
       const columnNames = this.allColumns();
       const flags = this.columnVisibilityFlags();
-      // Fallback in case we can't get columns
-      if (widths.length === 0 && columnNames.length === 0) {
-        return "--grid-template-columns: 1fr";
-      }
-      const visibleColumnWidths = columnNames
-        .map((_, index) => ({ index, isVisible: flags[index], width: widths[index] }))
-        .filter((col) => col.isVisible)
-        .map((col) => `${col.width}px`)
-        .join(" ");
-      return `--grid-template-columns: ${visibleColumnWidths}`;
+      const cssValue = this.buildGridTemplateColumns(widths, columnNames, flags);
+      return `--grid-template-columns: ${cssValue}`;
     });
 
     /** Whether the stop button has been clicked */
@@ -299,6 +307,10 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   search = this.resolve(async () => {
     return await this.post("GetSearchQuery", { timestamp: this.timestamp() });
   }, "");
+  searchRegexp = this.resolve(async () => {
+    const source = await this.post("GetSearchSource", { timestamp: this.timestamp() });
+    return source != null ? new RegExp(source, "gi") : null;
+  }, null);
 
   async setViewMode(viewMode: ViewMode) {
     console.log("statementmeta", this.statementMeta());
@@ -325,6 +337,25 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   private _visibleColumns() {
     const flags = this.columnVisibilityFlags();
     return this.allColumns().filter((_, index) => flags[index]);
+  }
+
+  /**
+   * Builds the grid-template-columns custom property value for colWidths and tempColWidths during resize
+   */
+  private buildGridTemplateColumns(
+    widths: number[],
+    columnNames: string[],
+    flags: boolean[],
+  ): string {
+    if (widths.length === 0 && columnNames.length === 0) {
+      return "1fr";
+    }
+    const visibleColumnWidths = columnNames
+      .map((_, index) => ({ index, isVisible: flags[index], width: widths[index] }))
+      .filter((col) => col.isVisible)
+      .map((col) => `${col.width}px`)
+      .join(" ");
+    return visibleColumnWidths;
   }
 
   /** Testing if a column is currently visible. This is for the settings panel. */
@@ -363,30 +394,45 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   handleStartResize(event: PointerEvent, index: number) {
     const target = event.target as HTMLElement;
     target.setPointerCapture(event.pointerId);
+    // Initialize temporary widths from current state
+    this.tempColWidths = this.colWidth().slice();
+    this.isResizing(true);
+    // Capture reference to table element for direct CSS manipulation
+    this.tableElement = target.closest(".grid") as HTMLElement;
     // this is half of the computations for the new column width
     // any new clientX added (via move event) provide the new width
-    this.resizeColumnDelta(this.colWidth()[index] - event.clientX);
+    this.resizeColumnDelta(this.tempColWidths[index] - event.clientX);
   }
 
   /** Triggered on each move event while resizing, dynamically changes column width. */
   handleMoveResize(event: PointerEvent, index: number) {
     const start = this.resizeColumnDelta();
     // skip, if the pointer just passing by
-    if (start == null) return;
-    const widths = this.colWidth().slice();
+    if (start == null || this.tempColWidths == null || this.tableElement == null) return;
     const newWidth = Math.round(start + event.clientX);
-    widths[index] = Math.max(16, newWidth); // Minimum width of 1rem
-    this.colWidth(widths);
+    this.tempColWidths[index] = Math.max(16, newWidth); // Minimum width of 1rem
+    const columnNames = this.allColumns();
+    const flags = this.columnVisibilityFlags();
+    const cssValue = this.buildGridTemplateColumns(this.tempColWidths, columnNames, flags);
+    // Directly update CSS custom property for immediate visual feedback
+    this.tableElement.style.setProperty("--grid-template-columns", cssValue);
   }
 
   /** Cleanup handler when the user stops resizing a column. */
   handleStopResize(event: PointerEvent) {
     const target = event.target as HTMLElement;
     target.releasePointerCapture(event.pointerId);
-    // drop temporary state so the move event doesn't change anything after the pointer is released
+
+    // Finalize the resize by persisting temporary widths
+    if (this.tempColWidths != null) {
+      this.storage.set({ ...this.storage.get()!, colWidths: this.tempColWidths });
+    }
+
+    // Clear temporary state
     this.resizeColumnDelta(null);
-    // persist changes to local storage
-    this.storage.set({ ...this.storage.get()!, colWidths: this.colWidth() });
+    this.tempColWidths = null;
+    this.tableElement = null;
+    this.isResizing(false);
   }
 
   /** The text search query string. */
@@ -455,5 +501,34 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     // Reset the button state after a short delay
     // in case the stop failed for some reason
     setTimeout(() => this.stopButtonClicked(false), 2000);
+  }
+
+  /**
+   * Format a result value with search highlighting. Adapted from message-viewer.ts code.
+   * If a search regexp is active, wrap matching text in <mark> elements.
+   * @param value The value to format
+   * @param search The search regexp to apply (or null)
+   * @returns Either a plain string or a DocumentFragment with highlighted matches
+   */
+  formatResultValue(value: unknown, search: RegExp | null) {
+    if (value == null) return "NULL";
+    const input = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+    if (search == null) return input;
+    // search regexp is global, reset its index state to avoid mismatches
+    search.lastIndex = 0;
+    const fragment = document.createDocumentFragment();
+    const matches = input.matchAll(search);
+    let cursor = 0;
+    for (const match of matches) {
+      const index = match.index;
+      const length = match[0].length;
+      fragment.append(input.substring(cursor, index));
+      const mark = document.createElement("mark");
+      mark.append(input.substring(index, index + length));
+      fragment.append(mark);
+      cursor = index + length;
+    }
+    fragment.append(input.substring(cursor));
+    return fragment;
   }
 }

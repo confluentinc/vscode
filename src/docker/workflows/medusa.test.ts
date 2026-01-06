@@ -56,6 +56,7 @@ describe("docker/workflows/medusa.ts MedusaWorkflow", () => {
 
     stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
     stubbedConfigs.stubGet(LOCAL_DOCKER_SOCKET_PATH, DEFAULT_UNIX_SOCKET_PATH);
+    stubbedConfigs.stubGet(LOCAL_MEDUSA_IMAGE_TAG, "latest");
 
     // assume no running containers matching this workflow image for most tests
     getContainersForImageStub = sandbox

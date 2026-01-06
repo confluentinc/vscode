@@ -70,63 +70,80 @@
             </template>
           </div>
           <template data-if="this.statementMeta().failed && this.statementMeta().detail">
-            <div class="reportable-box red">
-              <div class="error-heading">
-                <span class="codicon codicon-error"></span>
-                Something went wrong.
-              </div>
+            <details class="detail-section error" open>
+              <summary>
+                <span class="detail-title">Something went wrong</span>
+              </summary>
               <div
                 data-testid="statement-detail-error"
-                class="reportable-message"
-                data-html="this.statementMeta().detail && this.statementMeta().detail.replace(/\n/g, '<br>')"
+                class="detail-content"
+                data-html="this.detailText()"
               ></div>
-            </div>
+            </details>
           </template>
           <template data-if="!this.statementMeta().failed && this.statementMeta().detail">
-            <div class="reportable-box blue">
-              <div class="error-heading">
-                <span class="codicon codicon-info"></span>
-                Info
-              </div>
+            <details class="detail-section info" open>
+              <summary>
+                <span class="detail-title">Info</span>
+              </summary>
               <div
                 data-testid="statement-detail-info"
-                class="reportable-message"
-                data-html="this.statementMeta().detail && this.statementMeta().detail.replace(/\n/g, '<br>')"
+                class="detail-content"
+                data-html="this.detailText()"
               ></div>
-            </div>
+            </details>
           </template>
         </section>
 
         <section>
           <div class="flex-row">
-            <vscode-text-field
-              id="results-search"
-              placeholder="Search across results…"
-              type="search"
-              size="50"
-              data-prop-value="this.search()"
-              data-on-change="this.search(event.target.value)"
-              data-on-keydown="this.handleKeydown(event)"
-              data-on-input="this.handleInput(event)"
-              >Search</vscode-text-field
-            >
+            <div class="flex-column">
+              <vscode-text-field
+                id="results-search"
+                placeholder="Search across results…"
+                type="search"
+                size="50"
+                data-prop-value="this.search()"
+                data-on-change="this.search(event.target.value)"
+                data-on-keydown="this.handleKeydown(event)"
+                data-on-input="this.handleInput(event)"
+                >Search</vscode-text-field
+              >
+            </div>
+            <div>
+              <!-- Settings control positioned outside the grid -->
+              <div
+                style="place-content: end; height: 100%"
+                popovertarget="columnSettings"
+                data-on-click="window.columnSettings.togglePopover()"
+                data-position="bottom-end"
+                tabindex="-1"
+              >
+                <span class="codicon codicon-gear"></span>
+              </div>
+              <section popover id="columnSettings" class="column-control">
+                <div class="flex-column" style="--gap: 0">
+                  <label>Columns</label>
+                  <template data-for="column of this.allColumns() by column">
+                    <label class="checkbox">
+                      <input
+                        type="checkbox"
+                        data-prop-checked="this.isColumnVisible(this.columns()[this.column()].index)"
+                        data-prop-disabled="this.isColumnVisible(this.columns()[this.column()].index) && this.columnVisibilityFlags().filter(f => f).length <= 1"
+                        data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns()[this.column()].index)"
+                      />
+                      <span data-text="this.columns()[this.column()].title()"></span>
+                    </label>
+                  </template>
+                </div>
+              </section>
+            </div>
           </div>
         </section>
       </header>
 
       <section class="content">
         <div class="grid-container">
-          <!-- Settings control positioned outside the grid -->
-          <div
-            class="grid-cell grid-column-header cell-text-overflow grid-settings-control"
-            popovertarget="columnSettings"
-            data-on-click="window.columnSettings.togglePopover()"
-            data-position="bottom-end"
-            tabindex="-1"
-          >
-            <span class="codicon codicon-gear"></span>
-          </div>
-
           <table
             class="grid"
             cellpadding="0"
@@ -148,24 +165,6 @@
                 </template>
               </tr>
             </thead>
-
-            <section popover id="columnSettings" class="column-control">
-              <div class="flex-column" style="--gap: 0">
-                <label>Columns</label>
-                <template data-for="column of this.allColumns() by column">
-                  <label class="checkbox">
-                    <input
-                      type="checkbox"
-                      data-prop-checked="this.isColumnVisible(this.columns()[this.column()].index)"
-                      data-prop-disabled="this.isColumnVisible(this.columns()[this.column()].index) && this.columnVisibilityFlags().filter(f => f).length <= 1"
-                      data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns()[this.column()].index)"
-                    />
-                    <span data-text="this.columns()[this.column()].title()"></span>
-                  </label>
-                </template>
-              </div>
-            </section>
-
             <template data-if="this.hasResults() || this.emptyFilterResult()">
               <tbody>
                 <template data-for="result of this.snapshot().results">
@@ -391,6 +390,7 @@
       .content {
         flex: 1;
         overflow: auto;
+        position: relative;
       }
 
       .cell-text-overflow {
@@ -464,17 +464,8 @@
         color: var(--vscode-progressBar-background);
       }
 
-      .grid-container {
-        position: relative;
-      }
-
-      .grid {
-        padding-left: 26px;
-        /* padding for the settings control width */
-      }
-
       .grid-settings-control {
-        position: absolute;
+        position: sticky;
         top: 0;
         left: 0;
         width: 26px;
@@ -493,11 +484,21 @@
 
       .resize-handler {
         cursor: ew-resize;
-        width: 4px;
+        width: 5px;
         position: absolute;
         top: 0;
         right: 0;
         bottom: 0;
+        z-index: 10;
+        pointer-events: auto;
+      }
+
+      .resize-handler:hover {
+        background: var(--vscode-editorWidget-border);
+      }
+
+      .resize-handler:active {
+        background: var(--vscode-focusBorder);
       }
 
       .control {
@@ -557,42 +558,55 @@
         color: var(--vscode-descriptionForeground);
       }
 
-      .reportable-box {
-        padding: 12px;
-        border-radius: 6px;
+      .detail-section {
         margin-top: 0.5rem;
         margin-bottom: 0.5rem;
+        border-radius: 4px;
+        border: 1px solid var(--vscode-panel-border);
+        overflow: hidden;
       }
 
-      .reportable-box.red {
-        background: #ffeaea;
-        border: 1px solid #e53935;
-        color: #b71c1c;
+      .detail-section summary {
+        padding: 5px;
       }
 
-      .reportable-box.blue {
-        background: #e3f2fd;
-        border: 1px solid #1976d2;
-        color: #0d47a1;
+      .detail-section.error[open] {
+        background: var(--vscode-inputValidation-errorBackground);
+        border-color: var(--vscode-inputValidation-errorBorder);
       }
 
-      .reportable-message {
-        margin-top: 4px;
+      .detail-section.info[open] {
+        background: var(--vscode-inputValidation-infoBackground);
+        border-color: var(--vscode-inputValidation-infoBorder);
+      }
+
+      .detail-title {
+        font-weight: 600;
+      }
+
+      .detail-content {
+        padding: 0 12px 12px 12px;
         font-size: 95%;
+        line-height: 1.5;
       }
 
-      .error-heading {
-        display: flex;
-        align-items: center;
-        gap: 0.5em;
-        font-weight: bold;
-        margin-bottom: 4px;
+      .detail-section.error .detail-content {
+        color: var(--vscode-inputValidation-errorForeground);
+      }
+
+      .detail-section.info .detail-content {
+        color: var(--vscode-inputValidation-infoForeground);
       }
 
       .toggle-actions {
         margin-left: auto;
         display: flex;
         gap: 0.5rem;
+      }
+      /* search highlight */
+      .grid-cell mark {
+        background-color: var(--vscode-editor-findMatchHighlightBackground);
+        color: var(--vscode-editor-findMatchHighlightForeground);
       }
     </style>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>

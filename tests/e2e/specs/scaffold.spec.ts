@@ -19,12 +19,13 @@ import {
 import { View } from "../objects/views/View";
 import { FlinkComputePoolItem } from "../objects/views/viewItems/FlinkComputePoolItem";
 import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
-import { TopicItem } from "../objects/views/viewItems/TopicItem";
+import type { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebview";
 import { Tag } from "../tags";
 import { executeVSCodeCommand } from "../utils/commands";
 import { openGeneratedProjectInCurrentWindow, verifyGeneratedProject } from "../utils/scaffold";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
+import { randomHexString } from "../utils/strings";
 
 const TEST_ENV_NAME = "main-test-env";
 const TEST_COMPUTE_POOL_NAME = "main-test-pool";
@@ -188,15 +189,12 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
         test(`should apply ${templateDisplayName} template from Kafka topic in Topics view`, async ({
           page,
         }) => {
-          topicName = `e2e-project-scaffold-${templateName}`;
+          topicName = `e2e-project-scaffold-${templateName}-${randomHexString(6)}`;
           // Given we navigate to a topic in the Topics view
           const topicsView = new TopicsView(page);
           await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
           await topicsView.createTopic(topicName, 1, replicationFactor);
-          const targetTopic = topicsView.topics.filter({ hasText: topicName });
-          await expect(targetTopic).not.toHaveCount(0);
-          const topicItem = new TopicItem(page, targetTopic.first());
-          await expect(topicItem.locator).toBeVisible();
+          const topicItem: TopicItem = await topicsView.getTopicItem(topicName);
           // and we start the generate project flow from the right-click context menu
           await topicItem.generateProject();
           // and we choose a project template from the quickpick

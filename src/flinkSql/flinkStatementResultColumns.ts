@@ -22,11 +22,15 @@ const OPERATION_TYPES = {
  * Creates column definitions for either table or changelog view mode
  * @param schema The schema containing column information
  * @param viewMode The current view mode ('table' or 'changelog')
+ * @param searchRegexp Optional regex for highlighting search matches
+ * @param formatResultValue Optional function to format values with search highlighting
  * @returns Record of column definitions
  */
 export function createColumnDefinitions(
   schema: SqlV1ResultSchema,
   viewMode: ViewMode,
+  searchRegexp?: RegExp | null,
+  formatResultValue?: (value: unknown, search: RegExp | null) => any,
 ): ColumnDefinitions {
   if (viewMode === "changelog") {
     // Operation column for changelog view
@@ -45,18 +49,30 @@ export function createColumnDefinitions(
     // Add data columns for changelog view
     return {
       ...opColumn,
-      ...addSchemaColumns(schema, 1, (result, col, index) => {
-        if (Array.isArray(result.row) && result.row.length > index) {
-          return result.row[index] !== null && result.row[index] !== undefined
-            ? result.row[index]
-            : "NULL";
-        }
-        return "NULL";
-      }),
+      ...addSchemaColumns(
+        schema,
+        1,
+        (result, col, index) => {
+          if (Array.isArray(result.row) && result.row.length > index) {
+            return result.row[index] !== null && result.row[index] !== undefined
+              ? result.row[index]
+              : "NULL";
+          }
+          return "NULL";
+        },
+        searchRegexp,
+        formatResultValue,
+      ),
     };
   } else {
     // Add data columns for table view
-    return addSchemaColumns(schema, 0, (result, col) => result[col.name] ?? "NULL");
+    return addSchemaColumns(
+      schema,
+      0,
+      (result, col) => result[col.name] ?? "NULL",
+      searchRegexp,
+      formatResultValue,
+    );
   }
 }
 
@@ -67,6 +83,8 @@ function addSchemaColumns(
   schema: SqlV1ResultSchema,
   startIndex: number,
   getValue: (result: Record<string, any>, col: { name: string }, index: number) => any,
+  searchRegexp?: RegExp | null,
+  formatResultValue?: (value: unknown, search: RegExp | null) => any,
 ): ColumnDefinitions {
   return Object.fromEntries(
     schema?.columns?.map((col, index) => [
@@ -74,7 +92,13 @@ function addSchemaColumns(
       {
         index: startIndex + index,
         title: () => col.name,
-        children: (result: Record<string, any>) => getValue(result, col, index),
+        children: (result: Record<string, any>) => {
+          const value = getValue(result, col, index);
+          // Apply search highlighting if formatResultValue function is provided
+          return formatResultValue && searchRegexp != null
+            ? formatResultValue(value, searchRegexp)
+            : value;
+        },
         description: (result: Record<string, any>) => getValue(result, col, index),
       },
     ]) ?? [],

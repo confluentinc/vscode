@@ -3,8 +3,8 @@ import sinon from "sinon";
 import type { ThemeIcon } from "vscode";
 import { window } from "vscode";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
-import { IconNames } from "../constants";
 import * as organizationsGraphQL from "../graphql/organizations";
+import { IconNames } from "../icons";
 import { CCloudOrganization } from "../models/organization";
 import type { OrganizationId } from "../models/resource";
 import { organizationQuickPick } from "./organizations";
@@ -47,6 +47,7 @@ describe("quickpicks/organizations.ts organizationQuickPick()", function () {
 
     sinon.assert.calledOnce(showQuickPickStub);
     const options = showQuickPickStub.firstCall.args[1];
+    assert.strictEqual(options.title, "Select an organization");
     assert.strictEqual(options.placeHolder, "Select an organization");
     assert.strictEqual(options.ignoreFocusOut, true);
   });

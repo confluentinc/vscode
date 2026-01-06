@@ -3,6 +3,7 @@ import { udfsChanged } from "../../emitters";
 import { logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
+import type { FlinkUdf } from "../../models/flinkUDF";
 import { type CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
@@ -92,7 +93,7 @@ export async function detectClassesAndRegisterUDFs(artifactFile: Uri, artifactId
       });
       return; // No error - user cancelled database selection
     }
-    reportRegistrationResults(registrations.length, results);
+    await reportRegistrationResults(registrations.length, results);
   } catch (error) {
     const message = error instanceof Error ? error.message : "An unknown error occurred";
     logError(error, "UDF quick-register workflow failed", {
@@ -293,21 +294,49 @@ export async function executeUdfRegistrations(
  * @param successes Array of successfully registered function names
  * @param failures Array of failures with function names and error messages
  */
-export function reportRegistrationResults(
+export async function reportRegistrationResults(
   requestedCount: number,
   { successes, failures }: RegistrationResults,
 ) {
   if (successes.length > 0) {
-    const allSuccessful = successes.length === requestedCount;
     let successMessage;
+    let notificationButtons: Record<string, () => void> = {};
+
+    const allSuccessful = successes.length === requestedCount;
     if (allSuccessful) {
+      // Only show the "View UDF[s]" button when the Flink Database view is focused on a database
+      // that would show the UDF once registered (at least until
+      // https://github.com/confluentinc/vscode/issues/3154 is done).
+      const flinkDbViewProvider = FlinkDatabaseViewProvider.getInstance();
+      const udfs: FlinkUdf[] = await flinkDbViewProvider.udfsContainer.gatherResources();
+
       if (requestedCount === 1) {
         successMessage = `UDF registered successfully!`;
-      } else successMessage = `All ${successes.length} UDF(s) registered successfully!`;
+
+        const flinkUdf = udfs.find((udf) => udf.name === successes[0]);
+        if (flinkUdf) {
+          notificationButtons["View UDF"] = async () =>
+            await flinkDbViewProvider.revealResource(flinkUdf);
+        }
+      } else {
+        successMessage = `All ${successes.length} UDF(s) registered successfully!`;
+
+        const flinkUdfsInView = udfs.filter((udf) => successes.includes(udf.name));
+        if (flinkUdfsInView.length > 0) {
+          notificationButtons["View UDFs"] = async () => {
+            await flinkDbViewProvider.revealResource(flinkDbViewProvider.udfsContainer, {
+              expand: true,
+            });
+          };
+        }
+      }
     } else {
       successMessage = `${successes.length} of ${requestedCount} UDF(s) registered successfully.`;
     }
-    void showInfoNotificationWithButtons(`${successMessage} Functions: ${successes.join(", ")}`);
+    void showInfoNotificationWithButtons(
+      `${successMessage} Functions: ${successes.join(", ")}`,
+      notificationButtons,
+    );
   }
 
   if (failures.length > 0) {

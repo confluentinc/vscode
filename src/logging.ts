@@ -1,4 +1,3 @@
-import { readdirSync, statSync, unlinkSync } from "fs";
 import { join, normalize } from "path";
 import type { RotatingFileStream } from "rotating-file-stream";
 import { createStream } from "rotating-file-stream";
@@ -6,10 +5,10 @@ import type { Event, LogLevel, LogOutputChannel } from "vscode";
 import { Uri, window } from "vscode";
 import { SIDECAR_LOGFILE_NAME } from "./sidecar/constants";
 import { WriteableTmpDir } from "./utils/file";
-import { existsSync } from "./utils/fsWrappers";
+import { existsSync, readdirSync, statSync, unlinkSync } from "./utils/fsWrappers";
 
 /** The base file name prefix for the log file. Helps with clean up of old log files. @see {@link cleanupOldLogFiles} */
-export const BASEFILE_PREFIX: string = "vscode-confluent";
+export const BASEFILE_PREFIX = "vscode-confluent";
 
 /** Max size of any log file written to disk.
  * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#size */
@@ -402,6 +401,9 @@ export class Logger {
   }
 }
 
+/** Number of days after which old log files should be cleaned up. */
+export const LOG_CLEANUP_DAYS_THRESHOLD = 3;
+
 /** Helper function to clean up older log files that weren't picked up by the rotating file stream. */
 export function cleanupOldLogFiles() {
   const logger = new Logger("logging.cleanup");
@@ -411,7 +413,7 @@ export function cleanupOldLogFiles() {
 
   const now = new Date();
   const cutoffDate = new Date(now);
-  cutoffDate.setDate(now.getDate() - 3);
+  cutoffDate.setDate(now.getDate() - LOG_CLEANUP_DAYS_THRESHOLD);
 
   const logFiles: string[] = readdirSync(logfileDir).filter((file) => {
     // any `vscode-confluent*.log` files, excluding the sidecar log file
@@ -431,7 +433,7 @@ export function cleanupOldLogFiles() {
 
   // filter out any log files that were last modified before the cutoff date
   const oldLogFiles = logFiles.filter((file) => {
-    const filePath = `${logfileDir}/${file}`;
+    const filePath = join(logfileDir, file);
     const stats = statSync(filePath);
     return stats.mtime < cutoffDate;
   });
@@ -442,7 +444,7 @@ export function cleanupOldLogFiles() {
 
   // delete the old log files
   for (const file of oldLogFiles) {
-    const filePath = `${logfileDir}/${file}`;
+    const filePath = join(logfileDir, file);
     try {
       logger.debug(`Deleting old log file: ${filePath}`);
       unlinkSync(filePath);

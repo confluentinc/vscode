@@ -1,93 +1,128 @@
-import type * as vscode from "vscode";
+import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
+import { setFlinkDocumentMetadata } from "../flinkSql/statementUtils";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { pause } from "../sidecar/utils";
+import type { CCloudEnvironment } from "../models/environment";
+import type { FlinkDatabaseResourceContainer } from "../models/flinkDatabaseResourceContainer";
+import { FlinkDatabaseContainerLabel } from "../models/flinkDatabaseResourceContainer";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
-import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
-import { createTopicCommand } from "./kafkaClusters";
 
 const logger = new Logger("FlinkDatabaseViewCommands");
 
 export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {
   return [
-    // view mode toggling commands:
+    // create table/topic command for empty state
     registerCommandWithLogging(
-      "confluent.flinkdatabase.setRelationsViewMode",
-      setFlinkRelationsViewModeCommand,
+      "confluent.flinkdatabase.createRelation",
+      createRelationFromFlinkDatabaseViewCommand,
     ),
+    // refresh resource-specific container items
     registerCommandWithLogging(
-      "confluent.flinkdatabase.setUDFsViewMode",
-      setFlinkUDFViewModeCommand,
-    ),
-    registerCommandWithLogging(
-      "confluent.flinkdatabase.setArtifactsViewMode",
-      setFlinkArtifactsViewModeCommand,
-    ),
-    registerCommandWithLogging("confluent.flinkdatabase.setAIViewMode", setFlinkAIViewModeCommand),
-    // create table/topic command for empty state in Relations mode:
-    registerCommandWithLogging(
-      "confluent.flinkdatabase.createTopic",
-      createTopicInFlinkDatabaseViewCommand,
+      "confluent.flinkdatabase.refreshResourceContainer",
+      refreshResourceContainerCommand,
     ),
   ];
 }
-/** Set the Flink Database view to Relations mode */
-export async function setFlinkRelationsViewModeCommand() {
-  await FlinkDatabaseViewProvider.getInstance().switchMode(FlinkDatabaseViewProviderMode.Relations);
-}
-
-/** Set the Flink Database view to UDFs mode */
-export async function setFlinkUDFViewModeCommand() {
-  await FlinkDatabaseViewProvider.getInstance().switchMode(FlinkDatabaseViewProviderMode.UDFs);
-}
-
-/** Set the Flink Database view to Artifacts mode */
-export async function setFlinkArtifactsViewModeCommand() {
-  await FlinkDatabaseViewProvider.getInstance().switchMode(FlinkDatabaseViewProviderMode.Artifacts);
-}
-
-/** Set the Flink Database view to AI mode */
-export async function setFlinkAIViewModeCommand() {
-  await FlinkDatabaseViewProvider.getInstance().switchMode(FlinkDatabaseViewProviderMode.AI);
-}
 
 /**
- * Start the flow to create a new topic in the currently selected Flink database's Kafka cluster.
- * When the topic is created, refresh the view to show the new topic as a (schemaless) table.
+ * Open up a new FlinkSQL document inviting the user to create a new table or view.
+ * Sets the document metadata to point the the currently selected Flink database in the view.
  */
-export async function createTopicInFlinkDatabaseViewCommand(): Promise<void> {
+export async function createRelationFromFlinkDatabaseViewCommand(): Promise<void> {
   // get the currently selected Flink database from the view, create a topic in that cluster.
   const flinkDBViewProvider = FlinkDatabaseViewProvider.getInstance();
   const selectedFlinkDatabase = flinkDBViewProvider.database;
   if (!selectedFlinkDatabase) {
     // should never happen if the command is only available when a Flink database is selected.
-    logger.error("No Flink database selected when attempting to create topic.");
+    logger.error("No Flink database selected when attempting to create a relation.");
     return;
   }
 
-  // Directly invoke the command implementation so as to get type safety on parameter.
-  const topicWasCreated = await createTopicCommand(selectedFlinkDatabase);
+  // Grab the environment name for the Flink database
+  const ccloudLoader = CCloudResourceLoader.getInstance();
+  const environment = await ccloudLoader.getEnvironment(selectedFlinkDatabase.environmentId);
+  if (!environment) {
+    // This is wacky and should never happen, but log an error just in case.
+    logger.error(
+      `Could not find environment with ID ${selectedFlinkDatabase.environmentId} for selected Flink database.`,
+    );
+    return;
+  }
 
-  if (topicWasCreated) {
-    if (flinkDBViewProvider.mode !== FlinkDatabaseViewProviderMode.Relations) {
-      // Crafty user managed to switch the view mode prior to topic creation completing.
-      // Switch to back relations mode to see the new (schemaless) topic-as-table.
-      await flinkDBViewProvider.switchMode(FlinkDatabaseViewProviderMode.Relations);
-    }
+  // Open a new Flink SQL document with an informative comment block to create the table or view.
+  const documentTemplate = `-- Create a new table or view in Flink database "${selectedFlinkDatabase.name}" in environment "${environment.name}".
+--
+-- Write your CREATE TABLE or CREATE VIEW statement below, then use 'Submit Statement' above to execute it.
+-- 
+-- Documentation:
+--    CREATE TABLE: https://docs.confluent.io/cloud/current/flink/reference/statements/create-table.html
+--    CREATE VIEW: https://docs.confluent.io/cloud/current/flink/reference/statements/create-view.html
+--
+`;
+  const document = await vscode.workspace.openTextDocument({
+    language: "flinksql",
+    content: documentTemplate,
+  });
 
-    // Refresh the view to show the new topic.
-    // Retry a few times if necessary, as the topic creation may take a moment to propagate.
-    for (let i = 0; i < 5 && !flinkDBViewProvider.hasChildren(); i++) {
-      await pause(500);
-      // Deep refresh the view to (hopefully) show the new topic.
-      await flinkDBViewProvider.refresh(true);
-    }
+  // Set the Flink database and compute pool metadata for the new document
+  // so that when the user runs the statement, we know where to run it.
+  const pool = selectedFlinkDatabase.flinkPools[0];
+  const uri = document.uri;
 
-    // If we have any children at all, we're good. If not, log a warning and give up.
-    if (!flinkDBViewProvider.hasChildren()) {
-      logger.warn(
-        "Topic was created but Flink Database view has no children after several refresh attempts.",
+  // Set the codelenses to point to the gestured-upon env, database and its first compute pool.
+  await setFlinkDocumentMetadata(uri, {
+    catalog: environment as CCloudEnvironment,
+    database: selectedFlinkDatabase,
+    computePool: pool,
+  });
+
+  // Show the document and position the cursor at the end of the document.
+  const editor = await vscode.window.showTextDocument(document);
+  const position = new vscode.Position(document.lineCount - 1, 0);
+  editor.selection = new vscode.Selection(position, position);
+}
+
+export async function refreshResourceContainerCommand(
+  container: FlinkDatabaseResourceContainer<any>,
+): Promise<void> {
+  if (!container) {
+    logger.error("No container provided to refreshResourceContainerCommand");
+    return;
+  }
+
+  const provider = FlinkDatabaseViewProvider.getInstance();
+  const database = provider.database;
+  if (!database) {
+    logger.error("No Flink database selected when attempting to refresh resource container.");
+    return;
+  }
+
+  switch (container.label) {
+    case FlinkDatabaseContainerLabel.RELATIONS:
+      await provider.refreshRelationsContainer(database, true);
+      break;
+    case FlinkDatabaseContainerLabel.ARTIFACTS:
+      await provider.refreshArtifactsContainer(database, true);
+      break;
+    case FlinkDatabaseContainerLabel.UDFS:
+      await provider.refreshUDFsContainer(database, true);
+      break;
+    case FlinkDatabaseContainerLabel.AI_CONNECTIONS:
+      await provider.refreshAIConnectionsContainer(database, true);
+      break;
+    case FlinkDatabaseContainerLabel.AI_TOOLS:
+      await provider.refreshAIToolsContainer(database, true);
+      break;
+    case FlinkDatabaseContainerLabel.AI_MODELS:
+      await provider.refreshAIModelsContainer(database, true);
+      break;
+    case FlinkDatabaseContainerLabel.AI_AGENTS:
+      await provider.refreshAIAgentsContainer(database, true);
+      break;
+    default:
+      logger.error(
+        `Unknown container label "${container.label}" in refreshResourceContainerCommand`,
       );
-    }
   }
 }

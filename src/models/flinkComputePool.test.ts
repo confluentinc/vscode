@@ -1,7 +1,8 @@
 import * as assert from "assert";
 import { ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { CCLOUD_BASE_PATH, IconNames, UTM_SOURCE_VSCODE } from "../constants";
+import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
+import { IconNames } from "../icons";
 import type { CCloudFlinkComputePool } from "./flinkComputePool";
 import { FlinkComputePoolTreeItem, createFlinkComputePoolTooltip } from "./flinkComputePool";
 
@@ -39,7 +40,7 @@ describe("models/flinkComputePool.ts FlinkComputePoolTreeItem", () => {
     );
     // user-facing properties
     assert.strictEqual(treeItem.label, pool.name);
-    assert.strictEqual(treeItem.description, pool.id);
+    assert.strictEqual(treeItem.description, `${pool.provider}/${pool.region}`);
     assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.None);
     assert.deepStrictEqual(treeItem.iconPath, new ThemeIcon(IconNames.FLINK_COMPUTE_POOL));
   });

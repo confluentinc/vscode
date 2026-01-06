@@ -20,9 +20,10 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/f
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
-import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import * as contextValues from "../context/values";
 import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
+import { IconNames } from "../icons";
 import {
   CCloudResourceLoader,
   DirectResourceLoader,
@@ -473,7 +474,7 @@ describe("viewProviders/resources.ts", () => {
 
         for (const [label, dockerAvailable, connectedness, expectedStatus] of [
           ["No docker service", false, false, "(Docker Unavailable)"],
-          ["Docker service but no kafka container", true, false, "(No connection)"],
+          ["Docker service but no kafka container", true, false, "(Kafka not running)"],
           [
             "Docker and local kafka running",
             true,
@@ -491,12 +492,6 @@ describe("viewProviders/resources.ts", () => {
             assert.strictEqual(localConnectionRow.status, expectedStatus);
           });
         }
-
-        it("status getter should return 'Only Medusa available' when only Medusa is running", () => {
-          getContextValueStub.returns(true); // docker available
-          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_MEDUSA_ONLY);
-          assert.strictEqual(localConnectionRow.status, "Only Medusa available");
-        });
       });
 
       describe("medusa getter", () => {

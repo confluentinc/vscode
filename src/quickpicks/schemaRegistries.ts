@@ -1,7 +1,7 @@
 import { commands, QuickPickItemKind, ThemeIcon, window } from "vscode";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
-import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
+import { IconNames } from "../icons";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import type { Environment } from "../models/environment";
@@ -45,7 +45,7 @@ export async function schemaRegistryQuickPickWithViewProgress(): Promise<
  */
 export async function schemaRegistryQuickPick(
   defaultRegistryId: string | undefined = undefined,
-  title?: string,
+  title: string = "Select Schema Registry",
 ): Promise<SchemaRegistry | undefined> {
   const environments: Environment[] = [];
 

@@ -1,6 +1,7 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, IconNames, UTM_SOURCE_VSCODE } from "../constants";
+import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, UTM_SOURCE_VSCODE } from "../constants";
+import { IconNames } from "../icons";
 import { CustomMarkdownString } from "./main";
 import type {
   ConnectionId,
@@ -71,7 +72,13 @@ export class FlinkComputePoolTreeItem extends TreeItem {
 
     // user-facing properties
     this.iconPath = new ThemeIcon(resource.iconName);
-    this.description = resource.id;
+    if (this.resource.connectionType === ConnectionType.Ccloud) {
+      const ccloudResource = this.resource as CCloudFlinkComputePool;
+      this.description = `${ccloudResource.provider}/${ccloudResource.region}`;
+    } else {
+      // this won't happen until we support non-CCloud pools
+      this.description = this.resource.id;
+    }
 
     this.tooltip = createFlinkComputePoolTooltip(resource);
 

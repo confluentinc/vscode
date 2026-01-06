@@ -19,8 +19,8 @@ import {
 } from "../../tests/unit/testResources/schemaRegistry";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
 import { ConnectionType } from "../clients/sidecar";
-import { IconNames } from "../constants";
 import * as contextValues from "../context/values";
+import { IconNames } from "../icons";
 import type { CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader } from "../loaders";
 import { ConnectionLabel } from "../models/resource";
 import type { SchemaRegistry } from "../models/schemaRegistry";
@@ -80,6 +80,7 @@ describe("quickpicks/schemaRegistries.ts schemaRegistryQuickPick()", function ()
 
     sinon.assert.calledOnce(showQuickPickStub);
     const options = showQuickPickStub.firstCall.args[1];
+    assert.strictEqual(options.title, "Select Schema Registry");
     assert.strictEqual(options.placeHolder, "Select a Schema Registry");
     assert.strictEqual(options.ignoreFocusOut, true);
   });

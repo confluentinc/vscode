@@ -1,7 +1,8 @@
 import type { ElectronApplication, Page, TestInfo } from "@playwright/test";
 import { _electron as electron, expect, test as testBase } from "@playwright/test";
+import archiver from "archiver";
 import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
-import { existsSync, mkdtempSync, readFileSync } from "fs";
+import { createWriteStream, existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
 import type { DirectConnectionOptions, LocalConnectionOptions } from "./connectionTypes";
@@ -137,20 +138,21 @@ export const test = testBase.extend<VSCodeFixtures>({
     await use(electronApp);
 
     try {
-      // shorten grace period for shutdown to avoid hanging the entire test run
+      // shorten grace period for shutdown to avoid hanging the entire test run, but don't SIGKILL
+      // early because we might lose trace/screenshot/snapshot data
       await Promise.race([
         electronApp.close(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("electronApp.close() timeout after 10s")), 10000),
+          setTimeout(() => reject(new Error("electronApp.close() timeout after 5s")), 5_000),
         ),
       ]);
-    } catch (error) {
-      console.warn("Error closing electron app:", error);
-      // force-kill if needed
+    } catch {
+      console.warn("Timed out waiting for Electron to close, killing process...");
       try {
-        await electronApp.context().close();
-      } catch (contextError) {
-        console.warn("Error closing electron context:", contextError);
+        electronApp.process().kill("SIGKILL");
+        console.info("Killed Electron process");
+      } catch (err) {
+        console.warn(`Error killing Electron process: ${err}`);
       }
     }
   },
@@ -297,8 +299,8 @@ async function globalBeforeEach(page: Page, electronApp: ElectronApplication): P
       timeout: 1000,
     });
     await executeVSCodeCommand(page, "View: Toggle Secondary Side Bar Visibility");
-  } catch (error) {
-    console.warn("Error locating/toggling secondary sidebar:", error);
+  } catch {
+    console.warn("Error locating/toggling secondary sidebar");
   }
 }
 
@@ -308,40 +310,63 @@ async function globalAfterEach(
   page: Page,
   testInfo: TestInfo,
 ): Promise<void> {
-  const notificationArea = new NotificationArea(page);
+  // try to save extension and sidecar logs and attach them to the results for each test, but don't
+  // fail tests (that would otherwise pass) if either time out since they're nice-to-haves
+  await saveExtensionLogs(testTempDir, electronApp, page, testInfo);
+  await saveSidecarLogs(testTempDir, electronApp, page, testInfo);
+  // also include any additional logs from the VS Code window itself (main, window, extension host, etc)
+  await saveVSCodeWindowLogs(testTempDir, testInfo);
+}
 
-  // store the extension logs
+async function saveExtensionLogs(
+  testTempDir: string,
+  electronApp: ElectronApplication,
+  page: Page,
+  testInfo: TestInfo,
+): Promise<void> {
   const extensionLogPath = path.join(testTempDir, "vscode-confluent.log");
   await stubDialog(electronApp, "showSaveDialog", {
     filePath: extensionLogPath,
   });
   await executeVSCodeCommand(page, "confluent.support.saveLogs");
-  // wait for info notification indicating extension log file was saved
-  const extLogSuccess = notificationArea.infoNotifications.filter({
-    hasText: "Confluent extension log file saved successfully.",
-  });
-  await expect(extLogSuccess).toHaveCount(1, { timeout: 5000 });
-  // attach the extension log to the test results
-  await testInfo.attach("vscode-confluent.log", {
-    path: extensionLogPath,
-    contentType: "text/plain",
-  });
 
-  // store the (formatted) sidecar logs
+  try {
+    // wait for info notification indicating extension log file was saved
+    const notificationArea = new NotificationArea(page);
+    const extLogSuccess = notificationArea.infoNotifications.filter({
+      hasText: "Confluent extension log file saved successfully.",
+    });
+    await expect(extLogSuccess).toHaveCount(1, { timeout: 5000 });
+    // attach the extension log to the test results
+    await testInfo.attach("vscode-confluent.log", {
+      path: extensionLogPath,
+      contentType: "text/plain",
+    });
+  } catch {
+    console.error("Failed to save extension logs");
+  }
+}
+
+async function saveSidecarLogs(
+  testTempDir: string,
+  electronApp: ElectronApplication,
+  page: Page,
+  testInfo: TestInfo,
+): Promise<void> {
   const sidecarLogPath = path.join(testTempDir, "vscode-confluent-sidecar.log");
   await stubDialog(electronApp, "showSaveDialog", {
     filePath: sidecarLogPath,
   });
   await executeVSCodeCommand(page, "confluent.support.saveSidecarLogs");
+
   // select the formatted log option in the quick pick
   const formatQuickPick = new Quickpick(page);
   await expect(formatQuickPick.locator).toBeVisible({ timeout: 5000 });
   await formatQuickPick.selectItemByText("Human-readable format");
-  // NOTE: this occasionally times out on macOS or Windows for unknown reasons even after clearing
-  // any existing sidecar log file, but we don't want this to count as a test failure and these logs
-  // are more nice-to-have
+
   try {
     // wait for info notification indicating sidecar log file was saved
+    const notificationArea = new NotificationArea(page);
     const sidecarLogSuccess = notificationArea.infoNotifications.filter({
       hasText: "Confluent extension sidecar log file saved successfully.",
     });
@@ -351,7 +376,40 @@ async function globalAfterEach(
       path: sidecarLogPath,
       contentType: "text/plain",
     });
+  } catch {
+    console.error("Failed to save sidecar logs");
+  }
+}
+
+async function saveVSCodeWindowLogs(testTempDir: string, testInfo: TestInfo): Promise<void> {
+  // this will end up looking like `${testTempDir}/vscode-test-<hash>/logs/YYYYmmddTHHMMSS/window1/`
+  // which then has `exthost/` and `output_YYYYmmddTHHMMSS/` subdirectories
+  const logsDir = path.join(testTempDir, "logs");
+  if (!existsSync(logsDir)) {
+    console.warn("VS Code logs directory does not exist:", logsDir);
+    return;
+  }
+
+  const zipFileName = "vscode-window-logs.zip";
+  try {
+    const zipPath = path.join(testTempDir, zipFileName);
+    const output = createWriteStream(zipPath);
+    const archive = archiver("zip", { zlib: { level: 9 } });
+
+    // wait for the archive to finish
+    await new Promise<void>((resolve, reject) => {
+      output.on("close", () => resolve());
+      archive.on("error", (err) => reject(err));
+      archive.pipe(output);
+      archive.directory(logsDir, false);
+      archive.finalize();
+    });
+
+    await testInfo.attach(zipFileName, {
+      path: zipPath,
+      contentType: "application/zip",
+    });
   } catch (error) {
-    console.warn("Error saving sidecar logs:", error);
+    console.error("Error zipping VS Code logs directory:", error);
   }
 }

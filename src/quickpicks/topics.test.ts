@@ -14,7 +14,7 @@ import {
   TEST_LOCAL_KAFKA_TOPIC,
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
-import { IconNames } from "../constants";
+import { IconNames } from "../icons";
 import type { LocalResourceLoader } from "../loaders";
 import { KafkaTopic } from "../models/topic";
 import { topicQuickPick } from "./topics";
@@ -61,6 +61,7 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
 
     sinon.assert.calledOnce(showQuickPickStub);
     const options = showQuickPickStub.firstCall.args[1];
+    assert.strictEqual(options.title, "Select a topic");
     assert.strictEqual(options.placeHolder, "Select a topic");
     assert.strictEqual(options.ignoreFocusOut, true);
   });

@@ -1,6 +1,7 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { CCLOUD_CONNECTION_ID } from "../constants";
+import { IconNames } from "../icons";
 import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
 import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
@@ -16,8 +17,7 @@ export class FlinkAIModel implements IResourceBase, IdItem, ISearchable {
 
   name: string;
 
-  // https://github.com/confluentinc/vscode/issues/2989
-  iconName: IconNames = IconNames.PLACEHOLDER;
+  iconName: IconNames = IconNames.FLINK_AI_MODEL;
 
   constructor(
     props: Pick<FlinkAIModel, "environmentId" | "provider" | "region" | "databaseId" | "name">,

@@ -19,6 +19,7 @@ import {
 } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
+import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import { detectClassesAndRegisterUDFs } from "./utils/udfRegistration";
 import type { ArtifactUploadParams } from "./utils/uploadArtifactOrUDF";
@@ -51,8 +52,6 @@ export async function uploadArtifactCommand(
   const params = await artifactUploadQuickPickForm(item);
   if (!params) return; // User cancelled the prompt
 
-  // Determine if we should show the "View Artifact" button based on item type
-  const isFromJarFile = item instanceof vscode.Uri;
   const viewArtifactButton = "View Artifact";
 
   try {
@@ -79,11 +78,17 @@ export async function uploadArtifactCommand(
             },
           };
 
-          // Only show "View Artifact" button when not uploading from a file directly
-          if (!isFromJarFile) {
-            notificationButtons[viewArtifactButton] = async () => {
-              await focusArtifactsInView();
-            };
+          // Only show the "View Artifact" button when the Flink Database view is focused on a
+          // database that would show the artifact once uploaded, based on the provider's
+          // `artifactsChangedHandler` matching on environment+provider+region (at least until
+          // https://github.com/confluentinc/vscode/issues/3154 is done).
+          const flinkDbViewProvider = FlinkDatabaseViewProvider.getInstance();
+          const artifacts: FlinkArtifact[] =
+            await flinkDbViewProvider.artifactsContainer.gatherResources();
+          const flinkArtifact = artifacts.find((artifact) => artifact.id === response.id!);
+          if (flinkArtifact) {
+            notificationButtons[viewArtifactButton] = async () =>
+              await focusArtifactsInView(flinkArtifact);
           }
 
           void showInfoNotificationWithButtons(

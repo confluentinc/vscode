@@ -1,5 +1,5 @@
 import { commands, ThemeIcon, window } from "vscode";
-import { IconNames } from "../constants";
+import { IconNames } from "../icons";
 import { ResourceLoader } from "../loaders";
 import type { KafkaCluster } from "../models/kafkaCluster";
 import type { KafkaTopic } from "../models/topic";
@@ -43,6 +43,7 @@ export async function topicQuickPick(cluster: KafkaCluster, forceRefresh: boolea
   const choice: QuickPickItemWithValue<KafkaTopic> | undefined = await window.showQuickPick(
     choices,
     {
+      title: "Select a topic",
       placeHolder: "Select a topic",
       ignoreFocusOut: true,
     },

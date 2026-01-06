@@ -7,8 +7,9 @@ import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { SchemasView, SchemaType, SelectSchemaRegistry } from "../objects/views/SchemasView";
-import { SubjectItem } from "../objects/views/viewItems/SubjectItem";
+import type { SubjectItem } from "../objects/views/viewItems/SubjectItem";
 import { Tag } from "../tags";
+import { randomHexString } from "../utils/strings";
 
 /**
  * E2E test suite for testing the whole schema management flow in the extension.
@@ -72,13 +73,19 @@ test.describe("Schema Management", { tag: [Tag.EvolveSchema] }, () => {
 
       for (const [schemaType, fileExtension] of schemaTypes) {
         test.describe(`${schemaType} schema`, () => {
+          const subjectNamePrefix = `e2e-evolve-schema-${schemaType.toLowerCase()}-${randomHexString(6)}`;
           const schemaFile = `schemas/customer.${fileExtension}`;
 
           test("should create a new subject and upload the first schema version", async ({
             page,
           }) => {
             const schemasView = new SchemasView(page);
-            subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
+            subjectName = await schemasView.createSchemaVersion(
+              page,
+              schemaType,
+              schemaFile,
+              subjectNamePrefix,
+            );
 
             const notificationArea = new NotificationArea(page);
             const successNotifications: Locator = notificationArea.infoNotifications.filter({
@@ -94,11 +101,15 @@ test.describe("Schema Management", { tag: [Tag.EvolveSchema] }, () => {
             page,
           }) => {
             const schemasView = new SchemasView(page);
-            subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
+            subjectName = await schemasView.createSchemaVersion(
+              page,
+              schemaType,
+              schemaFile,
+              subjectNamePrefix,
+            );
 
             // try to evolve the newly-created schema
-            const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
-            const subjectItem = new SubjectItem(page, subjectLocator.first());
+            const subjectItem: SubjectItem = await schemasView.getSubjectItem(subjectName);
             await subjectItem.clickEvolveLatestSchema();
 
             // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title
@@ -140,10 +151,14 @@ test.describe("Schema Management", { tag: [Tag.EvolveSchema] }, () => {
             page,
           }) => {
             const schemasView = new SchemasView(page);
-            subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
+            subjectName = await schemasView.createSchemaVersion(
+              page,
+              schemaType,
+              schemaFile,
+              subjectNamePrefix,
+            );
             // try to evolve the newly-created schema
-            const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
-            const subjectItem = new SubjectItem(page, subjectLocator.first());
+            const subjectItem: SubjectItem = await schemasView.getSubjectItem(subjectName);
             await subjectItem.clickEvolveLatestSchema();
 
             // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title

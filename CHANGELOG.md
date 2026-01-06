@@ -4,15 +4,73 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
 ### Changed
 
-- Updated the "Support" view name to be "Help Center"
+- Renamed the Flink Database view's 'Table/View Relations' row to 'Tables and Views'
+- The '+' button on 'Tables and Views' now opens a FlinkSQL statement for the user to create either
+  a table or a view using SQL.
+- Simplified the tooltip for Flink views to omit information only appropriate for Kafka topic-based
+  Flink tables.
+- Flink views are shown with a different icon than Flink tables.
+
+### Removed
+
+### Fixed
+
+## 2.1.0
 
 ### Added
 
-- New "Relations" mode for the Flink Database view, now the default mode. Displays tables, views,
-  and their columns.
-- Show view definition text in a view's tooltip.
+- The Flink Artifacts/UDFs view has been upgraded to a "Flink Database" view, and now displays
+  additional Flink resources including tables & views, connections, and AI tools, models, & agents
+- "Join Confluent Community Slack" link in the Help Center view to connect with the Confluent
+  community on Slack.
+- Support for custom TLS configuration for Confluent Cloud Schema Registries in the direct
+  connection form
+- Now showing cloud provider/region information in top-level CCloud resources' descriptions instead
+  of IDs
+
+### Changed
+
+- Updated the "Support" view name to be "Help Center"
+- The Flink Database view is no longer behind a preview setting, and now shows top-level collapsible
+  groups for (table/view) relations, artifacts, UDFs, and AI resources that can be re-fetched
+  independently, removing the need to switch "view modes".
+- Several small UX improvements to the Flink Statement Results viewer, including search results
+  highlighting & VS Code Theme compatible elements.
+
+### Removed
+
+- The "Switch to \_\_\_" context menu actions in the Flink Database view have been removed since all
+  resources are now shown together in groups.
+- Remove Content-Type from default request headers when making http requests to the Sidecar
+
+### Fixed
+
+- Updated the link URL for managing Schema Registry API keys in Confluent Cloud
+
+## 2.0.3
+
+### Fixed
+
+- Bump required minimum Docker engine version to 25.0 (API version 1.44) to fix Local connections on
+  latest Docker Desktop releases ([#3091](https://github.com/confluentinc/vscode/issues/3091))
+
+## 2.0.2
+
+### Fixed
+
+- Fixed OAuth-based authentication with schema registries in Direct connections
+  ([#2647](https://github.com/confluentinc/vscode/issues/2647))
+
+## 2.0.1
+
+### Fixed
+
+- Fixed producing records with `null` values as keys/values to topics from CCloud connections
+  ([#3065](https://github.com/confluentinc/vscode/issues/3065))
 
 ## 2.0.0
 

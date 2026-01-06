@@ -1,7 +1,8 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import type { ArtifactV1FlinkArtifactMetadata } from "../clients/flinkArtifacts";
 import type { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_BASE_PATH, IconNames, UTM_SOURCE_VSCODE } from "../constants";
+import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
+import { IconNames } from "../icons";
 import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
 import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
@@ -106,6 +107,10 @@ export class FlinkArtifactTreeItem extends TreeItem {
     this.description = resource.description;
 
     this.tooltip = createFlinkArtifactToolTip(resource);
+
+    this.accessibilityInformation = {
+      label: `Flink Artifact: ${resource.name}`,
+    };
   }
 }
 

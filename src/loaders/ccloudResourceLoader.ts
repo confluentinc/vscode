@@ -21,6 +21,7 @@ import { getCCloudResources } from "../graphql/ccloud";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
+import type { FlinkAIAgent } from "../models/flinkAiAgent";
 import type { FlinkAIConnection } from "../models/flinkAiConnection";
 import type { FlinkAIModel } from "../models/flinkAiModel";
 import type { FlinkAITool } from "../models/flinkAiTool";
@@ -44,6 +45,8 @@ import { ObjectSet } from "../utils/objectset";
 import type { ExecutionResult } from "../utils/workerPool";
 import { executeInWorkerPool, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
+import type { RawFlinkAIAgentRow } from "./utils/flinkAiAgentsQuery";
+import { getFlinkAIAgentsQuery, transformRawFlinkAIAgentRows } from "./utils/flinkAiAgentsQuery";
 import type { RawFlinkAIConnectionRow } from "./utils/flinkAiConnectionsQuery";
 import {
   getFlinkAIConnectionsQuery,
@@ -66,6 +69,9 @@ import {
 } from "./utils/udfSystemCatalogQuery";
 
 const logger = new Logger("storage.ccloudResourceLoader");
+
+/** Flink SQL statement kinds for which we skip fetching results */
+export const SKIP_RESULTS_SQL_KINDS: string[] = ["CREATE_FUNCTION"];
 
 /** Options for executing a background Flink statement. */
 export interface ExecuteBackgroundStatementOptions {
@@ -498,6 +504,32 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
+   * Get the tables / views / columns of a given Flink database via system catalog queries.
+   *
+   * @param database The Flink database to get the relations and columns for.
+   * @param forceDeepRefresh Whether to bypass the ResourceManager cache and fetch fresh data.
+   * @returns Array of {@link FlinkRelation} objects representing the relations in the cluster.
+   */
+  public async getFlinkRelations(
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<FlinkRelation[]> {
+    const query: string = getRelationsAndColumnsSystemCatalogQuery(database);
+
+    const results: FlinkRelation[] = await this.getFlinkDatabaseResources<
+      RawRelationsAndColumnsRow,
+      FlinkRelation
+    >(
+      database,
+      WorkspaceStorageKeys.FLINK_RELATIONS,
+      query,
+      parseRelationsAndColumnsSystemCatalogQueryResponse,
+      forceDeepRefresh,
+    );
+    return results;
+  }
+
+  /**
    * Get the Flink UDFs for the given Flinkable database.
    *
    * @param database The Flink database to get the UDFs for.
@@ -546,7 +578,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       query,
       transformRawFlinkAIModelRows,
       forceDeepRefresh,
-      // no special statement options needed
+      { nameSpice: "list-models" },
     );
     return results;
   }
@@ -573,7 +605,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       query,
       transformRawFlinkAIToolRows,
       forceDeepRefresh,
-      // no special statement options needed
+      { nameSpice: "list-tools" },
     );
     return results;
   }
@@ -600,19 +632,36 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       query,
       transformRawFlinkAIConnectionRows,
       forceDeepRefresh,
-      // no special statement options needed
+      { nameSpice: "list-connections" },
     );
     return results;
   }
 
   /**
-   * Get the tables / views / columns of a given Flink database via system catalog queries.
+   * Get the Flink AI agents for a CCloud Flink database.
+   *
+   * @param database The Flink database to get the agents for.
+   * @param forceDeepRefresh Whether to bypass the ResourceManager cache and fetch fresh data.
+   * @returns Array of {@link FlinkAIAgent} objects representing the AI agents in the cluster.
    */
-  public async getFlinkRelations(database: CCloudFlinkDbKafkaCluster): Promise<FlinkRelation[]> {
-    const query = getRelationsAndColumnsSystemCatalogQuery(database);
-    const relationsAndColumns =
-      await this.executeBackgroundFlinkStatement<RawRelationsAndColumnsRow>(query, database);
-    return parseRelationsAndColumnsSystemCatalogQueryResponse(relationsAndColumns);
+  public async getFlinkAIAgents(
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<FlinkAIAgent[]> {
+    const query: string = getFlinkAIAgentsQuery(database);
+
+    const results: FlinkAIAgent[] = await this.getFlinkDatabaseResources<
+      RawFlinkAIAgentRow,
+      FlinkAIAgent
+    >(
+      database,
+      WorkspaceStorageKeys.FLINK_AI_AGENTS,
+      query,
+      transformRawFlinkAIAgentRows,
+      forceDeepRefresh,
+      { nameSpice: "list-agents" },
+    );
+    return results;
   }
 
   /**
@@ -719,8 +768,14 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       );
     }
 
-    // Consume all results.
-    const resultRows: Array<RT> = await parseAllFlinkStatementResults<RT>(statement);
+    let resultRows: Array<RT> = [];
+    if (statement.sqlKind && SKIP_RESULTS_SQL_KINDS.includes(statement.sqlKind)) {
+      logger.debug(
+        `Skipping fetching results for statement ${statement.id} of kind ${statement.sqlKind}`,
+      );
+    } else {
+      resultRows = await parseAllFlinkStatementResults<RT>(statement);
+    }
 
     // Delete the now completed statement. Even though is a hidden statement and won't be displayed
     // in the UI, we still want to delete it to avoid accumulating so many completed statements

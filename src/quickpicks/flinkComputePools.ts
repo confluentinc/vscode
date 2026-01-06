@@ -1,8 +1,8 @@
 import { commands, QuickPickItemKind, ThemeIcon, window } from "vscode";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
-import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { FLINK_CONFIG_COMPUTE_POOL } from "../extensionSettings/constants";
+import { IconNames } from "../icons";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import type { Environment } from "../models/environment";
@@ -140,7 +140,7 @@ export async function flinkComputePoolQuickPick(
     const icon = isCurrentlySelectedPool ? IconNames.CURRENT_RESOURCE : pool.iconName;
     items.push({
       label: pool.name,
-      description: pool.id,
+      description: `${pool.provider}/${pool.region}`,
       iconPath: new ThemeIcon(icon),
       value: pool,
     });
@@ -149,6 +149,7 @@ export async function flinkComputePoolQuickPick(
   // prompt the user to select a Flink compute pool
   const chosenItem: QuickPickItemWithValue<CCloudFlinkComputePool> | undefined =
     await window.showQuickPick(items, {
+      title: "Select a Flink compute pool",
       placeHolder: "Select a Flink compute pool",
       ignoreFocusOut: true,
     });

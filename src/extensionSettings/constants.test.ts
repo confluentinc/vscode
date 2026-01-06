@@ -7,7 +7,6 @@ import {
   CHAT_SEND_ERROR_DATA,
   CHAT_SEND_TOOL_CALL_DATA,
   ENABLE_CHAT_PARTICIPANT,
-  ENABLE_FLINK_ARTIFACTS,
   ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
   ENABLE_MEDUSA_CONTAINER,
   FLINK_CONFIG_COMPUTE_POOL,
@@ -155,7 +154,8 @@ describe("extensionSettings/constants.ts", function () {
       assert.ok(LOCAL_KAFKA_IMAGE_TAG.value !== undefined);
     });
 
-    it("should set the correct section and default value for LOCAL_MEDUSA_IMAGE", () => {
+    // skipped until Medusa settings are added to package.json
+    it.skip("should set the correct section and default value for LOCAL_MEDUSA_IMAGE", () => {
       const section: ExtensionConfiguration | undefined = getSectionForSetting(
         LOCAL_MEDUSA_IMAGE.id,
       );
@@ -168,7 +168,8 @@ describe("extensionSettings/constants.ts", function () {
       assert.ok(LOCAL_MEDUSA_IMAGE.value !== undefined);
     });
 
-    it("should set the correct section and default value for LOCAL_MEDUSA_IMAGE_TAG", () => {
+    // skipped until Medusa settings are added to package.json
+    it.skip("should set the correct section and default value for LOCAL_MEDUSA_IMAGE_TAG", () => {
       const section: ExtensionConfiguration | undefined = getSectionForSetting(
         LOCAL_MEDUSA_IMAGE_TAG.id,
       );
@@ -181,7 +182,8 @@ describe("extensionSettings/constants.ts", function () {
       assert.ok(LOCAL_MEDUSA_IMAGE_TAG.value !== undefined);
     });
 
-    it("should set the correct section and default value for ENABLE_MEDUSA_CONTAINER", () => {
+    // skipped until Medusa settings are added to package.json
+    it.skip("should set the correct section and default value for ENABLE_MEDUSA_CONTAINER", () => {
       const section: ExtensionConfiguration | undefined = getSectionForSetting(
         ENABLE_MEDUSA_CONTAINER.id,
       );
@@ -398,19 +400,6 @@ describe("extensionSettings/constants.ts", function () {
       assert.ok(ENABLE_CHAT_PARTICIPANT.defaultValue !== undefined);
       assert.strictEqual(ENABLE_CHAT_PARTICIPANT.defaultValue, expectedDefault);
       assert.ok(ENABLE_CHAT_PARTICIPANT.value !== undefined);
-    });
-
-    it("should set the correct section and default value for ENABLE_FLINK_ARTIFACTS", () => {
-      const section: ExtensionConfiguration | undefined = getSectionForSetting(
-        ENABLE_FLINK_ARTIFACTS.id,
-      );
-      assert.ok(section);
-      assert.strictEqual(ENABLE_FLINK_ARTIFACTS.sectionTitle, section.title);
-
-      const expectedDefault = section.properties[ENABLE_FLINK_ARTIFACTS.id].default;
-      assert.ok(ENABLE_FLINK_ARTIFACTS.defaultValue !== undefined);
-      assert.strictEqual(ENABLE_FLINK_ARTIFACTS.defaultValue, expectedDefault);
-      assert.ok(ENABLE_FLINK_ARTIFACTS.value !== undefined);
     });
   });
 });

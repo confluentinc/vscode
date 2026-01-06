@@ -6,9 +6,10 @@ import {
   SelectKafkaCluster,
   TopicsView,
 } from "../objects/views/TopicsView";
-import { TopicItem } from "../objects/views/viewItems/TopicItem";
+import type { TopicItem } from "../objects/views/viewItems/TopicItem";
 import type { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { Tag } from "../tags";
+import { randomHexString } from "../utils/strings";
 
 /**
  * E2E test suite for testing the Topics view and Message Viewer functionality.
@@ -26,7 +27,7 @@ import { Tag } from "../tags";
  */
 
 test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer] }, () => {
-  let topicName: string = "e2e-topic-message-viewer";
+  let topicName: string = `e2e-topic-message-viewer-${randomHexString(6)}`;
 
   test.afterEach(async ({ page }) => {
     const topicView = new TopicsView(page);
@@ -62,13 +63,8 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
           await topicsView.loadTopics(connectionType, entrypoint);
           await topicsView.createTopic(topicName, 1, replicationFactor);
 
-          // verify it shows up in the Topics view
-          let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
-          await targetTopic.scrollIntoViewIfNeeded();
-          await expect(targetTopic).toBeVisible();
-
           // open the message viewer for the topic
-          const topic = new TopicItem(page, targetTopic);
+          const topic: TopicItem = await topicsView.getTopicItem(topicName);
           const messageViewer: MessageViewerWebview = await topic.clickViewMessages();
 
           // the message viewer webview should now be visible in the editor area

@@ -31,7 +31,10 @@ describe("relationsAndColumnsSystemCatalogQuery.ts", () => {
         makeColumnRow("relation2", "column1", 1), // relation2 row missing
       ];
       assert.throws(() => {
-        parseRelationsAndColumnsSystemCatalogQueryResponse(rows);
+        parseRelationsAndColumnsSystemCatalogQueryResponse(
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          rows,
+        );
       }, /does not match current relation/);
     });
 
@@ -40,7 +43,10 @@ describe("relationsAndColumnsSystemCatalogQuery.ts", () => {
         makeColumnRow("relation1", "column1", 1), // relation1 row missing
       ];
       assert.throws(() => {
-        parseRelationsAndColumnsSystemCatalogQueryResponse(rows);
+        parseRelationsAndColumnsSystemCatalogQueryResponse(
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          rows,
+        );
       }, /does not match current relation/);
     });
 
@@ -85,7 +91,10 @@ describe("relationsAndColumnsSystemCatalogQuery.ts", () => {
         }),
       ];
 
-      const relations = parseRelationsAndColumnsSystemCatalogQueryResponse(rows);
+      const relations = parseRelationsAndColumnsSystemCatalogQueryResponse(
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        rows,
+      );
       assert.strictEqual(relations.length, 2);
 
       const relation1 = relations[0];
@@ -128,6 +137,23 @@ describe("relationsAndColumnsSystemCatalogQuery.ts", () => {
       assert.strictEqual(relation2ColA.isNullable, true);
     });
 
+    it("adds parent database context to each FlinkRelation", () => {
+      const rows = [makeRelationRow("relation1"), makeColumnRow("relation1", "column1", 1)];
+
+      const relations = parseRelationsAndColumnsSystemCatalogQueryResponse(
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        rows,
+      );
+      assert.strictEqual(relations.length, 1);
+
+      const relation1 = relations[0];
+      assert.strictEqual(relation1.name, "relation1");
+      assert.strictEqual(relation1.databaseId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
+      assert.strictEqual(relation1.environmentId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.environmentId);
+      assert.strictEqual(relation1.provider, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.provider);
+      assert.strictEqual(relation1.region, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.region);
+    });
+
     describe("view support", () => {
       it("handles view definitions correctly", () => {
         const rows = [
@@ -141,7 +167,10 @@ describe("relationsAndColumnsSystemCatalogQuery.ts", () => {
           }),
         ];
 
-        const relations = parseRelationsAndColumnsSystemCatalogQueryResponse(rows);
+        const relations = parseRelationsAndColumnsSystemCatalogQueryResponse(
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          rows,
+        );
         assert.strictEqual(relations.length, 1);
 
         const view = relations[0];
@@ -154,7 +183,10 @@ describe("relationsAndColumnsSystemCatalogQuery.ts", () => {
       it("raises exception if no relation row for a view definition", () => {
         const rows = [makeViewDefinitionRow("orphan_view", "SELECT 1")];
         assert.throws(() => {
-          parseRelationsAndColumnsSystemCatalogQueryResponse(rows);
+          parseRelationsAndColumnsSystemCatalogQueryResponse(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            rows,
+          );
         }, /does not match current relation/);
       });
     });

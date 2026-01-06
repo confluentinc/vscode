@@ -8,7 +8,7 @@ import {
   TEST_CCLOUD_STATUS_SUMMARY,
 } from "../../tests/unit/testResources/ccloudStatus";
 import type { CCloudStatusSummary, Incident } from "../ccloudStatus/types";
-import { IconNames } from "../constants";
+import { IconNames } from "../icons";
 import {
   disposeCCloudStatusBarItem,
   getCCloudStatusBarItem,

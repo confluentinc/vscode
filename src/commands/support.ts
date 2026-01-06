@@ -17,12 +17,17 @@ import { createZipFile } from "./utils/zipFiles";
 const logger = new Logger("commands.support");
 
 const FEEDBACK_URI = Uri.parse("https://www.surveymonkey.com/r/T262TDT");
+const JOIN_SLACK_URI = Uri.parse("https://cnfl.io/slack-dp");
 
 function openWalkthroughCommand() {
   commands.executeCommand(
     "workbench.action.openWalkthrough",
     "confluentinc.vscode-confluent#confluent-walkthrough",
   );
+}
+
+function joinSlackCommand() {
+  env.openExternal(JOIN_SLACK_URI);
 }
 
 function feedbackCommand() {
@@ -282,5 +287,6 @@ export function registerSupportCommands(): Disposable[] {
     registerCommandWithLogging("confluent.support.feedback", feedbackCommand),
     registerCommandWithLogging("confluent.support.issue", issueCommand),
     registerCommandWithLogging("confluent.support.openSettings", openSettings),
+    registerCommandWithLogging("confluent.support.joinSlack", joinSlackCommand),
   ];
 }

@@ -1,6 +1,18 @@
-import { ExtensionSetting, SettingsSection } from "./base";
+import { ExtensionSetting, Setting, SettingsSection } from "./base";
 
 export type NeverAskAlways = "never" | "ask" | "always";
+
+// ===== "HIDDEN" CONFIGS (not in package.json) =====
+// These settings are not contributed in package.json under `contributes.configuration`, so we use
+// the base Setting class rather than ExtensionSetting. Callers should handle possible undefined
+// defaultValue and value.
+
+/** Whether or not to enable Medusa container functionality. */
+export const ENABLE_MEDUSA_CONTAINER = new Setting<boolean>("confluent.localDocker.medusaEnable");
+/** Docker image to use with {@link LOCAL_MEDUSA_IMAGE_TAG} when creating local Medusa containers. */
+export const LOCAL_MEDUSA_IMAGE = new Setting<string>("confluent.localDocker.medusaImageRepo");
+/** Docker image tag to use when creating local Medusa containers. */
+export const LOCAL_MEDUSA_IMAGE_TAG = new Setting<string>("confluent.localDocker.medusaImageTag");
 
 // ===== MAIN CONFIGS =====
 
@@ -97,21 +109,6 @@ export const LOCAL_SCHEMA_REGISTRY_IMAGE_TAG = new ExtensionSetting<string>(
   "confluent.localDocker.schemaRegistryImageTag",
   SettingsSection.LOCAL,
 );
-/** Whether or not to enable Medusa container functionality. */
-export const ENABLE_MEDUSA_CONTAINER = new ExtensionSetting<boolean>(
-  "confluent.localDocker.medusaEnable",
-  SettingsSection.LOCAL,
-);
-/** Docker image to use with {@link LOCAL_MEDUSA_IMAGE_TAG} when creating local Medusa containers. */
-export const LOCAL_MEDUSA_IMAGE = new ExtensionSetting<string>(
-  "confluent.localDocker.medusaImageRepo",
-  SettingsSection.LOCAL,
-);
-/** Docker image tag to use when creating local Medusa containers. */
-export const LOCAL_MEDUSA_IMAGE_TAG = new ExtensionSetting<string>(
-  "confluent.localDocker.medusaImageTag",
-  SettingsSection.LOCAL,
-);
 
 // ===== FLINK CONFIGS =====
 
@@ -177,12 +174,6 @@ export const STATEMENT_RESULTS_LOCATION = new ExtensionSetting<"editor" | "panel
 );
 
 // ===== COPILOT CONFIGS =====
-
-/** Whether or not to enable Flink Artifacts functionality including the artifacts view. */
-export const ENABLE_FLINK_ARTIFACTS = new ExtensionSetting<boolean>(
-  "confluent.flink.artifacts",
-  SettingsSection.FLINK,
-);
 
 /** Whether or not to enable the `@Confluent` chat participant and associated tools. */
 export const ENABLE_CHAT_PARTICIPANT = new ExtensionSetting<boolean>(

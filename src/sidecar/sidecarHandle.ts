@@ -103,9 +103,8 @@ export class SidecarHandle {
     // used for client creation for individual service (class) methods, merged with any custom
     // config parameters provided by the caller
     this.defaultHeaders = {
-      // Expect JSON request and response bodies unless otherwise overridden (e.g. TemplatesApi).
+      // Expect JSON response bodies unless otherwise overridden (e.g. TemplatesApi).
       Accept: "application/json",
-      "Content-Type": "application/json",
       // Set the Authorization header to the current auth token.
       Authorization: `Bearer ${this.auth_secret}`,
     };

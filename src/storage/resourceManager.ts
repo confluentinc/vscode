@@ -9,11 +9,13 @@ import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import type { Environment, EnvironmentType } from "../models/environment";
 import { getEnvironmentClass } from "../models/environment";
+import { FlinkAIAgent } from "../models/flinkAiAgent";
 import { FlinkAIConnection } from "../models/flinkAiConnection";
 import { FlinkAIModel } from "../models/flinkAiModel";
 import { FlinkAITool } from "../models/flinkAiTool";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
+import { FlinkRelation } from "../models/flinkRelation";
 import { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster, KafkaClusterType } from "../models/kafkaCluster";
 import { getKafkaClusterClass } from "../models/kafkaCluster";
@@ -660,6 +662,8 @@ export class ResourceManager {
     // recreate real class instances from raw JSON objects based on the provided storage key
     return rawDatabaseResources.map((raw) => {
       switch (storageKey) {
+        case WorkspaceStorageKeys.FLINK_RELATIONS:
+          return new FlinkRelation(raw as FlinkRelation);
         case WorkspaceStorageKeys.FLINK_UDFS:
           return new FlinkUdf(raw as FlinkUdf);
         case WorkspaceStorageKeys.FLINK_AI_MODELS:
@@ -668,8 +672,8 @@ export class ResourceManager {
           return new FlinkAIConnection(raw as FlinkAIConnection);
         case WorkspaceStorageKeys.FLINK_AI_TOOLS:
           return new FlinkAITool(raw as FlinkAITool);
-        // extend cases for other Flink AI resource classes once available:
-        // - FlinkAIAgent https://github.com/confluentinc/vscode/issues/2999
+        case WorkspaceStorageKeys.FLINK_AI_AGENTS:
+          return new FlinkAIAgent(raw as FlinkAIAgent);
         default:
           throw new Error(`Unsupported storage key for Flink database resources: ${storageKey}`);
       }

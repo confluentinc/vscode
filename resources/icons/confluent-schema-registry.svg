@@ -1,5 +1,7 @@
-<svg width="13" height="13" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-    <path d="M7 1.5a1 1 0 011-1h3.5a1 1 0 011 1V5a1 1 0 01-1 1H8a1 1 0 01-1-1V1.5zm1 0V5h3.5V1.5H8z" />
+<svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9 2.5a1 1 0 011-1h3.5a1 1 0 011 1V6a1 1 0 01-1 1H10a1 1 0 01-1-1V2.5zm1 0V6h3.5V2.5H10z"
+        fill="currentColor" />
     <path
-        d="M6 3v4h4a1 1 0 011 1v4a1 1 0 01-1 1H1a1 1 0 01-1-1V3a1 1 0 011-1h4a1 1 0 011 1zM1 3v4h4V3H1zm4 5H1v4h4V8zm5 0H6v4h4V8z" />
+        d="M8 4v4h4a1 1 0 011 1v4a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1h4a1 1 0 011 1zM3 4v4h4V4H3zm4 5H3v4h4V9zm5 0H8v4h4V9z"
+        fill="currentColor" />
 </svg>

@@ -3,22 +3,21 @@ import { expect } from "@playwright/test";
 import { stubDialog } from "electron-playwright-helpers";
 import path from "path";
 import { ConnectionType } from "../../connectionTypes";
+import { randomHexString } from "../../utils/strings";
 import { NotificationArea } from "../notifications/NotificationArea";
 import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
-import { View } from "./View";
+import { SearchableView } from "./View";
+import { FlinkComputePoolItem } from "./viewItems/FlinkComputePoolItem";
 import { KafkaClusterItem } from "./viewItems/KafkaClusterItem";
 import { ViewItem } from "./viewItems/ViewItem";
 
-export enum FlinkViewMode {
-  Artifacts = "Flink Artifacts",
-  Database = "Flink Database",
-}
-
 export enum SelectFlinkDatabase {
   DatabaseFromResourcesView = "Flink database action from the Resources view",
-  FromArtifactsViewButton = "Artifacts view nav action",
+  FromDatabaseViewButton = "Flink Database view nav action",
+  ComputePoolFromResourcesView = "Compute pool action from the Resources view",
+  JarFile = "JAR file from file explorer",
 }
 
 /**
@@ -27,15 +26,19 @@ export enum SelectFlinkDatabase {
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  * Provides access to Flink artifact items and actions within the view.
  */
-export class FlinkDatabaseView extends View {
+export class FlinkDatabaseView extends SearchableView {
   constructor(page: Page) {
     super(page, /Flink Database.*Section/);
   }
 
-  /** Get all (root-level) artifact items in the Flink Artifacts section. */
+  /** Get the Artifacts container item. */
+  get artifactsContainer(): Locator {
+    return this.treeItems.filter({ hasText: "Artifacts" }).first();
+  }
+
+  /** Artifact items within the Artifacts container based on their accessibilityInformation label. */
   get artifacts(): Locator {
-    // Target the Flink Artifacts section specifically, not the Flink Database section
-    return this.treeItems;
+    return this.treeItems.and(this.page.locator('[aria-label^="Flink Artifact: "]'));
   }
 
   /**
@@ -43,18 +46,23 @@ export class FlinkDatabaseView extends View {
    * using the specified entrypoint.
    * @param entrypoint - The method to select the Kafka cluster
    * @param clusterLabel - Optional label or regex to identify the Kafka cluster in the quickpick
+   * @returns The provider/region string if using ComputePoolFromResourcesView, undefined otherwise
    */
   async loadArtifacts(
     entrypoint: SelectFlinkDatabase,
     clusterLabel?: string | RegExp,
-  ): Promise<void> {
+  ): Promise<string | undefined> {
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
-        await this.loadArtifactsFromResourcesView(clusterLabel);
+        await this.selectFlinkDBFromResourcesView(clusterLabel);
         break;
-      case SelectFlinkDatabase.FromArtifactsViewButton:
-        await this.loadArtifactsFromButton(clusterLabel);
+      case SelectFlinkDatabase.FromDatabaseViewButton:
+        await this.clickClusterItemFromSelectedDB(clusterLabel);
         break;
+      case SelectFlinkDatabase.ComputePoolFromResourcesView:
+        return;
+      case SelectFlinkDatabase.JarFile:
+        return;
       default:
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);
     }
@@ -64,7 +72,7 @@ export class FlinkDatabaseView extends View {
    * Load artifacts by selecting a Kafka cluster from the Resources view.
    * @param clusterLabel - Optional label or regex to identify the Kafka cluster
    */
-  private async loadArtifactsFromResourcesView(clusterLabel?: string | RegExp): Promise<void> {
+  private async selectFlinkDBFromResourcesView(clusterLabel?: string | RegExp): Promise<void> {
     const resourcesView = new ResourcesView(this.page);
     await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
 
@@ -79,10 +87,31 @@ export class FlinkDatabaseView extends View {
   }
 
   /**
-   * Load artifacts by selecting a Kafka cluster from the Artifacts view button.
+   * Clicks the upload action from a Flink Compute Pool item in the Resources view.
+   */
+  async clickUploadFromComputePool(provider: string, region: string): Promise<void> {
+    const resourcesView = new ResourcesView(this.page);
+    await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
+
+    const computePools = resourcesView.ccloudFlinkComputePools;
+    await expect(computePools).not.toHaveCount(0);
+
+    const poolDescription = `${provider}/${region}`;
+
+    const computePoolLocator = poolDescription
+      ? computePools.filter({ hasText: poolDescription }).first()
+      : computePools.first();
+    const computePoolItem = new FlinkComputePoolItem(this.page, computePoolLocator);
+    await computePoolItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
+  }
+
+  /**
+   * Click the "Select Kafka Cluster as Flink Database" nav action in the view title area,
+   * which will show a quickpick with a list of Kafka cluster items,
+   * the first item in that list is clicked.
    * @param clusterLabel - Optional label or regex to identify the Kafka cluster
    */
-  private async loadArtifactsFromButton(clusterLabel?: string | RegExp): Promise<void> {
+  private async clickClusterItemFromSelectedDB(clusterLabel?: string | RegExp): Promise<void> {
     await this.clickSelectKafkaClusterAsFlinkDatabase();
 
     const kafkaClusterQuickpick = new Quickpick(this.page);
@@ -101,10 +130,17 @@ export class FlinkDatabaseView extends View {
    * and selects the specified JAR file.
    * @param electronApp - The Electron application instance
    * @param filePath - The path to the JAR file to upload
+   * @param skipInitiation - If true, skips clicking the upload button (assumes quickpick is already open)
    * @returns The name of the uploaded artifact
    */
-  async uploadFlinkArtifact(electronApp: ElectronApplication, filePath: string): Promise<string> {
-    await this.initiateUpload();
+  async uploadFlinkArtifact(
+    electronApp: ElectronApplication,
+    filePath: string,
+    skipInitiation = false,
+  ): Promise<string> {
+    if (!skipInitiation) {
+      await this.initiateUpload();
+    }
     await this.selectJarFile(electronApp, filePath);
     const artifactName = await this.enterArtifactName(filePath);
     await this.confirmUpload();
@@ -121,37 +157,61 @@ export class FlinkDatabaseView extends View {
   }
 
   /**
-   * Switches the view mode in the Artifacts view to the specified Flink resource.
-   *
-   * Clicks the "Switch View Mode" nav action in the view title area, opens the context menu,
-   * and selects the menu item matching the provided view mode. Updates the internal `label`
-   * property to match the selected view mode.
-   *
-   * @param viewMode - The Flink resource view mode to switch to.
-   * @returns A promise that resolves when the view has been switched.
+   * Select a Kafka cluster as Flink database by matching the provider/region.
+   * Opens the cluster selection quickpick and selects the first cluster that matches
+   * the specified provider/region format (e.g., "AWS/us-east-2").
+   * @param provider - The cloud provider (e.g., "AWS", "AZURE", "GCP")
+   * @param region - The region (e.g., "us-east-2", "us-west-2")
    */
-  async clickSwitchToFlinkResource(viewMode: FlinkViewMode): Promise<void> {
-    const expandToggle = this.locator.locator(
-      '[title="Switch View Mode"], [aria-label="Switch View Mode"]',
-    );
-    await expandToggle.click();
-    const menuItem = this.page
-      .locator(".context-view .monaco-menu .monaco-action-bar .action-item")
-      .filter({
-        hasText: `Switch to ${viewMode}`,
-      });
-    await menuItem.first().hover();
-    // clicking doesn't work here, so use keyboard navigation instead:
-    await this.page.keyboard.press("Enter");
+  async selectKafkaClusterByProviderRegion(provider: string, region: string): Promise<void> {
+    await this.clickSelectKafkaClusterAsFlinkDatabase();
 
-    // Update the label based on the target view mode
-    this.label = new RegExp(`${viewMode}.*Section`);
+    const kafkaClusterQuickpick = new Quickpick(this.page);
+    await expect(kafkaClusterQuickpick.locator).toBeVisible();
+    await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
+
+    const providerRegionPattern = `${provider}/${region}`;
+    const matchingCluster = kafkaClusterQuickpick.items
+      .filter({ hasText: providerRegionPattern })
+      .first();
+    await expect(matchingCluster).toBeVisible();
+    await matchingCluster.click();
   }
+
+  /** Get a database resource item by its label/name, optionally within a given container. */
+  async getDatabaseResourceByLabel(label: string, container?: Locator) {
+    if (container) {
+      // wait for container to be in a non-loading state before searching resources by checking its icon
+      const containerItem = new ViewItem(this.page, container.first());
+      await expect(containerItem.icon).not.toHaveClass(/codicon-loading/);
+    }
+    return await this.getItemByLabel(label);
+  }
+
+  /** Expand a given container item if it is not already expanded. */
+  private async expandContainer(container: Locator): Promise<void> {
+    await expect(container).toBeVisible();
+
+    const isExpanded = await container.getAttribute("aria-expanded");
+    // containers are always Collapsed by default, so we don't need to check for null here
+    if (isExpanded === "false") {
+      await container.click();
+      await expect(container).toHaveAttribute("aria-expanded", "true");
+    }
+  }
+
+  /** Expand the Artifacts container to show any available artifact items. */
+  async expandArtifactsContainer(): Promise<void> {
+    await this.expandContainer(this.artifactsContainer);
+  }
+
   /**
-   * Click the upload button to initiate the artifact upload flow.
+   * Click the upload button on the Artifacts container to initiate the artifact upload flow.
    */
   private async initiateUpload(): Promise<void> {
-    await this.clickNavAction("Upload Flink Artifact to Confluent Cloud");
+    const container = this.artifactsContainer;
+    const containerItem = new ViewItem(this.page, container);
+    await containerItem.clickInlineAction("Upload Flink Artifact to Confluent Cloud");
 
     const quickpick = new Quickpick(this.page);
     await expect(quickpick.locator).toBeVisible();
@@ -185,10 +245,10 @@ export class FlinkDatabaseView extends View {
     const artifactItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
     await expect(artifactItem).toBeVisible();
     await artifactItem.click();
-    // Although this resource may be cleaned up, we append a random string to avoid name conflicts during development
-    const randomSuffix = Math.random().toString(36).substring(2, 8);
+
     const baseFileName = path.basename(filePath, ".jar");
-    const fullArtifactName = `${baseFileName}-${randomSuffix}`;
+    // Although this resource may be cleaned up, we append a random string to avoid name conflicts during development
+    const fullArtifactName = `${baseFileName}-${randomHexString(6)}`;
 
     const inputBox = new InputBox(this.page);
     await expect(inputBox.locator).toBeVisible();
@@ -239,5 +299,71 @@ export class FlinkDatabaseView extends View {
       hasText: "deleted successfully",
     });
     await expect(successNotifications).not.toHaveCount(0);
+  }
+
+  /**
+   * Upload a Flink artifact JAR file from the VS Code file explorer.
+   * Navigates through the quickpick steps after the upload has been initiated from a JAR file.
+   * @param artifactName - The name of the uploaded artifact (for verification)
+   * @param providerRegion - Optional provider/region to match (e.g., "AWS/us-east-2")
+   * @returns The name of the uploaded artifact
+   */
+  async uploadFlinkArtifactFromJAR(artifactName: string, providerRegion?: string): Promise<string> {
+    // Wait for the quickpick to appear
+    const quickpick = new Quickpick(this.page);
+    await expect(quickpick.locator).toBeVisible();
+
+    // Step 1: Select Environment
+    const environmentItem = quickpick.items.filter({ hasText: "1. Select Environment" }).first();
+    await expect(environmentItem).toBeVisible();
+    await environmentItem.click();
+
+    await expect(quickpick.locator).toBeVisible();
+    await expect(quickpick.items).not.toHaveCount(0);
+    await quickpick.items.first().click();
+
+    // Step 2: Select Cloud Provider & Region
+    await expect(quickpick.locator).toBeVisible();
+    const cloudRegionItem = quickpick.items
+      .filter({ hasText: "2. Select Cloud Provider & Region" })
+      .first();
+    await expect(cloudRegionItem).toBeVisible();
+    await cloudRegionItem.click();
+
+    await expect(quickpick.locator).toBeVisible();
+    await expect(quickpick.items).not.toHaveCount(0);
+    const provider: string = providerRegion ? providerRegion.split("/")[0] : "";
+    const providerRegionItem = providerRegion
+      ? quickpick.items.filter({ hasText: provider }).first()
+      : quickpick.items.first();
+    await providerRegionItem.click();
+
+    // Step 3 (JAR file) should already be completed
+    // since we initiated from a JAR file
+
+    // Step 4 (Artifact Name) needs to be completed or the old artifact name remains
+    const nameItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
+    await expect(nameItem).toBeVisible();
+    await nameItem.click();
+
+    const inputBox = new InputBox(this.page);
+    await expect(inputBox.locator).toBeVisible();
+    await inputBox.input.fill(artifactName);
+    await inputBox.confirm();
+
+    // Click "Upload Artifact" button
+    await expect(quickpick.locator).toBeVisible();
+    const uploadAction = quickpick.items.filter({ hasText: "Upload Artifact" }).first();
+    await expect(uploadAction).toBeVisible();
+    await uploadAction.click();
+
+    // Wait for upload success notification
+    const notificationArea = new NotificationArea(this.page);
+    const successNotifications = notificationArea.infoNotifications.filter({
+      hasText: "uploaded successfully",
+    });
+    await expect(successNotifications.first()).toBeVisible();
+
+    return artifactName;
   }
 }

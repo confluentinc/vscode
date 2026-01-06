@@ -9,7 +9,7 @@ import {
   workspace,
 } from "vscode";
 import type { ConnectionStatus, ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { ContextValues, getContextValue, setContextValue } from "../context/values";
 import {
   ccloudConnected,
@@ -24,6 +24,7 @@ import {
 } from "../emitters";
 import { logError } from "../errors";
 import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
+import { IconNames } from "../icons";
 import type { DirectResourceLoader } from "../loaders";
 import { CCloudResourceLoader, LocalResourceLoader, ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
@@ -458,12 +459,7 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
       getContextValue<boolean>(ContextValues.dockerServiceAvailable) === true;
 
     if (isDockerAvailable) {
-      if (this.kafkaCluster) {
-        return this.kafkaCluster.uri!;
-      } else if (this.medusa) {
-        return "Only Medusa available";
-      }
-      return "(No connection)";
+      return this.kafkaCluster ? this.kafkaCluster.uri! : "(Kafka not running)";
     } else {
       return "(Docker Unavailable)";
     }

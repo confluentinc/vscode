@@ -60,25 +60,30 @@ import type { EnvironmentId } from "../models/resource";
 import type * as sidecar from "../sidecar";
 import type { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
-import * as relationsUtils from "./utils/relationsAndColumnsSystemCatalogQuery";
 
+import { createFlinkAIAgent } from "../../tests/unit/testResources/flinkAIAgent";
 import { createFlinkAIConnection } from "../../tests/unit/testResources/flinkAIConnection";
 import { createFlinkAITool } from "../../tests/unit/testResources/flinkAITool";
 import { TEST_FLINK_RELATION } from "../../tests/unit/testResources/flinkRelation";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
+import type { FlinkAIAgent } from "../models/flinkAiAgent";
 import type { FlinkAIConnection } from "../models/flinkAiConnection";
 import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
+import type { FlinkRelation } from "../models/flinkRelation";
 import type { FlinkUdf } from "../models/flinkUDF";
 import { WorkspaceStorageKeys } from "../storage/constants";
 import {
   CCloudResourceLoader,
   loadArtifactsForProviderRegion,
   loadProviderRegions,
+  SKIP_RESULTS_SQL_KINDS,
 } from "./ccloudResourceLoader";
-import { getFlinkAIConnectionsQuery } from "./utils/flinkAiConnectionsQuery";
-import { getFlinkAIModelsQuery } from "./utils/flinkAiModelsQuery";
-import { getFlinkAIToolsQuery } from "./utils/flinkAiToolsQuery";
-import { getUdfSystemCatalogQuery } from "./utils/udfSystemCatalogQuery";
+import * as aiAgentsQueryUtils from "./utils/flinkAiAgentsQuery";
+import * as aiConnectionsQueryUtils from "./utils/flinkAiConnectionsQuery";
+import * as aiModelsQueryUtils from "./utils/flinkAiModelsQuery";
+import * as aiToolsQueryUtils from "./utils/flinkAiToolsQuery";
+import * as relationsQueryUtils from "./utils/relationsAndColumnsSystemCatalogQuery";
+import * as udfQueryUtils from "./utils/udfSystemCatalogQuery";
 
 describe("CCloudResourceLoader", () => {
   let sandbox: sinon.SinonSandbox;
@@ -1083,7 +1088,7 @@ describe("CCloudResourceLoader", () => {
             loaderGetDbResourcesStub,
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
             WorkspaceStorageKeys.FLINK_UDFS,
-            getUdfSystemCatalogQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
+            udfQueryUtils.getUdfSystemCatalogQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
             sinon.match.func,
             forceDeepRefresh,
             { nameSpice: "list-udfs" },
@@ -1108,7 +1113,7 @@ describe("CCloudResourceLoader", () => {
             loaderGetDbResourcesStub,
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
             WorkspaceStorageKeys.FLINK_AI_MODELS,
-            getFlinkAIModelsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
+            aiModelsQueryUtils.getFlinkAIModelsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
             sinon.match.func,
             forceDeepRefresh,
             // no statement options
@@ -1133,7 +1138,7 @@ describe("CCloudResourceLoader", () => {
             loaderGetDbResourcesStub,
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
             WorkspaceStorageKeys.FLINK_AI_TOOLS,
-            getFlinkAIToolsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
+            aiToolsQueryUtils.getFlinkAIToolsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
             sinon.match.func,
             forceDeepRefresh,
             // no statement options
@@ -1158,7 +1163,59 @@ describe("CCloudResourceLoader", () => {
             loaderGetDbResourcesStub,
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
             WorkspaceStorageKeys.FLINK_AI_CONNECTIONS,
-            getFlinkAIConnectionsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
+            aiConnectionsQueryUtils.getFlinkAIConnectionsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
+            sinon.match.func,
+            forceDeepRefresh,
+            // no statement options
+          );
+        });
+      }
+    });
+
+    describe("getFlinkAIAgents()", () => {
+      for (const forceDeepRefresh of [true, false]) {
+        it(`should call getFlinkDatabaseResources() with correct parameters (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          const testAgents: FlinkAIAgent[] = [createFlinkAIAgent("agent1")];
+          loaderGetDbResourcesStub.resolves(testAgents);
+
+          const result = await loader.getFlinkAIAgents(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          assert.deepStrictEqual(result, testAgents);
+          sinon.assert.calledOnceWithMatch(
+            loaderGetDbResourcesStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            WorkspaceStorageKeys.FLINK_AI_AGENTS,
+            aiAgentsQueryUtils.getFlinkAIAgentsQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
+            sinon.match.func,
+            forceDeepRefresh,
+            // no statement options
+          );
+        });
+      }
+    });
+
+    describe("getFlinkRelations()", () => {
+      for (const forceDeepRefresh of [true, false]) {
+        it(`should call getFlinkDatabaseResources() with correct parameters (forceDeepRefresh=${forceDeepRefresh})`, async () => {
+          const testRelations: FlinkRelation[] = [TEST_FLINK_RELATION];
+          loaderGetDbResourcesStub.resolves(testRelations);
+
+          const result = await loader.getFlinkRelations(
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            forceDeepRefresh,
+          );
+
+          assert.deepStrictEqual(result, testRelations);
+          sinon.assert.calledOnceWithMatch(
+            loaderGetDbResourcesStub,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            WorkspaceStorageKeys.FLINK_RELATIONS,
+            relationsQueryUtils.getRelationsAndColumnsSystemCatalogQuery(
+              TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            ),
             sinon.match.func,
             forceDeepRefresh,
             // no statement options
@@ -1168,36 +1225,83 @@ describe("CCloudResourceLoader", () => {
     });
   });
 
-  describe("getFlinkRelations", () => {
-    let executeBackgroundFlinkStatementStub: sinon.SinonStub;
-    let getRelationsAndColumnsSystemCatalogQueryStub: sinon.SinonStub;
-    let parseRelationsAndColumnsSystemCatalogQueryResponseStub: sinon.SinonStub;
+  describe("getFlinkDatabaseResource() wrappers' transformers", () => {
     beforeEach(() => {
-      executeBackgroundFlinkStatementStub = sandbox.stub(loader, "executeBackgroundFlinkStatement");
-      getRelationsAndColumnsSystemCatalogQueryStub = sandbox.stub(
-        relationsUtils,
-        "getRelationsAndColumnsSystemCatalogQuery",
-      );
-      parseRelationsAndColumnsSystemCatalogQueryResponseStub = sandbox.stub(
-        relationsUtils,
-        "parseRelationsAndColumnsSystemCatalogQueryResponse",
-      );
+      // prevent actual statement execution; we don't care about the args or results here since
+      // they're tested in the getFlinkDatabaseResources() suite
+      sandbox.stub(loader, "executeBackgroundFlinkStatement").resolves([]);
     });
 
-    it("should call parseRelationsAndColumnsSystemCatalogQueryResponse with result from catalog statement", async () => {
-      parseRelationsAndColumnsSystemCatalogQueryResponseStub.returns([TEST_FLINK_RELATION]);
-
-      const results = await loader.getFlinkRelations(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
-
-      assert.deepStrictEqual(
-        results,
-        [TEST_FLINK_RELATION],
-        "Expected relations to match parsed results",
+    it("getFlinkRelations() should use parseRelationsAndColumnsSystemCatalogQueryResponse", async () => {
+      const parseRelationsAndColumnsSystemCatalogQueryResponseSpy = sandbox.spy(
+        relationsQueryUtils,
+        "parseRelationsAndColumnsSystemCatalogQueryResponse",
       );
 
-      sinon.assert.calledOnce(getRelationsAndColumnsSystemCatalogQueryStub);
-      sinon.assert.calledOnce(executeBackgroundFlinkStatementStub);
-      sinon.assert.calledOnce(parseRelationsAndColumnsSystemCatalogQueryResponseStub);
+      // force refresh to call executeBackgroundFlinkStatement+transformer+setFlinkDatabaseResources
+      await loader.getFlinkRelations(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
+
+      sinon.assert.calledOnce(parseRelationsAndColumnsSystemCatalogQueryResponseSpy);
+    });
+
+    it("getFlinkUDFs() should use transformUdfSystemCatalogRows", async () => {
+      const transformUdfSystemCatalogRowsSpy = sandbox.spy(
+        udfQueryUtils,
+        "transformUdfSystemCatalogRows",
+      );
+
+      // force refresh to call executeBackgroundFlinkStatement+transformer+setFlinkDatabaseResources
+      await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
+
+      sinon.assert.calledOnce(transformUdfSystemCatalogRowsSpy);
+    });
+
+    it("getFlinkAIModels() should use transformRawFlinkAIModelRows", async () => {
+      const transformRawFlinkAIModelRowsSpy = sandbox.spy(
+        aiModelsQueryUtils,
+        "transformRawFlinkAIModelRows",
+      );
+
+      // force refresh to call executeBackgroundFlinkStatement+transformer+setFlinkDatabaseResources
+      await loader.getFlinkAIModels(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
+
+      sinon.assert.calledOnce(transformRawFlinkAIModelRowsSpy);
+    });
+
+    it("getFlinkAITools() should use transformRawFlinkAIToolRows", async () => {
+      const transformRawFlinkAIToolRowsSpy = sandbox.spy(
+        aiToolsQueryUtils,
+        "transformRawFlinkAIToolRows",
+      );
+
+      // force refresh to call executeBackgroundFlinkStatement+transformer+setFlinkDatabaseResources
+      await loader.getFlinkAITools(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
+
+      sinon.assert.calledOnce(transformRawFlinkAIToolRowsSpy);
+    });
+
+    it("getFlinkAIConnections() should use transformRawFlinkAIConnectionRows", async () => {
+      const transformRawFlinkAIConnectionRowsSpy = sandbox.spy(
+        aiConnectionsQueryUtils,
+        "transformRawFlinkAIConnectionRows",
+      );
+
+      // force refresh to call executeBackgroundFlinkStatement+transformer+setFlinkDatabaseResources
+      await loader.getFlinkAIConnections(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
+
+      sinon.assert.calledOnce(transformRawFlinkAIConnectionRowsSpy);
+    });
+
+    it("getFlinkAIAgents() should use transformRawFlinkAIAgentRows", async () => {
+      const transformRawFlinkAIAgentRowsSpy = sandbox.spy(
+        aiAgentsQueryUtils,
+        "transformRawFlinkAIAgentRows",
+      );
+
+      // force refresh to call executeBackgroundFlinkStatement+transformer+setFlinkDatabaseResources
+      await loader.getFlinkAIAgents(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
+
+      sinon.assert.calledOnce(transformRawFlinkAIAgentRowsSpy);
     });
   });
 
@@ -1769,6 +1873,27 @@ describe("CCloudResourceLoader", () => {
         );
       });
     });
+
+    for (const skipKind of SKIP_RESULTS_SQL_KINDS) {
+      it(`should skip fetching results for sqlKind=${skipKind} statements`, async () => {
+        const completedStatement = createFlinkStatement({
+          phase: Phase.COMPLETED,
+          sqlKind: skipKind,
+        });
+        waitForStatementCompletionStub.resolves(completedStatement);
+
+        const results = await loader.executeBackgroundFlinkStatement<TestResult>(
+          "STATEMENT THAT HAS NO RESULTS",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        );
+
+        assert.deepStrictEqual(results, []);
+        sinon.assert.calledOnce(submitFlinkStatementStub);
+        sinon.assert.calledOnce(waitForStatementCompletionStub);
+        sinon.assert.notCalled(parseAllFlinkStatementResultsStub);
+        sinon.assert.calledOnce(deleteStatementStub);
+      });
+    }
   });
 
   describe("deleteFlinkStatement", () => {

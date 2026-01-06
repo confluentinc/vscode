@@ -4,10 +4,10 @@ import { ConnectionType } from "../clients/sidecar";
 import {
   CCLOUD_BASE_PATH,
   CCLOUD_CONNECTION_ID,
-  IconNames,
   LOCAL_CONNECTION_ID,
   UTM_SOURCE_VSCODE,
 } from "../constants";
+import { IconNames } from "../icons";
 import { CustomMarkdownString } from "./main";
 import type {
   ConnectionId,
@@ -54,7 +54,7 @@ export class CCloudSchemaRegistry extends SchemaRegistry {
   }
 
   get ccloudApiKeysUrl(): string {
-    return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/schema-registry/api-keys?utm_source=${UTM_SOURCE_VSCODE}`;
+    return `https://${CCLOUD_BASE_PATH}/settings/api-keys?resourceIds=${this.id}&resourceScope=SchemaRegistry&utm_source=${UTM_SOURCE_VSCODE}`;
   }
 }
 
@@ -105,7 +105,12 @@ export class SchemaRegistryTreeItem extends TreeItem {
     this.contextValue = `${this.resource.connectionType.toLowerCase()}-schema-registry`;
 
     // user-facing properties
-    this.description = this.resource.id;
+    if (this.resource.connectionType === ConnectionType.Ccloud) {
+      const ccloudResource = this.resource as CCloudSchemaRegistry;
+      this.description = `${ccloudResource.provider}/${ccloudResource.region}`;
+    } else {
+      this.description = this.resource.id;
+    }
     this.iconPath = new ThemeIcon(this.resource.iconName);
     this.tooltip = createSchemaRegistryTooltip(this.resource);
 

@@ -1,9 +1,12 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { CCLOUD_CONNECTION_ID } from "../constants";
+import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
+import { IconNames } from "../icons";
 import { formatSqlType } from "../utils/flinkTypes";
+import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
-import type { ConnectionId } from "./resource";
+import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
 /**
  * Represents a column of a Flink relation (table or view).
@@ -215,7 +218,16 @@ export enum FlinkRelationType {
  * Represents a Flink relation (base table or view) within the system catalog.
  * Immutable data holder with light convenience getters, mirroring the style of FlinkUdf and Column.
  */
-export class FlinkRelation {
+export class FlinkRelation implements IResourceBase, IdItem, ISearchable {
+  /** What CCloud environment this relation came from (from the Kafka Cluster) */
+  environmentId: EnvironmentId;
+  /** What cloud provider hosts the parent Kafka Cluster? */
+  provider: string;
+  /** What cloud region hosts the parent Kafka Cluster? */
+  region: string;
+  /** The (CCloud) Kafka cluster id the relation belongs to. */
+  databaseId: string;
+
   /** Relation name */
   readonly name: string;
   /** Optional comment / description */
@@ -246,6 +258,10 @@ export class FlinkRelation {
   constructor(
     props: Pick<
       FlinkRelation,
+      | "environmentId"
+      | "provider"
+      | "region"
+      | "databaseId"
       | "name"
       | "comment"
       | "type"
@@ -258,6 +274,10 @@ export class FlinkRelation {
       | "columns"
     >,
   ) {
+    this.environmentId = props.environmentId;
+    this.provider = props.provider;
+    this.region = props.region;
+    this.databaseId = props.databaseId;
     this.name = props.name;
     this.comment = props.comment;
     this.type = props.type;
@@ -280,6 +300,10 @@ export class FlinkRelation {
 
   get connectionType(): ConnectionType {
     return ConnectionType.Ccloud;
+  }
+
+  get iconName() {
+    return this.type === FlinkRelationType.View ? IconNames.FLINK_VIEW : IconNames.TOPIC; // topic = table
   }
 
   /** Returns the visible (non-hidden) columns. */
@@ -324,7 +348,7 @@ export class FlinkRelation {
 
   getTreeItem(): TreeItem {
     const item = new TreeItem(this.name, TreeItemCollapsibleState.Collapsed);
-    item.iconPath = new ThemeIcon(IconNames.TOPIC); // topic = table
+    item.iconPath = new ThemeIcon(this.iconName);
     item.id = this.name;
 
     const typeSnippet = this.type.toLowerCase().replace(" ", "-");
@@ -351,30 +375,35 @@ export class FlinkRelation {
       tooltip.addField("Comment", this.comment);
     }
 
-    // Distribution
-    if (this.isDistributed) {
-      tooltip.addField("Distribution Bucket Count", this.distributionBucketCount.toString());
-    } else {
-      tooltip.addField("Distribution", "Not distributed");
-    }
-
-    // Watermark
-    if (this.isWatermarked) {
-      tooltip.addField("Watermarked", "Yes");
-      if (this.watermarkColumnName) {
-        tooltip.addField(
-          "Watermark Column",
-          `${this.watermarkColumnName}${this.watermarkColumnIsHidden ? " (hidden)" : ""}`,
-        );
+    // Attributes meaningful only for base tables (aka Kafka-topic-backed tables)
+    if (this.type === FlinkRelationType.BaseTable) {
+      // Distribution
+      if (this.isDistributed) {
+        tooltip.addField("Distribution Bucket Count", this.distributionBucketCount.toString());
+      } else {
+        tooltip.addField("Distribution", "Not distributed");
       }
-      tooltip.addField("Watermark Expression", this.watermarkExpression!);
-    } else {
-      tooltip.addField("Watermarked", "No");
+
+      // Watermark
+      if (this.isWatermarked) {
+        tooltip.addField("Watermarked", "Yes");
+        if (this.watermarkColumnName) {
+          tooltip.addField(
+            "Watermark Column",
+            `${this.watermarkColumnName}${this.watermarkColumnIsHidden ? " (hidden)" : ""}`,
+          );
+        }
+        tooltip.addField("Watermark Expression", this.watermarkExpression!);
+      } else {
+        tooltip.addField("Watermarked", "No");
+      }
     }
 
-    // If has a view definition, show it here for the time being.
+    // If has a view definition, show it here for the time being. Needs
+    // to ultimately be openable in a separate tab or similar.
     if (this.type === FlinkRelationType.View && this.viewDefinition) {
-      tooltip.addField("View Definition", `\`\`\`\n${this.viewDefinition}\n\`\`\``);
+      tooltip.appendMarkdown("\n\nView Definition:");
+      tooltip.addCodeBlock(this.viewDefinition, FLINK_SQL_LANGUAGE_ID);
     }
 
     return tooltip;

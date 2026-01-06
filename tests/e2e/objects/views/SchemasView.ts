@@ -8,7 +8,7 @@ import { NotificationArea } from "../notifications/NotificationArea";
 import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
-import { View } from "./View";
+import { SearchableView } from "./View";
 import { SubjectItem } from "./viewItems/SubjectItem";
 
 export enum SchemaType {
@@ -27,7 +27,7 @@ export enum SelectSchemaRegistry {
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  */
-export class SchemasView extends View {
+export class SchemasView extends SearchableView {
   constructor(page: Page) {
     super(page, /Schemas.*Section/);
   }
@@ -76,6 +76,12 @@ export class SchemasView extends View {
   /** Get all (root-level) subject items in the view. */
   get subjects(): Locator {
     return this.body.locator("[role='treeitem'][aria-level='1']");
+  }
+
+  /** Get a subject item by its label/name. */
+  async getSubjectItem(subjectName: string): Promise<SubjectItem> {
+    const item = await this.getItemByLabel(subjectName, this.subjects);
+    return new SubjectItem(this.page, item);
   }
 
   /**
@@ -137,7 +143,7 @@ export class SchemasView extends View {
     page: Page,
     schemaType: SchemaType,
     schemaFile: string,
-    subjectName?: string,
+    subjectName: string,
   ): Promise<string> {
     await this.clickCreateNewSchema();
 
@@ -176,10 +182,6 @@ export class SchemasView extends View {
     // enter subject name in the input box and submit
     const subjectInputBox = new InputBox(page);
     await expect(subjectInputBox.input).toBeVisible();
-    if (!subjectName) {
-      const randomValue: string = Math.random().toString(36).substring(2, 15);
-      subjectName = `customer-${randomValue}-value`;
-    }
     await subjectInputBox.input.fill(subjectName);
     await subjectInputBox.confirm();
 
@@ -213,10 +215,7 @@ export class SchemasView extends View {
     ]);
 
     // find the schema item in the view and start the deletion from its context menu
-    const subjectLocator: Locator = this.subjects.filter({ hasText: subjectName });
-    const subjectItem = new SubjectItem(page, subjectLocator.first());
-    await subjectItem.locator.scrollIntoViewIfNeeded();
-    await expect(subjectItem.locator).toBeVisible();
+    const subjectItem = await this.getSubjectItem(subjectName);
     await subjectItem.rightClickContextMenuAction("Delete All Schemas in Subject");
 
     // select the Hard Delete option

@@ -46,7 +46,7 @@ import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
 import { registerUriCommands } from "./commands/uris";
 import { setProjectScaffoldListener } from "./commands/utils/scaffoldUtils";
-import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, IconNames } from "./constants";
+import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
@@ -78,6 +78,7 @@ import {
 import { FLINK_SQL_LANGUAGE_ID } from "./flinkSql/constants";
 import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageClientManager";
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
+import { IconNames } from "./icons";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
 import { FlinkStatementResultsPanelProvider } from "./panelProviders/flinkStatementResults";
@@ -98,7 +99,6 @@ import type { RefreshableTreeViewProvider } from "./viewProviders/baseModels/bas
 import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { HelpCenterViewProvider } from "./viewProviders/helpCenter";
-import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { TopicViewProvider } from "./viewProviders/topics";
@@ -444,11 +444,6 @@ async function setupContextValues() {
     SCHEMA_URI_SCHEME,
     MESSAGE_URI_SCHEME,
   ]);
-  // set the initial Flink database view mode to "Relations"
-  const flinkViewMode = setContextValue(
-    ContextValues.flinkDatabaseViewMode,
-    FlinkDatabaseViewProviderMode.Relations,
-  );
 
   // Default to Docker daemon not being available until proven otherwise
   const dockerAvailable = setContextValue(ContextValues.dockerServiceAvailable, false);
@@ -464,7 +459,6 @@ async function setupContextValues() {
     resourcesWithNames,
     resourcesWithURIs,
     diffableResources,
-    flinkViewMode,
     dockerAvailable,
   ]);
 }
@@ -519,6 +513,7 @@ export function getRefreshableViewProviders(): RefreshableTreeViewProvider[] {
   // When adding a new refreshable view, also update the test block
   // "Refreshable views tests" in extension.test.ts.
   const refreshables = [
+    ResourceViewProvider.getInstance(),
     TopicViewProvider.getInstance(),
     SchemasViewProvider.getInstance(),
     FlinkStatementsViewProvider.getInstance(),

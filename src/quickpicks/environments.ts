@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IconNames } from "../constants";
+import { IconNames } from "../icons";
 import { CCloudResourceLoader } from "../loaders";
 import type { CCloudEnvironment } from "../models/environment";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
@@ -46,6 +46,7 @@ export async function ccloudEnvironmentQuickPick(
   const chosenEnvironment: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(
     environmentItems,
     {
+      title: "Select an environment",
       placeHolder: "Select an environment",
     },
   );

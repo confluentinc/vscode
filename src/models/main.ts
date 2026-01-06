@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IconNames } from "../constants";
+import { IconNames } from "../icons";
 
 /** Anything with an `id` string property */
 export interface IdItem {
@@ -85,6 +85,15 @@ export class CustomMarkdownString extends vscode.MarkdownString {
    */
   addLink(label: string, url: string): this {
     this.appendMarkdown(`\n\n[${label}](${url})`);
+    return this;
+  }
+
+  /**
+   * Add a code block to the tooltip, with optional syntax highlighting if a valid `language` value
+   * is provided.
+   */
+  addCodeBlock(code: string, language: string = ""): this {
+    this.appendMarkdown(`\n\n\`\`\`${language}\n${code}\n\`\`\``);
     return this;
   }
 }

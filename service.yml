@@ -54,6 +54,7 @@ semaphore:
         - name: TEST_SUITE
           required: false
           description: The test name or tag(s) (pipe-separated, e.g. `@ccloud|@direct`) to run. If not specified, will run all E2E tests.
+          default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts"
     - name: scheduled-ccloud-auth-smoketests-prod
       branch: main
       pipeline_file: ".semaphore/ccloud-auth-smoketests.yml"
