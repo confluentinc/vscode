@@ -4,12 +4,16 @@ import esbuild from "rollup-plugin-esbuild";
 import { test } from "../baseTest";
 
 test.use({
+  // @ts-expect-error: Playwright 1.46+ requires double-array for plugins,
+  // see https://github.com/microsoft/playwright/releases/tag/v1.46.0
   plugins: [
-    esbuild({ jsx: "automatic", target: "es2022", exclude: [/node_modules/] }),
-    replace({
-      "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV),
-      preventAssignment: true,
-    }),
+    [
+      esbuild({ jsx: "automatic", target: "es2022", exclude: [/node_modules/] }),
+      replace({
+        "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV),
+        preventAssignment: true,
+      }),
+    ],
   ],
 });
 
