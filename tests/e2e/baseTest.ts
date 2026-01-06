@@ -295,17 +295,7 @@ async function globalAfterEach(
   await saveExtensionLogs(testTempDir, electronApp, page, testInfo);
   await saveSidecarLogs(testTempDir, electronApp, page, testInfo);
   // also include any additional logs from the VS Code window itself (main, window, extension host, etc)
-  try {
-    await withTimeout(
-      "saveVSCodeWindowLogs()",
-      saveVSCodeWindowLogs(testTempDir, testInfo),
-      10_000,
-    );
-  } catch (err) {
-    console.warn("Failed to save VS Code window logs:", {
-      error: err instanceof Error ? err.message : err,
-    });
-  }
+  await saveVSCodeWindowLogs(testTempDir, testInfo);
 }
 
 async function saveExtensionLogs(
