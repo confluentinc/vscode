@@ -85,7 +85,7 @@ export const test = testBase.extend<VSCodeFixtures>({
     await use(tempDir);
   },
 
-  electronApp: async ({ trace, testTempDir }, use, testInfo) => {
+  electronApp: async ({ testTempDir }, use, testInfo) => {
     const testConfigs = getTestSetupCache();
 
     // launch VS Code with Electron using args pattern from vscode-test
@@ -106,67 +106,47 @@ export const test = testBase.extend<VSCodeFixtures>({
         `--extensionDevelopmentPath=${testConfigs.outPath}`,
       ],
     });
-
     if (!electronApp) {
       throw new Error("Failed to launch VS Code electron app");
     }
 
-    // wait for VS Code to be ready before trying to stub dialogs
-    const page = await electronApp.firstWindow();
-    if (!page) {
-      // usually this means the launch args were incorrect and/or the app didn't start correctly
-      throw new Error("Failed to get first window from VS Code");
-    }
-    await page.waitForLoadState("domcontentloaded");
-    await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
-
-    // Stub all dialogs by default; tests can still override as needed.
-    // For available `method` values to use with `stubMultipleDialogs`, see:
-    // https://www.electronjs.org/docs/latest/api/dialog
-    await stubAllDialogs(electronApp);
-
-    // on*, retain-on*
-    if (trace.toString().includes("on")) {
-      await electronApp.context().tracing.start({
-        screenshots: true,
-        snapshots: true,
-        sources: true,
-        title: `${process.platform} ${process.arch}: ${testInfo.title} (${testInfo.tags.join(", ")})`,
-      });
-    }
-
-    await use(electronApp);
+    const context = electronApp.context();
+    // always start tracing manually, but decide later whether to save it based on test result
+    await context.tracing.start({
+      screenshots: true,
+      snapshots: true,
+      sources: true,
+      title: `${process.platform} ${process.arch}: ${testInfo.title} (${testInfo.tags.join(", ")})`,
+    });
 
     try {
-      // shorten grace period for shutdown to avoid hanging the entire test run, but don't SIGKILL
-      // early because we might lose trace/screenshot/snapshot data
-      await Promise.race([
-        electronApp.close(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("electronApp.close() timeout after 5s")), 5_000),
-        ),
-      ]);
-    } catch {
-      console.warn("Timed out waiting for Electron to close, killing process...");
-      try {
-        electronApp.process().kill("SIGKILL");
-        console.info("Killed Electron process");
-      } catch (err) {
-        console.warn(`Error killing Electron process: ${err}`);
+      // wait for VS Code to be ready before trying to stub dialogs
+      const page = await electronApp.firstWindow();
+      await page.waitForLoadState("domcontentloaded");
+      await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
+
+      // Stub all dialogs by default; tests can still override as needed.
+      // For available `method` values to use with `stubMultipleDialogs`, see:
+      // https://www.electronjs.org/docs/latest/api/dialog
+      await stubAllDialogs(electronApp);
+
+      await use(electronApp);
+    } finally {
+      // only save and attach the trace for failed tests
+      if (testInfo.status !== testInfo.expectedStatus) {
+        const tracePath = path.join(testInfo.outputDir, "trace.zip");
+        await context.tracing.stop({ path: tracePath });
+        await testInfo.attach("trace", { path: tracePath, contentType: "application/zip" });
+      } else {
+        await context.tracing.stop();
       }
     }
+
+    await shutdownElectronApp(electronApp);
   },
 
   page: async ({ electronApp, testTempDir }, use, testInfo) => {
-    if (!electronApp) {
-      throw new Error("electronApp is null - failed to launch VS Code");
-    }
-
     const page = await electronApp.firstWindow();
-    if (!page) {
-      // shouldn't happen since we waited for the workbench above
-      throw new Error("Failed to get first window from VS Code");
-    }
 
     await globalBeforeEach(page, electronApp);
 
@@ -217,6 +197,7 @@ export const test = testBase.extend<VSCodeFixtures>({
   connectionItem: async (
     { electronApp, page, connectionType, directConnectionConfig, localConnectionConfig },
     use,
+    testInfo,
   ) => {
     if (!connectionType) {
       throw new Error(
@@ -234,6 +215,7 @@ export const test = testBase.extend<VSCodeFixtures>({
           electronApp,
           process.env.E2E_USERNAME!,
           process.env.E2E_PASSWORD!,
+          testInfo,
         );
         break;
       case ConnectionType.Direct:
@@ -411,5 +393,85 @@ async function saveVSCodeWindowLogs(testTempDir: string, testInfo: TestInfo): Pr
     });
   } catch (error) {
     console.error("Error zipping VS Code logs directory:", error);
+  }
+}
+
+/** Partial type for handles that may have an unref() method. */
+type PartialHandle = { unref?: () => void };
+
+/**
+ * Extended type for process with the (deprecated) `_getActiveHandles` method.
+ *
+ * NOTE: https://nodejs.org/api/deprecations.html#DEP0161 suggests using
+ * `process.getActiveResourcesInfo()`, but that only provides the names of active resources,
+ * not the actual handles to unref and allow the process to exit cleanly.
+ */
+type NodeProcessWithGetActiveHandles = NodeJS.Process & {
+  _getActiveHandles?: () => PartialHandle[];
+};
+
+/**
+ * Shut down the Electron app and clean up any lingering handles/requests so the Playwright worker
+ * can exit cleanly.
+ *
+ * With Playwright v1.50.0+, the behavior of `electronApp.close()` changes so it waits for the
+ * Electron process to exit, but if there are any lingering handles or requests, that may never
+ * happen, causing the test worker to hang and eventually time out.
+ *
+ * This function attempts to close the app gracefully, but if it doesn't exit within a timeout,
+ * it force kills the process group. It also unrefs any remaining active handles to allow the
+ * worker teardown to complete.
+ */
+async function shutdownElectronApp(electronApp: ElectronApplication): Promise<void> {
+  // 1) wait for close() to complete, but with a short timeout
+  let timeout: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([
+      electronApp.close(),
+      new Promise((resolve) => {
+        timeout = setTimeout(resolve, 1000);
+      }),
+    ]);
+  } catch {
+    // no need to deal with errors when we're trying to shut everything down here
+  } finally {
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+    }
+  }
+
+  // 2) check if the Electron process is still running, and force kill if so
+  try {
+    const proc = electronApp.process();
+    const pid = proc?.pid;
+    if (pid && pid > 1) {
+      process.kill(pid, 0); // status check
+      console.warn("Electron still running after close(), force killing process group...");
+      process.kill(-pid, 9); // SIGKILL entire process group (negative PID)
+    }
+  } catch {
+    // process no longer exists, no action needed
+  }
+
+  // 3) unref any remaining handles to allow the worker teardown to complete cleanly
+  try {
+    const handles = (process as NodeProcessWithGetActiveHandles)._getActiveHandles?.() || [];
+    let unrefdHandles = 0;
+    handles.forEach((handle: PartialHandle) => {
+      if (handle && typeof handle.unref === "function") {
+        try {
+          // see description for https://nodejs.org/api/process.html#processunrefmayberefable
+          handle.unref();
+          unrefdHandles++;
+        } catch {
+          // some handles may not support unref, not much we can do
+        }
+      }
+    });
+    if (handles.length) {
+      console.debug(`Unreferenced ${unrefdHandles}/${handles.length} handle(s)`);
+    }
+  } catch {
+    // ignore errors during unref since we can't do much about them
   }
 }
