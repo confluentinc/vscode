@@ -90,11 +90,14 @@ Abstract layer for loading resources from different connection types:
 
 ```
 ResourceLoader (abstract base at src/loaders/resourceLoader.ts)
-  ├── CCloudResourceLoader - Confluent Cloud via OAuth
-  ├── LocalResourceLoader - Local Docker-based Kafka/SR
-  └── DirectResourceLoader - Direct TCP connections
+  └── CachingResourceLoader (intermediate abstract at src/loaders/cachingResourceLoader.ts)
+      ├── CCloudResourceLoader - Confluent Cloud via OAuth
+      ├── LocalResourceLoader - Local Docker-based Kafka/SR
+      └── DirectResourceLoader - Direct TCP connections
 ```
 
+- `CachingResourceLoader` encapsulates caching of environments, Kafka clusters, schema registries, and topics
+- Generic types (EnvironmentType, KafkaClusterType, SchemaRegistryType) are defined at the CachingResourceLoader level
 - Registry pattern: `ResourceLoader.getInstance(connectionId)` for lookup
 - Constructed during extension activation in `constructResourceLoaderSingletons()`
 - Uses GraphQL to query sidecar for resource metadata
@@ -263,7 +266,7 @@ details and API calls.
 ### Prerequisites
 
 - Node.js 22.17.0 or later
-- Visual Studio Code 1.87.0 or later
+- Visual Studio Code 1.96.2 or later
 - Git 2.40.0 or later
 - Optional: NVM for Node version management
 - Optional: Global Gulp CLI (`npm install -g gulp`)
