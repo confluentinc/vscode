@@ -333,6 +333,11 @@ export function registerKafkaClusterCommands(): vscode.Disposable[] {
       "confluent.flinkdatabase.kafka-cluster.select",
       selectFlinkDatabaseViewKafkaClusterCommand,
     ),
+    // ...or as an inline action in the resources view with a different icon & command name
+    registerCommandWithLogging(
+      "confluent.flinkdatabase.select",
+      selectFlinkDatabaseViewKafkaClusterCommand,
+    ),
     registerCommandWithLogging("confluent.topics.create", createTopicCommand),
     registerCommandWithLogging("confluent.topics.delete", deleteTopicCommand),
     registerCommandWithLogging(
