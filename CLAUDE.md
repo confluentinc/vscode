@@ -69,8 +69,7 @@ discard. This enables automatic reconnection and proper resource management.
 
 ### View Provider Architecture
 
-Tree views extend `BaseViewProvider` or `ParentedBaseViewProvider` (which also extend
-`RefreshableTreeViewProvider`):
+Tree views extend `BaseViewProvider` or `ParentedBaseViewProvider`:
 
 - **BaseViewProvider** (`src/viewProviders/baseModels/base.ts`): Abstract base for all tree views
   with search/filter capability
@@ -138,12 +137,6 @@ generates `src/graphql/sidecarGraphQL.d.ts` (auto-generated, do not edit).
   HTML templates. VS Code color theme variables preferred and used when appropriate
 - `@vscode/webview-ui-toolkit` is a deprecated dependency - don't use it in new code; use UIKit
   styles on HTML elements instead.
-
-### Chat Participant (Copilot Integration)
-
-- Tools in `src/chat/tools/` extend `BaseLanguageModelTool<T>`
-- Handler in `src/chat/participant.ts` processes requests and streams responses
-- Auto-registered via `registerChatTools()` with tool chaining support
 
 ## Testing Strategy
 
@@ -266,49 +259,12 @@ npx gulp test
 Use VS Code's Run and Debug tab with configurations from `.vscode/` folder, or press F5 to launch
 Extension Development Host.
 
-### Testing Against Local Sidecar
-
-1. Clone [`ide-sidecar`](https://github.com/confluentinc/ide-sidecar) and build the native
-   executable:
-
-   ```bash
-   make clean mvn-package-native-no-tests
-   ```
-
-2. Copy the executable to this repository's `bin/` directory:
-
-   ```bash
-   cp ./target/ide-sidecar-0.*.0-runner /path/to/vscode/bin
-   ```
-
-3. Update `.versions/ide-sidecar.txt` to match the executable version
-
-4. If OpenAPI or GraphQL schemas changed, copy them and run `npx gulp apigen`
-
-5. Run `npx gulp ci` to verify everything builds correctly
-
 ## Code References
 
 When referencing code in comments or documentation, use the pattern `file_path:line_number` to help
 others navigate to the source location.
 
 Example: The connectToServer function marks clients as failed in `src/services/process.ts:712`.
-
-## PR Review Focus Areas
-
-- **Disposable Management**: Verify all event listeners are properly disposed via
-  `DisposableCollection`
-- **Type Safety**: Ensure no `any` types and all interfaces are properly typed
-- **Single Responsibility**: Check classes/functions maintain focused purposes
-- **Sidecar Pattern**: Confirm proper use of short-lived `SidecarHandle` instances
-- **Testing Coverage**: Validate new functionality includes appropriate unit/E2E tests
-- **Error Handling**: Ensure consistent use of `logError()` and `showErrorNotificationWithButtons()`
-- **Comment Preservation**: Never delete existing comments unless they contain errors - enhance
-  rather than remove
-- **OpenAPI Changes**: Check that spec changes include corresponding patches in
-  `src/clients/sidecar-openapi-specs/patches/`
-- **Extension Settings**: Verify settings follow the `ExtensionSetting<T>` pattern
-- **Webview Patterns**: Validate webview implementations use established template binding patterns
 
 ## Local Development with Claude Code
 
