@@ -27,10 +27,6 @@ import { openGeneratedProjectInCurrentWindow, verifyGeneratedProject } from "../
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 import { randomHexString } from "../utils/strings";
 
-const TEST_ENV_NAME = "main-test-env";
-const TEST_COMPUTE_POOL_NAME = "main-test-pool";
-const TEST_COMPUTE_POOL_ID = "lfcp-5ovn9q";
-
 /**
  * E2E test suite for testing the Project Scaffolding functionality.
  * {@see https://github.com/confluentinc/vscode/issues/1840}
@@ -77,17 +73,23 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
 
     test(`should apply Flink Table API In Java For Confluent Cloud template from Flink compute pool`, async ({
       page,
+      electronApp,
     }) => {
       const resourcesView = new ResourcesView(page);
-      // First, expand the CCloud env
+      // First, expand a CCloud env
       await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
-      await resourcesView.ccloudEnvironments.getByText(TEST_ENV_NAME).click();
-      // Then verify we can see the Flink compute pool
+      await resourcesView.ccloudEnvironments.first().click();
+      // Then verify we can see a Flink compute pool
       await expect(resourcesView.ccloudFlinkComputePools).not.toHaveCount(0);
       const computePool = new FlinkComputePoolItem(
         page,
-        resourcesView.ccloudFlinkComputePools.getByText(TEST_COMPUTE_POOL_NAME),
+        resourcesView.ccloudFlinkComputePools.first(),
       );
+
+      // Grant clipboard permission for reading the copied pool ID
+      await electronApp.context().grantPermissions(["clipboard-read"]);
+      await computePool.rightClickContextMenuAction("Copy ID");
+      const computePoolId = await page.evaluate(async () => await navigator.clipboard.readText());
 
       // If we start the generate project flow from the right-click context menu
       await computePool.generateProject();
@@ -116,7 +118,7 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
       await expect(configFileDocument.tab).toBeVisible();
       await expect(configFileDocument.editorContent).toBeVisible();
       await expect(configFileDocument.editorContent).toContainText(
-        `client.compute-pool-id=${TEST_COMPUTE_POOL_ID}`,
+        `client.compute-pool-id=${computePoolId}`,
       );
     });
   });
