@@ -72,13 +72,6 @@ npx gulp lint          # ESLint with auto-fix: gulp lint -f
   actions
 - **Messages**: Write actionable messages explaining what happened, why, and how to resolve
 
-### Chat Participant (Copilot)
-
-- **Registration**: Tools in `src/chat/tools/`, extend `BaseLanguageModelTool<T>`
-- **Handler**: `chatHandler()` in `src/chat/participant.ts` processes requests and streams responses
-- **Tools**: Auto-registered via `registerChatTools()`, support tool chaining and conversation
-  context
-
 ### Resource Management
 
 - **Loaders**: `ResourceLoader` pattern for async data fetching with caching
