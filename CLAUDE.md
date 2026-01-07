@@ -170,6 +170,8 @@ See
 - Full workflows in `tests/e2e/` with Page Object Model pattern
 - Located in separate directory from source code
 - Require Docker for local Kafka/SR instances
+- Do not include conditionals within E2E tests to manage tests dimensions, as it violates ESLint
+  rules. Instead, use test tags and filtering at runtime.
 
 ## Critical Requirements
 
