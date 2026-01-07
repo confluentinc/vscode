@@ -27,6 +27,7 @@ npx gulp test                         # Unit tests (Mocha/Sinon)
 npx gulp test -t "test name"          # Run specific test(s) by name
 npx gulp functional                   # Webview tests (Playwright) - same as functional tests
 npx gulp e2e                          # End-to-end tests (Playwright)
+npx gulp e2e -t "test name"           # Run specific end-to-end tests by name
 npx gulp test --coverage              # Generate Istanbul coverage reports
 ```
 
