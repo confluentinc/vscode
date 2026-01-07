@@ -1,9 +1,7 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this
-repository. See
-[Claude Code Best Practices](https://www.anthropic.com/engineering/claude-code-best-practices) for
-general agentic coding tips.
+repository.
 
 ## Project Overview
 
@@ -129,9 +127,6 @@ generates `src/graphql/sidecarGraphQL.d.ts` (auto-generated, do not edit).
 
 ### Webview Architecture
 
-See
-[Visual iteration workflow](https://www.anthropic.com/engineering/claude-code-best-practices#write-code-screenshot-result-iterate).
-
 - HTML templates in `src/webview/*.html` with template variables & functions like `this.${var}()`
   bound to the `ViewModel` in corresponding `.ts` files
 - Signal-based data binding for Template + ViewModel via custom template engine in
@@ -150,9 +145,6 @@ See
 - Auto-registered via `registerChatTools()` with tool chaining support
 
 ## Testing Strategy
-
-See
-[Test-driven development workflow](https://www.anthropic.com/engineering/claude-code-best-practices#write-tests-commit-code-iterate-commit).
 
 ### Unit Tests
 
@@ -218,36 +210,6 @@ class MyClass extends DisposableCollection {
 - **User-facing**: Use `showErrorNotificationWithButtons()` with "Open Logs" and "File Issue"
   actions
 - **Messages**: Write actionable error messages explaining what happened, why, and how to resolve
-
-## Important Guidelines
-
-### Auto-Generated Code
-
-- Never modify `src/clients/` directly - update OpenAPI specs and run `npx gulp apigen`
-- Never modify `src/graphql/sidecarGraphQL.d.ts` - update schema and run
-  `npx gql-tada generate output`
-- When modifying OpenAPI specs, commit both the spec changes AND a `.patch` file to
-  `src/clients/sidecar-openapi-specs/patches/` for reproducible generation
-
-### Sidecar Pattern
-
-- Use short-lived `SidecarHandle` instances
-- Support automatic reconnection by not holding handles long-term
-- Always `await getSidecar()` for each operation
-
-### Comment Preservation
-
-- **NEVER delete existing comments** unless they contain significant errors or gaps
-- Comments provide valuable context about business logic, architectural decisions, and edge cases
-- If code appears self-explanatory, comments may explain _why_ rather than _what_
-- When refactoring, enhance comments rather than removing them
-
-### Code Style
-
-- **Import statements**: Both `import type { }` and `import { }` are acceptable - TypeScript handles
-  them correctly
-- Don't nitpick style issues that don't affect functionality
-- Let automated tooling (ESLint, Prettier) handle formatting consistency
 
 ## Connection Types
 
@@ -353,9 +315,6 @@ When working with Claude Code during development:
 
 ### Code Generation Requests
 
-See
-[Be specific in your instructions](https://www.anthropic.com/engineering/claude-code-best-practices#be-specific-in-your-instructions).
-
 - Reference existing patterns from the codebase (ResourceLoader, ViewProvider, DisposableCollection)
 - Specify which connection type (CCloud, Direct, Local) when working with Kafka resources
 - Request examples that follow the established testing patterns (Mocha/Sinon for units, Playwright
@@ -364,9 +323,6 @@ See
 - Request TypeScript interfaces for complex data structures rather than inline types
 
 ### Refactoring Assistance
-
-See
-[Course correct early and often](https://www.anthropic.com/engineering/claude-code-best-practices#course-correct-early-and-often).
 
 - Preserve all existing comments when refactoring code
 - Maintain the established architectural patterns (sidecar communication, view providers, resource
