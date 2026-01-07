@@ -18,7 +18,7 @@ clusters within VS Code.
 ### View Provider Architecture
 
 - **Tree Views**: Resources, Topics, Schemas, Flink Statements, Flink Databases - all extend
-  `RefreshableTreeViewProvider`
+  `BaseViewProvider`
 - **Webviews**: Message viewer, connection forms, project scaffolding via HTML templates +
   TypeScript
 - **Pattern**: ViewProvider manages tree state, delegates to ResourceLoader subclasses for data
