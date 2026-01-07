@@ -18,7 +18,7 @@ clusters within VS Code.
 ### View Provider Architecture
 
 - **Tree Views**: Resources, Topics, Schemas, Flink Statements, Flink Databases - all extend
-  `RefreshableTreeViewProvider`
+  `BaseViewProvider`
 - **Webviews**: Message viewer, connection forms, project scaffolding via HTML templates +
   TypeScript
 - **Pattern**: ViewProvider manages tree state, delegates to ResourceLoader subclasses for data
@@ -43,6 +43,8 @@ npx gulp build -w       # Watch mode
 npx gulp test          # Unit tests (Mocha/Sinon)
 npx gulp test -t "test name here" # Run specific test(s) by name
 npx gulp e2e           # End-to-end tests (Playwright)
+npx gulp e2e -t "test pattern"  # Run specific e2e test(s) by pattern
+npx gulp e2e -x "test pattern"  # Exclude specific e2e test(s) by pattern
 npx gulp check         # TypeScript type checking
 npx gulp lint          # ESLint with auto-fix: gulp lint -f
 ```
@@ -69,13 +71,6 @@ npx gulp lint          # ESLint with auto-fix: gulp lint -f
 - **User-facing**: Use `showErrorNotificationWithButtons()` with "Open Logs" and "File Issue"
   actions
 - **Messages**: Write actionable messages explaining what happened, why, and how to resolve
-
-### Chat Participant (Copilot)
-
-- **Registration**: Tools in `src/chat/tools/`, extend `BaseLanguageModelTool<T>`
-- **Handler**: `chatHandler()` in `src/chat/participant.ts` processes requests and streams responses
-- **Tools**: Auto-registered via `registerChatTools()`, support tool chaining and conversation
-  context
 
 ### Resource Management
 
