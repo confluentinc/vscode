@@ -14,7 +14,7 @@ import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDa
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
 import { Tag } from "../tags";
 import { executeVSCodeCommand } from "../utils/commands";
-import { cleanupLargeFile, createLargeFile } from "../utils/flinkDatabase";
+import { createInvalidJarFile, createLargeFile } from "../utils/flinkDatabase";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 import { randomHexString } from "../utils/strings";
 
@@ -69,7 +69,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
         page,
         electronApp,
       }) => {
-        const artifactPath = path.join(
+        artifactPath = path.join(
           __dirname,
           "..",
           "..",
@@ -113,7 +113,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
         page,
         electronApp,
       }) => {
-        const artifactPath = createLargeFile({ sizeInMB: 150, directory: fixturesDir });
+        artifactPath = createLargeFile({ sizeInMB: 150, directory: fixturesDir });
         await setupTestEnvironment(entrypoint, page, electronApp);
         const artifactsView = new FlinkDatabaseView(page);
 
@@ -141,7 +141,40 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
           hasText: /Failed to upload/,
         });
         await expect(failureNotifications.first()).toBeVisible();
-        cleanupLargeFile(artifactPath);
+      });
+
+      test(`should fail to upload a jar file containing invalid content [${provider}/${region}] - ${testName}`, async ({
+        page,
+        electronApp,
+      }) => {
+        artifactPath = createInvalidJarFile(`invalid-artifact-${Date.now()}.jar`, fixturesDir);
+        await setupTestEnvironment(entrypoint, page, electronApp);
+        const artifactsView = new FlinkDatabaseView(page);
+
+        await artifactsView.ensureExpanded();
+        await artifactsView.loadArtifacts(entrypoint);
+        const initialArtifactCount = await artifactsView.artifacts.count();
+        try {
+          await startUploadFlow(
+            entrypoint,
+            page,
+            electronApp,
+            artifactsView,
+            provider,
+            region,
+            artifactPath,
+          );
+        } catch (error) {
+          // Swallow any errors from the upload flow since we expect failure
+        }
+
+        await expect(artifactsView.artifacts).toHaveCount(initialArtifactCount);
+
+        const notificationArea = new NotificationArea(page);
+        const failureNotifications: Locator = notificationArea.errorNotifications.filter({
+          hasText: /Failed to upload/,
+        });
+        await expect(failureNotifications.first()).toBeVisible();
       });
     }
   }
