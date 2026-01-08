@@ -28,7 +28,9 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   });
 
   test.afterEach(async () => {
-    if (artifactPath && existsSync(artifactPath)) {
+    // Only delete temporary test files, not permanent fixtures
+    const permanentFixture = path.join(fixturesDir, "udfs-simple.jar");
+    if (artifactPath && existsSync(artifactPath) && artifactPath !== permanentFixture) {
       unlinkSync(artifactPath);
     }
   });
