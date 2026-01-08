@@ -9,6 +9,12 @@ import { NotificationArea } from "../objects/notifications/NotificationArea";
  * If `notificationText` is provided, this will wait for an info notification with the specified
  * string/regex to appear and be dismissed before actually reading from the clipboard.
  *
+ * NOTE: This requires the `"clipboard-read"` permission to have been granted to the Electron
+ * app context beforehand, like:
+ * ```ts
+ * await electronApp.context().grantPermissions(["clipboard-read"]);
+ * ```
+ *
  * @param page The Playwright Page instance.
  * @param notificationText The string or RegExp to match in an info notification that appears, if
  * any. If `undefined`, this will immediately read and return the clipboard text.
