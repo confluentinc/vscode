@@ -884,15 +884,34 @@
             "default": true,
             "markdownDescription": "Show notifications when the extension is first installed or updated to a new version. Disabling this will prevent welcome messages and update notifications from appearing during extension activation.\n\n_NOTE: This does not affect error notifications or other extension functionality._"
           },
-          "confluent.resources.syncSchemasViewOnKafkaSelect": {
-            "type": "boolean",
-            "default": false,
-            "description": "Automatically focus the Schema Registry for the selected Kafka cluster's environment in the Schemas view."
-          },
-          "confluent.resources.syncFlinkDatabaseViewOnKafkaSelect": {
-            "type": "boolean",
-            "default": false,
-            "description": "Automatically focus the selected Kafka cluster as a Flink database in the Flink Database view (only for Flink-enabled clusters)."
+          "confluent.resources.syncOnKafkaClusterSelection": {
+            "type": "string",
+            "enum": [
+              "none",
+              "schemas",
+              "flinkDatabase",
+              "all"
+            ],
+            "enumItemLabels": [
+              "None",
+              "Schemas View",
+              "Flink Database View",
+              "All Views"
+            ],
+            "enumDescriptions": [
+              "Don't sync any views",
+              "Sync Schemas view only",
+              "Sync Flink Database view only",
+              "Sync all views"
+            ],
+            "markdownEnumDescriptions": [
+              "Don't automatically sync any views when selecting a Kafka cluster.",
+              "Automatically focus the **Schema Registry** for the selected Kafka cluster's environment in the Schemas view.",
+              "Automatically focus the selected Kafka cluster as a **Flink database** in the Flink Database view (only for Flink-enabled clusters).",
+              "Automatically sync **both Schemas and Flink Database views** when selecting a Kafka cluster."
+            ],
+            "default": "none",
+            "description": "Configure which views to automatically sync when selecting a Kafka cluster in the Resources view."
           }
         }
       },

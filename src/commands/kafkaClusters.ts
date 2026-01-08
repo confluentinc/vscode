@@ -4,10 +4,7 @@ import { fetchTopicAuthorizedOperations } from "../authz/topics";
 import type { TopicV3Api } from "../clients/kafkaRest";
 import { ResponseError } from "../clients/kafkaRest";
 import { flinkDatabaseViewResourceChanged, topicsViewResourceChanged } from "../emitters";
-import {
-  SYNC_FLINK_DATABASE_VIEW_ON_KAFKA_SELECT,
-  SYNC_SCHEMAS_VIEW_ON_KAFKA_SELECT,
-} from "../extensionSettings/constants";
+import { ClusterSelectSyncOption, SYNC_ON_KAFKA_SELECT } from "../extensionSettings/constants";
 import { ResourceLoader } from "../loaders/resourceLoader";
 import { Logger } from "../logging";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
@@ -43,7 +40,11 @@ export async function selectTopicsViewKafkaClusterCommand(cluster?: KafkaCluster
   void vscode.commands.executeCommand("confluent-topics.focus");
 
   // Optionally sync related views based on user settings
-  if (SYNC_SCHEMAS_VIEW_ON_KAFKA_SELECT.value) {
+  const shouldSyncSchemasView = [
+    ClusterSelectSyncOption.ALL,
+    ClusterSelectSyncOption.SCHEMAS,
+  ].includes(SYNC_ON_KAFKA_SELECT.value);
+  if (shouldSyncSchemasView) {
     const loader = ResourceLoader.getInstance(kafkaCluster.connectionId);
     const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(
       kafkaCluster.environmentId,
@@ -53,7 +54,11 @@ export async function selectTopicsViewKafkaClusterCommand(cluster?: KafkaCluster
     }
   }
 
-  if (SYNC_FLINK_DATABASE_VIEW_ON_KAFKA_SELECT.value) {
+  const shouldSyncFlinkDbView = [
+    ClusterSelectSyncOption.ALL,
+    ClusterSelectSyncOption.FLINK_DATABASE,
+  ].includes(SYNC_ON_KAFKA_SELECT.value);
+  if (shouldSyncFlinkDbView) {
     if (kafkaCluster instanceof CCloudKafkaCluster && kafkaCluster.isFlinkable()) {
       void selectFlinkDatabaseViewKafkaClusterCommand(kafkaCluster);
     }

@@ -41,14 +41,17 @@ export const SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS = new ExtensionSetting<boo
   "confluent.showNewVersionNotifications",
   SettingsSection.GENERAL,
 );
-/** Whether to automatically sync the Schemas view when selecting a Kafka cluster in the Resources view. */
-export const SYNC_SCHEMAS_VIEW_ON_KAFKA_SELECT = new ExtensionSetting<boolean>(
-  "confluent.resources.syncSchemasViewOnKafkaSelect",
-  SettingsSection.GENERAL,
-);
-/** Whether to automatically sync the Flink Database view when selecting a Kafka cluster in the Resources view. */
-export const SYNC_FLINK_DATABASE_VIEW_ON_KAFKA_SELECT = new ExtensionSetting<boolean>(
-  "confluent.resources.syncFlinkDatabaseViewOnKafkaSelect",
+
+/** Options for which view(s) to automatically sync when selecting a Kafka cluster in the Resources view, if any. */
+export enum ClusterSelectSyncOption {
+  NONE = "none",
+  SCHEMAS = "schemas",
+  FLINK_DATABASE = "flinkDatabase",
+  ALL = "all",
+}
+/** Views to automatically sync when selecting a Kafka cluster in the Resources view. */
+export const SYNC_ON_KAFKA_SELECT = new ExtensionSetting<ClusterSelectSyncOption>(
+  "confluent.resources.syncOnKafkaClusterSelection",
   SettingsSection.GENERAL,
 );
 
