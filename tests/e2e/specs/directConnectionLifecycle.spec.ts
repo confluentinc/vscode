@@ -258,10 +258,7 @@ test.describe("Direct Connection CRUD Lifecycle", { tag: [Tag.DirectConnectionCR
             const localKafka = await resourcesView.getKafkaCluster(ConnectionType.Local);
             await expect(localKafka).not.toHaveCount(0);
             const localKafkaItem = new KafkaClusterItem(page, localKafka.first());
-            await localKafkaItem.copyBootstrapServers();
-            const bootstrapServers = await page.evaluate(
-              async () => await navigator.clipboard.readText(),
-            );
+            const bootstrapServers = await localKafkaItem.copyBootstrapServers();
             kafkaConfig = {
               bootstrapServers,
               authType: SupportedAuthType.None,
@@ -280,8 +277,7 @@ test.describe("Direct Connection CRUD Lifecycle", { tag: [Tag.DirectConnectionCR
               page,
               localSchemaRegistry.first(),
             );
-            await localSchemaRegistryItem.copyUrl();
-            const uri = await page.evaluate(async () => await navigator.clipboard.readText());
+            const uri = await localSchemaRegistryItem.copyUrl();
             schemaRegistryConfig = {
               uri,
               authType: SupportedAuthType.None,
