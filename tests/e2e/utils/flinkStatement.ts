@@ -5,10 +5,7 @@ import path from "path";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
-
-const TEST_ENV_NAME = "main-test-env";
-const TEST_COMPUTE_POOL_NAME = "main-test-pool";
-const TEST_KAFKA_CLUSTER_NAME = "main-test-cluster";
+import { FlinkComputePoolItem } from "../objects/views/viewItems/FlinkComputePoolItem";
 
 /**
  * Submit a Flink statement to Confluent Cloud.
@@ -22,12 +19,18 @@ export async function submitFlinkStatement(
   electronApp: ElectronApplication,
 ) {
   const resourcesView = new ResourcesView(page);
-  // First, expand the CCloud env
+  // First, expand a CCloud env
   await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
-  await resourcesView.ccloudEnvironments.getByText(TEST_ENV_NAME).click();
-  // Then click on a Flink compute pool
+  await resourcesView.ccloudEnvironments.first().click();
+  // Then click on a Flink compute pool to open the Flink Statements view
   await expect(resourcesView.ccloudFlinkComputePools).not.toHaveCount(0);
-  await resourcesView.ccloudFlinkComputePools.getByText(TEST_COMPUTE_POOL_NAME).click();
+  const computePoolLocator = resourcesView.ccloudFlinkComputePools.first();
+  await computePoolLocator.click();
+
+  // Grant clipboard permission for reading the copied compute pool name
+  await electronApp.context().grantPermissions(["clipboard-read"]);
+  const computePoolItem = new FlinkComputePoolItem(page, computePoolLocator);
+  const computePoolName = await computePoolItem.copyName();
 
   // Open the fixture file
   await stubMultipleDialogs(electronApp, [
@@ -47,14 +50,13 @@ export async function submitFlinkStatement(
   // Select the Flink compute pool
   await codeLens.getByText("Set Compute Pool").click();
   const computePoolQuickpick = new Quickpick(page);
-  await computePoolQuickpick.selectItemByText(TEST_COMPUTE_POOL_NAME);
-  await expect(codeLens.getByText(TEST_COMPUTE_POOL_NAME)).toBeVisible();
+  await computePoolQuickpick.selectItemByText(computePoolName);
+  await expect(codeLens.getByText(computePoolName)).toBeVisible();
 
-  // Select the Kafka cluster
+  // Select a Kafka cluster (auto-filters to cloud provider/region matching the pool)
   await codeLens.getByText("Set Catalog & Database").click();
   const kafkaClusterQuickpick = new Quickpick(page);
-  await kafkaClusterQuickpick.selectItemByText(TEST_KAFKA_CLUSTER_NAME);
-  await expect(codeLens.getByText(TEST_KAFKA_CLUSTER_NAME)).toBeVisible();
+  await kafkaClusterQuickpick.items.first().click();
 
   // Submit the Flink statement
   await flinkSqlDoc.codeLensActions.getByText("Submit Statement").click();
