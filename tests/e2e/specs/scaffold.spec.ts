@@ -88,8 +88,7 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
 
       // Grant clipboard permission for reading the copied pool ID
       await electronApp.context().grantPermissions(["clipboard-read"]);
-      await computePool.rightClickContextMenuAction("Copy ID");
-      const computePoolId = await page.evaluate(async () => await navigator.clipboard.readText());
+      const computePoolId = await computePool.copyId();
 
       // If we start the generate project flow from the right-click context menu
       await computePool.generateProject();

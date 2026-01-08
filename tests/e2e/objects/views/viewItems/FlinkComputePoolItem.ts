@@ -1,3 +1,4 @@
+import { readFromClipboard } from "../../../utils/clipboard";
 import { ViewItem } from "./ViewItem";
 
 export class FlinkComputePoolItem extends ViewItem {
@@ -16,5 +17,17 @@ export class FlinkComputePoolItem extends ViewItem {
       throw new Error("Compute pool description not found");
     }
     return descriptionText.trim();
+  }
+
+  /** Copy the compute pool's name to the clipboard via the right-click context menu. */
+  async copyName(): Promise<string> {
+    await this.rightClickContextMenuAction("Copy Name");
+    return await readFromClipboard(this.page);
+  }
+
+  /** Copy the compute pool's ID to the clipboard via the right-click context menu. */
+  async copyId(): Promise<string> {
+    await this.rightClickContextMenuAction("Copy ID");
+    return await readFromClipboard(this.page);
   }
 }

@@ -5,7 +5,7 @@ import path from "path";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
-import { ViewItem } from "../objects/views/viewItems/ViewItem";
+import { FlinkComputePoolItem } from "../objects/views/viewItems/FlinkComputePoolItem";
 
 /**
  * Submit a Flink statement to Confluent Cloud.
@@ -29,9 +29,8 @@ export async function submitFlinkStatement(
 
   // Grant clipboard permission for reading the copied compute pool name
   await electronApp.context().grantPermissions(["clipboard-read"]);
-  const computePoolItem = new ViewItem(page, computePoolLocator);
-  await computePoolItem.rightClickContextMenuAction("Copy Name");
-  const computePoolName = await page.evaluate(async () => await navigator.clipboard.readText());
+  const computePoolItem = new FlinkComputePoolItem(page, computePoolLocator);
+  const computePoolName = await computePoolItem.copyName();
 
   // Open the fixture file
   await stubMultipleDialogs(electronApp, [
