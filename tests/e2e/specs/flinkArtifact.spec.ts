@@ -8,7 +8,6 @@ import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
 import { FileExplorer } from "../objects/FileExplorer";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
-import { InputBox } from "../objects/quickInputs/InputBox";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDatabaseView";
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
@@ -244,10 +243,9 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   ): Promise<string> {
     await artifactsView.clickUploadFromComputePool(provider, region);
     // Skip initiation since the upload modal was already opened via the compute pool context menu
-    const uploadedArtifactName = await uploadFlinkArtifact(
+    const uploadedArtifactName = await artifactsView.uploadFlinkArtifact(
       electronApp,
       filePath,
-      artifactsView,
       true,
     );
 
@@ -258,94 +256,12 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
   }
 });
 
-async function uploadFlinkArtifact(
-  electronApp: ElectronApplication,
-  filePath: string,
-  artifactsView: FlinkDatabaseView,
-  skipInitiation = false,
-): Promise<string> {
-  if (!skipInitiation) {
-    await artifactsView.initiateUpload();
-  }
-  await artifactsView.selectJarFile(electronApp, filePath);
-  const artifactName = await artifactsView.enterArtifactName(filePath);
-  await artifactsView.confirmUpload();
-  return artifactName;
-}
-
-/**
- * Upload a Flink artifact JAR file from the VS Code file explorer.
- * Navigates through the quickpick steps after the upload has been initiated from a JAR file.
- * @param artifactName - The name of the uploaded artifact (for verification)
- * @param artifactsView - The FlinkDatabaseView instance
- * @param providerRegion - Optional provider/region to match (e.g., "AWS/us-east-2")
- * @param  - If true, waits for success notification
- * @returns The name of the uploaded artifact
- */
-async function uploadFlinkArtifactFromJAR(
-  artifactName: string,
-  artifactsView: FlinkDatabaseView,
-  providerRegion?: string,
-): Promise<string> {
-  const page = artifactsView.page;
-
-  // Wait for the quickpick to appear
-  const quickpick = new Quickpick(page);
-  await expect(quickpick.locator).toBeVisible();
-
-  // Step 1: Select Environment
-  const environmentItem = quickpick.items.filter({ hasText: "1. Select Environment" }).first();
-  await expect(environmentItem).toBeVisible();
-  await environmentItem.click();
-
-  await expect(quickpick.locator).toBeVisible();
-  await expect(quickpick.items).not.toHaveCount(0);
-  await quickpick.items.first().click();
-
-  // Step 2: Select Cloud Provider & Region
-  await expect(quickpick.locator).toBeVisible();
-  const cloudRegionItem = quickpick.items
-    .filter({ hasText: "2. Select Cloud Provider & Region" })
-    .first();
-  await expect(cloudRegionItem).toBeVisible();
-  await cloudRegionItem.click();
-
-  await expect(quickpick.locator).toBeVisible();
-  await expect(quickpick.items).not.toHaveCount(0);
-  const provider: string = providerRegion ? providerRegion.split("/")[0] : "";
-  const providerRegionItem = providerRegion
-    ? quickpick.items.filter({ hasText: provider }).first()
-    : quickpick.items.first();
-  await providerRegionItem.click();
-
-  // Step 3 (JAR file) should already be completed
-  // since we initiated from a JAR file
-
-  // Step 4 (Artifact Name) needs to be completed or the old artifact name remains
-  const nameItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
-  await expect(nameItem).toBeVisible();
-  await nameItem.click();
-
-  const inputBox = new InputBox(page);
-  await expect(inputBox.locator).toBeVisible();
-  await inputBox.input.fill(artifactName);
-  await inputBox.confirm();
-
-  // Click "Upload Artifact" button
-  await expect(quickpick.locator).toBeVisible();
-  const uploadAction = quickpick.items.filter({ hasText: "Upload Artifact" }).first();
-  await expect(uploadAction).toBeVisible();
-  await uploadAction.click();
-
-  return artifactName;
-}
-
 async function completeArtifactUploadFlow(
   electronApp: ElectronApplication,
   artifactPath: string,
   artifactsView: FlinkDatabaseView,
 ): Promise<string> {
-  return await uploadFlinkArtifact(electronApp, artifactPath, artifactsView, false);
+  return await artifactsView.uploadFlinkArtifact(electronApp, artifactPath, false);
 }
 
 /**
@@ -372,7 +288,7 @@ async function completeArtifactUploadFlowForJAR(
   const fileItem = new ViewItem(page, jarFile);
   await fileItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
 
-  await uploadFlinkArtifactFromJAR(artifactName, artifactsView, `${provider}/${region}`);
+  await artifactsView.uploadFlinkArtifactFromJAR(artifactName, `${provider}/${region}`);
 
   // Switch back to the Confluent extension sidebar from the file explorer
   await openConfluentSidebar(page);

@@ -276,4 +276,85 @@ export class FlinkDatabaseView extends SearchableView {
     });
     await expect(successNotifications).not.toHaveCount(0);
   }
+
+  /**
+   * Upload a Flink artifact JAR file through the complete upload flow.
+   * Orchestrates all steps from initiation through confirmation.
+   * @param electronApp - The Electron application instance for file dialog handling
+   * @param filePath - The path to the JAR file to upload
+   * @param skipInitiation - If true, skips the initial upload action (default: false)
+   * @returns The name of the uploaded artifact
+   */
+  async uploadFlinkArtifact(
+    electronApp: ElectronApplication,
+    filePath: string,
+    skipInitiation = false,
+  ): Promise<string> {
+    if (!skipInitiation) {
+      await this.initiateUpload();
+    }
+    await this.selectJarFile(electronApp, filePath);
+    const artifactName = await this.enterArtifactName(filePath);
+    await this.confirmUpload();
+    return artifactName;
+  }
+
+  /**
+   * Upload a Flink artifact JAR file from the VS Code file explorer.
+   * Navigates through the quickpick steps after the upload has been initiated from a JAR file.
+   * @param artifactName - The name of the uploaded artifact (for verification)
+   * @param providerRegion - Optional provider/region to match (e.g., "AWS/us-east-2")
+   * @returns The name of the uploaded artifact
+   */
+  async uploadFlinkArtifactFromJAR(artifactName: string, providerRegion?: string): Promise<string> {
+    // Wait for the quickpick to appear
+    const quickpick = new Quickpick(this.page);
+    await expect(quickpick.locator).toBeVisible();
+
+    // Step 1: Select Environment
+    const environmentItem = quickpick.items.filter({ hasText: "1. Select Environment" }).first();
+    await expect(environmentItem).toBeVisible();
+    await environmentItem.click();
+
+    await expect(quickpick.locator).toBeVisible();
+    await expect(quickpick.items).not.toHaveCount(0);
+    await quickpick.items.first().click();
+
+    // Step 2: Select Cloud Provider & Region
+    await expect(quickpick.locator).toBeVisible();
+    const cloudRegionItem = quickpick.items
+      .filter({ hasText: "2. Select Cloud Provider & Region" })
+      .first();
+    await expect(cloudRegionItem).toBeVisible();
+    await cloudRegionItem.click();
+
+    await expect(quickpick.locator).toBeVisible();
+    await expect(quickpick.items).not.toHaveCount(0);
+    const provider: string = providerRegion ? providerRegion.split("/")[0] : "";
+    const providerRegionItem = providerRegion
+      ? quickpick.items.filter({ hasText: provider }).first()
+      : quickpick.items.first();
+    await providerRegionItem.click();
+
+    // Step 3 (JAR file) should already be completed
+    // since we initiated from a JAR file
+
+    // Step 4 (Artifact Name) needs to be completed or the old artifact name remains
+    const nameItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
+    await expect(nameItem).toBeVisible();
+    await nameItem.click();
+
+    const inputBox = new InputBox(this.page);
+    await expect(inputBox.locator).toBeVisible();
+    await inputBox.input.fill(artifactName);
+    await inputBox.confirm();
+
+    // Click "Upload Artifact" button
+    await expect(quickpick.locator).toBeVisible();
+    const uploadAction = quickpick.items.filter({ hasText: "Upload Artifact" }).first();
+    await expect(uploadAction).toBeVisible();
+    await uploadAction.click();
+
+    return artifactName;
+  }
 }
