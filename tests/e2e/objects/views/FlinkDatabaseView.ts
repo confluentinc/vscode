@@ -125,6 +125,28 @@ export class FlinkDatabaseView extends SearchableView {
   }
 
   /**
+   * Upload a Flink artifact JAR file through the complete upload flow.
+   * Orchestrates all steps from initiation through confirmation.
+   * @param electronApp - The Electron application instance for file dialog handling
+   * @param filePath - The path to the JAR file to upload
+   * @param skipInitiation - If true, skips the initial upload action (default: false)
+   * @returns The name of the uploaded artifact
+   */
+  async uploadFlinkArtifact(
+    electronApp: ElectronApplication,
+    filePath: string,
+    skipInitiation = false,
+  ): Promise<string> {
+    if (!skipInitiation) {
+      await this.initiateUpload();
+    }
+    await this.selectJarFile(electronApp, filePath);
+    const artifactName = await this.enterArtifactName(filePath);
+    await this.confirmUpload();
+    return artifactName;
+  }
+
+  /**
    * Click the "Select Kafka Cluster" nav action in the view title area, which will show a
    * quickpick with a list of Kafka cluster items.
    */
@@ -184,7 +206,7 @@ export class FlinkDatabaseView extends SearchableView {
   /**
    * Click the upload button on the Artifacts container to initiate the artifact upload flow.
    */
-  async initiateUpload(): Promise<void> {
+  private async initiateUpload(): Promise<void> {
     const container = this.artifactsContainer;
     const containerItem = new ViewItem(this.page, container);
     await containerItem.clickInlineAction("Upload Flink Artifact to Confluent Cloud");
@@ -199,7 +221,7 @@ export class FlinkDatabaseView extends SearchableView {
    * @param electronApp - The Electron application instance
    * @param filePath - The path to the JAR file
    */
-  public async selectJarFile(electronApp: ElectronApplication, filePath: string): Promise<void> {
+  private async selectJarFile(electronApp: ElectronApplication, filePath: string): Promise<void> {
     const quickpick = new Quickpick(this.page);
     const selectedJarFileItem = quickpick.items.filter({ hasText: "3. Select JAR File" }).first();
     await expect(selectedJarFileItem).toBeVisible();
@@ -216,7 +238,7 @@ export class FlinkDatabaseView extends SearchableView {
    * @param filePath - The path to the JAR file (used to generate the name)
    * @returns The full artifact name with random suffix
    */
-  async enterArtifactName(filePath: string): Promise<string> {
+  private async enterArtifactName(filePath: string): Promise<string> {
     const quickpick = new Quickpick(this.page);
     const artifactItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
     await expect(artifactItem).toBeVisible();
@@ -237,7 +259,7 @@ export class FlinkDatabaseView extends SearchableView {
   /**
    * Confirm the artifact upload by clicking the upload action.
    */
-  async confirmUpload(): Promise<void> {
+  private async confirmUpload(): Promise<void> {
     const quickpick = new Quickpick(this.page);
     const uploadAction = quickpick.items.filter({ hasText: "Upload Artifact" }).first();
     await expect(uploadAction).toBeVisible();
@@ -247,7 +269,7 @@ export class FlinkDatabaseView extends SearchableView {
   /**
    * Wait for the upload success notification to appear.
    */
-  async waitForUploadSuccess(): Promise<void> {
+  private async waitForUploadSuccess(): Promise<void> {
     const notificationArea = new NotificationArea(this.page);
     const successNotifications = notificationArea.infoNotifications.filter({
       hasText: "uploaded successfully",
@@ -275,28 +297,6 @@ export class FlinkDatabaseView extends SearchableView {
       hasText: "deleted successfully",
     });
     await expect(successNotifications).not.toHaveCount(0);
-  }
-
-  /**
-   * Upload a Flink artifact JAR file through the complete upload flow.
-   * Orchestrates all steps from initiation through confirmation.
-   * @param electronApp - The Electron application instance for file dialog handling
-   * @param filePath - The path to the JAR file to upload
-   * @param skipInitiation - If true, skips the initial upload action (default: false)
-   * @returns The name of the uploaded artifact
-   */
-  async uploadFlinkArtifact(
-    electronApp: ElectronApplication,
-    filePath: string,
-    skipInitiation = false,
-  ): Promise<string> {
-    if (!skipInitiation) {
-      await this.initiateUpload();
-    }
-    await this.selectJarFile(electronApp, filePath);
-    const artifactName = await this.enterArtifactName(filePath);
-    await this.confirmUpload();
-    return artifactName;
   }
 
   /**
