@@ -114,7 +114,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
         page,
         electronApp,
       }) => {
-        artifactPath = createLargeFile({ sizeInMB: 150, directory: fixturesDir });
+        artifactPath = createLargeFile({ directory: fixturesDir });
         await setupTestEnvironment(entrypoint, page, electronApp);
         const artifactsView = new FlinkDatabaseView(page);
 

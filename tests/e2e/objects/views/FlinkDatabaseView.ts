@@ -271,7 +271,7 @@ export class FlinkDatabaseView extends SearchableView {
   /**
    * Wait for the upload success notification to appear.
    */
-  private async waitForUploadSuccess(): Promise<void> {
+  async waitForUploadSuccess(): Promise<void> {
     const notificationArea = new NotificationArea(this.page);
     const successNotifications = notificationArea.infoNotifications.filter({
       hasText: "uploaded successfully",
