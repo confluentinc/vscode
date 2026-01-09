@@ -125,14 +125,13 @@ export class FlinkDatabaseView extends SearchableView {
   }
 
   /**
-   * Uploads a Flink artifact JAR file through a multi-step wizard flow.
-   * Handles file selection, artifact naming, and upload confirmation.
-   * @param electronApp - The Electron application instance for handling the system file dialog
-   * @param filePath - The absolute path to the JAR file to upload
-   * @param skipInitiation - If true, skips clicking the upload button (useful when upload
-   *                         is already initiated from another entry point like a compute pool
-   *                         or JAR file context menu). Defaults to false.
-   * @returns The auto-generated artifact name (base filename with random 6-character suffix)
+   * Upload a Flink artifact JAR file to Confluent Cloud.
+   * Clicks the upload button in the view title area, navigates through the quickpick steps,
+   * and selects the specified JAR file.
+   * @param electronApp - The Electron application instance
+   * @param filePath - The path to the JAR file to upload
+   * @param skipInitiation - If true, skips clicking the upload button (assumes quickpick is already open)
+   * @returns The name of the uploaded artifact
    */
   async uploadFlinkArtifact(
     electronApp: ElectronApplication,
