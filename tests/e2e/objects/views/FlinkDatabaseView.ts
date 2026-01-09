@@ -125,20 +125,17 @@ export class FlinkDatabaseView extends SearchableView {
   }
 
   /**
-   * Upload a Flink artifact JAR file to Confluent Cloud.
-   * Clicks the upload button in the view title area, navigates through the quickpick steps,
-   * and selects the specified JAR file.
-   * @param electronApp - The Electron application instance
+   * Upload a Flink artifact JAR file through the complete upload flow.
+   * Orchestrates all steps from initiation through confirmation.
+   * @param electronApp - The Electron application instance for file dialog handling
    * @param filePath - The path to the JAR file to upload
-   * @param skipInitiation - If true, skips clicking the upload button (assumes quickpick is already open)
-   * @param expectSuccess - If true, waits for success notification; if false, caller handles error notification
+   * @param skipInitiation - If true, skips the initial upload action (default: false)
    * @returns The name of the uploaded artifact
    */
   async uploadFlinkArtifact(
     electronApp: ElectronApplication,
     filePath: string,
     skipInitiation = false,
-    expectSuccess = true,
   ): Promise<string> {
     if (!skipInitiation) {
       await this.initiateUpload();
@@ -146,9 +143,6 @@ export class FlinkDatabaseView extends SearchableView {
     await this.selectJarFile(electronApp, filePath);
     const artifactName = await this.enterArtifactName(filePath);
     await this.confirmUpload();
-    if (expectSuccess) {
-      await this.waitForUploadSuccess();
-    }
     return artifactName;
   }
 
@@ -310,14 +304,9 @@ export class FlinkDatabaseView extends SearchableView {
    * Navigates through the quickpick steps after the upload has been initiated from a JAR file.
    * @param artifactName - The name of the uploaded artifact (for verification)
    * @param providerRegion - Optional provider/region to match (e.g., "AWS/us-east-2")
-   * @param expectSuccess - If true, waits for success notification
    * @returns The name of the uploaded artifact
    */
-  async uploadFlinkArtifactFromJAR(
-    artifactName: string,
-    providerRegion?: string,
-    expectSuccess = true,
-  ): Promise<string> {
+  async uploadFlinkArtifactFromJAR(artifactName: string, providerRegion?: string): Promise<string> {
     // Wait for the quickpick to appear
     const quickpick = new Quickpick(this.page);
     await expect(quickpick.locator).toBeVisible();
@@ -365,15 +354,6 @@ export class FlinkDatabaseView extends SearchableView {
     const uploadAction = quickpick.items.filter({ hasText: "Upload Artifact" }).first();
     await expect(uploadAction).toBeVisible();
     await uploadAction.click();
-
-    if (expectSuccess) {
-      // Wait for upload success notification
-      const notificationArea = new NotificationArea(this.page);
-      const successNotifications = notificationArea.infoNotifications.filter({
-        hasText: "uploaded successfully",
-      });
-      await expect(successNotifications.first()).toBeVisible();
-    }
 
     return artifactName;
   }
