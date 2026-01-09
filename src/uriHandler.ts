@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ccloudAuthCallback, projectScaffoldUri } from "./emitters";
+import { ccloudAuthCallback, flinkWorkspaceUri, projectScaffoldUri } from "./emitters";
 import { Logger } from "./logging";
 
 const logger = new Logger("uriHandler");
@@ -36,6 +36,9 @@ export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements 
         break;
       case "/projectScaffold":
         projectScaffoldUri.fire(uri);
+        break;
+      case "/flinkWorkspace":
+        flinkWorkspaceUri.fire(uri);
         break;
     }
   }
