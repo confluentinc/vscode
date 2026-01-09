@@ -149,14 +149,18 @@ export const test = testBase.extend<VSCodeFixtures>({
 
       await use(electronApp);
     } finally {
+      // TEMPORARY:
+      const tracePath = path.join(testInfo.outputDir, "trace.zip");
+      await context.tracing.stop({ path: tracePath });
+      await testInfo.attach("trace", { path: tracePath, contentType: "application/zip" });
       // only save and attach the trace for failed tests
-      if (testInfo.status !== testInfo.expectedStatus) {
-        const tracePath = path.join(testInfo.outputDir, "trace.zip");
-        await context.tracing.stop({ path: tracePath });
-        await testInfo.attach("trace", { path: tracePath, contentType: "application/zip" });
-      } else {
-        await context.tracing.stop();
-      }
+      // if (testInfo.status !== testInfo.expectedStatus) {
+      //   const tracePath = path.join(testInfo.outputDir, "trace.zip");
+      //   await context.tracing.stop({ path: tracePath });
+      //   await testInfo.attach("trace", { path: tracePath, contentType: "application/zip" });
+      // } else {
+      //   await context.tracing.stop();
+      // }
     }
 
     await shutdownElectronApp(electronApp);
