@@ -77,7 +77,6 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
               const topicsView = new TopicsView(page);
               // click a Kafka cluster from the Resources view to open and populate the Topics view
               await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
-              let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
 
               // if we want to use a schema, create a new subject with an initial schema version to match
               // the topic we're using
@@ -99,9 +98,6 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
                 // (which, in the background, will associate the topic with the subject we created,
                 // which then informs the schema key/value/etc quickpick during the produce flow)
                 await topicsView.clickRefresh();
-                targetTopic = topicsView.topicsWithSchemas.filter({
-                  hasText: topicName,
-                });
               }
 
               topicItem = await topicsView.getTopicItem(topicName);
