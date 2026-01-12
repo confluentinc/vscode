@@ -42,6 +42,19 @@ export const SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS = new ExtensionSetting<boo
   SettingsSection.GENERAL,
 );
 
+/** Options for which view(s) to automatically sync when selecting a Kafka cluster in the Resources view, if any. */
+export enum ClusterSelectSyncOption {
+  NONE = "none",
+  SCHEMAS = "schemas",
+  FLINK_DATABASE = "flinkDatabase",
+  ALL = "all",
+}
+/** Views to automatically sync when selecting a Kafka cluster in the Resources view. */
+export const SYNC_ON_KAFKA_SELECT = new ExtensionSetting<ClusterSelectSyncOption>(
+  "confluent.resources.syncOnKafkaClusterSelection",
+  SettingsSection.GENERAL,
+);
+
 // ===== CCLOUD CONFIGS =====
 
 /**
