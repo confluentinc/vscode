@@ -376,7 +376,7 @@ export class SidecarHandle {
     return new FlinkArtifactsArtifactV1Api(config);
   }
 
-  /** Create and return a  (Flink Workspaces REST OpenAPI spec) {@link WorkspacesWsV1Api} client instance */
+  /** Create and return a (Flink Workspaces REST OpenAPI spec) {@link WorkspacesWsV1Api} client instance */
   public getFlinkWorkspacesWsV1Api(): WorkspacesWsV1Api {
     const config = new FlinkWorkspacesConfiguration({
       ...this.defaultClientConfigParams,
