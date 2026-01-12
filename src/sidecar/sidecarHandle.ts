@@ -47,6 +47,10 @@ import {
   VersionResourceApi,
 } from "../clients/sidecar";
 
+import {
+  Configuration as FlinkWorkspacesConfiguration,
+  WorkspacesWsV1Api,
+} from "../clients/flinkWorkspaces";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
 import type { ConnectionId, IEnvProviderRegion } from "../models/resource";
@@ -363,7 +367,7 @@ export class SidecarHandle {
     return new SubjectsV1Api(config);
   }
 
-  /** Create and returns a (Flink Artifacts REST OpenAPI spec) {@link FlinkArtifactsArtifactV1Api} client instance */
+  /** Create and return a (Flink Artifacts REST OpenAPI spec) {@link FlinkArtifactsArtifactV1Api} client instance */
   public getFlinkArtifactsApi(providerRegion: IEnvProviderRegion): FlinkArtifactsArtifactV1Api {
     const config = new FlinkArtifactsConfiguration({
       ...this.defaultClientConfigParams,
@@ -372,6 +376,17 @@ export class SidecarHandle {
     return new FlinkArtifactsArtifactV1Api(config);
   }
 
+  /** Create and return a (Flink Workspaces REST OpenAPI spec) {@link WorkspacesWsV1Api} client instance */
+  public getFlinkWorkspacesWsV1Api(): WorkspacesWsV1Api {
+    const config = new FlinkWorkspacesConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: {
+        ...this.defaultClientConfigParams.headers,
+        [SIDECAR_CONNECTION_ID_HEADER]: CCLOUD_CONNECTION_ID,
+      },
+    });
+    return new WorkspacesWsV1Api(config);
+  }
   /** Create and returns a (Regions API OpenAPI spec) {@link RegionsFcpmV2Api} client instance */
   public getRegionsFcpmV2Api(): RegionsFcpmV2Api {
     const config = new FlinkComputePoolsConfiguration({
