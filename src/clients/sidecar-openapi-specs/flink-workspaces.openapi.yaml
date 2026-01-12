@@ -1,0 +1,1276 @@
+---
+openapi: 3.0.0
+info:
+  title: Workspaces API v1
+  description: The Workspace API for Flink
+  version: 0.0.1
+  contact:
+    name: Stream Designer
+    url: https://confluent.slack.com/app_redirect?channel=streaming-designer-eng
+    email: stream-designer@confluent.io
+  x-api-id: c07fb3e8-a36f-406b-9798-e7b97e2abfba
+  x-api-group: ws/v1
+  x-audience: component-internal
+  x-tag-group: Workspace API (%s)
+
+servers:
+  - url: https://flink.region.provider.confluent.cloud
+    description: Regional Flink Gateway
+
+paths:
+  # Workspace API
+  /ws/v1/organizations/{organization_id}/environments/{environment_id}/workspaces:
+    x-lifecycle-stage: General Availability
+    x-self-access: true
+    x-request-access-name: Workspaces API v1
+    get:
+      x-lifecycle-stage: General Availability
+      x-self-access: true
+      x-request-access-name: Workspaces API v1
+      operationId: listWsV1Workspaces
+      summary: List of Workspaces
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+
+        Retrieve a sorted, filtered, paginated list of workspaces.
+
+        By default, only workspaces created by the caller will be returned. See the `all` query parameter for more details.
+      parameters:
+        - name: organization_id
+          in: path
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - name: environment_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: spec.compute_pool
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/SearchFilter"
+          example: lfcp-00000
+          description: Filter the results by exact match for spec.compute_pool.id.
+        - name: all
+          in: query
+          required: false
+          schema:
+            default: false
+            type: boolean
+          description:
+            If true **and** the requester has either OrgAdmin or EnvAdmin roles, then return all
+            workspaces in the environment. Otherwise return only those created by the caller
+            (default).
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+            x-max-page-items: 500
+          description: A pagination size for collection requests.
+        - name: page_token
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+          description: An opaque pagination token for collection requests.
+      tags:
+        - Workspaces (ws/v1)
+      security:
+        - cloud-api-key: []
+      responses:
+        "200":
+          description: Workspaces.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ws.v1.WorkspaceList"
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthenticatedError"
+        "403":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/DefaultSystemError"
+    post:
+      x-lifecycle-stage: General Availability
+      x-self-access: true
+      x-request-access-name: Workspace API v1
+      operationId: createWsV1Workspace
+      summary: Create a Workspace
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+        Make a request to create a workspace.
+      parameters:
+        - name: organization_id
+          in: path
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - name: environment_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+      tags:
+        - Workspaces (ws/v1)
+      security:
+        - cloud-api-key: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ws.v1.Workspace"
+                - type: object
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      description:
+                        The user-supplied name for the workspace, which must be unique across the
+                        environment and region.
+                      example: my-workspace
+                      maxLength: 253
+                      pattern: "[a-z0-9]([-.a-z0-9]{0,251}[a-z0-9])?"
+                    spec:
+                      type: object
+                      properties:
+                        display_name:
+                          type: string
+                          description:
+                            A human-readable display name for the workspace, or generated if absent.
+                          maxLength: 255
+                        service_account:
+                          nullable: true
+                          description:
+                            The service account that clients can use to execute the workspace's code
+                            blocks.
+                          example:
+                            id: sa-00000
+                        compute_pool:
+                          nullable: true
+                          description:
+                            The compute pool in the same environment that clients can use to execute
+                            the workspace's code blocks.
+                          example:
+                            id: lfcp-00000
+                        blocks:
+                          description: The ordered blocks for the new workspace
+                        properties:
+                          description:
+                            The key-value pair properties for the new workspace. All key-value pairs
+                            are optional, and clients choose whether and how to use these key-value
+                            pairs.
+      responses:
+        "201":
+          description: A Workspace is being created.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+            Location:
+              schema:
+                type: string
+                format: uri
+                example: https://flink.region.provider.confluent.cloud/ws/v1/organizations/{organization_id}/environments/{environment_id}/workspaces/{name}
+              description: Workspace resource URI
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ws.v1.Workspace"
+                  - type: object
+                    required:
+                      - api_version
+                      - kind
+                      - metadata
+                      - org
+                      - environment
+                      - name
+                      - spec
+                  - type: object
+                    properties:
+                      metadata:
+                        type: object
+                        required:
+                          - self
+                          - uid
+                      spec:
+                        type: object
+                        required:
+                          - display_name
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthenticatedError"
+        "403":
+          $ref: "#/components/responses/UnauthorizedError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/DefaultSystemError"
+  /ws/v1/organizations/{organization_id}/environments/{environment_id}/workspaces/{name}:
+    x-lifecycle-stage: General Availability
+    x-self-access: true
+    x-request-access-name: Workspace API v1
+    get:
+      x-lifecycle-stage: General Availability
+      x-self-access: true
+      x-request-access-name: Workspace API v1
+      operationId: getWsV1Workspace
+      summary: Read a Workspace
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+        Make a request to read a workspace.
+      parameters:
+        - name: organization_id
+          in: path
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - name: environment_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The workspace name that is unique across the environment and region.
+      tags:
+        - Workspaces (ws/v1)
+      security:
+        - cloud-api-key: []
+      responses:
+        "200":
+          description: The Workspace.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ws.v1.Workspace"
+                  - type: object
+                    required:
+                      - api_version
+                      - kind
+                      - metadata
+                      - org
+                      - environment
+                      - name
+                      - spec
+                  - type: object
+                    properties:
+                      metadata:
+                        type: object
+                        required:
+                          - self
+                          - uid
+                      spec:
+                        type: object
+                        required:
+                          - display_name
+                        properties:
+                          display_name:
+                            type: string
+                            example: My first workspace
+                            description: A human-readable display name for the workspace.
+                          compute_pool:
+                            example:
+                              id: lfcp-00000
+                              environment: env-12345
+                              related: https://flink.region.provider.confluent.cloud/fcpm/v2/compute-pools/lfcp-00000
+                              resource_name: crn://confluent.cloud/organization=9bb441c4-edef-46ac-8a41-c49e44a3fd9a/environment=env-12345/flink-region=aws.us-east-2/compute-pool=lfcp-00000
+                          service_account:
+                            example:
+                              id: sa-4voj5e
+                              related: https://api.confluent.cloud/iam/v2/service-accounts/sa-4voj5e
+                              resource_name: crn://confluent.cloud/organization=9bb441c4-edef-46ac-8a41-c49e44a3fd9a/service-account=sa-4voj5e
+                          blocks:
+                            type: array
+                            description: The ordered blocks for the workspace
+                            items:
+                              $ref: "#/components/schemas/ws.v1.Block"
+                          properties:
+                            type: object
+                            description: A map (key-value pairs) of workspace-level properties.
+                            additionalProperties:
+                              type: string
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthenticatedError"
+        "403":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/DefaultSystemError"
+    put:
+      x-lifecycle-stage: General Availability
+      x-self-access: true
+      x-request-access-name: Workspace API v1
+      operationId: putWsV1Workspace
+      summary: Update a Workspace
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+        Make a request to update a workspace.
+
+        The request will fail with a 409 Conflict error if the Workspace has changed since it was fetched.
+        In this case, do a GET, reapply the modifications, and try the update again.
+      parameters:
+        - name: organization_id
+          in: path
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - name: environment_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The workspace name that is unique across the environment and region.
+      tags:
+        - Workspaces (ws/v1)
+      security:
+        - cloud-api-key: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ws.v1.Workspace"
+                - type: object
+                  required:
+                    - metadata
+                  properties:
+                    name:
+                      type: string
+                      maxLength: 253
+                      description:
+                        The identifier for the workspace, which may not be changed and any provided
+                        value is ignored.
+                    spec:
+                      type: object
+                    metadata:
+                      type: object
+                      readOnly: false
+                      required:
+                        - resource_version
+                      properties:
+                        resource_version:
+                          readOnly: false
+                          description:
+                            The system-generated opaque version from the workspace representation
+                            most recent read by the client before making the update request. It is
+                            used for optimistic locking and client-side detection of changes. A
+                            client includes this version to instruct the update to fail if the
+                            workspace has since been modified (i.e., the workspace resource has a
+                            different version). If the update fails, the client should re-read the
+                            workspace, apply the changes to the new representation while keeping the
+                            newer the resource version, and submit another update request.
+                - type: object
+                  properties:
+                    spec:
+                      type: object
+                      required:
+                        - display_name
+                      properties:
+                        compute_pool:
+                          nullable: true
+                          example:
+                            id: lfcp-00000
+                        service_account:
+                          nullable: true
+                          example:
+                            id: sa-00000
+      responses:
+        "200":
+          description: The updated workspace.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ws.v1.Workspace"
+                  - type: object
+                    required:
+                      - api_version
+                      - kind
+                      - metadata
+                      - org
+                      - environment
+                      - name
+                      - spec
+                  - type: object
+                    properties:
+                      metadata:
+                        type: object
+                        required:
+                          - self
+                          - uid
+                      spec:
+                        type: object
+                        required:
+                          - display_name
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthenticatedError"
+        "403":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/DefaultSystemError"
+    delete:
+      x-lifecycle-stage: General Availability
+      x-self-access: true
+      x-request-access-name: Workspace API v1
+      operationId: deleteWsV1Workspace
+      summary: Delete a Workspace
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+        Make a request to delete a workspace.
+      parameters:
+        - name: organization_id
+          in: path
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - name: environment_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The workspace name that is unique across the environment and region.
+      tags:
+        - Workspaces (ws/v1)
+      security:
+        - cloud-api-key: []
+      responses:
+        "202":
+          description: A Workspace is being deleted.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthenticatedError"
+        "403":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/DefaultSystemError"
+    patch:
+      x-lifecycle-stage: General Availability
+      x-self-access: true
+      x-request-access-name: Workspace API v1
+      operationId: patchWsV1Workspace
+      summary: Update a Workspace with patch request
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+        Make a request to patch a workspace.
+      parameters:
+        - name: organization_id
+          in: path
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - name: environment_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The workspace name that is unique across the environment and region.
+      tags:
+        - Workspaces (ws/v1)
+      security:
+        - cloud-api-key: []
+      requestBody:
+        content:
+          application/json-patch+json:
+            schema:
+              $ref: "#/components/schemas/PatchRequest"
+      responses:
+        "200":
+          description: The updated workspace.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ws.v1.Workspace"
+                  - type: object
+                    required:
+                      - api_version
+                      - kind
+                      - metadata
+                      - org
+                      - environment
+                      - name
+                      - spec
+                  - type: object
+                    properties:
+                      metadata:
+                        type: object
+                        required:
+                          - self
+                          - uid
+                      spec:
+                        type: object
+                        required:
+                          - display_name
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthenticatedError"
+        "403":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/DefaultSystemError"
+
+components:
+  schemas:
+    ws.v1.Workspace:
+      type: object
+      description: |-
+        A Workspace represents a named and ordered collection of Flink SQL code blocks.
+        The API allows you to list, create, read, update and delete your workspaces.
+
+
+        Related guide: [Confluent Flink Workspace API](https://docs.confluent.io/cloud/current/flink/workspaces.html).
+
+        ## The Workspaces Model
+        <SchemaDefinition schemaRef="#/components/schemas/ws.v1.Workspace" />
+
+        ## Quotas and Limits
+        This resource is subject to the following quotas:
+
+        | Quota | Description |
+        | --- | --- |
+        | `ws.max_workspaces.per_env` | Maximum number of workspaces in a region of a Confluent Cloud environment. |
+      properties:
+        api_version:
+          type: string
+          enum:
+            - ws/v1
+          description: APIVersion defines the schema version of this representation of a resource.
+          example: ws/v1
+          readOnly: true
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - Workspace
+          readOnly: true
+        metadata:
+          allOf:
+            - $ref: "#/components/schemas/ObjectMeta"
+            - properties:
+                self:
+                  example: https://flink.region.provider.confluent.cloud/ws/v1/organization/9bb441c4-edef-46ac-8a41-c49e44a3fd9a/environments/env-12345/workspaces/my-workspace
+        organization_id:
+          type: string
+          description: The organization in which the workspace exists.
+          example: 9bb441c4-edef-46ac-8a41-c49e44a3fd9a
+          readOnly: true
+        environment_id:
+          type: string
+          description: The environment in which the workspace exists.
+          example: env-12345
+          readOnly: true
+        name:
+          type: string
+          maxLength: 253
+          description: The workspace name that is unique across the environment and region.
+          example: my-workspace
+        spec:
+          $ref: "#/components/schemas/ws.v1.WorkspaceSpec"
+        status:
+          $ref: "#/components/schemas/ws.v1.WorkspaceStatus"
+
+    MultipleSearchFilter:
+      description: Filter a collection by a string search for one or more values
+      type: array
+      items:
+        type: string
+    SearchFilter:
+      description: Filter a collection by a string search
+      type: string
+
+    ws.v1.WorkspaceList:
+      type: object
+      description: |-
+        `Workspace` represents a named resource with an ordered collection of SQL code blocks.
+        The API allows you to list, create, read, update and delete your workspaces.
+        ## The Workspace Model
+        <SchemaDefinition schemaRef="#/components/schemas/ws.v1.Workspace" />
+      required:
+        - api_version
+        - kind
+        - metadata
+        - data
+      properties:
+        api_version:
+          type: string
+          enum:
+            - ws/v1
+          description: APIVersion defines the schema version of this representation of a resource.
+          example: ws/v1
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - WorkspaceList
+        metadata:
+          allOf:
+            - $ref: "#/components/schemas/ListMeta"
+        data:
+          type: array
+          description: The array of workspace resource.
+          items:
+            allOf:
+              - $ref: "#/components/schemas/ws.v1.Workspace"
+              - type: object
+                required:
+                  - metadata
+                  - org
+                  - environment
+                  - name
+                  - spec
+                properties:
+                  metadata:
+                    type: object
+                    required:
+                      - self
+                      - uid
+                  spec:
+                    type: object
+                    required:
+                      - display_name
+          uniqueItems: true
+
+    ws.v1.WorkspaceSpec:
+      type: object
+      description: The specification for the Workspace
+      properties:
+        display_name:
+          type: string
+          example: My first workspace
+          description: A human-readable display name for the workspace.
+        compute_pool:
+          allOf:
+            - $ref: "#/components/schemas/EnvScopedObjectReference"
+        service_account:
+          allOf:
+            - $ref: "#/components/schemas/GlobalObjectReference"
+        blocks:
+          type: array
+          description: The ordered blocks for the new workspace
+          items:
+            allOf:
+              - $ref: "#/components/schemas/ws.v1.Block"
+              - type: object
+                required:
+                  - type
+          minItems: 0
+          maxItems: 20
+        properties:
+          type: object
+          example:
+            sql-catalog: inventory
+            sql-database: customers
+          description:
+            A map (key-value pairs) of workspace-level properties. All key-value pairs are optional,
+            and clients choose whether and how to use these key-value pairs.
+          additionalProperties:
+            type: string
+          maximum: 32
+      x-enable-listmeta: true
+      x-enable-objectmeta: true
+
+    ws.v1.WorkspaceStatus:
+      type: object
+      description: The status of the Workspace
+      properties:
+        network_kind:
+          type: string
+          x-extensible-enum: [PUBLIC, PRIVATE]
+          description: |
+            The networking type used by the Workspace:
+
+            PUBLIC: Workspace is using public networking;
+
+            PRIVATE: Workspace is using private networking;
+          example: PUBLIC
+          readOnly: true
+      readOnly: true
+
+    ObjectMeta:
+      description: The metadata of the workspace.
+      required:
+        - self
+      properties:
+        self:
+          description:
+            Self is a Uniform Resource Locator (URL) at which an object can be addressed. This URL
+            encodes the service location, API version, and other particulars necessary to locate the
+            resource at a point in time
+          type: string
+          format: uri
+          example: https://flink.us-west1.aws.confluent.cloud/ws/v1/organizations/9bb441c4-edef-46ac-8a41-c49e44a3fd9a/environments/env-12345/workspaces/my-workspace
+          readOnly: true
+        uid:
+          type: string
+          format: uuid
+          example: 8241081c-a167-44ed-a920-7ec8f8473ee2
+          description:
+            The system-generated identifier of the resource that is unique across space and time.
+          readOnly: true
+        resource_version:
+          type: string
+          example: YOp5OKKb6w6sm3IfizBj
+          description:
+            The system-generated opaque version used for optimistic locking and client-side
+            detection of changes. A client should include this version in an update request,
+            instructing the update to fail if the workspace has since been modified (i.e., the
+            workspace resource has a different version).
+          readOnly: true
+        created_by:
+          type: string
+          example: u-abc123
+          description:
+            The system-generated and managed principal ID of the user who created the workspace.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          example: "1996-03-19T01:02:03-04:05"
+          description:
+            The date and time at which this object was created. It is represented in RFC3339 format
+            and is in UTC.
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          example: "2023-03-31T00:00:00-00:00"
+          description:
+            The date and time at which this object was last updated. It is represented in RFC3339
+            format and is in UTC.
+          readOnly: true
+      readOnly: true
+
+    ListMeta:
+      type: object
+      description: ListMeta describes metadata that resource collections may have
+      properties:
+        self:
+          description:
+            Self is a Uniform Resource Locator (URL) at which an object can be addressed. This URL
+            encodes the service location, API version, and other particulars necessary to locate the
+            resource at a point in time
+          type: string
+          example: https://flink.us-west1.aws.confluent.cloud/ws/v1/organizations/9bb441c4-edef-46ac-8a41-c49e44a3fd9a/environments/env-12345/workspaces
+        next:
+          description: A URL that can be followed to get the next batch of results.
+          type: string
+          example: https://flink.us-west1.aws.confluent.cloud/ws/v1/organizations/9bb441c4-edef-46ac-8a41-c49e44a3fd9a/environments/env-12345/workspaces?page_token=UvmDWOB1iwfAIBPj6EYb
+
+    ws.v1.Block:
+      type: object
+      description: A block within a workspace.
+      properties:
+        type:
+          type: string
+          enum:
+            - CODE
+          example: CODE
+          description: The type of block.
+        properties:
+          type: object
+          example:
+            app_id: block-1234
+            language: SQL
+          description:
+            A map (key-value pairs) of cell properties. All key-value pairs are optional, and
+            clients choose whether and how to use these key-value pairs.
+          additionalProperties:
+            type: string
+          maximum: 32
+        code_options:
+          $ref: "#/components/schemas/ws.v1.CodeOptions"
+
+    ws.v1.CodeOptions:
+      type: object
+      description: The options for a code block
+      properties:
+        source:
+          type: array
+          description: The lines of source code for this code block.
+          items:
+            type: string
+            example: "SELECT * FROM my-catalog.cluster_3.topic-1;"
+          minItems: 0
+          maxItems: 100
+      required:
+        - source
+
+    GlobalObjectReference:
+      type: object
+      description: ObjectReference provides information for you to locate the referred object
+      required:
+        - id
+        - related
+        - resource_name
+      properties:
+        id:
+          type: string
+          description: ID of the referred resource
+          minLength: 1
+          maxLength: 255
+        related:
+          type: string
+          format: uri
+          description: API URL for accessing or modifying the referred object
+          minLength: 1
+          readOnly: true
+        resource_name:
+          type: string
+          format: uri
+          description: CRN reference to the referred resource
+          minLength: 1
+          readOnly: true
+
+    EnvScopedObjectReference:
+      type: object
+      description: ObjectReference provides information for you to locate the referred object
+      required:
+        - id
+        - related
+        - resource_name
+      properties:
+        id:
+          type: string
+          description: ID of the referred resource
+          minLength: 1
+          maxLength: 255
+        environment:
+          type: string
+          description:
+            Environment of the referred resource, which is the same environment as the workspace
+          minLength: 1
+          maxLength: 255
+          readOnly: true
+        related:
+          type: string
+          format: uri
+          description: API URL for accessing or modifying the referred object
+          minLength: 1
+          readOnly: true
+        resource_name:
+          type: string
+          format: uri
+          description: CRN reference to the referred resource
+          minLength: 1
+          readOnly: true
+
+    Failure:
+      type: object
+      description: Provides information about problems encountered while performing an operation.
+      required:
+        - errors
+      properties:
+        errors:
+          description: List of errors which caused this operation to fail
+          type: array
+          items:
+            $ref: "#/components/schemas/Error"
+          uniqueItems: true
+    Error:
+      type: object
+      description: Describes a particular error encountered while performing an operation.
+      properties:
+        id:
+          description: A unique identifier for this particular occurrence of the problem.
+          type: string
+          maxLength: 255
+        status:
+          description: The HTTP status code applicable to this problem, expressed as a string value.
+          type: string
+        code:
+          description: An application-specific error code, expressed as a string value.
+          type: string
+        title:
+          description:
+            A short, human-readable summary of the problem. It **SHOULD NOT** change from occurrence
+            to occurrence of the problem, except for purposes of localization.
+          type: string
+        detail:
+          description: A human-readable explanation specific to this occurrence of the problem.
+          type: string
+        source:
+          type: object
+          description:
+            If this error was caused by a particular part of the API request, the source will point
+            to the query string parameter or request body property that caused it.
+          properties:
+            pointer:
+              description:
+                A JSON Pointer [RFC6901] to the associated entity in the request document [e.g.
+                "/spec" for a spec object, or "/spec/title" for a specific field].
+              type: string
+            parameter:
+              description: A string indicating which query parameter caused the error.
+              type: string
+
+    PatchRequest:
+      type: array
+      description:
+        PatchRequest represent a json-patch request to be applied to the workspace. See
+        https://tools.ietf.org/html/rfc6902
+      items:
+        oneOf:
+          - $ref: "#/components/schemas/JSONPatchRequestAddReplace"
+          - $ref: "#/components/schemas/JSONPatchRequestRemove"
+          - $ref: "#/components/schemas/JSONPatchRequestMoveCopy"
+    JSONPatchRequestAddReplace:
+      type: object
+      description: This option is used to add or replace a value for a field
+      additionalProperties: false
+      required:
+        - value
+        - op
+        - path
+      properties:
+        path:
+          description: A JSON Pointer path.
+          type: string
+        value:
+          description: The value to add, replace or test.
+        op:
+          description: The operation to perform.
+          type: string
+          enum:
+            - add
+            - replace
+            - test
+    JSONPatchRequestRemove:
+      type: object
+      description: This option is used to remove a field
+      additionalProperties: false
+      required:
+        - op
+        - path
+      properties:
+        path:
+          description: A JSON Pointer path.
+          type: string
+        op:
+          description: The operation to perform.
+          type: string
+          enum:
+            - remove
+    JSONPatchRequestMoveCopy:
+      type: object
+      description: This option is used to move or copy a field
+      additionalProperties: false
+      required:
+        - from
+        - op
+        - path
+      properties:
+        path:
+          description: A JSON Pointer path.
+          type: string
+        op:
+          description: The operation to perform.
+          type: string
+          enum:
+            - move
+            - copy
+        from:
+          description: A JSON Pointer path.
+          type: string
+
+  securitySchemes:
+    cloud-api-key:
+      type: http
+      scheme: basic
+      description:
+        Authenticate with Cloud API Keys using HTTP Basic Auth. Treat the Cloud API Key ID as the
+        username and Cloud API Key Secret as the password.
+  responses:
+    BadRequestError:
+      description: Bad Request
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Failure"
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: "400"
+                code: invalid_filter
+                title: Invalid Filter
+                detail: The 'delorean' resource can't be filtered by 'num_doors'
+                source:
+                  parameter: num_doors
+    UnauthenticatedError:
+      x-summary: Unauthorized
+      description: The request lacks valid authentication credentials for this resource.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+        WWW-Authenticate:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+          example: Basic error="invalid_key", error_description="The API Key is invalid"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Failure"
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: "401"
+                code: user_unauthenticated
+                title: Authentication Required
+                detail: Valid authentication credentials must be provided
+    OverQuotaError:
+      x-summary: Over Quota
+      description: The request would exceed one or more quotas.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Failure"
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: "402"
+                code: quota_exceeded
+                title: Maximum Workspaces Per Environment Quota Exceeded
+                detail: "The request would exceed the quota: ws.max_workspaces.per_env"
+    UnauthorizedError:
+      x-summary: Forbidden
+      description: The access credentials were considered insufficient to grant access
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Failure"
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: "403"
+                code: user_unauthorized
+                title: User Access Unauthorized
+                detail:
+                  The user 'mcfly' is not allowed to access the 'my-workspace' resource without the
+                  'plutonium' role.
+    ConflictError:
+      x-summary: Conflict
+      description: The request is in conflict with the current server state
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+        Location:
+          schema:
+            type: string
+            format: uri
+            example: https://flink.region.provider.confluent.cloud/{object}/{id}
+          description: Resource URI of conflicting resource
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Failure"
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: "409"
+                code: resource_already_exists
+                title: Resource Already exists
+                detail: The workspace '91e3e86f-fca6-4f14-98f5-a48e64113ce2' already exists.
+    NotFoundError:
+      description: Not Found
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Failure"
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: "404"
+                title: Not Found
+    ValidationError:
+      description: Validation Failed
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Failure"
+          example:
+            errors:
+              - status: "422"
+                code: invalid_configuration
+                id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                title: Validation Failed
+                detail:
+                  "The property '/cluster/storage_size' of type string did not match the following
+                  type: integer"
+                source:
+                  pointer: /cluster/storage_size
+    RateLimitError:
+      description: Rate Limit Exceeded
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+    DefaultSystemError:
+      description: Oops, something went wrong!
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Failure"
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: "500"
+                code: out_of_gas
+                title: DeLorean Out Of Gas
+                detail: The DeLorean has run out of gas, but Doc Brown will fill 'er up for you asap
+tags:
+  - name: Workspaces (ws/v1)
+    description: |-
+      [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+
+      A Workspace represents a named and ordered collection of Flink SQL code blocks.
+      The API allows you to list, create, read, update and delete your workspaces.
+
+
+      Related guide: [Confluent Flink Workspace API](https://docs.confluent.io/cloud/current/flink/workspaces.html).
+
+      ## The Workspaces Model
+      <SchemaDefinition schemaRef="#/components/schemas/ws.v1.Workspace" />
+
+      ## Quotas and Limits
+      This resource is subject to the following quotas:
+
+      | Quota | Description |
+      | --- | --- |
+      | `ws.max_workspaces.per_env` | Maximum number of workspaces in a region of a Confluent Cloud environment. |
