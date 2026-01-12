@@ -23,4 +23,5 @@ said behavior. We carry the patches so that when we update the base document, we
 
 | OpenAPI Spec | Patch | Reason |
 | ------------ | ----- | ------ |
-| [ce-kafka-rest.openapi.yaml](./ce-kafka-rest.openapi.yaml) | [add_included_operations_to_list_topics_route.patch](./add_included_operations_to_list_topics_route.patch) | Expose the `includeAuthorizedOperations` parameter for the list topics route |
+| [ce-kafka-rest.openapi.yaml](./ce-kafka-rest.openapi.yaml) | [add_included_operations_to_list_topics_route.patch](./patches/add_included_operations_to_list_topics_route.patch) | Expose the `includeAuthorizedOperations` parameter for the list topics route |
+| [flink-workspaces.openapi.yaml](./flink-workspaces.openapi.yaml) | [flink_workspaces_add_spec_properties.patch](./patches/flink_workspaces_add_spec_properties.patch) | Add `display_name`, `blocks`, and `properties` fields to workspace spec response |
