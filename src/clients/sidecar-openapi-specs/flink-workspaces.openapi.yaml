@@ -4,10 +4,6 @@ info:
   title: Workspaces API v1
   description: The Workspace API for Flink
   version: 0.0.1
-  contact:
-    name: Stream Designer
-    url: https://confluent.slack.com/app_redirect?channel=streaming-designer-eng
-    email: stream-designer@confluent.io
   x-api-id: c07fb3e8-a36f-406b-9798-e7b97e2abfba
   x-api-group: ws/v1
   x-audience: component-internal
