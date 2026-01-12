@@ -13,12 +13,26 @@
  */
 
 import { mapValues } from "../runtime";
+import type { WsV1Block } from "./WsV1Block";
+import {
+  WsV1BlockFromJSON,
+  WsV1BlockFromJSONTyped,
+  WsV1BlockToJSON,
+  WsV1BlockToJSONTyped,
+} from "./WsV1Block";
+
 /**
  *
  * @export
  * @interface GetWsV1Workspace200ResponseAllOfSpec
  */
 export interface GetWsV1Workspace200ResponseAllOfSpec {
+  /**
+   * A human-readable display name for the workspace.
+   * @type {string}
+   * @memberof GetWsV1Workspace200ResponseAllOfSpec
+   */
+  display_name: string;
   /**
    *
    * @type {any}
@@ -31,6 +45,18 @@ export interface GetWsV1Workspace200ResponseAllOfSpec {
    * @memberof GetWsV1Workspace200ResponseAllOfSpec
    */
   service_account?: any | null;
+  /**
+   * The ordered blocks for the workspace
+   * @type {Array<WsV1Block>}
+   * @memberof GetWsV1Workspace200ResponseAllOfSpec
+   */
+  blocks?: Array<WsV1Block>;
+  /**
+   * A map (key-value pairs) of workspace-level properties.
+   * @type {{ [key: string]: string; }}
+   * @memberof GetWsV1Workspace200ResponseAllOfSpec
+   */
+  properties?: { [key: string]: string };
 }
 
 /**
@@ -39,6 +65,7 @@ export interface GetWsV1Workspace200ResponseAllOfSpec {
 export function instanceOfGetWsV1Workspace200ResponseAllOfSpec(
   value: object,
 ): value is GetWsV1Workspace200ResponseAllOfSpec {
+  if (!("display_name" in value) || value["display_name"] === undefined) return false;
   return true;
 }
 
@@ -56,8 +83,12 @@ export function GetWsV1Workspace200ResponseAllOfSpecFromJSONTyped(
     return json;
   }
   return {
+    display_name: json["display_name"],
     compute_pool: json["compute_pool"] == null ? undefined : json["compute_pool"],
     service_account: json["service_account"] == null ? undefined : json["service_account"],
+    blocks:
+      json["blocks"] == null ? undefined : (json["blocks"] as Array<any>).map(WsV1BlockFromJSON),
+    properties: json["properties"] == null ? undefined : json["properties"],
   };
 }
 
@@ -76,7 +107,11 @@ export function GetWsV1Workspace200ResponseAllOfSpecToJSONTyped(
   }
 
   return {
+    display_name: value["display_name"],
     compute_pool: value["compute_pool"],
     service_account: value["service_account"],
+    blocks:
+      value["blocks"] == null ? undefined : (value["blocks"] as Array<any>).map(WsV1BlockToJSON),
+    properties: value["properties"],
   };
 }
