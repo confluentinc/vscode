@@ -978,6 +978,10 @@ export async function apigen() {
       "src/clients/flinkComputePool",
     ],
     ["src/clients/sidecar-openapi-specs/flink-sql.openapi.yaml", "src/clients/flinkSql"],
+    [
+      "src/clients/sidecar-openapi-specs/flink-workspaces.openapi.yaml",
+      "src/clients/flinkWorkspaces",
+    ],
     ["src/clients/docker.openapi.yaml", "src/clients/docker"],
     ["src/clients/medusa-openapi-spec/openapi.yaml", "src/clients/medusa"],
   ];
