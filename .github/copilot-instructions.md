@@ -135,6 +135,16 @@ When reviewing pull requests for this VS Code extension:
 - **Error Handling**: Ensure `logError()` and `showErrorNotificationWithButtons()` are used
   consistently
 
+### Auto-Generated Code - DO NOT REVIEW
+
+- **SKIP** all files under `src/clients/**/*` except for:
+  - `src/clients/sidecar-openapi-specs/` - OpenAPI specs and patches (review these)
+  - Files directly in `src/clients/` (not in subdirectories)
+- These subdirectories contain auto-generated TypeScript code from `npx gulp apigen` and should not
+  be reviewed for style, patterns, or best practices
+- If client code needs changes, update the OpenAPI spec in `src/clients/sidecar-openapi-specs/`
+  instead
+
 ### Comment Preservation
 
 - **Never delete existing comments** unless they contain significant errors or gaps
