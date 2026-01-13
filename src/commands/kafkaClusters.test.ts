@@ -3,10 +3,15 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
+import { TEST_CCLOUD_SCHEMA_REGISTRY } from "../../tests/unit/testResources";
 import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources/kafkaCluster";
+import { ClusterSelectSyncOption, SYNC_ON_KAFKA_SELECT } from "../extensionSettings/constants";
+import type { CCloudResourceLoader } from "../loaders";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import * as kafkaClusterQuickpicks from "../quickpicks/kafkaClusters";
@@ -15,6 +20,7 @@ import {
   selectFlinkDatabaseViewKafkaClusterCommand,
   selectTopicsViewKafkaClusterCommand,
 } from "./kafkaClusters";
+import * as schemaRegistryCommands from "./schemaRegistry";
 
 describe("commands/kafkaClusters.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -32,15 +38,33 @@ describe("commands/kafkaClusters.ts", () => {
   });
 
   describe("selectTopicsViewKafkaClusterCommand", () => {
-    let topicsViewResourceChangedFireStub: sinon.SinonStub;
     let kafkaClusterQuickPickWithViewProgressStub: sinon.SinonStub;
+    let selectSchemaRegistryCommandStub: sinon.SinonStub;
+    let topicsViewResourceChangedFireStub: sinon.SinonStub;
+    let flinkDatabaseViewResourceChangedFireStub: sinon.SinonStub;
+    let stubbedConfigs: StubbedWorkspaceConfiguration;
+    // no CCloud-specific logic here, but simpler setup without having to juggle loaders
+    let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+    const testKafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+    const testSchemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+    const testFlinkDatabase = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
 
     beforeEach(() => {
       kafkaClusterQuickPickWithViewProgressStub = sandbox.stub(
         kafkaClusterQuickpicks,
         "kafkaClusterQuickPickWithViewProgress",
       );
+      selectSchemaRegistryCommandStub = sandbox.stub(
+        schemaRegistryCommands,
+        "selectSchemaRegistryCommand",
+      );
+
       topicsViewResourceChangedFireStub = emitterStubs.topicsViewResourceChanged!.fire;
+      flinkDatabaseViewResourceChangedFireStub =
+        emitterStubs.flinkDatabaseViewResourceChanged!.fire;
+
+      stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+      stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
     });
 
     it("if no cluster provided and user cancels quick pick, should do nothing", async () => {
@@ -80,6 +104,88 @@ describe("commands/kafkaClusters.ts", () => {
       sinon.assert.calledOnce(kafkaClusterQuickPickWithViewProgressStub);
       sinon.assert.calledOnceWithExactly(topicsViewResourceChangedFireStub, testCluster);
       sinon.assert.calledOnceWithExactly(executeCommandStub, "confluent-topics.focus");
+    });
+
+    it(`should sync multiple views when "${SYNC_ON_KAFKA_SELECT.id}=${ClusterSelectSyncOption.ALL}"`, async () => {
+      stubbedConfigs.stubGet(SYNC_ON_KAFKA_SELECT, ClusterSelectSyncOption.ALL);
+      stubbedLoader.getSchemaRegistryForEnvironmentId.resolves(testSchemaRegistry);
+
+      // assuming we're using a Flink-enabled Kafka cluster
+      await selectTopicsViewKafkaClusterCommand(testFlinkDatabase);
+
+      sinon.assert.calledOnceWithExactly(
+        stubbedLoader.getSchemaRegistryForEnvironmentId,
+        testFlinkDatabase.environmentId,
+      );
+      sinon.assert.calledOnceWithExactly(selectSchemaRegistryCommandStub, testSchemaRegistry);
+      sinon.assert.calledOnceWithExactly(
+        flinkDatabaseViewResourceChangedFireStub,
+        testFlinkDatabase,
+      );
+    });
+
+    it(`should only sync the Schemas view when a Schema Registry is available for the selected Kafka cluster's environment and "${SYNC_ON_KAFKA_SELECT.id}=${ClusterSelectSyncOption.SCHEMAS}"`, async () => {
+      stubbedConfigs.stubGet(SYNC_ON_KAFKA_SELECT, ClusterSelectSyncOption.SCHEMAS);
+      stubbedLoader.getSchemaRegistryForEnvironmentId.resolves(testSchemaRegistry);
+
+      await selectTopicsViewKafkaClusterCommand(testKafkaCluster);
+
+      sinon.assert.calledOnceWithExactly(
+        stubbedLoader.getSchemaRegistryForEnvironmentId,
+        testKafkaCluster.environmentId,
+      );
+      sinon.assert.calledOnceWithExactly(selectSchemaRegistryCommandStub, testSchemaRegistry);
+      sinon.assert.notCalled(flinkDatabaseViewResourceChangedFireStub);
+    });
+
+    for (const option of [ClusterSelectSyncOption.SCHEMAS, ClusterSelectSyncOption.ALL]) {
+      it(`should not sync the Schemas view when no Schema Registry is available for the selected Kafka cluster's environment, even if "${SYNC_ON_KAFKA_SELECT.id}=${option}"`, async () => {
+        stubbedConfigs.stubGet(SYNC_ON_KAFKA_SELECT, option);
+        // wouldn't happen for a CCloud environment, but entirely possible for a local/direct connection
+        stubbedLoader.getSchemaRegistryForEnvironmentId.resolves(undefined);
+
+        await selectTopicsViewKafkaClusterCommand(testKafkaCluster);
+
+        sinon.assert.calledOnceWithExactly(
+          stubbedLoader.getSchemaRegistryForEnvironmentId,
+          testKafkaCluster.environmentId,
+        );
+        sinon.assert.notCalled(selectSchemaRegistryCommandStub);
+      });
+    }
+
+    it(`should only sync the Flink Database view when "${SYNC_ON_KAFKA_SELECT.id}=${ClusterSelectSyncOption.FLINK_DATABASE}" and the select Kafka cluster is Flink-enabled`, async () => {
+      stubbedConfigs.stubGet(SYNC_ON_KAFKA_SELECT, ClusterSelectSyncOption.FLINK_DATABASE);
+
+      await selectTopicsViewKafkaClusterCommand(testFlinkDatabase);
+
+      sinon.assert.notCalled(stubbedLoader.getSchemaRegistryForEnvironmentId);
+      sinon.assert.notCalled(selectSchemaRegistryCommandStub);
+      sinon.assert.calledOnceWithExactly(
+        flinkDatabaseViewResourceChangedFireStub,
+        testFlinkDatabase,
+      );
+    });
+
+    for (const option of [ClusterSelectSyncOption.FLINK_DATABASE, ClusterSelectSyncOption.ALL]) {
+      it(`should not sync the Flink Database view when using a non-Flink-enabled Kafka cluster, even if "${SYNC_ON_KAFKA_SELECT.id}=${option}"`, async () => {
+        stubbedConfigs.stubGet(SYNC_ON_KAFKA_SELECT, option);
+        stubbedLoader.getSchemaRegistryForEnvironmentId.resolves(testSchemaRegistry);
+
+        await selectTopicsViewKafkaClusterCommand(testKafkaCluster);
+
+        sinon.assert.notCalled(flinkDatabaseViewResourceChangedFireStub);
+      });
+    }
+
+    it(`should not sync any views when "${SYNC_ON_KAFKA_SELECT.id}=${ClusterSelectSyncOption.NONE}"`, async () => {
+      stubbedConfigs.stubGet(SYNC_ON_KAFKA_SELECT, ClusterSelectSyncOption.NONE);
+
+      await selectTopicsViewKafkaClusterCommand(testKafkaCluster);
+
+      sinon.assert.notCalled(stubbedLoader.getSchemaRegistryForEnvironmentId);
+      sinon.assert.notCalled(selectSchemaRegistryCommandStub);
+      sinon.assert.notCalled(flinkDatabaseViewResourceChangedFireStub);
     });
   });
 
