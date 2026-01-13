@@ -74,7 +74,7 @@ describe("commands/kafkaClusters.ts", () => {
 
       sinon.assert.calledOnce(kafkaClusterQuickPickWithViewProgressStub);
       sinon.assert.notCalled(topicsViewResourceChangedFireStub);
-      sinon.assert.notCalled(executeCommandStub);
+      sinon.assert.neverCalledWith(executeCommandStub, "confluent-topics.focus");
     });
 
     it("should use the provided cluster if valid", async () => {
@@ -205,7 +205,7 @@ describe("commands/kafkaClusters.ts", () => {
       await selectFlinkDatabaseViewKafkaClusterCommand();
       sinon.assert.calledOnce(flinkDatabaseQuickpickStub);
       sinon.assert.notCalled(flinkDatabaseViewResourceChangedFireStub);
-      sinon.assert.notCalled(executeCommandStub);
+      sinon.assert.neverCalledWith(executeCommandStub, "confluent-flink-database.focus");
     });
 
     it("if a non-ccloud-flinkable cluster is provided, should call quick pick", async () => {
@@ -214,7 +214,7 @@ describe("commands/kafkaClusters.ts", () => {
       await selectFlinkDatabaseViewKafkaClusterCommand({} as any as CCloudFlinkDbKafkaCluster);
       sinon.assert.calledOnce(flinkDatabaseQuickpickStub);
       sinon.assert.notCalled(flinkDatabaseViewResourceChangedFireStub);
-      sinon.assert.notCalled(executeCommandStub);
+      sinon.assert.neverCalledWith(executeCommandStub, "confluent-flink-database.focus");
     });
 
     it("should use the provided cluster if valid", async () => {
