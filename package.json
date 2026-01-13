@@ -1455,15 +1455,15 @@
           "when": "true"
         },
         {
-          "command": "confluent.flinkdatabase.select",
-          "when": "false"
-        },
-        {
           "command": "confluent.flinkdatabase.refresh",
           "when": "true"
         },
         {
           "command": "confluent.flinkdatabase.refreshResourceContainer",
+          "when": "false"
+        },
+        {
+          "command": "confluent.flinkdatabase.select",
           "when": "false"
         },
         {
