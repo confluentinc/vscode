@@ -33,6 +33,8 @@ export class ViewItem {
    * (with `"group": "inline"`) by its `label`. */
   async clickInlineAction(actionName: string): Promise<void> {
     await this.locator.hover();
+    // dismiss any tooltips that may be obstructing the item or its inline actions
+    await this.page.keyboard.press("Escape");
     await this.inlineActions.getByRole("button", { name: actionName }).click();
   }
 
