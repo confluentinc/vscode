@@ -6,6 +6,18 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
+- A new
+  [`confluent.resources.syncOnKafkaClusterSelection`](vscode://settings/confluent.resources.syncOnKafkaClusterSelection)
+  setting to control whether selecting a Kafka cluster in the Resources view will automatically sync
+  the Schemas and/or the Flink Database view(s). The current options are:
+  - `none` (default, previous behavior): do not sync either view and let users control which
+    resources populate the Schemas and Flink Database views
+  - `schemas`: sync the Schemas view with the Schema Registry matching the selected Kafka cluster's
+    environment (if any)
+  - `flinkDatabase`: sync the Flink Database view if the selected (CCloud) Kafka cluster has any
+    associated Flink compute pools
+  - `all`: sync both views as described above
+
 ### Changed
 
 - Renamed the Flink Database view's 'Table/View Relations' row to 'Tables and Views'
