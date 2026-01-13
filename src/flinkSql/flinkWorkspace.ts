@@ -7,7 +7,6 @@ import { logError } from "../errors";
 import { Logger } from "../logging";
 import type { EnvironmentId, IEnvProviderRegion } from "../models/resource";
 import { getSidecar } from "../sidecar";
-import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 
 const logger = new Logger("flinkSql.flinkWorkspace");
@@ -63,12 +62,7 @@ export function extractWorkspaceParamsFromUri(uri: Uri): FlinkWorkspaceParams | 
 export async function getFlinkWorkspace(
   params: FlinkWorkspaceParams,
 ): Promise<GetWsV1Workspace200Response | null> {
-  // 1. Verify we have a signed-in CCloud session
-  if (!hasCCloudAuthSession()) {
-    logger.trace("No CCloud auth session, cannot fetch workspace");
-    return null;
-  }
-
+  // 1. Ensure we have a signed-in CCloud session (prompts login if needed)
   try {
     await getCCloudAuthSession({ createIfNone: true });
   } catch (error) {
