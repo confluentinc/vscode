@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import type { ConnectionType } from "../../connectionTypes";
+import type { ConnectionType } from "../../types/connection";
 import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
@@ -10,14 +10,6 @@ import { TopicItem } from "./viewItems/TopicItem";
 export enum SelectKafkaCluster {
   FromResourcesView = "Kafka cluster action from the Resources view",
   FromTopicsViewButton = "Topics view nav action",
-}
-
-/** Configuration options for creating a topic. */
-export interface TopicConfig {
-  name: string;
-  numPartitions?: number;
-  replicationFactor?: number;
-  clusterLabel?: string | RegExp;
 }
 
 export const DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR = 3;
@@ -114,7 +106,7 @@ export class TopicsView extends SearchableView {
     switch (entrypoint) {
       case SelectKafkaCluster.FromResourcesView: {
         const resourcesView = new ResourcesView(this.page);
-        const cluster = await resourcesView.getKafkaCluster(connectionType);
+        const cluster = await resourcesView.getKafkaCluster(connectionType, clusterLabel);
         await cluster.click();
         break;
       }
