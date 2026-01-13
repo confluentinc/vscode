@@ -5,7 +5,7 @@ import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import { flinkWorkspaceUri } from "../emitters";
 import { logError } from "../errors";
 import { Logger } from "../logging";
-import type { EnvironmentId } from "../models/resource";
+import type { EnvironmentId, IEnvProviderRegion } from "../models/resource";
 import { getSidecar } from "../sidecar";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
@@ -113,11 +113,13 @@ export async function getFlinkWorkspace(
     return null;
   }
 
-  const workspacesApi = sidecar.getFlinkWorkspacesWsV1Api({
+  const providerRegion: IEnvProviderRegion = {
     environmentId: params.environmentId as EnvironmentId,
-    provider: provider,
-    region: region,
-  });
+    provider,
+    region,
+  };
+
+  const workspacesApi = sidecar.getFlinkWorkspacesWsV1Api(providerRegion);
 
   let workspace: GetWsV1Workspace200Response;
   try {
