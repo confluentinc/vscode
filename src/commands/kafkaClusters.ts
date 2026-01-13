@@ -4,6 +4,8 @@ import { fetchTopicAuthorizedOperations } from "../authz/topics";
 import type { TopicV3Api } from "../clients/kafkaRest";
 import { ResponseError } from "../clients/kafkaRest";
 import { flinkDatabaseViewResourceChanged, topicsViewResourceChanged } from "../emitters";
+import { ClusterSelectSyncOption, SYNC_ON_KAFKA_SELECT } from "../extensionSettings/constants";
+import { ResourceLoader } from "../loaders/resourceLoader";
 import { Logger } from "../logging";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
@@ -17,6 +19,7 @@ import {
 import { getSidecar } from "../sidecar";
 import { removeProtocolPrefix } from "../utils/bootstrapServers";
 import { getTopicViewProvider } from "../viewProviders/topics";
+import { selectSchemaRegistryCommand } from "./schemaRegistry";
 
 const logger = new Logger("commands.kafkaClusters");
 
@@ -35,6 +38,31 @@ export async function selectTopicsViewKafkaClusterCommand(cluster?: KafkaCluster
   topicsViewResourceChanged.fire(kafkaCluster);
   // And set focus to the topics view.
   void vscode.commands.executeCommand("confluent-topics.focus");
+
+  // Optionally sync related views based on user settings
+  const shouldSyncSchemasView = [
+    ClusterSelectSyncOption.ALL,
+    ClusterSelectSyncOption.SCHEMAS,
+  ].includes(SYNC_ON_KAFKA_SELECT.value);
+  if (shouldSyncSchemasView) {
+    const loader = ResourceLoader.getInstance(kafkaCluster.connectionId);
+    const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(
+      kafkaCluster.environmentId,
+    );
+    if (schemaRegistry) {
+      void selectSchemaRegistryCommand(schemaRegistry);
+    }
+  }
+
+  const shouldSyncFlinkDbView = [
+    ClusterSelectSyncOption.ALL,
+    ClusterSelectSyncOption.FLINK_DATABASE,
+  ].includes(SYNC_ON_KAFKA_SELECT.value);
+  if (shouldSyncFlinkDbView) {
+    if (kafkaCluster instanceof CCloudKafkaCluster && kafkaCluster.isFlinkable()) {
+      void selectFlinkDatabaseViewKafkaClusterCommand(kafkaCluster);
+    }
+  }
 }
 
 /** Pick a Flinkable Kafka Cluster as the one to examine in the Flink Database view */
@@ -331,6 +359,11 @@ export function registerKafkaClusterCommands(): vscode.Disposable[] {
     // or from context menu item in resources view.
     registerCommandWithLogging(
       "confluent.flinkdatabase.kafka-cluster.select",
+      selectFlinkDatabaseViewKafkaClusterCommand,
+    ),
+    // ...or as an inline action in the resources view with a different icon & command name
+    registerCommandWithLogging(
+      "confluent.flinkdatabase.select",
       selectFlinkDatabaseViewKafkaClusterCommand,
     ),
     registerCommandWithLogging("confluent.topics.create", createTopicCommand),
