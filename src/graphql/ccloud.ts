@@ -82,6 +82,7 @@ export async function getCCloudResources(): Promise<CCloudEnvironment[]> {
             maxCfu: pool.max_cfu,
           }),
       );
+      envFlinkComputePools.sort((a, b) => a.name.localeCompare(b.name));
       flinkComputePoolsByEnv.set(env.id as EnvironmentId, envFlinkComputePools);
 
       // Also index by "provider/region" for cross-env lookup
