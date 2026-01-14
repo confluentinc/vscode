@@ -1,3 +1,4 @@
+import { KafkaJS } from "@confluentinc/kafka-javascript";
 import { expect } from "@playwright/test";
 import { test } from "../baseTest";
 import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
@@ -5,7 +6,6 @@ import type { TopicItem } from "../objects/views/viewItems/TopicItem";
 import type { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { Tag } from "../tags";
 import { ConnectionType } from "../types/connection";
-import { CompressionType } from "../types/topic";
 
 /**
  * E2E test suite for testing the Topics view and Message Viewer functionality.
@@ -33,12 +33,12 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
     SelectKafkaCluster.FromResourcesView,
     SelectKafkaCluster.FromTopicsViewButton,
   ];
-  const compressionTypes: CompressionType[] = [
-    CompressionType.None,
-    CompressionType.Gzip,
-    CompressionType.Snappy,
-    CompressionType.Lz4,
-    CompressionType.Zstd,
+  const compressionTypes: KafkaJS.CompressionTypes[] = [
+    KafkaJS.CompressionTypes.None,
+    KafkaJS.CompressionTypes.GZIP,
+    KafkaJS.CompressionTypes.Snappy,
+    KafkaJS.CompressionTypes.LZ4,
+    KafkaJS.CompressionTypes.ZSTD,
   ];
 
   for (const [connectionType, connectionTag] of connectionTypes) {

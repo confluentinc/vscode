@@ -698,6 +698,7 @@ export async function testBuild() {
       "winston",
       "mocha",
       "@playwright/test",
+      "@confluentinc/kafka-javascript",
       "dotenv",
       "glob",
       "electron",

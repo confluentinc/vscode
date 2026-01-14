@@ -1,5 +1,4 @@
 import { KafkaJS } from "@confluentinc/kafka-javascript";
-import type { KafkaConfig, SASLOptions } from "@confluentinc/kafka-javascript/types/kafkajs";
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { DEBUG_LOGGING_ENABLED } from "../constants";
@@ -7,7 +6,7 @@ import { ResourcesView } from "../objects/views/ResourcesView";
 import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
 import type { DirectConnectionOptions } from "../types/connection";
 import { ConnectionType, SupportedAuthType } from "../types/connection";
-import { CompressionType, type ProducerOptions } from "../types/topic";
+import type { ProducerOptions } from "../types/topic";
 
 /**
  * Produces messages to a Kafka topic using the JavaScript Kafka client based on the connection type.
@@ -34,7 +33,7 @@ export async function produceMessages(
 ): Promise<void> {
   const {
     numMessages = 10,
-    compressionType = CompressionType.None,
+    compressionType = KafkaJS.CompressionTypes.None,
     keyPrefix = "test-key",
     valuePrefix = "test-value",
   } = options;
@@ -45,7 +44,7 @@ export async function produceMessages(
   }));
 
   let bootstrapServers: string;
-  let saslConfig: SASLOptions | undefined;
+  let saslConfig: KafkaJS.SASLOptions | undefined;
   if (connectionType === ConnectionType.Local) {
     // copy the bootstrap server from the Resources view for LOCAL connections since we don't have
     // to set up any local credentials
@@ -53,8 +52,7 @@ export async function produceMessages(
     const localKafka = await resourcesView.getKafkaCluster(ConnectionType.Local);
     await expect(localKafka).not.toHaveCount(0);
     const localKafkaItem = new KafkaClusterItem(page, localKafka.first());
-    await localKafkaItem.copyBootstrapServers();
-    bootstrapServers = await page.evaluate(async () => await navigator.clipboard.readText());
+    bootstrapServers = await localKafkaItem.copyBootstrapServers();
   } else {
     // CCLOUD and DIRECT connections will use the same bootstrap servers and auth mechanism unless
     // otherwise specified by the tests
@@ -74,7 +72,7 @@ export async function produceMessages(
     }
   }
 
-  const kafkaConfig: KafkaConfig = {
+  const kafkaConfig: KafkaJS.KafkaConfig = {
     ssl: connectionType !== ConnectionType.Local,
     brokers: bootstrapServers.split(","),
     logLevel: KafkaJS.logLevel.ERROR, // silence non-error logging
