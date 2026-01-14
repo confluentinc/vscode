@@ -30,7 +30,8 @@ export class ViewItem {
   /**
    * Click a
    * {@link https://code.visualstudio.com/api/extension-guides/tree-view#view-actions view item action}
-   * (with `"group": "inline"`) by its `label`. */
+   * (with `"group": "inline"`) by its `label`.
+   */
   async clickInlineAction(actionName: string): Promise<void> {
     await this.locator.hover();
     await this.inlineActions.getByRole("button", { name: actionName }).click();

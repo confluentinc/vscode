@@ -15,8 +15,8 @@ import { executeVSCodeCommand } from "./commands";
 const DEFAULT_UI_SETTINGS = process.platform === "win32" ? {} : { "window.menuStyle": "custom" };
 
 const DEFAULT_EDITOR_SETTINGS = {
-  // this is to avoid VS Code incorrectly setting the language of .proto files as C# so they
-  // appear correctly (as "plaintext") in the URI quickpick
+  // avoid letting VS Code incorrectly set the language of .proto files as C# so they appear
+  // correctly (as "plaintext") in the URI quickpick
   "workbench.editor.languageDetection": false,
   // we also have to disable a lot of auto-formatting so the .insertContent() method properly
   // adds the schema/produce-message content as it exists in the fixture files
@@ -28,9 +28,9 @@ const DEFAULT_EDITOR_SETTINGS = {
   "editor.insertSpaces": false,
   "json.format.enable": false,
   "json.validate.enable": false,
-  // this prevents skipping newlines/commas while content is added to the editor
+  // prevent skipping newlines/commas while content is added to the editor
   "editor.acceptSuggestionOnEnter": "off",
-  // this prevents VS Code from converting the `http` to `https` in `$schema` URIs:
+  // prevent VS Code from converting the `http` to `https` in `$schema` URIs:
   "editor.linkedEditing": false,
 };
 
