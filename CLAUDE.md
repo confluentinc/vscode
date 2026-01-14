@@ -145,6 +145,9 @@ generates `src/graphql/sidecarGraphQL.d.ts` (auto-generated, do not edit).
 - Co-located `.test.ts` files using Mocha + Sinon + assert
 - Focus on isolated behavior, mocking external dependencies
 - Use `.only` for focused testing (remember to remove before PR!)
+- **Design for stubbing**: When writing new functions, avoid calling other functions in the same
+  module that you'll need to stub—Sinon can only stub module exports, not internal calls within the
+  same file. Extract such dependencies to separate modules or pass them as parameters.
 
 ### Functional Tests
 
@@ -288,3 +291,15 @@ When working with Claude Code during development:
   responsibility)
 - Request TypeScript interfaces for complex data structures rather than inline types
 - Don't introduce unnecessary abstractions or backwards compatibility shims
+
+### Before Writing New Code
+
+- **Check for existing patterns first**: For non-trivial utilities or complex logic, search the
+  codebase for existing functions or established patterns that solve the same problem before
+  implementing new ones. Reuse over reinvent.
+- **No decorative comment blocks**: Do not add large comment separators like `// ======...` or
+  `// ------...` to divide sections of code. Readability should come from code structure itself
+  (well-named functions, logical grouping, small files), not formatting.
+- **Main functions first**: Place primary public functions and entry point handlers at the top of
+  files, with utility/helper functions below. Readers should understand what a file does without
+  scrolling past implementation details.
