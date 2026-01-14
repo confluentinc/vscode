@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import { type Locator, type Page } from "@playwright/test";
 
 /** Object representing a tree item in a {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view}. */
 export class ViewItem {
@@ -30,7 +30,8 @@ export class ViewItem {
   /**
    * Click a
    * {@link https://code.visualstudio.com/api/extension-guides/tree-view#view-actions view item action}
-   * (with `"group": "inline"`) by its `label`. */
+   * (with `"group": "inline"`) by its `label`.
+   */
   async clickInlineAction(actionName: string): Promise<void> {
     await this.locator.hover();
     await this.inlineActions.getByRole("button", { name: actionName }).click();
