@@ -115,29 +115,16 @@ export class SearchableView extends View {
     await expect(inputBox.locator).toBeHidden();
   }
 
-  /** Get a tree item by its label/name, optionally searching within a specific locator. */
+  /** Get a tree item by its label/name by {@link search searching}, optionally filtering by a specific locator. */
   async getItemByLabel(label: string, fromLocator?: Locator): Promise<Locator> {
     // make sure we're not in any kind of loading state
     await expect(this.progressIndicator).toBeHidden();
 
+    await this.search(label);
+
     // filter all tree items in this view unless a specific locator is provided
     const baseLocator = fromLocator ?? this.treeItems;
     const itemLocator = baseLocator.filter({ hasText: label });
-
-    try {
-      await expect(itemLocator, {
-        message: `should check if '${label}' is visible before searching`,
-      }).toBeVisible({ timeout: 1000 });
-      // item is in the DOM but may be partially out of view, so we may need to scroll to
-      // it before any other actions can happen
-      await itemLocator.scrollIntoViewIfNeeded();
-      return itemLocator;
-    } catch {
-      // item not found, try searching for it
-    }
-
-    await this.search(label);
-
     await expect(itemLocator).toBeVisible();
     return itemLocator;
   }
