@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { type Locator, type Page } from "@playwright/test";
 
 /** Object representing a tree item in a {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view}. */
 export class ViewItem {
@@ -34,21 +34,7 @@ export class ViewItem {
    */
   async clickInlineAction(actionName: string): Promise<void> {
     await this.locator.hover();
-
-    const action: Locator = this.inlineActions.getByRole("button", { name: actionName });
-    // dismiss any tooltips that may be obstructing the item or its inline actions before clicking
-    await expect
-      .poll(async () => {
-        try {
-          await expect(action).toBeVisible({ timeout: 500 });
-          return true;
-        } catch {
-          await this.page.keyboard.press("Escape");
-          return false;
-        }
-      })
-      .toBe(true);
-    await action.click();
+    await this.inlineActions.getByRole("button", { name: actionName }).click();
   }
 
   /**

@@ -32,8 +32,6 @@ const DEFAULT_EDITOR_SETTINGS = {
   "editor.acceptSuggestionOnEnter": "off",
   // prevent VS Code from converting the `http` to `https` in `$schema` URIs:
   "editor.linkedEditing": false,
-  // increase hover delay to prevent hover popups from obscuring elements we need to click
-  "workbench.hover.delay": 3000,
 };
 
 const DEFAULT_SETTINGS = { ...DEFAULT_EDITOR_SETTINGS, ...DEFAULT_UI_SETTINGS };
