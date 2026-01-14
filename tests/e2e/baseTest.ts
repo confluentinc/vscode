@@ -5,6 +5,7 @@ import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
 import { createWriteStream, existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
+import { DEBUG_LOGGING_ENABLED } from "./constants";
 import { Notification } from "./objects/notifications/Notification";
 import { NotificationArea } from "./objects/notifications/NotificationArea";
 import { Quickpick } from "./objects/quickInputs/Quickpick";
@@ -209,9 +210,6 @@ export const test = testBase.extend<VSCodeFixtures>({
 
   localConnectionConfig: [{ schemaRegistry: true }, { option: true }],
 
-  // no default value, must be provided by test
-  connectionType: undefined as any,
-
   connectionItem: async (
     { electronApp, page, connectionType, directConnectionConfig, localConnectionConfig },
     use,
@@ -271,9 +269,6 @@ export const test = testBase.extend<VSCodeFixtures>({
     }
   },
 
-  // no default value, must be provided by test
-  topicConfig: undefined as any,
-
   topic: async (
     { electronApp, page, connectionType, connectionItem, topicConfig, directConnectionConfig },
     use,
@@ -308,7 +303,6 @@ export const test = testBase.extend<VSCodeFixtures>({
     if (topicConfig.produce && connectionType === ConnectionType.Ccloud) {
       clusterLabel = topicConfig.clusterLabel ?? process.env.E2E_KAFKA_CLUSTER_NAME!;
     }
-    console.debug(`Using cluster label "${clusterLabel}" for creating topic`, { topicConfig });
 
     // setup: create the topic
     const topicsView = new TopicsView(page);
@@ -554,7 +548,7 @@ async function shutdownElectronApp(electronApp: ElectronApplication): Promise<vo
         }
       }
     });
-    if (handles.length) {
+    if (DEBUG_LOGGING_ENABLED && handles.length) {
       console.debug(`Unreferenced ${unrefdHandles}/${handles.length} handle(s)`);
     }
   } catch {

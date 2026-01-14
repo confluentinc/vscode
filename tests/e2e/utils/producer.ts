@@ -2,6 +2,7 @@ import { KafkaJS } from "@confluentinc/kafka-javascript";
 import type { KafkaConfig, SASLOptions } from "@confluentinc/kafka-javascript/types/kafkajs";
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
+import { DEBUG_LOGGING_ENABLED } from "../constants";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
 import type { DirectConnectionOptions } from "../types/connection";
@@ -87,14 +88,15 @@ export async function produceMessages(
 
   try {
     await producer.connect();
-    console.debug(
-      `Connected to Kafka, producing ${numMessages} messages to topic '${topicName}'...`,
-    );
     await producer.send({
       topic: topicName,
       messages,
     });
-    console.debug(`Successfully produced ${numMessages} messages to topic '${topicName}'`);
+    if (DEBUG_LOGGING_ENABLED) {
+      console.debug(`Produced ${numMessages} message(s) to topic '${topicName}'`, {
+        connectionType,
+      });
+    }
     await producer.flush({ timeout: 5000 });
   } catch (error) {
     console.error("Error producing messages:", error);
