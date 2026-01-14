@@ -70,7 +70,7 @@ interface VSCodeFixtures {
    * Connection type to set up for parameterized tests.
    * Used by the `connectionItem` fixture to determine which connection to set up.
    */
-  connectionType: ConnectionType;
+  connectionType: ConnectionType | undefined;
   /**
    * Configuration options for setting up a direct connection with the {@linkcode directConnection} fixture.
    */
@@ -89,7 +89,7 @@ interface VSCodeFixtures {
   /**
    * Configuration options for creating a topic with the {@linkcode topic} fixture.
    */
-  topicConfig: TopicConfig;
+  topicConfig: TopicConfig | undefined;
   /**
    * Set up a topic based on the {@linkcode topicConfig} option and return the associated topic
    * `name` for tests to reference.
@@ -210,6 +210,9 @@ export const test = testBase.extend<VSCodeFixtures>({
 
   localConnectionConfig: [{ schemaRegistry: true }, { option: true }],
 
+  // no default value, must be provided by test
+  connectionType: [undefined, { option: true }],
+
   connectionItem: async (
     { electronApp, page, connectionType, directConnectionConfig, localConnectionConfig },
     use,
@@ -268,6 +271,9 @@ export const test = testBase.extend<VSCodeFixtures>({
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }
   },
+
+  // no default value, must be provided by test
+  topicConfig: [undefined, { option: true }],
 
   topic: async (
     { electronApp, page, connectionType, connectionItem, topicConfig, directConnectionConfig },
