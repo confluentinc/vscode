@@ -377,13 +377,10 @@ export class SidecarHandle {
   }
 
   /** Create and return a (Flink Workspaces REST OpenAPI spec) {@link WorkspacesWsV1Api} client instance */
-  public getFlinkWorkspacesWsV1Api(): WorkspacesWsV1Api {
+  public getFlinkWorkspacesWsV1Api(providerRegion: IEnvProviderRegion): WorkspacesWsV1Api {
     const config = new FlinkWorkspacesConfiguration({
       ...this.defaultClientConfigParams,
-      headers: {
-        ...this.defaultClientConfigParams.headers,
-        [SIDECAR_CONNECTION_ID_HEADER]: CCLOUD_CONNECTION_ID,
-      },
+      headers: this.constructFlinkDataPlaneClientHeaders(providerRegion),
     });
     return new WorkspacesWsV1Api(config);
   }
