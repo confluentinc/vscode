@@ -5,8 +5,6 @@ import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import { flinkWorkspaceUri } from "../emitters";
 import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
 import { Logger } from "../logging";
-import type { IFlinkQueryable } from "../models/resource";
-import { getSidecar } from "../sidecar";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 
 const logger = new Logger("flinkSql.flinkWorkspace");
@@ -52,8 +50,7 @@ export function extractWorkspaceParamsFromUri(uri: Uri): FlinkWorkspaceParams | 
 
 /**
  * Fetch and validate a Flink workspace from the API.
- * Since the Flink Workspaces API is region-scoped, this function discovers the available
- * regions from the environment's Flink compute pools and searches each region for the workspace.
+ * Ensures CCloud authentication before delegating to the resource loader.
  *
  * @param params Workspace parameters to validate against
  * @returns The workspace response if validation succeeds, null otherwise
@@ -61,7 +58,7 @@ export function extractWorkspaceParamsFromUri(uri: Uri): FlinkWorkspaceParams | 
 export async function getFlinkWorkspace(
   params: FlinkWorkspaceParams,
 ): Promise<GetWsV1Workspace200Response | null> {
-  // 1. Ensure we have a signed-in CCloud session (prompts login if needed)
+  // Ensure we have a signed-in CCloud session (prompts login if needed)
   try {
     await getCCloudAuthSession({ createIfNone: true });
   } catch (error) {
@@ -74,105 +71,9 @@ export async function getFlinkWorkspace(
     throw error;
   }
 
-  // 2. Load the environment to discover available provider/region combinations
+  // Delegate to the resource loader for the actual workspace fetching
   const loader = CCloudResourceLoader.getInstance();
-  const environments = await loader.getEnvironments();
-  const environment = environments.find((env) => env.id === params.environmentId);
-
-  if (!environment) {
-    logger.warn("Environment not found", { environmentId: params.environmentId });
-    return null;
-  }
-
-  // Use the existing determineFlinkQueryables method to get unique provider/region combinations
-  const flinkQueryables = await loader.determineFlinkQueryables(environment);
-  if (flinkQueryables.length === 0) {
-    logger.warn("No Flink compute pools found in environment", {
-      environmentId: params.environmentId,
-    });
-    return null;
-  }
-
-  logger.debug(`Found ${flinkQueryables.length} unique region(s) to search`, {
-    regions: flinkQueryables.map((q) => `${q.provider}/${q.region}`),
-  });
-
-  // 3. Search for the workspace across regions
-  const workspace = await findWorkspaceInRegions(params, flinkQueryables);
-
-  if (!workspace) {
-    return null;
-  }
-
-  // 4. Validate workspace matches expected organization and environment
-  if (workspace.organization_id !== params.organizationId) {
-    logger.warn("Organization ID mismatch", {
-      expected: params.organizationId,
-      actual: workspace.organization_id,
-    });
-    return null;
-  }
-
-  if (workspace.environment_id !== params.environmentId) {
-    logger.warn("Environment ID mismatch", {
-      expected: params.environmentId,
-      actual: workspace.environment_id,
-    });
-    return null;
-  }
-
-  return workspace;
-}
-
-/**
- * Search for a workspace across multiple provider/region combinations.
- *
- * @param params Workspace parameters (workspaceName is used for the query)
- * @param flinkQueryables The provider/region combinations to search (from determineFlinkQueryables)
- * @returns The workspace if found, null otherwise
- */
-async function findWorkspaceInRegions(
-  params: FlinkWorkspaceParams,
-  flinkQueryables: IFlinkQueryable[],
-): Promise<GetWsV1Workspace200Response | null> {
-  const sidecar = await getSidecar();
-
-  // Search each region sequentially until we find the workspace.
-  // Sequential search is preferred here because:
-  // 1. Most environments have 1-2 regions, so parallelization overhead isn't worth it
-  // 2. We stop as soon as we find the workspace (fail-fast)
-  // 3. Easier error handling and logging
-  for (const queryable of flinkQueryables) {
-    try {
-      const workspacesApi = sidecar.getFlinkWorkspacesWsV1Api(queryable);
-      const workspace = await workspacesApi.getWsV1Workspace({
-        organization_id: queryable.organizationId,
-        environment_id: queryable.environmentId,
-        name: params.workspaceName,
-      });
-
-      logger.debug(`Found workspace in region ${queryable.provider}/${queryable.region}`, {
-        workspaceName: params.workspaceName,
-      });
-
-      return workspace;
-    } catch {
-      // 404 means workspace doesn't exist in this region - continue searching
-      // Other errors are logged but we continue to try other regions
-      logger.debug(`Workspace not found in region ${queryable.provider}/${queryable.region}`, {
-        workspaceName: params.workspaceName,
-      });
-    }
-  }
-
-  // Workspace not found in any region
-  logger.warn("Workspace not found in any region", {
-    workspaceName: params.workspaceName,
-    environmentId: params.environmentId,
-    searchedRegions: flinkQueryables.map((q) => `${q.provider}/${q.region}`),
-  });
-
-  return null;
+  return loader.getFlinkWorkspace(params);
 }
 
 /**
@@ -255,18 +156,28 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
 
   // Create and open a separate document for each SQL statement
   try {
-    for (const statement of sqlStatements) {
-      const content = `${statement}`;
-      const document = await vscode.workspace.openTextDocument({
-        language: FLINK_SQL_LANGUAGE_ID,
-        content: content,
-      });
-      await vscode.window.showTextDocument(document, { preview: false });
-    }
+    await openSqlStatementsAsDocuments(sqlStatements);
   } catch (error) {
     vscode.window.showErrorMessage(
       `Failed to open Flink SQL workspace: ${error instanceof Error ? error.message : String(error)}`,
     );
+  }
+}
+
+/**
+ * Open SQL statements as VS Code documents.
+ * Compute pool, catalog, and database settings are resolved via user defaults.
+ *
+ * @param sqlStatements Array of SQL statement strings to open as documents
+ */
+async function openSqlStatementsAsDocuments(sqlStatements: string[]): Promise<void> {
+  for (const statement of sqlStatements) {
+    const document = await vscode.workspace.openTextDocument({
+      language: FLINK_SQL_LANGUAGE_ID,
+      content: statement,
+    });
+
+    await vscode.window.showTextDocument(document, { preview: false });
   }
 }
 
