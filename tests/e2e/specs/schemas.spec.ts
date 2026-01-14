@@ -93,8 +93,8 @@ test.describe("Schema Management", { tag: [Tag.EvolveSchema] }, () => {
             });
             await expect(successNotifications.first()).toBeVisible();
 
-            const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
-            await expect(subjectLocator).toBeVisible();
+            const subjectItem: SubjectItem = await schemasView.getSubjectItem(subjectName);
+            await expect(subjectItem.locator).toBeVisible();
           });
 
           test("should create a new schema version with valid/compatible changes", async ({
