@@ -61,7 +61,10 @@ export class View {
     // when the header is collapsed (even though the header is always visible by default)
     await this.ensureExpanded();
     await this.header.hover();
-    await this.header.getByRole("button", { name: label }).click();
+    const action = this.header.getByRole("button", { name: label });
+    // avoid race condition where action isn't visible before clicking
+    await expect(action).toBeVisible();
+    await action.click();
   }
 
   /** Click the tree item with the given label. */
@@ -93,15 +96,27 @@ export class SearchableView extends View {
     await this.clickNavAction("Search");
   }
 
-  /** Search for a tree item by its label/name. */
-  async search(query: string): Promise<void> {
+  /** Determine whether a search is currently applied in this view. */
+  async isSearchApplied(): Promise<boolean> {
     await this.ensureExpanded();
+    // make sure we're not in any kind of loading state
     await expect(this.progressIndicator).toBeHidden();
 
-    // clear the "Clear Search" nav action if it's already visible
+    await this.header.hover();
     const clearSearchButton = this.header.getByRole("button", { name: "Clear Search" });
-    const hasActiveSearch = await clearSearchButton.isVisible();
-    if (hasActiveSearch) {
+    try {
+      await expect(clearSearchButton).toBeVisible({ timeout: 1000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Search for a tree item by its label/name. */
+  async search(query: string): Promise<void> {
+    // clear the "Clear Search" nav action if it's already visible
+    if (await this.isSearchApplied()) {
+      const clearSearchButton = this.header.getByRole("button", { name: "Clear Search" });
       await clearSearchButton.click();
       await expect(clearSearchButton).toBeHidden();
     }
@@ -117,9 +132,6 @@ export class SearchableView extends View {
 
   /** Get a tree item by its label/name by {@link search searching}, optionally filtering by a specific locator. */
   async getItemByLabel(label: string, fromLocator?: Locator): Promise<Locator> {
-    // make sure we're not in any kind of loading state
-    await expect(this.progressIndicator).toBeHidden();
-
     await this.search(label);
 
     // filter all tree items in this view unless a specific locator is provided
