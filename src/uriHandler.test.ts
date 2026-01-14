@@ -37,7 +37,7 @@ describe("UriEventHandler", () => {
 
   it("should emit flinkWorkspaceUri event with correct URI", async () => {
     const flinkWorkspaceUri = vscode.Uri.parse(
-      "vscode://confluentinc.vscode-confluent/flinkWorkspace?environmentId=my-env&provider=aws&region=us-east-2&organizationId=my-orgworkspaceName=my-workspace",
+      "vscode://confluentinc.vscode-confluent/flinkWorkspace?environmentId=my-env&provider=aws&region=us-east-2&organizationId=my-org&workspaceName=my-workspace",
     );
     await uriHandler.handleUri(flinkWorkspaceUri);
 
