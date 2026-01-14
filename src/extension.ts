@@ -78,7 +78,6 @@ import {
 import { FLINK_SQL_LANGUAGE_ID } from "./flinkSql/constants";
 import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageClientManager";
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
-import { setFlinkWorkspaceListener } from "./flinkSql/flinkWorkspace";
 import { IconNames } from "./icons";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
@@ -248,10 +247,6 @@ async function _activateExtension(
   // Register the project scaffold listener
   const projectScaffoldListener = setProjectScaffoldListener();
   context.subscriptions.push(projectScaffoldListener);
-
-  // Register the Flink workspace listener
-  const flinkWorkspaceListener = setFlinkWorkspaceListener();
-  context.subscriptions.push(flinkWorkspaceListener);
 
   // register all the commands (apart from the view providers' refresh commands, which are handled above)
   const registeredCommands: vscode.Disposable[] = [
