@@ -143,6 +143,9 @@ export const flinkStatementSearchSet = new vscode.EventEmitter<string | null>();
 /** Fired with a URI when a vscode URL is opened asking for a scaffolding template to be materialized (linked from CCloud UI) */
 export const projectScaffoldUri = new vscode.EventEmitter<vscode.Uri>();
 
+/** Fires when we get a `vscode://confluentinc.vscode-confluent/flinkWorkspace` URI to handle. */
+export const flinkWorkspaceUri = new vscode.EventEmitter<vscode.Uri>();
+
 /** Metadata for a given {@link vscode.Uri} has been updated. */
 export const uriMetadataSet = new vscode.EventEmitter<vscode.Uri>();
 
