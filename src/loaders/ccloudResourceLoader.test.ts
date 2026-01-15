@@ -116,6 +116,32 @@ describe("CCloudResourceLoader", () => {
     sandbox.restore();
   });
 
+  /** Helper to create a mock workspace response with required fields. */
+  function createMockWorkspace(
+    orgId: string,
+    envId: string,
+    name: string,
+  ): GetWsV1Workspace200Response {
+    return {
+      api_version: GetWsV1Workspace200ResponseApiVersionEnum.WsV1,
+      kind: GetWsV1Workspace200ResponseKindEnum.Workspace,
+      metadata: {},
+      organization_id: orgId,
+      environment_id: envId,
+      name: name,
+      spec: { display_name: name, blocks: [] },
+    };
+  }
+
+  /** Shared params for workspace-related tests. */
+  const testWorkspaceParams: FlinkWorkspaceParams = {
+    organizationId: TEST_CCLOUD_ORGANIZATION.id,
+    environmentId: TEST_CCLOUD_ENVIRONMENT.id,
+    workspaceName: "test-workspace",
+    provider: "aws",
+    region: "us-west-2",
+  };
+
   describe("constructor", () => {
     it("should register at least one event handler disposable after construction", () => {
       const eventHandlers = loader["disposables"];
@@ -2043,62 +2069,36 @@ describe("CCloudResourceLoader", () => {
   });
 
   describe("validateWorkspaceResponse", () => {
-    /** Helper to create a mock workspace response with required fields. */
-    function createMockWorkspace(
-      orgId: string,
-      envId: string,
-      name: string,
-    ): GetWsV1Workspace200Response {
-      return {
-        api_version: GetWsV1Workspace200ResponseApiVersionEnum.WsV1,
-        kind: GetWsV1Workspace200ResponseKindEnum.Workspace,
-        metadata: {},
-        organization_id: orgId,
-        environment_id: envId,
-        name: name,
-        spec: { display_name: name, blocks: [] },
-      };
-    }
-
     it("should return true when organization and environment IDs match", () => {
-      const workspace = createMockWorkspace("org-123", "env-456", "test-workspace");
-      const params: FlinkWorkspaceParams = {
-        organizationId: "org-123",
-        environmentId: "env-456",
-        workspaceName: "test-workspace",
-        provider: "aws",
-        region: "us-west-2",
-      };
+      const workspace = createMockWorkspace(
+        testWorkspaceParams.organizationId,
+        testWorkspaceParams.environmentId,
+        testWorkspaceParams.workspaceName,
+      );
 
-      const result = loader["validateWorkspaceResponse"](workspace, params);
+      const result = loader["validateWorkspaceResponse"](workspace, testWorkspaceParams);
       assert.strictEqual(result, true);
     });
 
     it("should return false when organization ID does not match", () => {
-      const workspace = createMockWorkspace("org-different", "env-456", "test-workspace");
-      const params: FlinkWorkspaceParams = {
-        organizationId: "org-123",
-        environmentId: "env-456",
-        workspaceName: "test-workspace",
-        provider: "aws",
-        region: "us-west-2",
-      };
+      const workspace = createMockWorkspace(
+        "org-different",
+        testWorkspaceParams.environmentId,
+        testWorkspaceParams.workspaceName,
+      );
 
-      const result = loader["validateWorkspaceResponse"](workspace, params);
+      const result = loader["validateWorkspaceResponse"](workspace, testWorkspaceParams);
       assert.strictEqual(result, false);
     });
 
     it("should return false when environment ID does not match", () => {
-      const workspace = createMockWorkspace("org-123", "env-different", "test-workspace");
-      const params: FlinkWorkspaceParams = {
-        organizationId: "org-123",
-        environmentId: "env-456",
-        workspaceName: "test-workspace",
-        provider: "aws",
-        region: "us-west-2",
-      };
+      const workspace = createMockWorkspace(
+        testWorkspaceParams.organizationId,
+        "env-different",
+        testWorkspaceParams.workspaceName,
+      );
 
-      const result = loader["validateWorkspaceResponse"](workspace, params);
+      const result = loader["validateWorkspaceResponse"](workspace, testWorkspaceParams);
       assert.strictEqual(result, false);
     });
   });
@@ -2107,31 +2107,6 @@ describe("CCloudResourceLoader", () => {
     let getCCloudAuthSessionStub: sinon.SinonStub;
     let workspacesApiStub: sinon.SinonStubbedInstance<WorkspacesWsV1Api>;
     let stubbedSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
-
-    const testParams: FlinkWorkspaceParams = {
-      organizationId: TEST_CCLOUD_ORGANIZATION.id,
-      environmentId: TEST_CCLOUD_ENVIRONMENT.id,
-      workspaceName: "test-workspace",
-      provider: "aws",
-      region: "us-west-2",
-    };
-
-    /** Helper to create a mock workspace response with required fields. */
-    function createMockWorkspace(
-      orgId: string,
-      envId: string,
-      name: string,
-    ): GetWsV1Workspace200Response {
-      return {
-        api_version: GetWsV1Workspace200ResponseApiVersionEnum.WsV1,
-        kind: GetWsV1Workspace200ResponseKindEnum.Workspace,
-        metadata: {},
-        organization_id: orgId,
-        environment_id: envId,
-        name: name,
-        spec: { display_name: name, blocks: [] },
-      };
-    }
 
     beforeEach(() => {
       getCCloudAuthSessionStub = sandbox.stub(authnUtils, "getCCloudAuthSession");
@@ -2143,7 +2118,7 @@ describe("CCloudResourceLoader", () => {
     it("should return null when user does not consent to login", async () => {
       getCCloudAuthSessionStub.rejects(new Error("User did not consent to login."));
 
-      const result = await loader.getFlinkWorkspace(testParams);
+      const result = await loader.getFlinkWorkspace(testWorkspaceParams);
 
       assert.strictEqual(result, null);
       sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, { createIfNone: true });
@@ -2155,7 +2130,7 @@ describe("CCloudResourceLoader", () => {
       error.name = "CCloudConnectionError";
       getCCloudAuthSessionStub.rejects(error);
 
-      const result = await loader.getFlinkWorkspace(testParams);
+      const result = await loader.getFlinkWorkspace(testWorkspaceParams);
 
       assert.strictEqual(result, null);
       sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, { createIfNone: true });
@@ -2167,7 +2142,7 @@ describe("CCloudResourceLoader", () => {
       getCCloudAuthSessionStub.rejects(unexpectedError);
 
       await assert.rejects(async () => {
-        await loader.getFlinkWorkspace(testParams);
+        await loader.getFlinkWorkspace(testWorkspaceParams);
       }, unexpectedError);
 
       sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, { createIfNone: true });
@@ -2177,20 +2152,20 @@ describe("CCloudResourceLoader", () => {
     it("should return workspace when API call succeeds and validation passes", async () => {
       getCCloudAuthSessionStub.resolves({});
       const mockWorkspace = createMockWorkspace(
-        testParams.organizationId,
-        testParams.environmentId,
-        testParams.workspaceName,
+        testWorkspaceParams.organizationId,
+        testWorkspaceParams.environmentId,
+        testWorkspaceParams.workspaceName,
       );
       workspacesApiStub.getWsV1Workspace.resolves(mockWorkspace);
 
-      const result = await loader.getFlinkWorkspace(testParams);
+      const result = await loader.getFlinkWorkspace(testWorkspaceParams);
 
       assert.deepStrictEqual(result, mockWorkspace);
       sinon.assert.calledOnce(getCCloudAuthSessionStub);
       sinon.assert.calledOnceWithExactly(workspacesApiStub.getWsV1Workspace, {
-        organization_id: testParams.organizationId,
-        environment_id: testParams.environmentId,
-        name: testParams.workspaceName,
+        organization_id: testWorkspaceParams.organizationId,
+        environment_id: testWorkspaceParams.environmentId,
+        name: testWorkspaceParams.workspaceName,
       });
     });
 
@@ -2198,12 +2173,12 @@ describe("CCloudResourceLoader", () => {
       getCCloudAuthSessionStub.resolves({});
       const mockWorkspace = createMockWorkspace(
         "different-org",
-        testParams.environmentId,
-        testParams.workspaceName,
+        testWorkspaceParams.environmentId,
+        testWorkspaceParams.workspaceName,
       );
       workspacesApiStub.getWsV1Workspace.resolves(mockWorkspace);
 
-      const result = await loader.getFlinkWorkspace(testParams);
+      const result = await loader.getFlinkWorkspace(testWorkspaceParams);
 
       assert.strictEqual(result, null);
       sinon.assert.calledOnce(getCCloudAuthSessionStub);
@@ -2214,7 +2189,7 @@ describe("CCloudResourceLoader", () => {
       getCCloudAuthSessionStub.resolves({});
       workspacesApiStub.getWsV1Workspace.rejects(new Error("API request failed"));
 
-      const result = await loader.getFlinkWorkspace(testParams);
+      const result = await loader.getFlinkWorkspace(testWorkspaceParams);
 
       assert.strictEqual(result, null);
       sinon.assert.calledOnce(getCCloudAuthSessionStub);
