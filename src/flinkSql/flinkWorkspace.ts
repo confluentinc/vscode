@@ -151,7 +151,7 @@ export async function extractMetadataFromWorkspace(
     catalog: environment,
   };
 
-  const computePoolId = (workspace.spec.compute_pool as { id?: string } | null)?.id;
+  const computePoolId = (workspace.spec.compute_pool as CCloudFlinkComputePool["id"]) || undefined;
 
   if (computePoolId) {
     const computePool = environment.flinkComputePools.find((pool) => pool.id === computePoolId);
