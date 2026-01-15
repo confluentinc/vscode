@@ -1,5 +1,6 @@
 import type { Disposable } from "vscode";
 
+import { getCCloudAuthSession } from "../authn/utils";
 import type { ArtifactV1FlinkArtifactListDataInner } from "../clients/flinkArtifacts";
 import type {
   FcpmV2RegionListDataInner,
@@ -74,7 +75,6 @@ import {
   getUdfSystemCatalogQuery,
   transformUdfSystemCatalogRows,
 } from "./utils/udfSystemCatalogQuery";
-import { getCCloudAuthSession } from "../authn/utils";
 
 const logger = new Logger("storage.ccloudResourceLoader");
 
@@ -863,10 +863,6 @@ export class CCloudResourceLoader extends CachingResourceLoader<
         name: params.workspaceName,
       });
 
-      logger.debug(`Found workspace in region ${params.provider}/${params.region}`, {
-        workspaceName: params.workspaceName,
-      });
-
       // Validate workspace matches expected organization and environment
       if (!this.validateWorkspaceResponse(workspace, params)) {
         return null;
@@ -942,10 +938,6 @@ async function loadStatementsForProviderRegion(
     // set to true.
     label_selector: "user.confluent.io/hidden!=true",
   };
-
-  logger.debug(
-    `getFlinkStatements() requesting from ${queryable.provider}-${queryable.region} :\n${JSON.stringify(request, null, 2)}`,
-  );
 
   const flinkStatements: FlinkStatement[] = [];
 

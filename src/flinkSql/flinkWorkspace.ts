@@ -82,13 +82,6 @@ export async function extractMetadataFromWorkspace(
   workspace: GetWsV1Workspace200Response,
   environment: CCloudEnvironment,
 ): Promise<WorkspaceMetadataContext> {
-  logger.debug("Extracting metadata from workspace", {
-    workspaceName: workspace.name,
-    environmentId: environment.id,
-    environmentName: environment.name,
-    workspaceProperties: workspace.spec.properties,
-  });
-
   const context: WorkspaceMetadataContext = {
     catalog: environment,
   };
@@ -99,7 +92,6 @@ export async function extractMetadataFromWorkspace(
     const computePool = environment.flinkComputePools.find((pool) => pool.id === computePoolId);
     if (computePool) {
       context.computePool = computePool;
-      logger.debug("Resolved compute pool from workspace", { computePoolId });
     } else {
       logger.warn("Compute pool from workspace not found in environment", {
         computePoolId,
@@ -110,24 +102,14 @@ export async function extractMetadataFromWorkspace(
 
   // Extract database (Kafka cluster ID) from workspace properties
   const databaseId = workspace.spec.properties?.["sql-database"];
-  logger.debug("Extracting database from workspace", {
-    databaseId,
-    hasProperties: !!workspace.spec.properties,
-  });
 
   if (databaseId) {
     const loader = CCloudResourceLoader.getInstance();
     const kafkaClusters = await loader.getKafkaClustersForEnvironmentId(environment.id);
-    logger.debug("Loaded Kafka clusters for environment", {
-      environmentId: environment.id,
-      clusterCount: kafkaClusters?.length ?? 0,
-      clusterIds: kafkaClusters?.map((c) => c.id) ?? [],
-    });
 
     const cluster = kafkaClusters?.find((c) => c.id === databaseId);
     if (cluster && cluster.isFlinkable()) {
       context.database = cluster;
-      logger.debug("Resolved database from workspace properties", { databaseId });
     } else if (cluster) {
       logger.warn("Database cluster found but not Flink-enabled", {
         databaseId,
@@ -141,15 +123,6 @@ export async function extractMetadataFromWorkspace(
       });
     }
   }
-
-  logger.debug("Extracted metadata context", {
-    hasCatalog: !!context.catalog,
-    catalogId: context.catalog?.id,
-    hasDatabase: !!context.database,
-    databaseId: context.database?.id,
-    hasComputePool: !!context.computePool,
-    computePoolId: context.computePool?.id,
-  });
 
   return context;
 }
