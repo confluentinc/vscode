@@ -832,6 +832,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     params: FlinkWorkspaceParams,
   ): Promise<GetWsV1Workspace200Response | null> {
     // Ensure we have a signed-in CCloud session (prompts login if needed)
+    // This should only ever be called from a URI handler context
     try {
       await getCCloudAuthSession({ createIfNone: true });
     } catch (error) {
