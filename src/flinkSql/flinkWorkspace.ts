@@ -86,8 +86,8 @@ export async function extractMetadataFromWorkspace(
     catalog: environment,
   };
 
-  // Extract compute pool ID and resolve to full model
   const computePoolId = (workspace.spec.compute_pool as { id?: string } | null)?.id;
+
   if (computePoolId) {
     const computePool = environment.flinkComputePools.find((pool) => pool.id === computePoolId);
     if (computePool) {
@@ -100,7 +100,6 @@ export async function extractMetadataFromWorkspace(
     }
   }
 
-  // Extract database (Kafka cluster ID) from workspace properties
   const databaseId = workspace.spec.properties?.["sql-database"];
 
   if (databaseId) {
@@ -150,7 +149,6 @@ export function extractSqlStatementsFromWorkspace(
       continue;
     }
 
-    // Join the source lines to form a complete SQL statement
     const sqlStatement = block.code_options.source.join("\n");
     if (sqlStatement.trim()) {
       sqlStatements.push(sqlStatement);
@@ -171,14 +169,12 @@ export function extractSqlStatementsFromWorkspace(
 export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
   logger.debug("Handling Flink workspace URI event", { uri: uri.toString() });
 
-  // Extract workspace parameters from the URI
   const params = extractWorkspaceParamsFromUri(uri);
   if (!params) {
     vscode.window.showErrorMessage("Invalid Flink workspace URI: missing required parameters");
     return;
   }
 
-  // Validate the workspace exists
   const loader = CCloudResourceLoader.getInstance();
   const workspace = await loader.getFlinkWorkspace(params);
   if (!workspace) {
@@ -195,16 +191,13 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
     return;
   }
 
-  // Extract metadata from workspace for setting on opened documents
   const metadataContext = await extractMetadataFromWorkspace(
     workspace,
     environment as CCloudEnvironment,
   );
 
-  // Extract SQL statements from the workspace
   const sqlStatements = extractSqlStatementsFromWorkspace(workspace);
 
-  // If no statements found, show a single empty document with metadata
   if (sqlStatements.length === 0) {
     try {
       const document = await vscode.workspace.openTextDocument({
@@ -221,7 +214,6 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
     return;
   }
 
-  // Create and open a separate document for each SQL statement
   try {
     await openSqlStatementsAsDocuments(sqlStatements, metadataContext);
   } catch (error) {

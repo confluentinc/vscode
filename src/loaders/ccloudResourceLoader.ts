@@ -863,7 +863,6 @@ export class CCloudResourceLoader extends CachingResourceLoader<
         name: params.workspaceName,
       });
 
-      // Validate workspace matches expected organization and environment
       if (!this.validateWorkspaceResponse(workspace, params)) {
         return null;
       }
