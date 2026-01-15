@@ -18,7 +18,7 @@ import {
 } from "../quickpicks/kafkaClusters";
 import { getSidecar } from "../sidecar";
 import { removeProtocolPrefix } from "../utils/bootstrapServers";
-import { getTopicViewProvider } from "../viewProviders/topics";
+import { TopicViewProvider } from "../viewProviders/topics";
 import { selectSchemaRegistryCommand } from "./schemaRegistry";
 
 const logger = new Logger("commands.kafkaClusters");
@@ -148,7 +148,7 @@ async function deleteTopicCommand(topic: KafkaTopic) {
         // explicitly deep refresh the topics view after deleting a topic, so that repainting
         // ommitting the newly deleted topic is a foreground task we block on before
         // closing the progress window.
-        getTopicViewProvider().refresh(true, topic);
+        await TopicViewProvider.getInstance().refresh(true, topic);
       } catch (error) {
         const errorMessage = `Failed to delete topic: ${error}`;
         logger.error(errorMessage);
@@ -165,7 +165,8 @@ async function deleteTopicCommand(topic: KafkaTopic) {
  * @returns True if the topic was created, false otherwise.
  */
 export async function createTopicCommand(item?: KafkaCluster): Promise<boolean> {
-  const topicsViewCluster = getTopicViewProvider().kafkaCluster;
+  const topicsViewProvider = TopicViewProvider.getInstance();
+  const topicsViewCluster = topicsViewProvider.kafkaCluster;
 
   let cluster: KafkaCluster | undefined;
   // we'll need to know which Kafka cluster to create the topic in, which happens one of three ways:
@@ -240,7 +241,7 @@ export async function createTopicCommand(item?: KafkaCluster): Promise<boolean> 
         // Refresh in the foreground after creating a topic, so that the new topic is visible
         // immediately after the progress window closes (assuming topics view is showing this cluster).
 
-        getTopicViewProvider().refresh(true, cluster);
+        await topicsViewProvider.refresh(true, cluster);
 
         return true; // indicate the user actually created a topic.
       } catch (error) {
