@@ -74,6 +74,7 @@ import {
   getUdfSystemCatalogQuery,
   transformUdfSystemCatalogRows,
 } from "./utils/udfSystemCatalogQuery";
+import { getCCloudAuthSession } from "../authn/utils";
 
 const logger = new Logger("storage.ccloudResourceLoader");
 
@@ -830,6 +831,20 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   public async getFlinkWorkspace(
     params: FlinkWorkspaceParams,
   ): Promise<GetWsV1Workspace200Response | null> {
+    // Ensure we have a signed-in CCloud session (prompts login if needed)
+    try {
+      await getCCloudAuthSession({ createIfNone: true });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message === "User did not consent to login." ||
+          error.name === "CCloudConnectionError")
+      ) {
+        return null; // User cancelled - silent exit
+      }
+      throw error;
+    }
+
     const sidecar = await getSidecar();
 
     // Build the queryable from the params - provider/region come directly from the URI

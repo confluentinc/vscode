@@ -1,6 +1,5 @@
 import type { Uri } from "vscode";
 import * as vscode from "vscode";
-import { getCCloudAuthSession } from "../authn/utils";
 import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import { flinkWorkspaceUri } from "../emitters";
 import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
@@ -70,35 +69,6 @@ export function extractWorkspaceParamsFromUri(uri: Uri): FlinkWorkspaceParams | 
     region,
   };
 }
-
-/**
- * Fetch and validate a Flink workspace from the API.
- * Ensures CCloud authentication before delegating to the resource loader.
- *
- * @param params Workspace parameters to validate against
- * @returns The workspace response if validation succeeds, null otherwise
- */
-export async function getFlinkWorkspace(
-  params: FlinkWorkspaceParams,
-): Promise<GetWsV1Workspace200Response | null> {
-  // Ensure we have a signed-in CCloud session (prompts login if needed)
-  try {
-    await getCCloudAuthSession({ createIfNone: true });
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.message === "User did not consent to login." || error.name === "CCloudConnectionError")
-    ) {
-      return null; // User cancelled - silent exit
-    }
-    throw error;
-  }
-
-  // Delegate to the resource loader for the actual workspace fetching
-  const loader = CCloudResourceLoader.getInstance();
-  return loader.getFlinkWorkspace(params);
-}
-
 /**
  * Extract metadata context from a workspace response for setting on opened documents.
  * Resolves the compute pool ID from workspace.spec.compute_pool to full CCloudFlinkComputePool,
@@ -236,17 +206,14 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
   }
 
   // Validate the workspace exists
-  const workspace = await getFlinkWorkspace(params);
+  const loader = CCloudResourceLoader.getInstance();
+  const workspace = await loader.getFlinkWorkspace(params);
   if (!workspace) {
     vscode.window.showErrorMessage(
       `Unable to load Flink workspace: ${params.workspaceName}. Please verify the workspace exists and you have access.`,
     );
     return;
   }
-
-  // Load environment to use as catalog and for resolving metadata
-  // Force deep refresh to ensure we have the latest compute pools and Kafka clusters
-  const loader = CCloudResourceLoader.getInstance();
   const environment = await loader.getEnvironment(params.environmentId as EnvironmentId, true);
   if (!environment) {
     vscode.window.showErrorMessage(
