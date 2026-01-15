@@ -37,6 +37,70 @@ export interface WorkspaceMetadataContext {
 }
 
 /**
+ * Handle a flinkWorkspace URI event by creating and opening a .flink.sql file.
+ * Validates the workspace exists before creating the file, then extracts metadata
+ * from the workspace to set on opened documents.
+ *
+ * @param uri The URI containing workspace parameters
+ */
+export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
+  logger.debug("Handling Flink workspace URI event", { uri: uri.toString() });
+
+  const params = extractWorkspaceParamsFromUri(uri);
+  if (!params) {
+    vscode.window.showErrorMessage("Invalid Flink workspace URI: missing required parameters");
+    return;
+  }
+
+  const loader = CCloudResourceLoader.getInstance();
+  const workspace = await loader.getFlinkWorkspace(params);
+  if (!workspace) {
+    vscode.window.showErrorMessage(
+      `Unable to load Flink workspace: ${params.workspaceName}. Please verify the workspace exists and you have access.`,
+    );
+    return;
+  }
+  const environment = await loader.getEnvironment(params.environmentId as EnvironmentId, true);
+  if (!environment) {
+    vscode.window.showErrorMessage(
+      `Unable to load environment: ${params.environmentId}. Please verify the environment exists and you have access.`,
+    );
+    return;
+  }
+
+  const metadataContext = await extractMetadataFromWorkspace(
+    workspace,
+    environment as CCloudEnvironment,
+  );
+
+  const sqlStatements = extractSqlStatementsFromWorkspace(workspace);
+
+  if (sqlStatements.length === 0) {
+    try {
+      const document = await vscode.workspace.openTextDocument({
+        language: FLINK_SQL_LANGUAGE_ID,
+        content: `-- No SQL statements found in workspace --`,
+      });
+      await setFlinkDocumentMetadata(document.uri, metadataContext);
+      await vscode.window.showTextDocument(document);
+    } catch (error) {
+      vscode.window.showErrorMessage(
+        `Failed to open Flink SQL workspace: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    return;
+  }
+
+  try {
+    await openSqlStatementsAsDocuments(sqlStatements, metadataContext);
+  } catch (error) {
+    vscode.window.showErrorMessage(
+      `Failed to open Flink SQL workspace: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+/**
  * Extract Flink workspace parameters from a URI's query string.
  * @param uri The URI containing workspace parameters in its query string
  * @returns Parsed workspace parameters, or null if required parameters are missing
@@ -69,6 +133,7 @@ export function extractWorkspaceParamsFromUri(uri: Uri): FlinkWorkspaceParams | 
     region,
   };
 }
+
 /**
  * Extract metadata context from a workspace response for setting on opened documents.
  * Resolves the compute pool ID from workspace.spec.compute_pool to full CCloudFlinkComputePool,
@@ -157,70 +222,6 @@ export function extractSqlStatementsFromWorkspace(
 
   logger.debug(`Extracted ${sqlStatements.length} SQL statements from workspace`);
   return sqlStatements;
-}
-
-/**
- * Handle a flinkWorkspace URI event by creating and opening a .flink.sql file.
- * Validates the workspace exists before creating the file, then extracts metadata
- * from the workspace to set on opened documents.
- *
- * @param uri The URI containing workspace parameters
- */
-export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
-  logger.debug("Handling Flink workspace URI event", { uri: uri.toString() });
-
-  const params = extractWorkspaceParamsFromUri(uri);
-  if (!params) {
-    vscode.window.showErrorMessage("Invalid Flink workspace URI: missing required parameters");
-    return;
-  }
-
-  const loader = CCloudResourceLoader.getInstance();
-  const workspace = await loader.getFlinkWorkspace(params);
-  if (!workspace) {
-    vscode.window.showErrorMessage(
-      `Unable to load Flink workspace: ${params.workspaceName}. Please verify the workspace exists and you have access.`,
-    );
-    return;
-  }
-  const environment = await loader.getEnvironment(params.environmentId as EnvironmentId, true);
-  if (!environment) {
-    vscode.window.showErrorMessage(
-      `Unable to load environment: ${params.environmentId}. Please verify the environment exists and you have access.`,
-    );
-    return;
-  }
-
-  const metadataContext = await extractMetadataFromWorkspace(
-    workspace,
-    environment as CCloudEnvironment,
-  );
-
-  const sqlStatements = extractSqlStatementsFromWorkspace(workspace);
-
-  if (sqlStatements.length === 0) {
-    try {
-      const document = await vscode.workspace.openTextDocument({
-        language: FLINK_SQL_LANGUAGE_ID,
-        content: `-- No SQL statements found in workspace --`,
-      });
-      await setFlinkDocumentMetadata(document.uri, metadataContext);
-      await vscode.window.showTextDocument(document);
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        `Failed to open Flink SQL workspace: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-    return;
-  }
-
-  try {
-    await openSqlStatementsAsDocuments(sqlStatements, metadataContext);
-  } catch (error) {
-    vscode.window.showErrorMessage(
-      `Failed to open Flink SQL workspace: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
 }
 
 /**
