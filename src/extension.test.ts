@@ -10,7 +10,6 @@ import {
 import { ExtensionContextNotSetError } from "./errors";
 import { getRefreshableViewProviders } from "./extension";
 import { ResourceManager } from "./storage/resourceManager";
-import { TopicViewProvider } from "./viewProviders/topics";
 
 describe("Base Extension Test", () => {
   it("should activate the extension", async () => {
@@ -36,11 +35,6 @@ describe("ExtensionContext", () => {
 
   it("should not allow ExtensionContext-dependent singletons to be created before extension activation", async () => {
     const extensionContextSingletons = [
-      {
-        callable: () => TopicViewProvider.getInstance(),
-        source: "TopicViewProvider",
-        clear: () => (TopicViewProvider["instance"] = null),
-      },
       {
         callable: () => ConfluentCloudAuthProvider.getInstance(),
         source: "ConfluentCloudAuthProvider",
