@@ -406,8 +406,3 @@ export class TopicViewProvider
     return this.kafkaCluster !== null && isCCloud(this.kafkaCluster);
   }
 }
-
-/** Get the singleton instance of the {@link TopicViewProvider} */
-export function getTopicViewProvider() {
-  return TopicViewProvider.getInstance();
-}
