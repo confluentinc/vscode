@@ -11,10 +11,10 @@ import { IconNames } from "../icons";
 import { KafkaTopic, KafkaTopicTreeItem } from "./topic";
 
 describe("Test KafkaTopic properties", () => {
-  it("uniqueId should return a unique identifier for the topic", () => {
+  it("id should return a unique identifier for the topic", () => {
     assert.strictEqual(
       `${TEST_LOCAL_KAFKA_TOPIC.clusterId}-${TEST_LOCAL_KAFKA_TOPIC.name}`,
-      TEST_LOCAL_KAFKA_TOPIC.uniqueId,
+      TEST_LOCAL_KAFKA_TOPIC.id,
     );
   });
 
