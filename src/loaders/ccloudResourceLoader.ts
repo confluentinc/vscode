@@ -37,7 +37,12 @@ import type { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { CCloudOrganization } from "../models/organization";
-import type { EnvironmentId, IFlinkQueryable, IProviderRegion } from "../models/resource";
+import type {
+  EnvironmentId,
+  IFlinkQueryable,
+  IProviderRegion,
+  OrganizationId,
+} from "../models/resource";
 import type { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import type { SidecarHandle } from "../sidecar";
 import { getSidecar } from "../sidecar";
@@ -817,101 +822,52 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
   /**
    * Fetch and validate a Flink workspace from the API.
-   * Since the Flink Workspaces API is region-scoped, this method discovers the available
-   * regions from the environment's Flink compute pools and searches each region for the workspace.
+   * Uses the provider/region from the params to query the region-scoped Workspaces API directly.
    *
-   * @param params Workspace parameters containing environmentId, organizationId, and workspaceName
+   * @param params Workspace parameters containing environmentId, organizationId, workspaceName, provider, and region
    * @returns The workspace response if found and validation succeeds, null otherwise
    */
   public async getFlinkWorkspace(
     params: FlinkWorkspaceParams,
   ): Promise<GetWsV1Workspace200Response | null> {
-    // 1. Load the environment to discover available provider/region combinations
-    const environment = await this.getEnvironment(params.environmentId as EnvironmentId);
+    const sidecar = await getSidecar();
 
-    if (!environment) {
-      logger.warn("Environment not found", { environmentId: params.environmentId });
-      return null;
-    }
+    // Build the queryable from the params - provider/region come directly from the URI
+    const queryable: IFlinkQueryable = {
+      organizationId: params.organizationId as OrganizationId,
+      environmentId: params.environmentId as EnvironmentId,
+      provider: params.provider,
+      region: params.region,
+    };
 
-    // 2. Use determineFlinkQueryables to get unique provider/region combinations
-    // Safe cast: CCloudResourceLoader.getEnvironment() returns CCloudEnvironment
-    const flinkQueryables = await this.determineFlinkQueryables(environment as CCloudEnvironment);
-    if (flinkQueryables.length === 0) {
-      logger.warn("No Flink compute pools found in environment", {
+    try {
+      const workspacesApi = sidecar.getFlinkWorkspacesWsV1Api(queryable);
+      const workspace = await workspacesApi.getWsV1Workspace({
+        organization_id: params.organizationId,
+        environment_id: params.environmentId,
+        name: params.workspaceName,
+      });
+
+      logger.debug(`Found workspace in region ${params.provider}/${params.region}`, {
+        workspaceName: params.workspaceName,
+      });
+
+      // Validate workspace matches expected organization and environment
+      if (!this.validateWorkspaceResponse(workspace, params)) {
+        return null;
+      }
+
+      return workspace;
+    } catch (error) {
+      logger.warn("Failed to fetch workspace", {
+        workspaceName: params.workspaceName,
         environmentId: params.environmentId,
+        provider: params.provider,
+        region: params.region,
+        error,
       });
       return null;
     }
-
-    logger.debug(`Found ${flinkQueryables.length} unique region(s) to search`, {
-      regions: flinkQueryables.map((q) => `${q.provider}/${q.region}`),
-    });
-
-    // 3. Search for the workspace across regions
-    const workspace = await this.findWorkspaceInRegions(params, flinkQueryables);
-
-    if (!workspace) {
-      return null;
-    }
-
-    // 4. Validate workspace matches expected organization and environment
-    if (!this.validateWorkspaceResponse(workspace, params)) {
-      return null;
-    }
-
-    return workspace;
-  }
-
-  /**
-   * Search for a workspace across multiple provider/region combinations.
-   *
-   * @param params Workspace parameters (workspaceName is used for the query)
-   * @param flinkQueryables The provider/region combinations to search
-   * @returns The workspace if found, null otherwise
-   */
-  private async findWorkspaceInRegions(
-    params: FlinkWorkspaceParams,
-    flinkQueryables: IFlinkQueryable[],
-  ): Promise<GetWsV1Workspace200Response | null> {
-    const sidecar = await getSidecar();
-
-    // Search each region sequentially until we find the workspace.
-    // Sequential search is preferred here because:
-    // 1. Most environments have 1-2 regions, so parallelization overhead isn't worth it
-    // 2. We stop as soon as we find the workspace (fail-fast)
-    // 3. Easier error handling and logging
-    for (const queryable of flinkQueryables) {
-      try {
-        const workspacesApi = sidecar.getFlinkWorkspacesWsV1Api(queryable);
-        const workspace = await workspacesApi.getWsV1Workspace({
-          organization_id: queryable.organizationId,
-          environment_id: queryable.environmentId,
-          name: params.workspaceName,
-        });
-
-        logger.debug(`Found workspace in region ${queryable.provider}/${queryable.region}`, {
-          workspaceName: params.workspaceName,
-        });
-
-        return workspace;
-      } catch {
-        // 404 means workspace doesn't exist in this region - continue searching
-        // Other errors are logged but we continue to try other regions
-        logger.debug(`Workspace not found in region ${queryable.provider}/${queryable.region}`, {
-          workspaceName: params.workspaceName,
-        });
-      }
-    }
-
-    // Workspace not found in any region
-    logger.warn("Workspace not found in any region", {
-      workspaceName: params.workspaceName,
-      environmentId: params.environmentId,
-      searchedRegions: flinkQueryables.map((q) => `${q.provider}/${q.region}`),
-    });
-
-    return null;
   }
 
   /**
