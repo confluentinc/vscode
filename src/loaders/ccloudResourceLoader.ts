@@ -939,6 +939,10 @@ async function loadStatementsForProviderRegion(
     label_selector: "user.confluent.io/hidden!=true",
   };
 
+  logger.debug(
+    `getFlinkStatements() requesting from ${queryable.provider}-${queryable.region} :\n${JSON.stringify(request, null, 2)}`,
+  );
+
   const flinkStatements: FlinkStatement[] = [];
 
   let needMore: boolean = true;
