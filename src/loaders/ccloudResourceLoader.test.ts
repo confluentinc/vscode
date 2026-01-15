@@ -15,6 +15,7 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/f
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
+import * as authnUtils from "../authn/utils";
 import type {
   ArtifactV1FlinkArtifactList,
   ArtifactV1FlinkArtifactListDataInner,
@@ -46,7 +47,14 @@ import {
   SqlV1StatementListKindEnum,
   StatementsSqlV1Api,
 } from "../clients/flinkSql";
+import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
+import {
+  GetWsV1Workspace200ResponseApiVersionEnum,
+  GetWsV1Workspace200ResponseKindEnum,
+  WorkspacesWsV1Api,
+} from "../clients/flinkWorkspaces";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
+import type { FlinkWorkspaceParams } from "../flinkSql/flinkWorkspace";
 import * as statementUtils from "../flinkSql/statementUtils";
 import * as graphqlCCloud from "../graphql/ccloud";
 import * as graphqlOrgs from "../graphql/organizations";
@@ -2031,6 +2039,186 @@ describe("CCloudResourceLoader", () => {
 
       sinon.assert.calledOnce(refreshStub);
       sinon.assert.calledOnce(statementsApiStub.updateSqlv1Statement);
+    });
+  });
+
+  describe("validateWorkspaceResponse", () => {
+    /** Helper to create a mock workspace response with required fields. */
+    function createMockWorkspace(
+      orgId: string,
+      envId: string,
+      name: string,
+    ): GetWsV1Workspace200Response {
+      return {
+        api_version: GetWsV1Workspace200ResponseApiVersionEnum.WsV1,
+        kind: GetWsV1Workspace200ResponseKindEnum.Workspace,
+        metadata: {},
+        organization_id: orgId,
+        environment_id: envId,
+        name: name,
+        spec: { display_name: name, blocks: [] },
+      };
+    }
+
+    it("should return true when organization and environment IDs match", () => {
+      const workspace = createMockWorkspace("org-123", "env-456", "test-workspace");
+      const params: FlinkWorkspaceParams = {
+        organizationId: "org-123",
+        environmentId: "env-456",
+        workspaceName: "test-workspace",
+        provider: "aws",
+        region: "us-west-2",
+      };
+
+      const result = loader["validateWorkspaceResponse"](workspace, params);
+      assert.strictEqual(result, true);
+    });
+
+    it("should return false when organization ID does not match", () => {
+      const workspace = createMockWorkspace("org-different", "env-456", "test-workspace");
+      const params: FlinkWorkspaceParams = {
+        organizationId: "org-123",
+        environmentId: "env-456",
+        workspaceName: "test-workspace",
+        provider: "aws",
+        region: "us-west-2",
+      };
+
+      const result = loader["validateWorkspaceResponse"](workspace, params);
+      assert.strictEqual(result, false);
+    });
+
+    it("should return false when environment ID does not match", () => {
+      const workspace = createMockWorkspace("org-123", "env-different", "test-workspace");
+      const params: FlinkWorkspaceParams = {
+        organizationId: "org-123",
+        environmentId: "env-456",
+        workspaceName: "test-workspace",
+        provider: "aws",
+        region: "us-west-2",
+      };
+
+      const result = loader["validateWorkspaceResponse"](workspace, params);
+      assert.strictEqual(result, false);
+    });
+  });
+
+  describe("getFlinkWorkspace", () => {
+    let getCCloudAuthSessionStub: sinon.SinonStub;
+    let workspacesApiStub: sinon.SinonStubbedInstance<WorkspacesWsV1Api>;
+    let stubbedSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
+
+    const testParams: FlinkWorkspaceParams = {
+      organizationId: TEST_CCLOUD_ORGANIZATION.id,
+      environmentId: TEST_CCLOUD_ENVIRONMENT.id,
+      workspaceName: "test-workspace",
+      provider: "aws",
+      region: "us-west-2",
+    };
+
+    /** Helper to create a mock workspace response with required fields. */
+    function createMockWorkspace(
+      orgId: string,
+      envId: string,
+      name: string,
+    ): GetWsV1Workspace200Response {
+      return {
+        api_version: GetWsV1Workspace200ResponseApiVersionEnum.WsV1,
+        kind: GetWsV1Workspace200ResponseKindEnum.Workspace,
+        metadata: {},
+        organization_id: orgId,
+        environment_id: envId,
+        name: name,
+        spec: { display_name: name, blocks: [] },
+      };
+    }
+
+    beforeEach(() => {
+      getCCloudAuthSessionStub = sandbox.stub(authnUtils, "getCCloudAuthSession");
+      stubbedSidecarHandle = getSidecarStub(sandbox);
+      workspacesApiStub = sandbox.createStubInstance(WorkspacesWsV1Api);
+      stubbedSidecarHandle.getFlinkWorkspacesWsV1Api.returns(workspacesApiStub);
+    });
+
+    it("should return null when user does not consent to login", async () => {
+      getCCloudAuthSessionStub.rejects(new Error("User did not consent to login."));
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.strictEqual(result, null);
+      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, { createIfNone: true });
+      sinon.assert.notCalled(workspacesApiStub.getWsV1Workspace);
+    });
+
+    it("should return null when CCloudConnectionError occurs", async () => {
+      const error = new Error("Connection failed");
+      error.name = "CCloudConnectionError";
+      getCCloudAuthSessionStub.rejects(error);
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.strictEqual(result, null);
+      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, { createIfNone: true });
+      sinon.assert.notCalled(workspacesApiStub.getWsV1Workspace);
+    });
+
+    it("should re-throw unexpected auth errors", async () => {
+      const unexpectedError = new Error("Something unexpected");
+      getCCloudAuthSessionStub.rejects(unexpectedError);
+
+      await assert.rejects(async () => {
+        await loader.getFlinkWorkspace(testParams);
+      }, unexpectedError);
+
+      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, { createIfNone: true });
+      sinon.assert.notCalled(workspacesApiStub.getWsV1Workspace);
+    });
+
+    it("should return workspace when API call succeeds and validation passes", async () => {
+      getCCloudAuthSessionStub.resolves({});
+      const mockWorkspace = createMockWorkspace(
+        testParams.organizationId,
+        testParams.environmentId,
+        testParams.workspaceName,
+      );
+      workspacesApiStub.getWsV1Workspace.resolves(mockWorkspace);
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.deepStrictEqual(result, mockWorkspace);
+      sinon.assert.calledOnce(getCCloudAuthSessionStub);
+      sinon.assert.calledOnceWithExactly(workspacesApiStub.getWsV1Workspace, {
+        organization_id: testParams.organizationId,
+        environment_id: testParams.environmentId,
+        name: testParams.workspaceName,
+      });
+    });
+
+    it("should return null when workspace validation fails", async () => {
+      getCCloudAuthSessionStub.resolves({});
+      const mockWorkspace = createMockWorkspace(
+        "different-org",
+        testParams.environmentId,
+        testParams.workspaceName,
+      );
+      workspacesApiStub.getWsV1Workspace.resolves(mockWorkspace);
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.strictEqual(result, null);
+      sinon.assert.calledOnce(getCCloudAuthSessionStub);
+      sinon.assert.calledOnce(workspacesApiStub.getWsV1Workspace);
+    });
+
+    it("should return null when API call throws error", async () => {
+      getCCloudAuthSessionStub.resolves({});
+      workspacesApiStub.getWsV1Workspace.rejects(new Error("API request failed"));
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.strictEqual(result, null);
+      sinon.assert.calledOnce(getCCloudAuthSessionStub);
+      sinon.assert.calledOnce(workspacesApiStub.getWsV1Workspace);
     });
   });
 });
