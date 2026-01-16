@@ -70,7 +70,6 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
     workspace,
     environment as CCloudEnvironment,
   );
-  metadataContext.catalog = environment as CCloudEnvironment;
 
   const sqlStatements = extractSqlStatementsFromWorkspace(workspace);
 
@@ -135,26 +134,50 @@ export function extractWorkspaceParamsFromUri(uri: Uri): FlinkWorkspaceParams | 
  */
 export async function extractMetadataFromWorkspace(
   workspace: GetWsV1Workspace200Response,
-  environment?: CCloudEnvironment,
+  environment: CCloudEnvironment,
 ): Promise<WorkspaceMetadataContext> {
-  const context: WorkspaceMetadataContext = {};
-  const loader = CCloudResourceLoader.getInstance();
+  const context: WorkspaceMetadataContext = {
+    catalog: environment,
+  };
 
-  const computePoolId = workspace.spec.compute_pool;
+  const computePoolId = workspace.spec.compute_pool?.id ?? undefined;
 
-  const computePool = await loader.getFlinkComputePool(computePoolId);
+  if (computePoolId) {
+    const computePool = environment.flinkComputePools.find((pool) => pool.id === computePoolId);
+    if (computePool) {
+      context.computePool = computePool;
+    } else {
+      logError(
+        new Error(
+          `Compute pool ${computePoolId} from workspace not found in environment ${environment.id}`,
+        ),
+        "Compute pool not found",
+      );
+    }
+  }
 
-  context.computePool = computePool;
   const databaseId = workspace.spec.properties?.["sql-database"];
 
   if (databaseId) {
-    const cluster = await loader.getFlinkDatabase(
-      environment?.environmentId as EnvironmentId,
-      databaseId,
-    );
+    const loader = CCloudResourceLoader.getInstance();
+    const kafkaClusters = await loader.getKafkaClustersForEnvironmentId(environment.id);
 
-    context.database = cluster;
+    const cluster = kafkaClusters?.find((c) => c.id === databaseId);
+    if (cluster && cluster.isFlinkable()) {
+      context.database = cluster;
+    } else if (cluster) {
+      logError(
+        new Error("Database cluster found but not Flink-enabled"),
+        `Database ID: ${databaseId}, Environment ID: ${environment.id}, Flink Pool Count: ${cluster.flinkPools?.length ?? 0}`,
+      );
+    } else {
+      logError(
+        new Error("Database from workspace properties not found in loaded clusters"),
+        `Database ID: ${databaseId}, Environment ID: ${environment.id}`,
+      );
+    }
   }
+
   return context;
 }
 
