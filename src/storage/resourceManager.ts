@@ -514,7 +514,7 @@ export class ResourceManager {
           );
         });
       }
-      return KafkaTopic.create({ ...topicObj, children });
+      return new KafkaTopic({ ...topicObj, children });
     });
   }
 
