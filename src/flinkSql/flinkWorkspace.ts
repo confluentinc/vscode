@@ -165,16 +165,6 @@ export async function extractMetadataFromWorkspace(
     const cluster = kafkaClusters?.find((c) => c.id === databaseId);
     if (cluster && cluster.isFlinkable()) {
       context.database = cluster;
-    } else if (cluster) {
-      logError(
-        new Error("Database cluster found but not Flink-enabled"),
-        `Database ID: ${databaseId}, Environment ID: ${environment.id}, Flink Pool Count: ${cluster.flinkPools?.length ?? 0}`,
-      );
-    } else {
-      logError(
-        new Error("Database from workspace properties not found in loaded clusters"),
-        `Database ID: ${databaseId}, Environment ID: ${environment.id}`,
-      );
     }
   }
 
