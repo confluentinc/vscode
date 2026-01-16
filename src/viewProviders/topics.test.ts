@@ -1,39 +1,34 @@
 import * as assert from "assert";
-import type { SinonStubbedInstance } from "sinon";
 import * as sinon from "sinon";
-import { TreeItemCollapsibleState, window } from "vscode";
+import { window } from "vscode";
 import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
-  TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_ENVIRONMENT_ID,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMA,
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
-  TEST_DIRECT_KAFKA_CLUSTER,
   TEST_LOCAL_ENVIRONMENT_ID,
   TEST_LOCAL_KAFKA_CLUSTER,
-  TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import * as contextValues from "../context/values";
-import type { EventChangeType, SubjectChangeEvent } from "../emitters";
-import { CCloudResourceLoader } from "../loaders";
+import type { SubjectChangeEvent } from "../emitters";
+import type { CCloudResourceLoader } from "../loaders";
 import { TopicFetchError } from "../loaders/utils/loaderUtils";
-import type { CCloudEnvironment } from "../models/environment";
-import { DirectKafkaCluster } from "../models/kafkaCluster";
-import type { EnvironmentId } from "../models/resource";
 import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
-import * as telemetryEvents from "../telemetry/events";
 import { TopicViewProvider } from "./topics";
-import { SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 
-describe("TopicViewProvider", () => {
-  let provider: TopicViewProvider;
+const testTopicWithSchema = new KafkaTopic({
+  ...TEST_CCLOUD_KAFKA_TOPIC,
+  children: [TEST_CCLOUD_SUBJECT_WITH_SCHEMA],
+});
+
+describe("viewProviders/topics.ts", () => {
   let sandbox: sinon.SinonSandbox;
 
   before(async () => {
@@ -41,602 +36,566 @@ describe("TopicViewProvider", () => {
   });
 
   beforeEach(() => {
-    // test a detached instance.
-    // @ts-expect-error constructor is private for the main codebase
-    // to force using getInstance() to get the singleton.
-    provider = new TopicViewProvider();
     sandbox = sinon.createSandbox();
   });
 
   afterEach(() => {
-    provider.dispose();
     sandbox.restore();
   });
 
-  describe("refresh()", () => {
-    let onDidChangeTreeDataFireStub: sinon.SinonStub;
+  describe("TopicViewProvider", () => {
+    let provider: TopicViewProvider;
+    let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
     beforeEach(() => {
-      onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
+      provider = new TopicViewProvider();
+      provider["initialize"]();
+
+      stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
+      stubbedLoader.getTopicsForCluster.resolves([]);
     });
 
-    it("no-arg refresh() when focused on a cluster should call onDidChangeTreeData.fire() and set this.forceDeepRefresh to false", () => {
-      provider["forceDeepRefresh"] = true;
-      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
-      provider.refresh();
-      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
-      assert.strictEqual(provider["forceDeepRefresh"], false);
+    afterEach(() => {
+      provider.dispose();
     });
 
-    it("no-arg refresh() when no cluster is set should still call onDidChangeTreeData.fire() and set this.forceDeepRefresh to false (disconnect scenario)", () => {
-      provider["forceDeepRefresh"] = true;
-      provider.kafkaCluster = null;
-      provider.refresh();
-      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
-      assert.strictEqual(provider["forceDeepRefresh"], false);
-    });
+    describe("refresh()", () => {
+      let onDidChangeTreeDataFireStub: sinon.SinonStub;
 
-    it("true-arg refresh() when focused on a cluster should call onDidChangeTreeData.fire() and set this.forceDeepRefresh to true", () => {
-      provider["forceDeepRefresh"] = false;
-      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
-      provider.refresh(true);
-      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
-      assert.strictEqual(provider["forceDeepRefresh"], true);
-    });
-
-    it("onlyIfMatching a kafka cluster when no cluster is set should do nothing", () => {
-      provider.kafkaCluster = null;
-      provider.refresh(false, TEST_LOCAL_KAFKA_CLUSTER);
-      sinon.assert.notCalled(onDidChangeTreeDataFireStub);
-    });
-
-    it("onlyIfMatching a kafka cluster when the cluster doesn't match should do nothing", () => {
-      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
-      provider.refresh(false, TEST_CCLOUD_KAFKA_CLUSTER);
-      sinon.assert.notCalled(onDidChangeTreeDataFireStub);
-    });
-
-    it("onlyIfMatching a kafka cluster when the cluster matches should call onDidChangeTreeData.fire()", () => {
-      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
-      provider.refresh(false, TEST_LOCAL_KAFKA_CLUSTER);
-      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
-    });
-
-    it("onlyIfMatching a contained Kafka topic when the cluster doesn't match should do nothing", () => {
-      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
-      provider.refresh(false, TEST_CCLOUD_KAFKA_TOPIC);
-      sinon.assert.notCalled(onDidChangeTreeDataFireStub);
-    });
-
-    it("onlyIfMatching a contained Kafka topic when the cluster matches should call onDidChangeTreeData.fire()", () => {
-      provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
-      provider.refresh(false, TEST_CCLOUD_KAFKA_TOPIC);
-      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
-    });
-  });
-
-  describe("getTreeItem()", () => {
-    it("getTreeItem() should return a SchemaTreeItem for a Schema instance", () => {
-      const treeItem = provider.getTreeItem(TEST_CCLOUD_SCHEMA);
-      assert.ok(treeItem instanceof SchemaTreeItem);
-    });
-
-    it("getTreeItem() should return a KafkaTopicTreeItem for a KafkaTopic instance", () => {
-      const treeItem = provider.getTreeItem(TEST_CCLOUD_KAFKA_TOPIC);
-      assert.ok(treeItem instanceof KafkaTopicTreeItem);
-    });
-
-    it("getTreeItem() should return a SubjectTreeItem when given a Subject", () => {
-      const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
-      assert.ok(treeItem instanceof SubjectTreeItem);
-    });
-  });
-
-  describe("isFocusedOnCCloud()", () => {
-    it("isFocusedOnCCloud() should return true when the cluster is a CCloud one", () => {
-      provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
-      assert.strictEqual(provider.isFocusedOnCCloud(), true);
-    });
-
-    it("isFocusedOnCCloud() should return false when the cluster is not a CCloud one", () => {
-      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
-      assert.strictEqual(provider.isFocusedOnCCloud(), false);
-    });
-
-    it("isFocusedOnCCloud() should return false when the cluster is null", () => {
-      provider.kafkaCluster = null;
-      assert.strictEqual(provider.isFocusedOnCCloud(), false);
-    });
-  });
-
-  describe("updateTreeViewDescription()", () => {
-    const initialDescription = "Initial description";
-
-    let ccloudLoader: SinonStubbedInstance<CCloudResourceLoader>;
-
-    function getDescription(): string | undefined {
-      return provider["treeView"].description;
-    }
-
-    beforeEach(() => {
-      provider["treeView"].description = initialDescription;
-      ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
-    });
-
-    it("does nothing when no cluster is set", async () => {
-      provider.kafkaCluster = null;
-      await provider.updateTreeViewDescription();
-      assert.strictEqual(getDescription(), initialDescription);
-    });
-
-    it("sets to mix of cluster name and environment name when cluster is set", async () => {
-      provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER; // in TEST_CCLOUD_ENVIRONMENT.
-
-      // Wire up ccloudLoader.getEnvironments to return two environments, one of which is the parent environment.
-      const parentEnvironment = {
-        ...TEST_CCLOUD_ENVIRONMENT,
-        name: "Test Env Name",
-      } as CCloudEnvironment;
-
-      const testEnvironments = [
-        {
-          ...TEST_CCLOUD_ENVIRONMENT,
-          id: "some other env" as EnvironmentId,
-          name: "Test Environment",
-        },
-        parentEnvironment,
-      ] as CCloudEnvironment[];
-
-      ccloudLoader.getEnvironments.resolves(testEnvironments);
-
-      await provider.updateTreeViewDescription();
-
-      assert.strictEqual(
-        getDescription(),
-        `${parentEnvironment.name} | ${TEST_CCLOUD_KAFKA_CLUSTER.name}`,
-      );
-    });
-
-    it("sets to cluster name when no parent environment is found", async () => {
-      provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER; // in TEST_CCLOUD_ENVIRONMENT.
-
-      // Wire up ccloudLoader.getEnvironments to return an empty array, hitting warning case.
-      ccloudLoader.getEnvironments.resolves([]);
-
-      await provider.updateTreeViewDescription();
-
-      assert.strictEqual(getDescription(), TEST_CCLOUD_KAFKA_CLUSTER.name);
-    });
-  });
-
-  describe("TopicViewProvider search behavior", () => {
-    let ccloudLoader: CCloudResourceLoader;
-    let getTopicsForClusterStub: sinon.SinonStub;
-    let getSubjectsStub: sinon.SinonStub;
-    let getSchemasForSubjectStub: sinon.SinonStub;
-
-    beforeEach(async () => {
-      // stub the methods called while inside loadTopicSchemas() since we can't stub it directly
-      ccloudLoader = CCloudResourceLoader.getInstance();
-      getTopicsForClusterStub = sandbox.stub(ccloudLoader, "getTopicsForCluster").resolves([]);
-      getSubjectsStub = sandbox.stub(ccloudLoader, "getSubjects").resolves([]);
-      getSchemasForSubjectStub = sandbox.stub(ccloudLoader, "getSchemasForSubject").resolves([]);
-
-      provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
-    });
-
-    it("getChildren() should filter root-level topics based on search string", async () => {
-      getTopicsForClusterStub.resolves([TEST_CCLOUD_KAFKA_TOPIC]);
-      // Topic name matches the search string
-      await provider.topicSearchSetHandler(TEST_CCLOUD_KAFKA_TOPIC.name);
-
-      const rootElements = await provider.getChildren();
-
-      assert.strictEqual(rootElements.length, 1);
-      assert.deepStrictEqual(rootElements[0], TEST_CCLOUD_KAFKA_TOPIC);
-    });
-
-    it("getChildren() should showErrorMessage if loader.getTopicsForCluster() raises TopicFetchError", async () => {
-      const showErrorMessageStub = sandbox.stub(window, "showErrorMessage");
-      getTopicsForClusterStub.rejects(new TopicFetchError("Test error"));
-
-      const shouldBeEmpty = await provider.getChildren();
-      sinon.assert.calledOnce(showErrorMessageStub);
-      assert.strictEqual(shouldBeEmpty.length, 0);
-    });
-
-    it("getChildren() should filter schema subject containers based on search string", async () => {
-      getSubjectsStub.resolves([
-        TEST_CCLOUD_SCHEMA.subjectObject(),
-        TEST_LOCAL_SCHEMA.subjectObject(), // has different subject name at least. Should be skipped 'cause won't match search.
-      ]);
-      getSchemasForSubjectStub.resolves([TEST_CCLOUD_SCHEMA]);
-      // Schema subject matches the search string
-      await provider.topicSearchSetHandler(TEST_CCLOUD_SCHEMA.subject);
-
-      const children = await provider.getChildren(TEST_CCLOUD_KAFKA_TOPIC);
-
-      // Will be a Subject carrying one single Schema, TEST_CCLOUD_SCHEMA.
-      assert.strictEqual(children.length, 1);
-      assert.ok(children[0] instanceof Subject);
-      assert.equal(children[0].name, TEST_CCLOUD_SCHEMA.subject);
-      assert.equal(children[0].schemas!.length, 1);
-    });
-
-    it("getChildren() should show correct count in tree view message when items match search", async () => {
-      getTopicsForClusterStub.resolves([
-        TEST_CCLOUD_KAFKA_TOPIC,
-        KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "other-topic" }),
-      ]);
-      // Topic name matches the search string of one topic
-      const searchStr = TEST_CCLOUD_KAFKA_TOPIC.name;
-      await provider.topicSearchSetHandler(searchStr);
-
-      await provider.getChildren();
-
-      assert.strictEqual(provider.searchMatches.size, 1);
-      assert.strictEqual(provider.totalItemCount, 2);
-      assert.strictEqual(
-        provider["treeView"].message,
-        `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} for "${searchStr}"`,
-      );
-    });
-
-    it("getChildren() should clear tree view message when search is cleared", async () => {
-      // Search cleared
-      await provider.topicSearchSetHandler(null);
-
-      await provider.getChildren();
-
-      assert.strictEqual(provider["treeView"].message, undefined);
-    });
-
-    it("getTreeItem() should set the resourceUri of topic items whose name matches the search string", async () => {
-      // Topic name matches the search string
-      await provider.topicSearchSetHandler(TEST_CCLOUD_KAFKA_TOPIC.name);
-
-      const treeItem = provider.getTreeItem(TEST_CCLOUD_KAFKA_TOPIC);
-
-      assert.ok(treeItem instanceof KafkaTopicTreeItem);
-      assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
-    });
-
-    it("getTreeItem() should set the resourceUri of schema subject containers whose subject matches the search string", async () => {
-      // Schema ID matches the search string
-      await provider.topicSearchSetHandler(TEST_CCLOUD_SCHEMA.subject);
-
-      const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
-
-      assert.ok(treeItem instanceof SubjectTreeItem);
-      assert.ok(treeItem.resourceUri);
-      assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
-    });
-
-    it("getTreeItem() should expand topic items when their schemas match search", async () => {
-      const topic = KafkaTopic.create({
-        ...TEST_CCLOUD_KAFKA_TOPIC,
-        children: [TEST_CCLOUD_SUBJECT],
-      });
-      // Schema subject matches search
-      await provider.topicSearchSetHandler(TEST_CCLOUD_SCHEMA.subject);
-
-      const treeItem = provider.getTreeItem(topic);
-
-      assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Expanded);
-    });
-
-    it("getTreeItem() should collapse topic items when schemas exist but don't match search", async () => {
-      const topic = KafkaTopic.create({
-        ...TEST_CCLOUD_KAFKA_TOPIC,
-        children: [TEST_CCLOUD_SUBJECT],
-      });
-      // Search string doesn't match topic or schema
-      await provider.topicSearchSetHandler("non-matching-search");
-
-      const treeItem = provider.getTreeItem(topic);
-
-      assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Collapsed);
-    });
-  });
-
-  describe("TopicViewProvider event handlers", () => {
-    let resetStub: sinon.SinonStub;
-    let refreshStub: sinon.SinonStub;
-    let updateTreeViewDescriptionStub: sinon.SinonStub;
-
-    beforeEach(() => {
-      resetStub = sandbox.stub(provider, "reset");
-      refreshStub = sandbox.stub(provider, "refresh");
-      updateTreeViewDescriptionStub = sandbox.stub(provider, "updateTreeViewDescription");
-    });
-
-    describe("environmentChangedHandler", () => {
       beforeEach(() => {
-        // default to viewing kafka cluster in local environment
-        provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+        onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
       });
 
-      it("should call reset() when environment is deleted", async () => {
-        await provider.environmentChangedHandler({
-          id: TEST_LOCAL_ENVIRONMENT_ID,
-          wasDeleted: true,
-        });
-        sinon.assert.calledOnce(resetStub);
-        sinon.assert.notCalled(updateTreeViewDescriptionStub);
-        sinon.assert.notCalled(refreshStub);
+      it("no-arg refresh() when focused on a cluster should call onDidChangeTreeData.fire()", async () => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+        await provider.refresh();
+        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
       });
 
-      it("should call updateTreeViewDescription() and refresh() when environment is changed but not deleted", async () => {
-        await provider.environmentChangedHandler({
-          id: TEST_LOCAL_ENVIRONMENT_ID,
-          wasDeleted: false,
-        });
-        sinon.assert.notCalled(resetStub);
-        sinon.assert.calledOnce(updateTreeViewDescriptionStub);
-        sinon.assert.calledOnce(refreshStub);
-      });
-
-      it("should not call any methods when the event is for a different environment", async () => {
-        await provider.environmentChangedHandler({
-          id: TEST_CCLOUD_ENVIRONMENT_ID,
-          wasDeleted: false,
-        });
-        sinon.assert.notCalled(resetStub);
-        sinon.assert.notCalled(updateTreeViewDescriptionStub);
-        sinon.assert.notCalled(refreshStub);
-      });
-
-      it("should not call any methods when no cluster is set", async () => {
+      it("no-arg refresh() when no cluster is set should call onDidChangeTreeData.fire() once to clear (disconnect scenario)", async () => {
         provider.kafkaCluster = null;
-        await provider.environmentChangedHandler({
-          id: TEST_LOCAL_ENVIRONMENT_ID,
-          wasDeleted: false,
-        });
-        sinon.assert.notCalled(resetStub);
-        sinon.assert.notCalled(updateTreeViewDescriptionStub);
-        sinon.assert.notCalled(refreshStub);
+        await provider.refresh();
+        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+      });
+
+      it("refresh(true) should pass forceDeepRefresh=true to loader", async () => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+        await provider.refresh(true);
+        sinon.assert.calledWith(stubbedLoader.getTopicsForCluster, TEST_CCLOUD_KAFKA_CLUSTER, true);
+      });
+
+      it("refresh(false) should pass forceDeepRefresh=false to loader", async () => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+        await provider.refresh(false);
+        sinon.assert.calledWith(
+          stubbedLoader.getTopicsForCluster,
+          TEST_CCLOUD_KAFKA_CLUSTER,
+          false,
+        );
+      });
+
+      it("onlyIfMatching a kafka cluster when no cluster is set should do nothing", async () => {
+        provider.kafkaCluster = null;
+        await provider.refresh(false, TEST_LOCAL_KAFKA_CLUSTER);
+        sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+      });
+
+      it("onlyIfMatching a kafka cluster when the cluster doesn't match should do nothing", async () => {
+        provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+        await provider.refresh(false, TEST_CCLOUD_KAFKA_CLUSTER);
+        sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+      });
+
+      it("onlyIfMatching a kafka cluster when the cluster matches should call onDidChangeTreeData.fire()", async () => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+        await provider.refresh(false, TEST_CCLOUD_KAFKA_CLUSTER);
+        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+      });
+
+      it("onlyIfMatching a contained Kafka topic when the cluster doesn't match should do nothing", async () => {
+        provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+        await provider.refresh(false, TEST_CCLOUD_KAFKA_TOPIC);
+        sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+      });
+
+      it("onlyIfMatching a contained Kafka topic when the cluster matches should call onDidChangeTreeData.fire()", async () => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+        await provider.refresh(false, TEST_CCLOUD_KAFKA_TOPIC);
+        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
       });
     });
 
-    describe("ccloudConnectedHandler", () => {
-      for (const nowConnected of [true, false]) {
-        it(`should call reset() when initially connected to CCloud and connected event: ${nowConnected}`, async () => {
-          provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER; // Ensure we are in a CCloud context
-          await provider.ccloudConnectedHandler(nowConnected);
+    describe("refreshTopics()", () => {
+      beforeEach(() => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+      });
+
+      it("should populate topicsInTreeView from loader results", async () => {
+        stubbedLoader.getTopicsForCluster.resolves([TEST_CCLOUD_KAFKA_TOPIC]);
+
+        await provider.refreshTopics(TEST_CCLOUD_KAFKA_CLUSTER, false);
+
+        assert.strictEqual(provider["topicsInTreeView"].size, 1);
+        assert.deepStrictEqual(
+          provider["topicsInTreeView"].get(TEST_CCLOUD_KAFKA_TOPIC.name),
+          TEST_CCLOUD_KAFKA_TOPIC,
+        );
+      });
+
+      it("should populate subjectsInTreeView and subjectToTopicMap when topics have associated Subjects", async () => {
+        stubbedLoader.getTopicsForCluster.resolves([testTopicWithSchema]);
+
+        await provider.refreshTopics(TEST_CCLOUD_KAFKA_CLUSTER, false);
+
+        assert.strictEqual(provider["subjectsInTreeView"].size, 1);
+        assert.strictEqual(provider["subjectToTopicMap"].size, 1);
+        assert.deepStrictEqual(
+          provider["subjectToTopicMap"].get(TEST_CCLOUD_SUBJECT_WITH_SCHEMA.name),
+          testTopicWithSchema,
+        );
+      });
+
+      it("should call showErrorMessage when loader raises a TopicFetchError", async () => {
+        const showErrorMessageStub = sandbox.stub(window, "showErrorMessage");
+        stubbedLoader.getTopicsForCluster.rejects(new TopicFetchError("Test error"));
+
+        await provider.refreshTopics(TEST_CCLOUD_KAFKA_CLUSTER, false);
+
+        assert.strictEqual(provider["topicsInTreeView"].size, 0);
+        sinon.assert.calledOnce(showErrorMessageStub);
+      });
+    });
+
+    describe("getTreeItem()", () => {
+      it("getTreeItem() should return a SchemaTreeItem for a Schema instance", () => {
+        const treeItem = provider.getTreeItem(TEST_CCLOUD_SCHEMA);
+        assert.ok(treeItem instanceof SchemaTreeItem);
+      });
+
+      it("getTreeItem() should return a KafkaTopicTreeItem for a KafkaTopic instance", () => {
+        const treeItem = provider.getTreeItem(TEST_CCLOUD_KAFKA_TOPIC);
+        assert.ok(treeItem instanceof KafkaTopicTreeItem);
+      });
+
+      it("getTreeItem() should return a SubjectTreeItem when given a Subject", () => {
+        const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+        assert.ok(treeItem instanceof SubjectTreeItem);
+      });
+    });
+
+    describe("isFocusedOnCCloud()", () => {
+      it("isFocusedOnCCloud() should return true when the cluster is a CCloud one", () => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+        assert.strictEqual(provider.isFocusedOnCCloud(), true);
+      });
+
+      it("isFocusedOnCCloud() should return false when the cluster is not a CCloud one", () => {
+        provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+        assert.strictEqual(provider.isFocusedOnCCloud(), false);
+      });
+
+      it("isFocusedOnCCloud() should return false when the cluster is null", () => {
+        provider.kafkaCluster = null;
+        assert.strictEqual(provider.isFocusedOnCCloud(), false);
+      });
+    });
+
+    describe("getChildren()", () => {
+      beforeEach(() => {
+        // set focused cluster but no cached topics by default
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+      });
+
+      it("should return an empty array when no cluster is focused", () => {
+        provider.kafkaCluster = null;
+
+        const children = provider.getChildren();
+
+        assert.strictEqual(children.length, 0);
+      });
+
+      it("should return topics from topicsInTreeView at the root level", () => {
+        provider["topicsInTreeView"].set(TEST_CCLOUD_KAFKA_TOPIC.name, TEST_CCLOUD_KAFKA_TOPIC);
+
+        const children = provider.getChildren();
+
+        assert.strictEqual(children.length, 1);
+        assert.deepStrictEqual(children[0], TEST_CCLOUD_KAFKA_TOPIC);
+      });
+
+      it("should return subjects from topic.children when expanding a topic", () => {
+        provider["topicsInTreeView"].set(testTopicWithSchema.name, testTopicWithSchema);
+        provider["subjectsInTreeView"].set(
+          testTopicWithSchema.children[0].name,
+          testTopicWithSchema.children[0],
+        );
+
+        const topicChildren = provider.getChildren(testTopicWithSchema);
+
+        assert.strictEqual(topicChildren.length, 1);
+        assert.ok(topicChildren[0] instanceof Subject);
+      });
+
+      it("should return an empty array when expanding a topic not in the cache", () => {
+        // not preloaded in topicsInTreeView
+        const children = provider.getChildren(TEST_CCLOUD_KAFKA_TOPIC);
+
+        assert.strictEqual(children.length, 0);
+      });
+
+      it("should return schemas from subject.schemas when expanding a subject", () => {
+        provider["subjectsInTreeView"].set(
+          TEST_CCLOUD_SUBJECT_WITH_SCHEMA.name,
+          TEST_CCLOUD_SUBJECT_WITH_SCHEMA,
+        );
+
+        const subjectChildren = provider.getChildren(TEST_CCLOUD_SUBJECT_WITH_SCHEMA);
+
+        assert.strictEqual(subjectChildren.length, 1);
+        assert.deepStrictEqual(subjectChildren, TEST_CCLOUD_SUBJECT_WITH_SCHEMA.schemas);
+      });
+
+      it("should return an empty array when expanding a subject not in the cache", () => {
+        // subject is not in subjectsInTreeView
+        const children = provider.getChildren(TEST_CCLOUD_SUBJECT);
+
+        assert.strictEqual(children.length, 0);
+      });
+    });
+
+    describe("getParent()", () => {
+      it("should return undefined for a KafkaTopic (root-level item)", () => {
+        const parent = provider.getParent(TEST_CCLOUD_KAFKA_TOPIC);
+
+        assert.strictEqual(parent, undefined);
+      });
+
+      it("should return the parent topic for a Subject", () => {
+        provider["subjectToTopicMap"].set(
+          testTopicWithSchema.children[0].name,
+          testTopicWithSchema,
+        );
+
+        const parent = provider.getParent(testTopicWithSchema.children[0]);
+
+        assert.deepStrictEqual(parent, testTopicWithSchema);
+      });
+
+      it("should return undefined for a Subject not in the cache", () => {
+        const parent = provider.getParent(TEST_CCLOUD_SUBJECT);
+
+        assert.strictEqual(parent, undefined);
+      });
+
+      it("should return the parent subject for a Schema", () => {
+        provider["subjectsInTreeView"].set(
+          TEST_CCLOUD_SUBJECT_WITH_SCHEMA.name,
+          TEST_CCLOUD_SUBJECT_WITH_SCHEMA,
+        );
+
+        const parent = provider.getParent(TEST_CCLOUD_SCHEMA);
+
+        assert.deepStrictEqual(parent, TEST_CCLOUD_SUBJECT_WITH_SCHEMA);
+      });
+
+      it("should return undefined for a Schema whose subject is not in the cache", () => {
+        const parent = provider.getParent(TEST_CCLOUD_SCHEMA);
+
+        assert.strictEqual(parent, undefined);
+      });
+    });
+
+    describe("updateTopicSubjects()", () => {
+      let onDidChangeTreeDataFireStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+        onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
+      });
+
+      it("should fetch subjects and update caches when topic is in topicsInTreeView", async () => {
+        const testTopic = TEST_CCLOUD_KAFKA_TOPIC;
+        provider["topicsInTreeView"].set(testTopic.name, testTopic);
+        stubbedLoader.getTopicSubjectGroups.resolves([TEST_CCLOUD_SUBJECT_WITH_SCHEMA]);
+
+        await provider["updateTopicSubjects"](testTopic);
+
+        // topic's children should be updated
+        assert.deepStrictEqual(testTopic.children, [TEST_CCLOUD_SUBJECT_WITH_SCHEMA]);
+        // subject caches should be populated
+        assert.strictEqual(provider["subjectsInTreeView"].size, 1);
+        assert.strictEqual(provider["subjectToTopicMap"].size, 1);
+        // tree data change event should fire for the topic
+        sinon.assert.calledOnceWithExactly(onDidChangeTreeDataFireStub, testTopic);
+      });
+
+      it("should not update caches when topic is not in topicsInTreeView", async () => {
+        stubbedLoader.getTopicSubjectGroups.resolves([TEST_CCLOUD_SUBJECT_WITH_SCHEMA]);
+
+        await provider["updateTopicSubjects"](TEST_CCLOUD_KAFKA_TOPIC);
+
+        assert.strictEqual(provider["subjectsInTreeView"].size, 0);
+        assert.strictEqual(provider["subjectToTopicMap"].size, 0);
+        sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+      });
+    });
+
+    describe("updateSubjectSchemas()", () => {
+      let onDidChangeTreeDataFireStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+        onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
+      });
+
+      it("should fetch schemas and update subject when kafkaCluster is set", async () => {
+        const subjectWithoutSchemas = new Subject(
+          TEST_CCLOUD_SUBJECT.name,
+          TEST_CCLOUD_SUBJECT.connectionId,
+          TEST_CCLOUD_SUBJECT.environmentId,
+          TEST_CCLOUD_SUBJECT.schemaRegistryId,
+          null,
+        );
+        stubbedLoader.getSchemasForSubject.resolves([TEST_CCLOUD_SCHEMA]);
+
+        await provider["updateSubjectSchemas"](subjectWithoutSchemas);
+
+        assert.deepStrictEqual(subjectWithoutSchemas.schemas, [TEST_CCLOUD_SCHEMA]);
+        sinon.assert.calledOnceWithExactly(onDidChangeTreeDataFireStub, subjectWithoutSchemas);
+      });
+
+      it("should return early when no kafkaCluster is set", async () => {
+        provider.kafkaCluster = null;
+
+        await provider["updateSubjectSchemas"](TEST_CCLOUD_SUBJECT);
+
+        sinon.assert.notCalled(stubbedLoader.getSchemasForSubject);
+        sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+      });
+    });
+
+    describe("reveal()", () => {
+      let treeViewRevealStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        treeViewRevealStub = sandbox.stub(provider["treeView"], "reveal").resolves();
+      });
+
+      it("should reveal a KafkaTopic from the cache", async () => {
+        provider["topicsInTreeView"].set(TEST_CCLOUD_KAFKA_TOPIC.name, TEST_CCLOUD_KAFKA_TOPIC);
+
+        await provider.reveal(TEST_CCLOUD_KAFKA_TOPIC, { select: true });
+
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, TEST_CCLOUD_KAFKA_TOPIC, {
+          select: true,
+        });
+      });
+
+      it("should reveal a Subject from the cache", async () => {
+        provider["subjectsInTreeView"].set(
+          TEST_CCLOUD_SUBJECT_WITH_SCHEMA.name,
+          TEST_CCLOUD_SUBJECT_WITH_SCHEMA,
+        );
+
+        await provider.reveal(TEST_CCLOUD_SUBJECT_WITH_SCHEMA, { focus: true });
+
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, TEST_CCLOUD_SUBJECT_WITH_SCHEMA, {
+          focus: true,
+        });
+      });
+
+      it("should reveal a Schema by finding it within its parent subject", async () => {
+        provider["subjectsInTreeView"].set(
+          TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.name,
+          TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+        );
+
+        await provider.reveal(TEST_CCLOUD_SCHEMA);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        const revealedItem = treeViewRevealStub.firstCall.args[0];
+        assert.strictEqual(revealedItem.id, TEST_CCLOUD_SCHEMA.id);
+      });
+
+      it("should not reveal when item is not in the cache", async () => {
+        await provider.reveal(TEST_CCLOUD_KAFKA_TOPIC);
+
+        sinon.assert.notCalled(treeViewRevealStub);
+      });
+
+      it("should not reveal a Schema when parent subject is not in the cache", async () => {
+        await provider.reveal(TEST_CCLOUD_SCHEMA);
+
+        sinon.assert.notCalled(treeViewRevealStub);
+      });
+    });
+
+    describe("event handlers", () => {
+      let resetStub: sinon.SinonStub;
+      let refreshStub: sinon.SinonStub;
+      let updateTreeViewDescriptionStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        resetStub = sandbox.stub(provider, "reset");
+        refreshStub = sandbox.stub(provider, "refresh");
+        updateTreeViewDescriptionStub = sandbox.stub(provider, "updateTreeViewDescription");
+      });
+
+      describe("environmentChangedHandler", () => {
+        beforeEach(() => {
+          // default to viewing kafka cluster in local environment
+          provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+        });
+
+        it("should call reset() when environment is deleted", async () => {
+          await provider.environmentChangedHandler({
+            id: TEST_LOCAL_ENVIRONMENT_ID,
+            wasDeleted: true,
+          });
           sinon.assert.calledOnce(resetStub);
           sinon.assert.notCalled(updateTreeViewDescriptionStub);
           sinon.assert.notCalled(refreshStub);
         });
 
-        it(`should not call any methods when looking at a non-CCloud cluster and connected event: ${nowConnected}`, async () => {
-          provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER; // Ensure we are in a non-CCloud context
-          await provider.ccloudConnectedHandler(nowConnected);
+        it("should call updateTreeViewDescription() and refresh() when environment is changed but not deleted", async () => {
+          await provider.environmentChangedHandler({
+            id: TEST_LOCAL_ENVIRONMENT_ID,
+            wasDeleted: false,
+          });
           sinon.assert.notCalled(resetStub);
-          sinon.assert.notCalled(updateTreeViewDescriptionStub);
-          sinon.assert.notCalled(refreshStub);
-        });
-
-        it(`should not call any methods when no cluster is set and connected event: ${nowConnected}`, async () => {
-          provider.kafkaCluster = null; // No cluster set
-          await provider.ccloudConnectedHandler(nowConnected);
-          sinon.assert.notCalled(resetStub);
-          sinon.assert.notCalled(updateTreeViewDescriptionStub);
-          sinon.assert.notCalled(refreshStub);
-        });
-      }
-    });
-
-    describe("localKafkaConnectedHandler", () => {
-      for (const nowConnected of [true, false]) {
-        it(`should call reset() when initially connected to local Kafka and connected event: ${nowConnected}`, async () => {
-          provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER; // Ensure we are in a local context
-          await provider.localKafkaConnectedHandler(nowConnected);
-          sinon.assert.calledOnce(resetStub);
-          sinon.assert.notCalled(updateTreeViewDescriptionStub);
-          sinon.assert.notCalled(refreshStub);
-        });
-
-        it(`should not call any methods when looking at a non-local cluster and connected event: ${nowConnected}`, async () => {
-          provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER; // Ensure we are in a non-local context
-          await provider.localKafkaConnectedHandler(nowConnected);
-          sinon.assert.notCalled(resetStub);
-          sinon.assert.notCalled(updateTreeViewDescriptionStub);
-          sinon.assert.notCalled(refreshStub);
-        });
-
-        it(`should not call any methods when no cluster is set and connected event: ${nowConnected}`, async () => {
-          provider.kafkaCluster = null; // No cluster set
-          await provider.localKafkaConnectedHandler(nowConnected);
-          sinon.assert.notCalled(resetStub);
-          sinon.assert.notCalled(updateTreeViewDescriptionStub);
-          sinon.assert.notCalled(refreshStub);
-        });
-      }
-    });
-
-    describe("currentKafkaClusterChangedHandler", () => {
-      let setSearchStub: sinon.SinonStub;
-      let setContextValueStub: sinon.SinonStub;
-      beforeEach(() => {
-        setSearchStub = sandbox.stub(provider, "setSearch");
-        setContextValueStub = sandbox.stub(contextValues, "setContextValue");
-      });
-
-      it("should do nothing when current cluster is null and called with null", async () => {
-        await provider.currentKafkaClusterChangedHandler(null);
-        sinon.assert.notCalled(resetStub);
-        sinon.assert.notCalled(updateTreeViewDescriptionStub);
-        sinon.assert.notCalled(refreshStub);
-        sinon.assert.notCalled(setSearchStub);
-      });
-
-      it("should do nothing when called with the same cluster", async () => {
-        provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
-        await provider.currentKafkaClusterChangedHandler(TEST_LOCAL_KAFKA_CLUSTER);
-        sinon.assert.notCalled(resetStub);
-        sinon.assert.notCalled(updateTreeViewDescriptionStub);
-        sinon.assert.notCalled(refreshStub);
-        sinon.assert.notCalled(setSearchStub);
-      });
-
-      it("should only call reset() when edging from having cluster set to no cluster", async () => {
-        provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
-        await provider.currentKafkaClusterChangedHandler(null);
-        sinon.assert.calledOnce(resetStub);
-        sinon.assert.notCalled(updateTreeViewDescriptionStub);
-        sinon.assert.notCalled(refreshStub);
-        sinon.assert.notCalled(setSearchStub);
-      });
-
-      it("should handle switching clusters correctly", async () => {
-        provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
-        await provider.currentKafkaClusterChangedHandler(TEST_CCLOUD_KAFKA_CLUSTER);
-        assert.deepEqual(provider.kafkaCluster, TEST_CCLOUD_KAFKA_CLUSTER);
-
-        sinon.assert.calledOnce(setContextValueStub);
-        sinon.assert.calledWith(
-          setContextValueStub,
-          contextValues.ContextValues.kafkaClusterSelected,
-          true,
-        );
-        sinon.assert.calledOnce(setSearchStub);
-        sinon.assert.calledOnce(updateTreeViewDescriptionStub);
-        sinon.assert.calledOnce(refreshStub);
-      });
-
-      it("should handle changing between a local cluster and a shadow direct cluster if the same id correctly", async () => {
-        provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
-        // Same id as local cluster, but direct cluster type / env id / connection id, as is
-        // the case when having a shadow direct connection on top of local kafka.
-        const shadowDirectCluster = DirectKafkaCluster.create({
-          ...TEST_DIRECT_KAFKA_CLUSTER,
-          id: TEST_LOCAL_KAFKA_CLUSTER.id,
-        });
-        await provider.currentKafkaClusterChangedHandler(shadowDirectCluster);
-        assert.deepEqual(provider.kafkaCluster, shadowDirectCluster);
-
-        sinon.assert.calledOnce(setContextValueStub);
-        sinon.assert.calledWith(
-          setContextValueStub,
-          contextValues.ContextValues.kafkaClusterSelected,
-          true,
-        );
-        sinon.assert.calledOnce(setSearchStub);
-        sinon.assert.calledOnce(updateTreeViewDescriptionStub);
-        sinon.assert.calledOnce(refreshStub);
-      });
-    });
-
-    describe("topicSearchSetHandler", () => {
-      let setSearchStub: sinon.SinonStub;
-      let logUsageStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        setSearchStub = sandbox.stub(provider, "setSearch");
-        logUsageStub = sandbox.stub(telemetryEvents, "logUsage");
-      });
-
-      it("should call setSearch() with the search string", async () => {
-        const searchString = "test-search";
-        await provider.topicSearchSetHandler(searchString);
-        sinon.assert.calledOnce(setSearchStub);
-        sinon.assert.calledWith(setSearchStub, searchString);
-        sinon.assert.calledOnce(logUsageStub);
-        sinon.assert.calledOnce(refreshStub);
-        assert.strictEqual(provider.searchStringSetCount, 1);
-      });
-
-      it("should call setSearch() with null when search string is null, but not increment searchStringSetCount", async () => {
-        await provider.topicSearchSetHandler(null);
-        sinon.assert.calledOnce(setSearchStub);
-        sinon.assert.calledWith(setSearchStub, null);
-        sinon.assert.calledOnce(logUsageStub);
-        sinon.assert.calledOnce(refreshStub);
-        assert.strictEqual(provider.searchStringSetCount, 0);
-      });
-    });
-
-    describe("subjectChangedHandler", () => {
-      it("ignores when not focused on any Kafka cluster", () => {
-        provider.kafkaCluster = null;
-        provider.subjectChangeHandler({
-          subject: TEST_CCLOUD_SUBJECT,
-          change: "added",
-        } as SubjectChangeEvent);
-        sinon.assert.notCalled(refreshStub);
-      });
-
-      it("ignores when event is for a different environment", () => {
-        provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
-        provider.subjectChangeHandler({
-          subject: TEST_CCLOUD_SUBJECT,
-          change: "added",
-        } as SubjectChangeEvent);
-        sinon.assert.notCalled(refreshStub);
-      });
-
-      for (const change of ["added", "deleted"] as EventChangeType[]) {
-        it(`calls reset() when a subject is ${change} in the current environment`, () => {
-          provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
-          provider.subjectChangeHandler({
-            subject: TEST_CCLOUD_SUBJECT,
-            change,
-          } as SubjectChangeEvent);
+          sinon.assert.calledOnce(updateTreeViewDescriptionStub);
           sinon.assert.calledOnce(refreshStub);
-          // Must be a deep refresh to do the right thing and re-correlate topics and subjects.
-          sinon.assert.calledWith(refreshStub, true);
         });
-      }
+
+        it("should not call any methods when the event is for a different environment", async () => {
+          await provider.environmentChangedHandler({
+            id: TEST_CCLOUD_ENVIRONMENT_ID,
+            wasDeleted: false,
+          });
+          sinon.assert.notCalled(resetStub);
+          sinon.assert.notCalled(updateTreeViewDescriptionStub);
+          sinon.assert.notCalled(refreshStub);
+        });
+
+        it("should not call any methods when no cluster is set", async () => {
+          provider.kafkaCluster = null;
+          await provider.environmentChangedHandler({
+            id: TEST_LOCAL_ENVIRONMENT_ID,
+            wasDeleted: false,
+          });
+          sinon.assert.notCalled(resetStub);
+          sinon.assert.notCalled(updateTreeViewDescriptionStub);
+          sinon.assert.notCalled(refreshStub);
+        });
+      });
+
+      describe("localKafkaConnectedHandler", () => {
+        for (const nowConnected of [true, false]) {
+          it(`should call reset() when initially connected to local Kafka and connected event: ${nowConnected}`, async () => {
+            provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER; // Ensure we are in a local context
+            await provider.localKafkaConnectedHandler(nowConnected);
+            sinon.assert.calledOnce(resetStub);
+            sinon.assert.notCalled(updateTreeViewDescriptionStub);
+            sinon.assert.notCalled(refreshStub);
+          });
+
+          it(`should not call any methods when looking at a non-local cluster and connected event: ${nowConnected}`, async () => {
+            provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER; // Ensure we are in a non-local context
+            await provider.localKafkaConnectedHandler(nowConnected);
+            sinon.assert.notCalled(resetStub);
+            sinon.assert.notCalled(updateTreeViewDescriptionStub);
+            sinon.assert.notCalled(refreshStub);
+          });
+
+          it(`should not call any methods when no cluster is set and connected event: ${nowConnected}`, async () => {
+            provider.kafkaCluster = null; // No cluster set
+            await provider.localKafkaConnectedHandler(nowConnected);
+            sinon.assert.notCalled(resetStub);
+            sinon.assert.notCalled(updateTreeViewDescriptionStub);
+            sinon.assert.notCalled(refreshStub);
+          });
+        }
+      });
+
+      describe("subjectChangedHandler", () => {
+        it("ignores when not focused on any Kafka cluster", async () => {
+          provider.kafkaCluster = null;
+          await provider.subjectChangeHandler({
+            subject: TEST_CCLOUD_SUBJECT,
+            change: "added",
+          } as SubjectChangeEvent);
+          sinon.assert.notCalled(refreshStub);
+        });
+
+        it("ignores when event is for a different environment", async () => {
+          provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+          await provider.subjectChangeHandler({
+            subject: TEST_CCLOUD_SUBJECT,
+            change: "added",
+          } as SubjectChangeEvent);
+          sinon.assert.notCalled(refreshStub);
+        });
+
+        for (const change of ["added", "deleted"] as const) {
+          it(`calls reset() when a subject is ${change} in the current environment`, async () => {
+            provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+            await provider.subjectChangeHandler({
+              subject: TEST_CCLOUD_SUBJECT,
+              change,
+            } as SubjectChangeEvent);
+            sinon.assert.calledOnce(refreshStub);
+            // Must be a deep refresh to do the right thing and re-correlate topics and subjects.
+            sinon.assert.calledWith(refreshStub, true);
+          });
+        }
+      });
     });
-  });
 
-  describe("setEventListeners() wires the proper handler methods to the proper event emitters", () => {
-    let emitterStubs: StubbedEventEmitters;
+    describe("setCustomEventListeners()", () => {
+      let emitterStubs: StubbedEventEmitters;
 
-    beforeEach(() => {
-      // Stub all event emitters in the emitters module
-      emitterStubs = eventEmitterStubs(sandbox);
-    });
+      beforeEach(() => {
+        // Stub all event emitters in the emitters module
+        emitterStubs = eventEmitterStubs(sandbox);
+      });
 
-    // Define test cases as corresponding pairs of
-    // [event emitter name, view provider handler method name]
-    const handlerEmitterPairs: Array<[keyof typeof emitterStubs, keyof TopicViewProvider]> = [
-      ["environmentChanged", "environmentChangedHandler"],
-      ["ccloudConnected", "ccloudConnectedHandler"],
-      ["localKafkaConnected", "localKafkaConnectedHandler"],
-      ["topicsViewResourceChanged", "currentKafkaClusterChangedHandler"],
-      ["topicSearchSet", "topicSearchSetHandler"],
-      ["schemaSubjectChanged", "subjectChangeHandler"],
-      ["schemaVersionsChanged", "subjectChangeHandler"],
-    ];
+      // Define test cases as corresponding pairs of
+      // [event emitter name, view provider handler method name]
+      const handlerEmitterPairs: Array<[keyof typeof emitterStubs, keyof TopicViewProvider]> = [
+        ["environmentChanged", "environmentChangedHandler"],
+        ["localKafkaConnected", "localKafkaConnectedHandler"],
+        ["schemaSubjectChanged", "subjectChangeHandler"],
+        ["schemaVersionsChanged", "subjectChangeHandler"],
+      ];
 
-    it("setEventListeners should return the expected number of listeners", () => {
-      const listeners = provider.setEventListeners();
-      assert.strictEqual(listeners.length, handlerEmitterPairs.length);
-    });
+      it("should return the expected number of listeners", () => {
+        const listeners = provider["setCustomEventListeners"]();
+        assert.strictEqual(listeners.length, handlerEmitterPairs.length);
+      });
 
-    handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
-      it(`should register ${handlerMethodName} with ${emitterName} emitter`, () => {
-        // Create stub for the handler method
-        const handlerStub = sandbox.stub(provider, handlerMethodName);
+      handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
+        it(`should register ${handlerMethodName} with ${emitterName} emitter`, () => {
+          // Create stub for the handler method
+          const handlerStub = sandbox.stub(provider, handlerMethodName);
 
-        // Re-invoke setEventListeners() to capture emitter .event() stub calls
-        provider.setEventListeners();
+          // Re-invoke setCustomEventListeners() to capture emitter .event() stub calls
+          provider["setCustomEventListeners"]();
 
-        const emitterStub = emitterStubs[emitterName]!;
-        // Verify the emitter's event method was called
-        sinon.assert.calledOnce(emitterStub.event);
+          const emitterStub = emitterStubs[emitterName]!;
+          // Verify the emitter's event method was called
+          sinon.assert.calledOnce(emitterStub.event);
 
-        // Capture the handler function that was registered
-        const registeredHandler = emitterStub.event.firstCall.args[0];
+          // Capture the handler function that was registered
+          const registeredHandler = emitterStub.event.firstCall.args[0];
 
-        // Call the registered handler
-        registeredHandler(undefined);
+          // Call the registered handler
+          registeredHandler(undefined);
 
-        // Verify the expected method stub was called,
-        // proving that the expected handler was registered
-        // to the expected emitter.
-        sinon.assert.calledOnce(handlerStub);
+          // Verify the expected method stub was called,
+          // proving that the expected handler was registered
+          // to the expected emitter.
+          sinon.assert.calledOnce(handlerStub);
+        });
       });
     });
   });
