@@ -366,6 +366,37 @@ describe("storage/resourceManager", () => {
         );
       }
     });
+
+    it("getTopicsForCluster() should reconstitute nested Subject and Schema instances from JSON objects", async () => {
+      const manager = getResourceManager();
+      await manager.setKafkaClusters(CCLOUD_CONNECTION_ID, [TEST_CCLOUD_KAFKA_CLUSTER]);
+
+      const topicWithSubjects = new KafkaTopic({
+        ...TEST_CCLOUD_KAFKA_TOPIC,
+        name: "topic-with-subjects",
+        children: [TEST_CCLOUD_SUBJECT_WITH_SCHEMA],
+      });
+      await manager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, [topicWithSubjects]);
+
+      const retrievedTopics = await manager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+
+      // check KafkaTopic instances
+      assert.ok(retrievedTopics);
+      assert.strictEqual(retrievedTopics.length, 1);
+      const retrievedTopic = retrievedTopics[0];
+      assert.ok(retrievedTopic instanceof KafkaTopic);
+
+      // check Subject instances
+      const retrievedSubjects = retrievedTopic.children;
+      assert.ok(retrievedSubjects[0] instanceof Subject);
+      assert.strictEqual(retrievedSubjects[0].name, TEST_CCLOUD_SUBJECT_WITH_SCHEMA.name);
+
+      // check Schema instances
+      const retrievedSchemas = retrievedSubjects[0].schemas;
+      assert.ok(retrievedSchemas);
+      assert.ok(retrievedSchemas[0] instanceof Schema);
+      assert.strictEqual(retrievedSchemas[0].id, TEST_CCLOUD_SUBJECT_WITH_SCHEMA.schemas![0].id);
+    });
   });
 
   describe("ResourceManager Schema Registry methods", function () {
