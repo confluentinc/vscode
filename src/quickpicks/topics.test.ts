@@ -31,10 +31,9 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
   let stubbedLoader: sinon.SinonStubbedInstance<LocalResourceLoader>;
 
   const topicWithoutSchema = TEST_LOCAL_KAFKA_TOPIC;
-  const topicWithSchema = KafkaTopic.create({
+  const topicWithSchema = new KafkaTopic({
     ...topicWithoutSchema,
     name: "topic-with-schema",
-    hasSchema: true,
     children: [TEST_LOCAL_SUBJECT_WITH_SCHEMAS],
   });
   const testTopics: KafkaTopic[] = [topicWithSchema, topicWithoutSchema];

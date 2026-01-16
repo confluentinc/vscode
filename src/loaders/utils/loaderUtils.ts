@@ -102,7 +102,7 @@ export function correlateTopicsWithSchemaSubjects(
       isFlinkable = (cluster as CCloudKafkaCluster).isFlinkable();
     }
 
-    return KafkaTopic.create({
+    return new KafkaTopic({
       connectionId: cluster.connectionId,
       connectionType: cluster.connectionType,
       name: topic.topic_name,
@@ -113,7 +113,6 @@ export function correlateTopicsWithSchemaSubjects(
       configs: topic.configs,
       clusterId: cluster.id,
       environmentId: cluster.environmentId,
-      hasSchema: matchingSubjects.length > 0,
       isFlinkable: isFlinkable,
       operations: toKafkaTopicOperations(topic.authorized_operations!),
       children: matchingSubjects,

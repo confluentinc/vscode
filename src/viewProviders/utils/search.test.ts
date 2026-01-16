@@ -71,9 +71,8 @@ describe("viewProviders/utils/search.ts", () => {
     });
 
     it("should return topic when its subject children match", () => {
-      const topic = KafkaTopic.create({
+      const topic = new KafkaTopic({
         ...TEST_CCLOUD_KAFKA_TOPIC,
-        hasSchema: true,
         children: [TEST_CCLOUD_SUBJECT_WITH_SCHEMA],
       });
 
@@ -134,9 +133,8 @@ describe("viewProviders/utils/search.ts", () => {
 
     it("should return true when a nested child matches", () => {
       // KafkaTopic -> Subject -> Schema
-      const topic = KafkaTopic.create({
+      const topic = new KafkaTopic({
         ...TEST_CCLOUD_KAFKA_TOPIC,
-        hasSchema: true,
         children: [TEST_CCLOUD_SUBJECT_WITH_SCHEMA],
       });
 
@@ -193,9 +191,8 @@ describe("viewProviders/utils/search.ts", () => {
 
     it("should traverse deeply nested matches", () => {
       // KafkaTopic -> Subject -> Schema
-      const topic = KafkaTopic.create({
+      const topic = new KafkaTopic({
         ...TEST_CCLOUD_KAFKA_TOPIC,
-        hasSchema: true,
         children: [TEST_CCLOUD_SUBJECT_WITH_SCHEMA],
       });
       const searchStr = TEST_CCLOUD_SCHEMA.subject;

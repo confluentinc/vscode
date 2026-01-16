@@ -9,6 +9,7 @@ import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMA,
   TEST_DIRECT_ENVIRONMENT,
   TEST_DIRECT_SCHEMA_REGISTRY,
   TEST_LOCAL_KAFKA_CLUSTER,
@@ -44,7 +45,7 @@ import { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { ConnectionId, EnvironmentId, IEnvProviderRegion } from "../models/resource";
-import { Subject } from "../models/schema";
+import { Schema, Subject } from "../models/schema";
 import type { SchemaRegistry } from "../models/schemaRegistry";
 import { CCloudSchemaRegistry, LocalSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -304,12 +305,12 @@ describe("storage/resourceManager", () => {
       ]);
 
       const ccloudTopics = [
-        KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
-        KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
+        new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
+        new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
       ];
 
       const otherCcloudClusterTopics = [
-        KafkaTopic.create({
+        new KafkaTopic({
           ...TEST_CCLOUD_KAFKA_TOPIC,
           name: "test-ccloud-topic-3",
           clusterId: otherCcloudCluster.id,
@@ -365,6 +366,37 @@ describe("storage/resourceManager", () => {
           "Expected right topics to still be returned for each cloud cluster",
         );
       }
+    });
+
+    it("getTopicsForCluster() should reconstitute nested Subject and Schema instances from JSON objects", async () => {
+      const manager = getResourceManager();
+      await manager.setKafkaClusters(CCLOUD_CONNECTION_ID, [TEST_CCLOUD_KAFKA_CLUSTER]);
+
+      const topicWithSubjects = new KafkaTopic({
+        ...TEST_CCLOUD_KAFKA_TOPIC,
+        name: "topic-with-subjects",
+        children: [TEST_CCLOUD_SUBJECT_WITH_SCHEMA],
+      });
+      await manager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, [topicWithSubjects]);
+
+      const retrievedTopics = await manager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+
+      // check KafkaTopic instances
+      assert.ok(retrievedTopics);
+      assert.strictEqual(retrievedTopics.length, 1);
+      const retrievedTopic = retrievedTopics[0];
+      assert.ok(retrievedTopic instanceof KafkaTopic);
+
+      // check Subject instances
+      const retrievedSubjects = retrievedTopic.children;
+      assert.ok(retrievedSubjects[0] instanceof Subject);
+      assert.strictEqual(retrievedSubjects[0].name, TEST_CCLOUD_SUBJECT_WITH_SCHEMA.name);
+
+      // check Schema instances
+      const retrievedSchemas = retrievedSubjects[0].schemas;
+      assert.ok(retrievedSchemas);
+      assert.ok(retrievedSchemas[0] instanceof Schema);
+      assert.strictEqual(retrievedSchemas[0].id, TEST_CCLOUD_SUBJECT_WITH_SCHEMA.schemas![0].id);
     });
   });
 
@@ -1029,8 +1061,8 @@ describe("storage/resourceManager", () => {
 
     before(async () => {
       ccloudTopics = [
-        KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
-        KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
+        new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
+        new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
       ];
     });
 

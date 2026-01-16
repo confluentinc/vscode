@@ -44,7 +44,7 @@ import type { LoadedDocumentContent } from "../utils/file";
 import { getEditorOrFileContents } from "../utils/file";
 import type { ExecutionResult } from "../utils/workerPool";
 import { executeInWorkerPool, isErrorResult, isSuccessResult } from "../utils/workerPool";
-import { getTopicViewProvider } from "../viewProviders/topics";
+import { TopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
 import { handleWebviewMessage } from "../webview/comms/comms";
 import type { post } from "../webview/topic-config-form";
@@ -56,7 +56,7 @@ const logger = new Logger("topics");
 
 /** Copy the Kafka Cluster ID from the Topics tree provider nav action. */
 async function copyKafkaClusterId() {
-  const cluster: KafkaCluster | null = getTopicViewProvider().kafkaCluster;
+  const cluster: KafkaCluster | null = TopicViewProvider.getInstance().kafkaCluster;
   if (!cluster) {
     return;
   }
@@ -66,7 +66,7 @@ async function copyKafkaClusterId() {
 
 /** Copy the Kafka Cluster name from the Topics tree provider nav action. */
 async function copyKafkaClusterName() {
-  const cluster: KafkaCluster | null = getTopicViewProvider().kafkaCluster;
+  const cluster: KafkaCluster | null = TopicViewProvider.getInstance().kafkaCluster;
   if (!cluster) {
     return;
   }
@@ -76,7 +76,7 @@ async function copyKafkaClusterName() {
 
 /** Copy the Kafka Cluster bootstrap servers from the Topics tree provider nav action. */
 async function copyKafkaClusterBootstrapUrl() {
-  const cluster: KafkaCluster | null = getTopicViewProvider().kafkaCluster;
+  const cluster: KafkaCluster | null = TopicViewProvider.getInstance().kafkaCluster;
   if (!cluster) {
     return;
   }

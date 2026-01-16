@@ -132,37 +132,37 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
             stubbedLoader = getStubbedCCloudResourceLoader(
               sandbox,
             ) as unknown as sinon.SinonStubbedInstance<ResourceLoader>;
-            testTopic = KafkaTopic.create({
+            testSubject = TEST_CCLOUD_SUBJECT_WITH_SCHEMAS;
+            testTopic = new KafkaTopic({
               ...TEST_CCLOUD_KAFKA_TOPIC,
-              hasSchema: true,
               name: "test-topic",
+              children: [testSubject],
             });
             testSchemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
-            testSubject = TEST_CCLOUD_SUBJECT_WITH_SCHEMAS;
             break;
           case ConnectionType.Local:
             stubbedLoader = getStubbedLocalResourceLoader(
               sandbox,
             ) as unknown as sinon.SinonStubbedInstance<ResourceLoader>;
-            testTopic = KafkaTopic.create({
+            testSubject = TEST_LOCAL_SUBJECT_WITH_SCHEMAS;
+            testTopic = new KafkaTopic({
               ...TEST_LOCAL_KAFKA_TOPIC,
-              hasSchema: true,
               name: "test-topic",
+              children: [testSubject],
             });
             testSchemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
-            testSubject = TEST_LOCAL_SUBJECT_WITH_SCHEMAS;
             break;
           case ConnectionType.Direct:
             stubbedLoader = getStubbedDirectResourceLoader(
               sandbox,
             ) as unknown as sinon.SinonStubbedInstance<ResourceLoader>;
-            testTopic = KafkaTopic.create({
+            testSubject = TEST_DIRECT_SUBJECT_WITH_SCHEMAS;
+            testTopic = new KafkaTopic({
               ...TEST_DIRECT_KAFKA_TOPIC,
-              hasSchema: true,
               name: "test-topic",
+              children: [testSubject],
             });
             testSchemaRegistry = TEST_DIRECT_SCHEMA_REGISTRY;
-            testSubject = TEST_DIRECT_SUBJECT_WITH_SCHEMAS;
             break;
           default:
             throw new Error(`Unsupported connection type: ${connectionType}`);
@@ -172,7 +172,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       it("throws an error for topics without schemas", async function () {
         await assert.rejects(
           async () => {
-            await getLatestSchemasForTopic(KafkaTopic.create({ ...testTopic, hasSchema: false }));
+            await getLatestSchemasForTopic(new KafkaTopic({ ...testTopic, children: [] }));
           },
           (error) =>
             error instanceof Error &&
