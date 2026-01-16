@@ -2,6 +2,7 @@ import * as assert from "assert";
 import "mocha";
 import * as vscode from "vscode";
 import { MarkdownString } from "vscode";
+import { TEST_CCLOUD_SUBJECT } from "../../tests/unit/testResources/schema";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_LOCAL_KAFKA_TOPIC,
@@ -88,7 +89,7 @@ describe("KafkaTopicTreeItem constructor", () => {
   });
 
   it("No read operation implications", () => {
-    const noReadTopic = KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, operations: ["WRITE"] });
+    const noReadTopic = new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, operations: ["WRITE"] });
     const noReadTopicTreeItem = new KafkaTopicTreeItem(noReadTopic);
 
     assert.strictEqual(hasAuthorizationTooltipWarning(noReadTopicTreeItem, "READ"), true);
@@ -96,7 +97,7 @@ describe("KafkaTopicTreeItem constructor", () => {
   });
 
   it("No delete operation implications", () => {
-    const NO_DELETE_TOPIC = KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, operations: ["READ"] });
+    const NO_DELETE_TOPIC = new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, operations: ["READ"] });
     const noDeleteTopicTreeItem = new KafkaTopicTreeItem(NO_DELETE_TOPIC);
 
     assert.strictEqual(hasAuthorizationTooltipWarning(noDeleteTopicTreeItem, "DELETE"), true);
@@ -104,7 +105,7 @@ describe("KafkaTopicTreeItem constructor", () => {
   });
 
   it("No permissions at all implications", () => {
-    const NO_OPERATIONS_TOPIC = KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, operations: [] });
+    const NO_OPERATIONS_TOPIC = new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, operations: [] });
     const noPermissionsTopicTreeItem = new KafkaTopicTreeItem(NO_OPERATIONS_TOPIC);
 
     assert.strictEqual(hasAuthorizationTooltipWarning(noPermissionsTopicTreeItem, "READ"), true);
@@ -115,7 +116,7 @@ describe("KafkaTopicTreeItem constructor", () => {
 
   it("has schema implications", () => {
     const schemaTopicTreeItem = new KafkaTopicTreeItem(
-      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, hasSchema: true }),
+      new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, children: [TEST_CCLOUD_SUBJECT] }),
     );
     const icon = schemaTopicTreeItem.iconPath;
     assert.strictEqual(icon instanceof vscode.ThemeIcon, true);
@@ -129,7 +130,7 @@ describe("KafkaTopicTreeItem constructor", () => {
 
   it("no schema implications", () => {
     const noSchemaTopicTreeItem = new KafkaTopicTreeItem(
-      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, hasSchema: false }),
+      new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, children: [] }),
     );
     const icon = noSchemaTopicTreeItem.iconPath;
     assert.strictEqual(icon instanceof vscode.ThemeIcon, true);
@@ -144,21 +145,25 @@ describe("KafkaTopicTreeItem constructor", () => {
 
   it("should append context value with -flinkable if the cluster has matchking flink pool in the same provider/region", () => {
     const flinkableTopicTreeItem = new KafkaTopicTreeItem(
-      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, isFlinkable: true }),
+      new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, isFlinkable: true }),
     );
     assert.strictEqual(flinkableTopicTreeItem.contextValue!.includes("-flinkable"), true);
   });
 
   it("should not append context value with -flinkable if the cluster has matchking flink pool in the same provider/region", () => {
     const nonFlinkableTopicTreeItem = new KafkaTopicTreeItem(
-      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, isFlinkable: false }),
+      new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, isFlinkable: false }),
     );
     assert.strictEqual(nonFlinkableTopicTreeItem.contextValue!.includes("-flinkable"), false);
   });
 
   it("set context value for topic with muliple attributes such as schema and flinkable correctly", () => {
     const topicWithBothTreeItem = new KafkaTopicTreeItem(
-      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, hasSchema: true, isFlinkable: true }),
+      new KafkaTopic({
+        ...TEST_CCLOUD_KAFKA_TOPIC,
+        children: [TEST_CCLOUD_SUBJECT],
+        isFlinkable: true,
+      }),
     );
     assert.strictEqual(topicWithBothTreeItem.contextValue!.includes("-with-schema"), true);
     assert.strictEqual(topicWithBothTreeItem.contextValue!.includes("-flinkable"), true);

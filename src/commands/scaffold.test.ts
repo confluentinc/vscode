@@ -109,7 +109,7 @@ describe("commands/scaffold.ts", () => {
       );
 
       // make a new topic with an environment ID that won't be found
-      const topicWithMissingEnv = KafkaTopic.create({
+      const topicWithMissingEnv = new KafkaTopic({
         ...TEST_CCLOUD_KAFKA_TOPIC,
         clusterId: "missing-cluster-id",
       });

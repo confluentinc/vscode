@@ -9,6 +9,7 @@ import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMA,
   TEST_DIRECT_ENVIRONMENT,
   TEST_DIRECT_SCHEMA_REGISTRY,
   TEST_LOCAL_KAFKA_CLUSTER,
@@ -44,7 +45,7 @@ import { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { ConnectionId, EnvironmentId, IEnvProviderRegion } from "../models/resource";
-import { Subject } from "../models/schema";
+import { Schema, Subject } from "../models/schema";
 import type { SchemaRegistry } from "../models/schemaRegistry";
 import { CCloudSchemaRegistry, LocalSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -304,12 +305,12 @@ describe("storage/resourceManager", () => {
       ]);
 
       const ccloudTopics = [
-        KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
-        KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
+        new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
+        new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
       ];
 
       const otherCcloudClusterTopics = [
-        KafkaTopic.create({
+        new KafkaTopic({
           ...TEST_CCLOUD_KAFKA_TOPIC,
           name: "test-ccloud-topic-3",
           clusterId: otherCcloudCluster.id,
@@ -1060,8 +1061,8 @@ describe("storage/resourceManager", () => {
 
     before(async () => {
       ccloudTopics = [
-        KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
-        KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
+        new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
+        new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
       ];
     });
 
