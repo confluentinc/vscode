@@ -822,7 +822,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
-   * Fetch and validate a Flink workspace from the API.
+   * Fetch a Flink workspace from the API.
    * Uses the provider/region from the params to query the region-scoped Workspaces API directly.
    *
    * @param params Workspace parameters containing environmentId, organizationId, workspaceName, provider, and region
@@ -864,10 +864,6 @@ export class CCloudResourceLoader extends CachingResourceLoader<
         name: params.workspaceName,
       });
 
-      if (!this.validateWorkspaceResponse(workspace, params)) {
-        return null;
-      }
-
       return workspace;
     } catch (error) {
       logger.warn("Failed to fetch workspace", {
@@ -879,36 +875,6 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       });
       return null;
     }
-  }
-
-  /**
-   * Validate that the workspace response matches the expected organization and environment.
-   *
-   * @param workspace The workspace response from the API
-   * @param params The original request parameters to validate against
-   * @returns true if validation passes, false otherwise
-   */
-  private validateWorkspaceResponse(
-    workspace: GetWsV1Workspace200Response,
-    params: FlinkWorkspaceParams,
-  ): boolean {
-    if (workspace.organization_id !== params.organizationId) {
-      logger.warn("Organization ID mismatch", {
-        expected: params.organizationId,
-        actual: workspace.organization_id,
-      });
-      return false;
-    }
-
-    if (workspace.environment_id !== params.environmentId) {
-      logger.warn("Environment ID mismatch", {
-        expected: params.environmentId,
-        actual: workspace.environment_id,
-      });
-      return false;
-    }
-
-    return true;
   }
 }
 

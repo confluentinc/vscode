@@ -49,25 +49,19 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
   logger.debug("Handling Flink workspace URI event", { uri: uri.toString() });
 
   const params = extractWorkspaceParamsFromUri(uri);
-  if (!params) {
-    await showErrorNotificationWithButtons(
-      "Invalid Flink workspace URI: missing required parameters",
-    );
-    return;
-  }
 
   const loader = CCloudResourceLoader.getInstance();
-  const workspace = await loader.getFlinkWorkspace(params);
+  const workspace = await loader.getFlinkWorkspace(params as FlinkWorkspaceParams);
   if (!workspace) {
     await showErrorNotificationWithButtons(
-      `Unable to load Flink workspace: ${params.workspaceName}. Please verify the workspace exists and you have access.`,
+      `Unable to load Flink workspace: ${params?.workspaceName}. Please verify the workspace exists and you have access.`,
     );
     return;
   }
-  const environment = await loader.getEnvironment(params.environmentId as EnvironmentId, true);
+  const environment = await loader.getEnvironment(params?.environmentId as EnvironmentId, true);
   if (!environment) {
     await showErrorNotificationWithButtons(
-      `Unable to load environment: ${params.environmentId}. Please verify the environment exists and you have access.`,
+      `Unable to load environment: ${params?.environmentId}. Please verify the environment exists and you have access.`,
     );
     return;
   }
@@ -76,23 +70,17 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
     workspace,
     environment as CCloudEnvironment,
   );
+  metadataContext.catalog = environment as CCloudEnvironment;
 
   const sqlStatements = extractSqlStatementsFromWorkspace(workspace);
 
   if (sqlStatements.length === 0) {
-    try {
-      const document = await vscode.workspace.openTextDocument({
-        language: FLINK_SQL_LANGUAGE_ID,
-        content: `No Flink SQL statements were found in this workspace.`,
-      });
-      await setFlinkDocumentMetadata(document.uri, metadataContext);
-      await vscode.window.showTextDocument(document);
-    } catch (error) {
-      logError(error, "Failed to open empty Flink SQL workspace document");
-      await showErrorNotificationWithButtons(
-        `Failed to open Flink SQL workspace: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+    const document = await vscode.workspace.openTextDocument({
+      language: FLINK_SQL_LANGUAGE_ID,
+      content: `No Flink SQL statements were found in this workspace.`,
+    });
+    await setFlinkDocumentMetadata(document.uri, metadataContext);
+    await vscode.window.showTextDocument(document);
     return;
   }
 
@@ -147,50 +135,26 @@ export function extractWorkspaceParamsFromUri(uri: Uri): FlinkWorkspaceParams | 
  */
 export async function extractMetadataFromWorkspace(
   workspace: GetWsV1Workspace200Response,
-  environment: CCloudEnvironment,
+  environment?: CCloudEnvironment,
 ): Promise<WorkspaceMetadataContext> {
-  const context: WorkspaceMetadataContext = {
-    catalog: environment,
-  };
+  const context: WorkspaceMetadataContext = {};
+  const loader = CCloudResourceLoader.getInstance();
 
-  const computePoolId = workspace.spec.compute_pool?.id ?? undefined;
+  const computePoolId = workspace.spec.compute_pool;
 
-  if (computePoolId) {
-    const computePool = environment.flinkComputePools.find((pool) => pool.id === computePoolId);
-    if (computePool) {
-      context.computePool = computePool;
-    } else {
-      logError(
-        new Error(
-          `Compute pool ${computePoolId} from workspace not found in environment ${environment.id}`,
-        ),
-        "Compute pool not found",
-      );
-    }
-  }
+  const computePool = await loader.getFlinkComputePool(computePoolId);
 
+  context.computePool = computePool;
   const databaseId = workspace.spec.properties?.["sql-database"];
 
   if (databaseId) {
-    const loader = CCloudResourceLoader.getInstance();
-    const kafkaClusters = await loader.getKafkaClustersForEnvironmentId(environment.id);
+    const cluster = await loader.getFlinkDatabase(
+      environment?.environmentId as EnvironmentId,
+      databaseId,
+    );
 
-    const cluster = kafkaClusters?.find((c) => c.id === databaseId);
-    if (cluster && cluster.isFlinkable()) {
-      context.database = cluster;
-    } else if (cluster) {
-      logError(
-        new Error("Database cluster found but not Flink-enabled"),
-        `Database ID: ${databaseId}, Environment ID: ${environment.id}, Flink Pool Count: ${cluster.flinkPools?.length ?? 0}`,
-      );
-    } else {
-      logError(
-        new Error("Database from workspace properties not found in loaded clusters"),
-        `Database ID: ${databaseId}, Environment ID: ${environment.id}`,
-      );
-    }
+    context.database = cluster;
   }
-
   return context;
 }
 
