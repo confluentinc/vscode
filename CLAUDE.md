@@ -204,6 +204,7 @@ class MyClass extends DisposableCollection {
 ## Error Handling
 
 - **Logging**: Always use `logError()` utility (`src/utils/errors.ts`) for consistent error capture
+  rather than `logger.warn()` or `logger.error()`
 - **User-facing**: Use `showErrorNotificationWithButtons()` with "Open Logs" and "File Issue"
   actions
 - **Messages**: Write actionable error messages explaining what happened, why, and how to resolve
@@ -294,9 +295,6 @@ When working with Claude Code during development:
 
 ### Before Writing New Code
 
-- **Check for existing patterns first**: For non-trivial utilities or complex logic, search the
-  codebase for existing functions or established patterns that solve the same problem before
-  implementing new ones. Reuse over reinvent.
 - **No decorative comment blocks**: Do not add large comment separators like `// ======...` or
   `// ------...` to divide sections of code. Readability should come from code structure itself
   (well-named functions, logical grouping, small files), not formatting.
