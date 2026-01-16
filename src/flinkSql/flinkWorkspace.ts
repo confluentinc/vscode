@@ -120,24 +120,20 @@ export function extractWorkspaceParamsFromUri(uri: Uri): FlinkWorkspaceParams | 
   const provider = params.get("provider");
   const region = params.get("region");
 
-  if (!environmentId || !organizationId || !workspaceName || !provider || !region) {
-    logger.warn("Missing required workspace parameters in URI", {
-      environmentId,
-      organizationId,
-      workspaceName,
-      provider,
-      region,
-    });
+  const requiredParams = { environmentId, organizationId, workspaceName, provider, region };
+  const missingParams = Object.entries(requiredParams)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+
+  if (missingParams.length > 0) {
+    logError(
+      new Error("Missing required Flink workspace URI parameters"),
+      `URI missing parameters: ${missingParams.join(", ")}`,
+    );
     return null;
   }
 
-  return {
-    environmentId,
-    organizationId,
-    workspaceName,
-    provider,
-    region,
-  };
+  return requiredParams as FlinkWorkspaceParams;
 }
 
 /**
@@ -164,10 +160,12 @@ export async function extractMetadataFromWorkspace(
     if (computePool) {
       context.computePool = computePool;
     } else {
-      logger.warn("Compute pool from workspace not found in environment", {
-        computePoolId,
-        environmentId: environment.id,
-      });
+      logError(
+        new Error(
+          `Compute pool ${computePoolId} from workspace not found in environment ${environment.id}`,
+        ),
+        "Compute pool not found",
+      );
     }
   }
 
@@ -181,16 +179,15 @@ export async function extractMetadataFromWorkspace(
     if (cluster && cluster.isFlinkable()) {
       context.database = cluster;
     } else if (cluster) {
-      logger.warn("Database cluster found but not Flink-enabled", {
-        databaseId,
-        environmentId: environment.id,
-        flinkPoolCount: cluster.flinkPools?.length ?? 0,
-      });
+      logError(
+        new Error("Database cluster found but not Flink-enabled"),
+        `Database ID: ${databaseId}, Environment ID: ${environment.id}, Flink Pool Count: ${cluster.flinkPools?.length ?? 0}`,
+      );
     } else {
-      logger.warn("Database from workspace properties not found in loaded clusters", {
-        databaseId,
-        environmentId: environment.id,
-      });
+      logError(
+        new Error("Database from workspace properties not found in loaded clusters"),
+        `Database ID: ${databaseId}, Environment ID: ${environment.id}`,
+      );
     }
   }
 
