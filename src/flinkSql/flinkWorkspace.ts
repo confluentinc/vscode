@@ -230,7 +230,7 @@ export function extractSqlStatementsFromWorkspace(
  * @param sqlStatements Array of SQL statement strings to open as documents
  * @param metadataContext Optional metadata to set on each opened document
  */
-async function openSqlStatementsAsDocuments(
+export async function openSqlStatementsAsDocuments(
   sqlStatements: string[],
   metadataContext?: WorkspaceMetadataContext,
 ): Promise<void> {
