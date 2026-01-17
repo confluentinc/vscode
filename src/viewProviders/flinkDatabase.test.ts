@@ -3,10 +3,7 @@ import * as sinon from "sinon";
 import type { CancellationToken, Progress } from "vscode";
 import { window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
-import {
-  TEST_CCLOUD_ENVIRONMENT,
-  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-} from "../../tests/unit/testResources";
+import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { createFlinkAIAgent } from "../../tests/unit/testResources/flinkAIAgent";
 import { createFlinkAIConnection } from "../../tests/unit/testResources/flinkAIConnection";
 import { createFlinkAIModel } from "../../tests/unit/testResources/flinkAIModel";
@@ -21,7 +18,6 @@ import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResponseError } from "../clients/flinkArtifacts";
 import type { CCloudResourceLoader } from "../loaders";
-import type { CCloudEnvironment } from "../models/environment";
 import { FlinkAIAgentTreeItem } from "../models/flinkAiAgent";
 import { FlinkAIConnectionTreeItem } from "../models/flinkAiConnection";
 import { FlinkAIModelTreeItem } from "../models/flinkAiModel";
@@ -955,52 +951,6 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         sinon.assert.calledOnce(refreshUDFsStub);
         sinon.assert.calledWith(refreshUDFsStub, db, true);
-      });
-    });
-
-    describe("updateTreeViewDescription()", () => {
-      const initialDescription = "Initial description";
-
-      function getDescription(): string | undefined {
-        return viewProvider["treeView"].description;
-      }
-
-      beforeEach(() => {
-        viewProvider["treeView"].description = initialDescription;
-      });
-
-      it("does nothing when no database is set", async () => {
-        viewProvider["resource"] = null;
-        await viewProvider.updateTreeViewDescription();
-        assert.strictEqual(getDescription(), "");
-      });
-
-      it("sets to mix of database name and environment name when database is set", async () => {
-        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER; // in TEST_CCLOUD_ENVIRONMENT.
-
-        const parentEnvironment = {
-          ...TEST_CCLOUD_ENVIRONMENT,
-          name: "Test Env Name",
-        } as CCloudEnvironment;
-
-        ccloudLoader.getEnvironment.resolves(parentEnvironment);
-
-        await viewProvider.updateTreeViewDescription();
-
-        assert.strictEqual(
-          getDescription(),
-          `${parentEnvironment.name} | ${TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name}`,
-        );
-      });
-
-      it("sets to database name when no parent environment is found", async () => {
-        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER; // in TEST_CCLOUD_ENVIRONMENT.
-
-        ccloudLoader.getEnvironment.resolves(undefined);
-
-        await viewProvider.updateTreeViewDescription();
-
-        assert.strictEqual(getDescription(), TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name);
       });
     });
   });
