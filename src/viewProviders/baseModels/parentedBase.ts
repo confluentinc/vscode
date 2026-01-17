@@ -15,6 +15,7 @@ import { BaseViewProvider } from "./base";
  */
 export type EnvironmentedBaseViewProviderData = BaseViewProviderData & {
   environmentId: EnvironmentId;
+  name: string;
 };
 
 /**
@@ -122,11 +123,15 @@ export abstract class ParentedBaseViewProvider<
   }
 
   /**
-   * Update the tree view description to show the currently-focused {@linkcode resource}'s parent
-   * {@link Environment} name and the resource ID.
+   * Update the tree view description to show the currently-focused {@linkcode resource}.
    *
-   * Reassigns {@linkcode environment} to the parent {@link Environment} of the {@linkcode resource}.
-   * */
+   * Displays information from left to right in order of relevance:
+   * `{resource name} | {provider/region} | {environment name}`
+   *
+   * Examples:
+   * - CCloud: `my-cluster | AWS/us-west-2 | production-env`
+   * - Direct/Local: `my-cluster | local-env`
+   */
   async updateTreeViewDescription(): Promise<void> {
     const subLogger = this.logger.withCallpoint("updateTreeViewDescription");
 
@@ -145,12 +150,16 @@ export abstract class ParentedBaseViewProvider<
       focusedResource.environmentId,
     );
 
-    if (parentEnv) {
-      subLogger.debug("found environment, setting view description");
-      this.treeView.description = `${parentEnv.name} | ${focusedResource.id}`;
-    } else {
-      subLogger.debug(`couldn't find parent environment for ${focusedResource.constructor.name}`);
-      this.treeView.description = "";
+    const parts: string[] = [focusedResource.name];
+    // only include provider/region for CCloud resources
+    if (isCCloud(focusedResource) && "provider" in focusedResource && "region" in focusedResource) {
+      parts.push(`${focusedResource.provider}/${focusedResource.region}`);
     }
+    if (parentEnv) {
+      parts.push(parentEnv.name);
+    }
+
+    subLogger.debug("setting view description", { parts });
+    this.treeView.description = parts.join(" | ");
   }
 }

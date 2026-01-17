@@ -5,7 +5,11 @@ import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
-import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
+import {
+  TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_PROVIDER,
+  TEST_CCLOUD_REGION,
+} from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
@@ -552,26 +556,23 @@ describe("FlinkStatementsViewProvider", () => {
       assert.strictEqual(viewProvider["treeView"].description, "");
     });
 
-    it("updates to FCP description when user selects a compute pool", async () => {
+    it("updates to compute pool description when user selects a compute pool", async () => {
       viewProvider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
 
       await viewProvider.updateTreeViewDescription();
 
       assert.strictEqual(
         viewProvider["treeView"].description,
-        `FCP: ${TEST_CCLOUD_FLINK_COMPUTE_POOL.name} | ${TEST_CCLOUD_FLINK_COMPUTE_POOL.id}`,
+        `${TEST_CCLOUD_FLINK_COMPUTE_POOL.name} | ${TEST_CCLOUD_PROVIDER}/${TEST_CCLOUD_REGION}`,
       );
     });
 
-    it("updates to Env description when user selects an environment", async () => {
+    it("updates to environment name when user selects an environment", async () => {
       viewProvider["resource"] = TEST_CCLOUD_ENVIRONMENT;
 
       await viewProvider.updateTreeViewDescription();
 
-      assert.strictEqual(
-        viewProvider["treeView"].description,
-        `ENV: ${TEST_CCLOUD_ENVIRONMENT.name} | ${TEST_CCLOUD_ENVIRONMENT.id}`,
-      );
+      assert.strictEqual(viewProvider["treeView"].description, TEST_CCLOUD_ENVIRONMENT.name);
     });
   });
 });

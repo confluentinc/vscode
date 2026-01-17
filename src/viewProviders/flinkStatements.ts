@@ -239,8 +239,8 @@ export class FlinkStatementsViewProvider
 
   /**
    * Override the base updateTreeViewDescription from {@link ParentedBaseViewProvider} to show clear scope indicators.
-   * - Environment mode: "Env: {envName} | {envId}"
-   * - Single Flink compute pool mode: "FCP: {poolName} | {poolId}"
+   * - Environment mode: "{envName}"
+   * - Single Flink compute pool mode: "{poolName} | {provider/region} | {envName}"
    */
   async updateTreeViewDescription(): Promise<void> {
     const focusedResource = this.resource;
@@ -257,18 +257,22 @@ export class FlinkStatementsViewProvider
       `updateTreeViewDescription() called with ${focusedResource.constructor.name}, checking for scope...`,
     );
 
-    if (focusedResource instanceof CCloudFlinkComputePool) {
-      // single compute pool mode: show pool name and ID
-      this.logger.debug(
-        "updateTreeViewDescription() focused on compute pool, setting FCP description",
+    if (focusedResource instanceof CCloudEnvironment) {
+      // environment mode: only show environment name
+      this.logger.debug("updateTreeViewDescription() focused on environment, setting description");
+      this.treeView.description = focusedResource.name;
+    } else if (focusedResource instanceof CCloudFlinkComputePool) {
+      // compute pool mode: show pool name, provider/region, and env name
+      this.logger.debug("updateTreeViewDescription() focused on compute pool, setting description");
+      const parentEnv = await ResourceLoader.getEnvironment(
+        focusedResource.connectionId,
+        focusedResource.environmentId,
       );
-      this.treeView.description = `FCP: ${focusedResource.name} | ${focusedResource.id}`;
-    } else if (focusedResource instanceof CCloudEnvironment) {
-      // environment mode: show environment name and ID
-      this.logger.debug(
-        "updateTreeViewDescription() focused on environment, setting Env description",
-      );
-      this.treeView.description = `ENV: ${focusedResource.name} | ${focusedResource.id}`;
+      const parts = [focusedResource.name, `${focusedResource.provider}/${focusedResource.region}`];
+      if (parentEnv) {
+        parts.push(parentEnv.name);
+      }
+      this.treeView.description = parts.join(" | ");
     }
   }
 }
