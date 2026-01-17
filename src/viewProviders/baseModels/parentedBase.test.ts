@@ -3,7 +3,11 @@ import * as sinon from "sinon";
 import type { TreeItem } from "vscode";
 import { EventEmitter } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoaders";
-import { TEST_CCLOUD_ENVIRONMENT } from "../../../tests/unit/testResources/environments";
+import {
+  TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_PROVIDER,
+  TEST_CCLOUD_REGION,
+} from "../../../tests/unit/testResources/environments";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
 import {
   makeStatus,
@@ -127,22 +131,25 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
 
       assert.strictEqual(
         provider["treeView"].description,
-        `${TEST_CCLOUD_ENVIRONMENT.name} | ${TEST_CCLOUD_FLINK_COMPUTE_POOL.id}`,
+        `${TEST_CCLOUD_FLINK_COMPUTE_POOL.name} | ${TEST_CCLOUD_PROVIDER}/${TEST_CCLOUD_REGION} | ${TEST_CCLOUD_ENVIRONMENT.name}`,
       );
     });
 
-    it("Should set the description to empty when environment is not found within loader", async () => {
+    it("Should set description without env name when environment is not found", async () => {
       const stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader> =
         getStubbedCCloudResourceLoader(sandbox);
       stubbedLoader.getEnvironments.resolves([]);
 
       provider.resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
 
-      provider["treeView"].description = "this should go away";
+      provider["treeView"].description = "this should be replaced";
 
       await provider.updateTreeViewDescription();
 
-      assert.strictEqual(provider["treeView"].description, "");
+      assert.strictEqual(
+        provider["treeView"].description,
+        `${TEST_CCLOUD_FLINK_COMPUTE_POOL.name} | ${TEST_CCLOUD_PROVIDER}/${TEST_CCLOUD_REGION}`,
+      );
     });
   });
 
