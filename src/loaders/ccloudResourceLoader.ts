@@ -1,14 +1,17 @@
 import type { Disposable } from "vscode";
 
+import { getCCloudAuthSession } from "../authn/utils";
 import type { ArtifactV1FlinkArtifactListDataInner } from "../clients/flinkArtifacts";
 import type {
   FcpmV2RegionListDataInner,
   ListFcpmV2RegionsRequest,
 } from "../clients/flinkComputePool";
 import type { ListSqlv1StatementsRequest } from "../clients/flinkSql";
+import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected, flinkStatementDeleted } from "../emitters";
+import type { FlinkWorkspaceParams } from "../flinkSql/flinkWorkspace";
 import type { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
 import {
   determineFlinkStatementName,
@@ -35,7 +38,12 @@ import type { FlinkUdf } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { CCloudOrganization } from "../models/organization";
-import type { EnvironmentId, IFlinkQueryable, IProviderRegion } from "../models/resource";
+import type {
+  EnvironmentId,
+  IFlinkQueryable,
+  IProviderRegion,
+  OrganizationId,
+} from "../models/resource";
 import type { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import type { SidecarHandle } from "../sidecar";
 import { getSidecar } from "../sidecar";
@@ -811,6 +819,62 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     }
 
     return providerRegionSet.items();
+  }
+
+  /**
+   * Fetch a Flink workspace from the API.
+   * Uses the provider/region from the params to query the region-scoped Workspaces API directly.
+   *
+   * @param params Workspace parameters containing environmentId, organizationId, workspaceName, provider, and region
+   * @returns The workspace response if found and validation succeeds, null otherwise
+   */
+  public async getFlinkWorkspace(
+    params: FlinkWorkspaceParams,
+  ): Promise<GetWsV1Workspace200Response | null> {
+    // Ensure we have a signed-in CCloud session (prompts login if needed)
+    // This should only ever be called from a URI handler context
+    try {
+      await getCCloudAuthSession({ createIfNone: true });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message === "User did not consent to login." ||
+          error.name === "CCloudConnectionError")
+      ) {
+        return null; // User cancelled - silent exit
+      }
+      throw error;
+    }
+
+    const sidecar = await getSidecar();
+
+    // Build the queryable from the params - provider/region come directly from the URI
+    const queryable: IFlinkQueryable = {
+      organizationId: params.organizationId as OrganizationId,
+      environmentId: params.environmentId as EnvironmentId,
+      provider: params.provider,
+      region: params.region,
+    };
+
+    try {
+      const workspacesApi = sidecar.getFlinkWorkspacesWsV1Api(queryable);
+      const workspace = await workspacesApi.getWsV1Workspace({
+        organization_id: params.organizationId,
+        environment_id: params.environmentId,
+        name: params.workspaceName,
+      });
+
+      return workspace;
+    } catch (error) {
+      logger.warn("Failed to fetch workspace", {
+        workspaceName: params.workspaceName,
+        environmentId: params.environmentId,
+        provider: params.provider,
+        region: params.region,
+        error,
+      });
+      return null;
+    }
   }
 }
 
