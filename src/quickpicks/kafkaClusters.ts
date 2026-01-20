@@ -12,7 +12,7 @@ import type {
   KafkaCluster,
 } from "../models/kafkaCluster";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
-import { getTopicViewProvider } from "../viewProviders/topics";
+import { TopicViewProvider } from "../viewProviders/topics";
 import type { QuickPickItemWithValue } from "./types";
 
 const logger = new Logger("quickpicks.kafkaClusters");
@@ -113,7 +113,7 @@ export async function kafkaClusterQuickPick(
   });
 
   // if there's a focused cluster, push it to the top of the list
-  const focusedCluster: KafkaCluster | null = getTopicViewProvider().kafkaCluster;
+  const focusedCluster: KafkaCluster | null = TopicViewProvider.getInstance().kafkaCluster;
   const focusedClusterIndex: number = kafkaClusters.findIndex(
     (cluster) => cluster.id === focusedCluster?.id,
   );
