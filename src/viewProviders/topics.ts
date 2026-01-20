@@ -87,7 +87,8 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
       if (cachedTopic.children && cachedTopic.children.length > 0) {
         children = cachedTopic.children;
       } else if (cachedTopic.hasSchema) {
-        // need to load subjects for this topic - this shouldn't happen
+        // need to load subjects for this topic - this will trigger a background fetch that will
+        // update the expanded topic directly once subjects and schema versions are fetched
         void this.updateTopicSubjects(cachedTopic);
       }
     } else if (element instanceof Subject) {
