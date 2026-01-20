@@ -56,7 +56,7 @@ import type { FlinkStatement } from "../models/flinkStatement";
 import { Phase, restFlinkStatementToModel } from "../models/flinkStatement";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import type { EnvironmentId } from "../models/resource";
+import type { EnvironmentId, IFlinkQueryable } from "../models/resource";
 import type * as sidecar from "../sidecar";
 import type { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
@@ -66,6 +66,14 @@ import { createFlinkAIConnection } from "../../tests/unit/testResources/flinkAIC
 import { createFlinkAITool } from "../../tests/unit/testResources/flinkAITool";
 import { TEST_FLINK_RELATION } from "../../tests/unit/testResources/flinkRelation";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
+import * as authnUtils from "../authn/utils";
+import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
+import {
+  GetWsV1Workspace200ResponseApiVersionEnum,
+  GetWsV1Workspace200ResponseKindEnum,
+  WorkspacesWsV1Api,
+} from "../clients/flinkWorkspaces";
+import type { FlinkWorkspaceParams } from "../flinkSql/flinkWorkspace";
 import type { FlinkAIAgent } from "../models/flinkAiAgent";
 import type { FlinkAIConnection } from "../models/flinkAiConnection";
 import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
@@ -2031,6 +2039,122 @@ describe("CCloudResourceLoader", () => {
 
       sinon.assert.calledOnce(refreshStub);
       sinon.assert.calledOnce(statementsApiStub.updateSqlv1Statement);
+    });
+  });
+  describe("getFlinkWorkspace", () => {
+    let stubbedSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
+    let workspacesApiStub: sinon.SinonStubbedInstance<WorkspacesWsV1Api>;
+    let getCCloudAuthSessionStub: sinon.SinonStub;
+
+    const testParams: FlinkWorkspaceParams = {
+      environmentId: "env-12345",
+      organizationId: "org-67890",
+      workspaceName: "test-workspace",
+      provider: "aws",
+      region: "us-west-2",
+    };
+
+    const mockWorkspaceResponse: GetWsV1Workspace200Response = {
+      api_version: GetWsV1Workspace200ResponseApiVersionEnum.WsV1,
+      kind: GetWsV1Workspace200ResponseKindEnum.Workspace,
+      metadata: {
+        self: "https://api.confluent.cloud/ws/v1/workspaces/test-workspace",
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+      name: "test-workspace",
+      organization_id: "org-67890",
+      environment_id: "env-12345",
+      spec: {
+        display_name: "Test Workspace",
+      },
+    };
+
+    beforeEach(() => {
+      stubbedSidecar = getSidecarStub(sandbox);
+      workspacesApiStub = sandbox.createStubInstance(WorkspacesWsV1Api);
+      stubbedSidecar.getFlinkWorkspacesWsV1Api.returns(workspacesApiStub);
+
+      getCCloudAuthSessionStub = sandbox.stub(authnUtils, "getCCloudAuthSession");
+    });
+
+    it("should return the workspace when fetch succeeds", async () => {
+      //  only needs the auth check to pass so the test can verify the next behavior
+      getCCloudAuthSessionStub.resolves({});
+      workspacesApiStub.getWsV1Workspace.resolves(mockWorkspaceResponse);
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.deepStrictEqual(result, mockWorkspaceResponse);
+      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, { createIfNone: true });
+      sinon.assert.calledOnce(stubbedSidecar.getFlinkWorkspacesWsV1Api);
+      sinon.assert.calledOnceWithExactly(workspacesApiStub.getWsV1Workspace, {
+        organization_id: testParams.organizationId,
+        environment_id: testParams.environmentId,
+        name: testParams.workspaceName,
+      });
+    });
+
+    it("should return null when user does not consent to login", async () => {
+      const authError = new Error("User did not consent to login.");
+      getCCloudAuthSessionStub.rejects(authError);
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.strictEqual(result, null);
+      sinon.assert.calledOnce(getCCloudAuthSessionStub);
+      sinon.assert.notCalled(workspacesApiStub.getWsV1Workspace);
+    });
+
+    it("should return null when CCloudConnectionError occurs", async () => {
+      const connectionError = new Error("CCloud connection failed");
+      connectionError.name = "CCloudConnectionError";
+      getCCloudAuthSessionStub.rejects(connectionError);
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.strictEqual(result, null);
+      sinon.assert.calledOnce(getCCloudAuthSessionStub);
+      sinon.assert.notCalled(workspacesApiStub.getWsV1Workspace);
+    });
+
+    it("should re-throw unexpected authentication errors", async () => {
+      const unexpectedError = new Error("Unexpected auth error");
+      getCCloudAuthSessionStub.rejects(unexpectedError);
+
+      await assert.rejects(async () => {
+        await loader.getFlinkWorkspace(testParams);
+      }, unexpectedError);
+
+      sinon.assert.calledOnce(getCCloudAuthSessionStub);
+      sinon.assert.notCalled(workspacesApiStub.getWsV1Workspace);
+    });
+
+    it("should return null when workspace API call fails", async () => {
+      getCCloudAuthSessionStub.resolves({});
+      const apiError = new Error("Workspace not found");
+      workspacesApiStub.getWsV1Workspace.rejects(apiError);
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.strictEqual(result, null);
+      sinon.assert.calledOnce(getCCloudAuthSessionStub);
+      sinon.assert.calledOnce(workspacesApiStub.getWsV1Workspace);
+    });
+
+    it("should build queryable with correct provider/region from params", async () => {
+      getCCloudAuthSessionStub.resolves({});
+      workspacesApiStub.getWsV1Workspace.resolves(mockWorkspaceResponse);
+
+      await loader.getFlinkWorkspace(testParams);
+
+      const getFlinkWorkspacesWsV1ApiCall = stubbedSidecar.getFlinkWorkspacesWsV1Api.getCall(0);
+      const queryable = getFlinkWorkspacesWsV1ApiCall.args[0] as IFlinkQueryable;
+
+      assert.strictEqual(queryable.organizationId, testParams.organizationId);
+      assert.strictEqual(queryable.environmentId, testParams.environmentId);
+      assert.strictEqual(queryable.provider, testParams.provider);
+      assert.strictEqual(queryable.region, testParams.region);
     });
   });
 });
