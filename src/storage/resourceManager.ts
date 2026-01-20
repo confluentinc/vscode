@@ -26,7 +26,7 @@ import type {
   IResourceBase,
   ISchemaRegistryResource,
 } from "../models/resource";
-import { Subject } from "../models/schema";
+import { Schema, Subject } from "../models/schema";
 import type { SchemaRegistryType } from "../models/schemaRegistry";
 import { getSchemaRegistryClass } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -495,7 +495,27 @@ export class ResourceManager {
     // Promote each member to be an instance of KafkaTopic, return.
     // (Empty list will be returned as is, indicating that we know there are
     //  no topics in this cluster.)
-    return vanillaJSONTopics.map((topic) => KafkaTopic.create(topic as KafkaTopic));
+    return vanillaJSONTopics.map((topic) => {
+      const topicObj = topic as KafkaTopic;
+      // also rehydrate Subjects and Schemas before recreating the KafkaTopic instance
+      let children: Subject[] = [];
+      if (topicObj.children && topicObj.children.length > 0) {
+        children = topicObj.children.map((child: Subject | object) => {
+          if (child instanceof Subject) {
+            return child;
+          }
+          const subjectObj = child as Subject;
+          return new Subject(
+            subjectObj.name,
+            subjectObj.connectionId,
+            subjectObj.environmentId,
+            subjectObj.schemaRegistryId,
+            subjectObj.schemas?.map((schema) => Schema.create(schema)),
+          );
+        });
+      }
+      return new KafkaTopic({ ...topicObj, children });
+    });
   }
 
   // Flink Artifacts

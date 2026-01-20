@@ -979,7 +979,7 @@ LIMIT 10;`;
     openTextDocumentStub.resolves(mockDocument);
     showTextDocumentStub.resolves({ document: mockDocument });
 
-    const flinkableTopic = KafkaTopic.create({
+    const flinkableTopic = new KafkaTopic({
       ...TEST_CCLOUD_KAFKA_TOPIC,
       clusterId: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id,
     });

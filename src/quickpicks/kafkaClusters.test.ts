@@ -20,7 +20,7 @@ import { CCloudEnvironment } from "../models/environment";
 import type { KafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import type { EnvironmentId } from "../models/resource";
-import * as topicsViewProviders from "../viewProviders/topics";
+import { TopicViewProvider } from "../viewProviders/topics";
 import { flinkDatabaseQuickpick, kafkaClusterQuickPick } from "./kafkaClusters";
 import type { QuickPickItemWithValue } from "./types";
 
@@ -45,6 +45,7 @@ describe("quickpicks/kafkaClusters", () => {
   describe("kafkaClusterQuickPick", () => {
     let localLoader: sinon.SinonStubbedInstance<LocalResourceLoader>;
     let ccloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+    let stubbedTopicsViewProvider: sinon.SinonStubbedInstance<TopicViewProvider>;
 
     beforeEach(() => {
       localLoader = getStubbedLocalResourceLoader(sandbox);
@@ -53,6 +54,9 @@ describe("quickpicks/kafkaClusters", () => {
       // Set ccloud as signed out by default.
       ccloudLoader.getOrganization.resolves(undefined);
       ccloudLoader.getEnvironments.resolves([]);
+
+      stubbedTopicsViewProvider = sandbox.createStubInstance(TopicViewProvider);
+      sandbox.stub(TopicViewProvider, "getInstance").returns(stubbedTopicsViewProvider);
     });
 
     it("bails out early if the environment has no clusters / ccloud logged out", async () => {
@@ -180,8 +184,7 @@ describe("quickpicks/kafkaClusters", () => {
 
       // Simulate a focused cluster
       const focusedCluster = clusters[1];
-      const getTopicViewProviderStub = sandbox.stub().returns({ kafkaCluster: focusedCluster });
-      sandbox.stub(topicsViewProviders, "getTopicViewProvider").returns(getTopicViewProviderStub());
+      stubbedTopicsViewProvider.kafkaCluster = focusedCluster;
 
       await kafkaClusterQuickPick();
 
