@@ -70,6 +70,8 @@ are being run:
     - `E2E_KAFKA_API_KEY`: API key for the Kafka cluster
     - `E2E_KAFKA_API_SECRET`: API secret for the Kafka cluster
     - `E2E_KAFKA_BOOTSTRAP_SERVERS`: Bootstrap servers for the Kafka cluster
+    - `E2E_KAFKA_CLUSTER_NAME`: Label/name of the Kafka cluster in the Resources view, used to
+      select the specific cluster when producing messages with the configured API key/secret
   - Including a configuration for a Schema Registry:
     - `E2E_SR_API_KEY`: API key for the Schema Registry server
     - `E2E_SR_API_SECRET`: API secret for the Schema Registry server

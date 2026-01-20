@@ -5,6 +5,7 @@ import { globSync } from "glob";
 import { tmpdir } from "os";
 import path from "path";
 import { fileURLToPath } from "url";
+import { DEBUG_LOGGING_ENABLED } from "./constants";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,10 +20,7 @@ interface TestSetupCache {
 
 setup("setup VS Code for E2E tests", async () => {
   const vscodeVersion = process.env.VSCODE_VERSION || "stable";
-  console.log(`Setting up VS Code (${vscodeVersion}) for E2E tests...`);
-
   const vscodeInstallPath = await downloadAndUnzipVSCode(vscodeVersion);
-  console.log(`VS Code (${vscodeVersion}) install path: ${vscodeInstallPath}`);
 
   // locate the VS Code executable path based on the platform
   let vscodeExecutablePath: string;
@@ -38,10 +36,13 @@ setup("setup VS Code for E2E tests", async () => {
       ? directExecutable
       : rootExecutable;
   }
-  console.log(
-    `${process.platform} VS Code (${vscodeVersion}) executable path:`,
-    vscodeExecutablePath,
-  );
+  if (DEBUG_LOGGING_ENABLED) {
+    console.debug(`Setting up VS Code (${vscodeVersion}) for E2E tests`, {
+      vscodeInstallPath,
+      vscodeExecutablePath,
+      platform: process.platform,
+    });
+  }
 
   const extensionPath = path.normalize(path.resolve(__dirname, "..", ".."));
   const outPath: string = path.normalize(path.resolve(extensionPath, "out"));
@@ -52,15 +53,21 @@ setup("setup VS Code for E2E tests", async () => {
     throw new Error("No VSIX file found in the out/ directory. Run 'npx gulp bundle' first.");
   }
 
-  console.log("Test setup complete, using:");
-  console.log("  Executable:", vscodeExecutablePath);
-  console.log("  Extension out/ path:", outPath);
-
   // save test setup cache to file for other workers to read
   const testSetupCache: TestSetupCache = {
     vscodeExecutablePath: vscodeExecutablePath,
     outPath,
   };
   writeFileSync(TEST_SETUP_CACHE_FILE, JSON.stringify(testSetupCache, null, 2));
-  console.log("test setup cache saved to:", TEST_SETUP_CACHE_FILE);
+
+  if (DEBUG_LOGGING_ENABLED) {
+    console.debug("Test setup complete", {
+      vscodeVersion,
+      extensionPath,
+      vsixPath,
+      vscodeExecutablePath,
+      outPath,
+      testSetupCacheFile: TEST_SETUP_CACHE_FILE,
+    });
+  }
 });
