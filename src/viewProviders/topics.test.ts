@@ -305,41 +305,6 @@ describe("viewProviders/topics.ts", () => {
       });
     });
 
-    describe("updateTopicSubjects()", () => {
-      let onDidChangeTreeDataFireStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
-        onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
-      });
-
-      it("should fetch subjects and update caches when topic is in topicsInTreeView", async () => {
-        const testTopic = TEST_CCLOUD_KAFKA_TOPIC;
-        provider["topicsInTreeView"].set(testTopic.name, testTopic);
-        stubbedLoader.getTopicSubjectGroups.resolves([TEST_CCLOUD_SUBJECT_WITH_SCHEMA]);
-
-        await provider["updateTopicSubjects"](testTopic);
-
-        // topic's children should be updated
-        assert.deepStrictEqual(testTopic.children, [TEST_CCLOUD_SUBJECT_WITH_SCHEMA]);
-        // subject caches should be populated
-        assert.strictEqual(provider["subjectsInTreeView"].size, 1);
-        assert.strictEqual(provider["subjectToTopicMap"].size, 1);
-        // tree data change event should fire for the topic
-        sinon.assert.calledOnceWithExactly(onDidChangeTreeDataFireStub, testTopic);
-      });
-
-      it("should not update caches when topic is not in topicsInTreeView", async () => {
-        stubbedLoader.getTopicSubjectGroups.resolves([TEST_CCLOUD_SUBJECT_WITH_SCHEMA]);
-
-        await provider["updateTopicSubjects"](TEST_CCLOUD_KAFKA_TOPIC);
-
-        assert.strictEqual(provider["subjectsInTreeView"].size, 0);
-        assert.strictEqual(provider["subjectToTopicMap"].size, 0);
-        sinon.assert.notCalled(onDidChangeTreeDataFireStub);
-      });
-    });
-
     describe("updateSubjectSchemas()", () => {
       let onDidChangeTreeDataFireStub: sinon.SinonStub;
 

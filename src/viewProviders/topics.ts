@@ -83,14 +83,7 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
       if (!cachedTopic) {
         return [];
       }
-
-      if (cachedTopic.children && cachedTopic.children.length > 0) {
-        children = cachedTopic.children;
-      } else if (cachedTopic.hasSchema) {
-        // need to load subjects for this topic - this will trigger a background fetch that will
-        // update the expanded topic directly once subjects and schema versions are fetched
-        void this.updateTopicSubjects(cachedTopic);
-      }
+      children = cachedTopic.children;
     } else if (element instanceof Subject) {
       // expanding a subject to show its schema version(s)
       const cachedSubject: Subject | undefined = this.subjectsInTreeView.get(element.name);
@@ -186,29 +179,6 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
     }
 
     this._onDidChangeTreeData.fire();
-  }
-
-  /** Fetch and update {@link Subject subjects} for a specific {@link KafkaTopic topic}. */
-  private async updateTopicSubjects(topic: KafkaTopic): Promise<void> {
-    await this.withProgress(`Loading schemas for ${topic.name}...`, async () => {
-      this.logger.debug("updateTopicSubjects(): Fetching subjects for topic", {
-        topic: topic.name,
-      });
-
-      const loader = ResourceLoader.getInstance(topic.connectionId);
-      const subjects = await loader.getTopicSubjectGroups(topic);
-
-      const topicInMap = this.topicsInTreeView.get(topic.name);
-      if (topicInMap) {
-        // update cached topic for subject associations and fire change event
-        topicInMap.children = subjects;
-        subjects.forEach((subject) => {
-          this.subjectsInTreeView.set(subject.name, subject);
-          this.subjectToTopicMap.set(subject.name, topicInMap);
-        });
-        this._onDidChangeTreeData.fire(topicInMap);
-      }
-    });
   }
 
   /** Fetch and cache {@link Schema schemas} for a specific {@link Subject subject}. */
