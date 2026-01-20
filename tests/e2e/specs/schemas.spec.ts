@@ -2,13 +2,13 @@ import type { Locator } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
-import { ConnectionType } from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { SchemasView, SchemaType, SelectSchemaRegistry } from "../objects/views/SchemasView";
 import type { SubjectItem } from "../objects/views/viewItems/SubjectItem";
 import { Tag } from "../tags";
+import { ConnectionType } from "../types/connection";
 import { randomHexString } from "../utils/strings";
 
 /**
@@ -93,8 +93,8 @@ test.describe("Schema Management", { tag: [Tag.EvolveSchema] }, () => {
             });
             await expect(successNotifications.first()).toBeVisible();
 
-            const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
-            await expect(subjectLocator).toBeVisible();
+            const subjectItem: SubjectItem = await schemasView.getSubjectItem(subjectName);
+            await expect(subjectItem.locator).toBeVisible();
           });
 
           test("should create a new schema version with valid/compatible changes", async ({
