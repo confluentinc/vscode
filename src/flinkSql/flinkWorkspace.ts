@@ -8,7 +8,6 @@ import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
-import type { EnvironmentId } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import { setFlinkDocumentMetadata } from "./statementUtils";
@@ -58,18 +57,8 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
     );
     return;
   }
-  const environment = await loader.getEnvironment(params?.environmentId as EnvironmentId, true);
-  if (!environment) {
-    await showErrorNotificationWithButtons(
-      `Unable to load environment: ${params?.environmentId}. Please verify the environment exists and you have access.`,
-    );
-    return;
-  }
 
-  const metadataContext = await extractMetadataFromWorkspace(
-    workspace,
-    environment as CCloudEnvironment,
-  );
+  const metadataContext = await extractMetadataFromWorkspace(workspace);
 
   const sqlStatements = extractSqlStatementsFromWorkspace(workspace);
 
@@ -129,16 +118,31 @@ export function extractWorkspaceParamsFromUri(uri: Uri): FlinkWorkspaceParams | 
  * uses the environment as the Flink catalog, and extracts database from workspace properties.
  *
  * @param workspace The workspace response from the API
- * @param environment The environment containing this workspace (used as catalog)
  * @returns Metadata context with resolved resources
  */
 export async function extractMetadataFromWorkspace(
   workspace: GetWsV1Workspace200Response,
-  environment: CCloudEnvironment,
 ): Promise<WorkspaceMetadataContext> {
-  const context: WorkspaceMetadataContext = {
-    catalog: environment,
-  };
+  const context: WorkspaceMetadataContext = {};
+
+  const environmentId = workspace.environment_id;
+  if (!environmentId) {
+    logError(new Error("Workspace missing environment_id"), "Cannot extract metadata");
+    return context;
+  }
+
+  const loader = CCloudResourceLoader.getInstance();
+  const environments = await loader.getEnvironments(true);
+  const environment = environments.find((env) => env.id === environmentId);
+  if (!environment) {
+    logError(
+      new Error(`Environment ${environmentId} not found`),
+      "Cannot extract metadata from workspace",
+    );
+    return context;
+  }
+
+  context.catalog = environment;
 
   const computePoolId = workspace.spec.compute_pool?.id ?? undefined;
 
@@ -159,7 +163,6 @@ export async function extractMetadataFromWorkspace(
   const databaseId = workspace.spec.properties?.["sql-database"];
 
   if (databaseId) {
-    const loader = CCloudResourceLoader.getInstance();
     const kafkaClusters = await loader.getKafkaClustersForEnvironmentId(environment.id);
 
     const cluster = kafkaClusters?.find((c) => c.id === databaseId);
