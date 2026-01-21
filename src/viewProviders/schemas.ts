@@ -383,6 +383,11 @@ export class SchemasViewProvider
   isFocusedOnCCloud(): boolean {
     return (this.resource && isCCloud(this.resource)) || false;
   }
+
+  /** Override to exclude the resource name since it will always show "Schema Registry". */
+  async updateTreeViewDescription(): Promise<void> {
+    return super.updateTreeViewDescription({ withResourceName: false });
+  }
 }
 
 /** Get the singleton instance of the {@link SchemasViewProvider} */
