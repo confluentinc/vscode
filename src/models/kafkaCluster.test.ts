@@ -80,7 +80,7 @@ describe("models/kafkaCluster", () => {
       {
         label: "LocalKafkaCluster does not contain topic with different clusterId",
         cluster: TEST_LOCAL_KAFKA_CLUSTER,
-        topic: KafkaTopic.create({
+        topic: new KafkaTopic({
           ...TEST_LOCAL_KAFKA_TOPIC,
           clusterId: "different-cluster-id",
         }),
@@ -89,7 +89,7 @@ describe("models/kafkaCluster", () => {
       {
         label: "CCloudKafkaCluster does not contain topic from different environment",
         cluster: TEST_CCLOUD_KAFKA_CLUSTER,
-        topic: KafkaTopic.create({
+        topic: new KafkaTopic({
           ...TEST_CCLOUD_KAFKA_TOPIC,
           environmentId: "different-env-id" as EnvironmentId,
         }),
@@ -99,7 +99,7 @@ describe("models/kafkaCluster", () => {
         label:
           "LocalKafkaCluster does not contain Direct topic even when clusterId matches (connection type mismatch)",
         cluster: TEST_LOCAL_KAFKA_CLUSTER,
-        topic: KafkaTopic.create({
+        topic: new KafkaTopic({
           ...TEST_DIRECT_KAFKA_TOPIC,
           clusterId: TEST_LOCAL_KAFKA_CLUSTER.id,
         }),
@@ -109,7 +109,7 @@ describe("models/kafkaCluster", () => {
         label:
           "CCloudKafkaCluster does not contain Local topic even when clusterId matches (connection type mismatch)",
         cluster: TEST_CCLOUD_KAFKA_CLUSTER,
-        topic: KafkaTopic.create({
+        topic: new KafkaTopic({
           ...TEST_LOCAL_KAFKA_TOPIC,
           clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
           environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,

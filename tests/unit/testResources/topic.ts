@@ -9,47 +9,55 @@ import {
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "./kafkaCluster";
 
-const TEST_KAFKA_TOPIC_BODY = {
-  // connectionId: configured below
-  // connectionType: configured below
-  name: "test-topic",
-  is_internal: false,
-  replication_factor: 1,
-  partition_count: 1,
-  partitions: {},
-  configs: {},
-  // clusterId: configured below
-  // environmentId: configured below
-  operations: [...KAFKA_TOPIC_OPERATIONS],
-  hasSchema: false,
-};
+/** Create a {@link KafkaTopic} for testing purposes. */
+export function createKafkaTopic(
+  args: {
+    connectionId: string;
+    connectionType: ConnectionType;
+    environmentId: string;
+    clusterId: string;
+  } & Partial<KafkaTopic>,
+): KafkaTopic {
+  return new KafkaTopic({
+    connectionId: args.connectionId,
+    connectionType: args.connectionType,
+    environmentId: args.environmentId,
+    clusterId: args.clusterId,
+    // optional properties with defaults
+    name: args.name ?? "test-topic",
+    replication_factor:
+      args.replication_factor ?? (args.connectionType === ConnectionType.Ccloud ? 3 : 1),
+    partition_count: args.partition_count ?? 1,
+    partitions: args.partitions ?? {},
+    configs: args.configs ?? {},
+    is_internal: args.is_internal ?? false,
+    operations: args.operations ?? [...KAFKA_TOPIC_OPERATIONS],
+    isFlinkable: args.isFlinkable ?? false,
+    children: args.children ?? [],
+  });
+}
 
-export const TEST_LOCAL_KAFKA_TOPIC: KafkaTopic = KafkaTopic.create({
-  ...TEST_KAFKA_TOPIC_BODY,
+export const TEST_LOCAL_KAFKA_TOPIC = createKafkaTopic({
   connectionId: LOCAL_CONNECTION_ID,
   connectionType: ConnectionType.Local,
-  name: "test-local-topic",
-  partition_count: 1,
-  clusterId: TEST_LOCAL_KAFKA_CLUSTER.id,
   environmentId: TEST_LOCAL_KAFKA_CLUSTER.environmentId,
+  clusterId: TEST_LOCAL_KAFKA_CLUSTER.id,
+  name: "test-local-topic",
 });
 
-export const TEST_CCLOUD_KAFKA_TOPIC: KafkaTopic = KafkaTopic.create({
-  ...TEST_KAFKA_TOPIC_BODY,
+export const TEST_CCLOUD_KAFKA_TOPIC = createKafkaTopic({
   connectionId: CCLOUD_CONNECTION_ID,
   connectionType: ConnectionType.Ccloud,
+  environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+  clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
   name: "test-ccloud-topic",
   partition_count: 3,
-  clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
-  environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
 });
 
-export const TEST_DIRECT_KAFKA_TOPIC: KafkaTopic = KafkaTopic.create({
-  ...TEST_KAFKA_TOPIC_BODY,
+export const TEST_DIRECT_KAFKA_TOPIC = createKafkaTopic({
   connectionId: TEST_DIRECT_CONNECTION_ID,
   connectionType: ConnectionType.Direct,
-  name: "test-direct-topic",
-  partition_count: 1,
-  clusterId: TEST_DIRECT_KAFKA_CLUSTER.id,
   environmentId: TEST_DIRECT_KAFKA_CLUSTER.environmentId,
+  clusterId: TEST_DIRECT_KAFKA_CLUSTER.id,
+  name: "test-direct-topic",
 });
