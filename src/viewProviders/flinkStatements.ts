@@ -238,37 +238,19 @@ export class FlinkStatementsViewProvider
   }
 
   /**
-   * Override the base updateTreeViewDescription from {@link ParentedBaseViewProvider} to show clear scope indicators.
-   * - Environment mode: "Env: {envName} | {envId}"
-   * - Single Flink compute pool mode: "FCP: {poolName} | {poolId}"
+   * Override to show scope-appropriate descriptions:
+   * - Environment mode: shows only environment name (as the resource name)
+   * - Compute pool mode: shows full description (pool name | provider/region | env name)
    */
   async updateTreeViewDescription(): Promise<void> {
-    const focusedResource = this.resource;
-
-    if (!focusedResource) {
-      this.logger.debug(
-        "updateTreeViewDescription() called with no focused resource, clearing view description",
-      );
-      this.treeView.description = "";
-      return;
+    if (this.resource instanceof CCloudEnvironment) {
+      return super.updateTreeViewDescription({
+        withResourceName: true,
+        withCloudProviderRegion: false,
+        withEnvironmentName: false,
+      });
     }
-
-    this.logger.debug(
-      `updateTreeViewDescription() called with ${focusedResource.constructor.name}, checking for scope...`,
-    );
-
-    if (focusedResource instanceof CCloudFlinkComputePool) {
-      // single compute pool mode: show pool name and ID
-      this.logger.debug(
-        "updateTreeViewDescription() focused on compute pool, setting FCP description",
-      );
-      this.treeView.description = `FCP: ${focusedResource.name} | ${focusedResource.id}`;
-    } else if (focusedResource instanceof CCloudEnvironment) {
-      // environment mode: show environment name and ID
-      this.logger.debug(
-        "updateTreeViewDescription() focused on environment, setting Env description",
-      );
-      this.treeView.description = `ENV: ${focusedResource.name} | ${focusedResource.id}`;
-    }
+    // focused on a Flink compute pool (or nothing), so use the default view description
+    return super.updateTreeViewDescription();
   }
 }

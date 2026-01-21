@@ -9,6 +9,9 @@ import {
 import type { ConnectionId } from "../../src/models/resource";
 import { TEST_DIRECT_CONNECTION_ID } from "../unit/testResources/connection";
 
+/** Union type of all available ResourceLoader subclasses */
+export type AnyResourceLoader = CCloudResourceLoader | LocalResourceLoader | DirectResourceLoader;
+
 /**
  * Configures the stubs for the static methods of the {@link ResourceLoader} class:
  * - `getInstance()`: Stubs the static method to return the provided loader instance.
@@ -21,9 +24,7 @@ import { TEST_DIRECT_CONNECTION_ID } from "../unit/testResources/connection";
  */
 function configureResourceLoaderMethods(
   sandbox: SinonSandbox,
-  loader: SinonStubbedInstance<
-    ResourceLoader | CCloudResourceLoader | LocalResourceLoader | DirectResourceLoader
-  >,
+  loader: SinonStubbedInstance<AnyResourceLoader>,
   connectionId?: ConnectionId,
 ): void {
   // check if `ResourceLoader.getInstance()` has already been stubbed
@@ -47,42 +48,13 @@ function configureResourceLoaderMethods(
     loadersStub = sandbox.stub(ResourceLoader, "loaders").returns([]);
   }
   // check the return value of the loadersStub and update it if necessary
-  let stubbedLoaders: Array<
-    SinonStubbedInstance<
-      ResourceLoader | CCloudResourceLoader | LocalResourceLoader | DirectResourceLoader
-    >
-  > = loadersStub();
+  let stubbedLoaders: Array<SinonStubbedInstance<AnyResourceLoader>> = loadersStub();
   // make sure the call count is reset to 0 in case any tests want to assert on it
   loadersStub.resetHistory();
   if (!stubbedLoaders.includes(loader)) {
     stubbedLoaders.push(loader);
   }
   loadersStub.returns(stubbedLoaders);
-}
-
-/**
- * Creates a stubbed instance of the abstract {@link ResourceLoader} class.
- *
- * NOTE: This function stubs the static `getInstance()` method as well as the abstract methods of
- * the {@link ResourceLoader} class.
- *
- * @param sandbox The {@link SinonSandbox} to use for creating stubs.
- * @returns A {@link SinonStubbedInstance} of the {@link ResourceLoader} class.
- */
-export function getStubbedResourceLoader(
-  sandbox: SinonSandbox,
-): SinonStubbedInstance<ResourceLoader> {
-  const stubbedLoader: SinonStubbedInstance<ResourceLoader> =
-    sandbox.createStubInstance(ResourceLoader);
-  // add stubs for abstract methods
-  stubbedLoader.getEnvironments = sandbox.stub();
-  stubbedLoader.getKafkaClustersForEnvironmentId = sandbox.stub();
-  stubbedLoader.getSchemaRegistries = sandbox.stub();
-  stubbedLoader.getSchemaRegistryForEnvironmentId = sandbox.stub();
-  stubbedLoader.getTopicSubjectGroups = sandbox.stub();
-  // stub the static method to return the stubbed instance
-  configureResourceLoaderMethods(sandbox, stubbedLoader);
-  return stubbedLoader;
 }
 
 /**
