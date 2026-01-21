@@ -26,6 +26,9 @@ All notable changes to this extension will be documented in this file.
 - Simplified the tooltip for Flink views to omit information only appropriate for Kafka topic-based
   Flink tables.
 - Flink views are shown with a different icon than Flink tables.
+- The descriptions of the Topics, Schemas, Flink Statements, and Flink Database views now show the
+  name of the focused resource (Kafka cluster, Flink compute pool) first, followed by the cloud
+  provider/region (if using a CCloud resource), followed by the environment name.
 
 ### Removed
 
