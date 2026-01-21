@@ -66,6 +66,7 @@ import { createFlinkAIConnection } from "../../tests/unit/testResources/flinkAIC
 import { createFlinkAITool } from "../../tests/unit/testResources/flinkAITool";
 import { TEST_FLINK_RELATION } from "../../tests/unit/testResources/flinkRelation";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
+import { CCloudConnectionError } from "../authn/errors";
 import * as authnUtils from "../authn/utils";
 import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import {
@@ -2079,8 +2080,6 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should return the workspace when fetch succeeds", async () => {
-      //  only needs the auth check to pass so the test can verify the next behavior
-      getCCloudAuthSessionStub.resolves({});
       workspacesApiStub.getWsV1Workspace.resolves(mockWorkspaceResponse);
 
       const result = await loader.getFlinkWorkspace(testParams);
@@ -2107,8 +2106,7 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should return null when CCloudConnectionError occurs", async () => {
-      const connectionError = new Error("CCloud connection failed");
-      connectionError.name = "CCloudConnectionError";
+      const connectionError = new CCloudConnectionError("CCloud connection failed");
       getCCloudAuthSessionStub.rejects(connectionError);
 
       const result = await loader.getFlinkWorkspace(testParams);
@@ -2131,7 +2129,6 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should return null when workspace API call fails", async () => {
-      getCCloudAuthSessionStub.resolves({});
       const apiError = new Error("Workspace not found");
       workspacesApiStub.getWsV1Workspace.rejects(apiError);
 
@@ -2143,7 +2140,6 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should build queryable with correct provider/region from params", async () => {
-      getCCloudAuthSessionStub.resolves({});
       workspacesApiStub.getWsV1Workspace.resolves(mockWorkspaceResponse);
 
       await loader.getFlinkWorkspace(testParams);
