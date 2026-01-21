@@ -1,12 +1,24 @@
 import * as assert from "assert";
+import type { SinonSandbox, SinonStubbedInstance } from "sinon";
 import * as sinon from "sinon";
 import type { TreeItem } from "vscode";
 import { EventEmitter } from "vscode";
-import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoaders";
+import type { AnyResourceLoader } from "../../../tests/stubs/resourceLoaders";
+import {
+  getStubbedCCloudResourceLoader,
+  getStubbedDirectResourceLoader,
+  getStubbedLocalResourceLoader,
+} from "../../../tests/stubs/resourceLoaders";
+import {
+  createParentedTestResource,
+  type TestParentedResource,
+} from "../../../tests/unit/testResources/base";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_PROVIDER,
   TEST_CCLOUD_REGION,
+  TEST_DIRECT_ENVIRONMENT,
+  TEST_LOCAL_ENVIRONMENT,
 } from "../../../tests/unit/testResources/environments";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
 import {
@@ -17,19 +29,46 @@ import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import { ConnectionType } from "../../clients/sidecar";
 import * as contextValues from "../../context/values";
 import { ContextValues } from "../../context/values";
-import type { CCloudResourceLoader } from "../../loaders";
-import type { FlinkComputePool } from "../../models/flinkComputePool";
+import type { Environment } from "../../models/environment";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem, Phase } from "../../models/flinkStatement";
 import { BaseViewProvider } from "./base";
+import type { EnvironmentedBaseViewProviderData } from "./parentedBase";
 import { ParentedBaseViewProvider } from "./parentedBase";
 
+interface ConnectionTypeTestConfig {
+  connectionType: ConnectionType;
+  getStubbedLoader: (sandbox: SinonSandbox) => SinonStubbedInstance<AnyResourceLoader>;
+  testEnvironment: Environment;
+}
+
+const CONNECTION_TYPE_CONFIGS: ConnectionTypeTestConfig[] = [
+  {
+    connectionType: ConnectionType.Ccloud,
+    getStubbedLoader: getStubbedCCloudResourceLoader,
+    testEnvironment: TEST_CCLOUD_ENVIRONMENT,
+  },
+  {
+    connectionType: ConnectionType.Local,
+    getStubbedLoader: getStubbedLocalResourceLoader,
+    testEnvironment: TEST_LOCAL_ENVIRONMENT,
+  },
+  {
+    connectionType: ConnectionType.Direct,
+    getStubbedLoader: getStubbedDirectResourceLoader,
+    testEnvironment: TEST_DIRECT_ENVIRONMENT,
+  },
+];
+
 /** Sample view provider subclass for testing {@link ParentedBaseViewProvider}. */
-class TestParentedViewProvider extends ParentedBaseViewProvider<FlinkComputePool, FlinkStatement> {
+class TestParentedViewProvider extends ParentedBaseViewProvider<
+  EnvironmentedBaseViewProviderData,
+  FlinkStatement
+> {
   loggerName = "viewProviders.test.TestParentedViewProvider";
   viewId = "confluent-test";
 
-  parentResourceChangedEmitter = new EventEmitter<FlinkComputePool | null>();
+  parentResourceChangedEmitter = new EventEmitter<EnvironmentedBaseViewProviderData | null>();
   parentResourceChangedContextValue = ContextValues.flinkStatementsPoolSelected;
   readonly kind = "test-parented-statements";
 
@@ -62,7 +101,6 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
   let provider: TestParentedViewProvider;
 
   before(async () => {
-    // required for all subclasses of BaseViewProvider since they deal with extension storage
     await getTestExtensionContext();
   });
 
@@ -108,7 +146,7 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
   });
 
   describe("updateTreeViewDescription()", () => {
-    it("should clear the description and clear .environment when no resource is focused", async () => {
+    it("should clear the description when no resource is focused", async () => {
       provider.resource = null;
       provider["treeView"].description = "this should go away";
 
@@ -117,40 +155,103 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
       assert.strictEqual(provider["treeView"].description, "");
     });
 
-    it("should set the description and set .environment when a resource is focused", async () => {
-      // specifically stub the CCloudResourceLoader since the ResourceLoader's `getEnvironments`
-      // (abstract) method is considered undefined here
-      const stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader> =
-        getStubbedCCloudResourceLoader(sandbox);
-      stubbedLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
+    for (const {
+      connectionType,
+      getStubbedLoader: getLoader,
+      testEnvironment,
+    } of CONNECTION_TYPE_CONFIGS) {
+      const usingCCloudResource = connectionType === ConnectionType.Ccloud;
 
-      provider.resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
-      provider["treeView"].description = "";
+      describe(`${connectionType} resources`, () => {
+        let stubbedLoader: SinonStubbedInstance<AnyResourceLoader>;
+        let testResource: TestParentedResource;
 
-      await provider.updateTreeViewDescription();
+        beforeEach(() => {
+          stubbedLoader = getLoader(sandbox);
+          stubbedLoader.getEnvironment.resolves(testEnvironment);
 
-      assert.strictEqual(
-        provider["treeView"].description,
-        `${TEST_CCLOUD_FLINK_COMPUTE_POOL.name} | ${TEST_CCLOUD_PROVIDER}/${TEST_CCLOUD_REGION} | ${TEST_CCLOUD_ENVIRONMENT.name}`,
-      );
-    });
+          // create a general test "parent" resource that one of our views would focus on
+          testResource = createParentedTestResource("test-id", "test-resource", connectionType);
+          provider.resource = testResource;
+        });
 
-    it("Should set description without env name when environment is not found", async () => {
-      const stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader> =
-        getStubbedCCloudResourceLoader(sandbox);
-      stubbedLoader.getEnvironments.resolves([]);
+        it("should include resource name and environment name", async () => {
+          await provider.updateTreeViewDescription();
 
-      provider.resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+          const expectedParts = [testResource.name];
+          if (usingCCloudResource) {
+            expectedParts.push(`${TEST_CCLOUD_PROVIDER}/${TEST_CCLOUD_REGION}`);
+          }
+          expectedParts.push(testEnvironment.name);
+          assert.strictEqual(provider["treeView"].description, expectedParts.join(" | "));
+        });
 
-      provider["treeView"].description = "this should be replaced";
+        it("should omit environment name when environment is not found", async () => {
+          stubbedLoader.getEnvironment.resolves(undefined);
 
-      await provider.updateTreeViewDescription();
+          await provider.updateTreeViewDescription();
 
-      assert.strictEqual(
-        provider["treeView"].description,
-        `${TEST_CCLOUD_FLINK_COMPUTE_POOL.name} | ${TEST_CCLOUD_PROVIDER}/${TEST_CCLOUD_REGION}`,
-      );
-    });
+          const expectedParts = [testResource.name];
+          if (usingCCloudResource) {
+            expectedParts.push(`${TEST_CCLOUD_PROVIDER}/${TEST_CCLOUD_REGION}`);
+          }
+          assert.strictEqual(provider["treeView"].description, expectedParts.join(" | "));
+        });
+
+        it("should exclude resource name when withResourceName=false", async () => {
+          await provider.updateTreeViewDescription({ withResourceName: false });
+
+          const expectedParts: string[] = [];
+          if (usingCCloudResource) {
+            expectedParts.push(`${TEST_CCLOUD_PROVIDER}/${TEST_CCLOUD_REGION}`);
+          }
+          expectedParts.push(testEnvironment.name);
+          assert.strictEqual(provider["treeView"].description, expectedParts.join(" | "));
+        });
+
+        if (usingCCloudResource) {
+          it("should exclude provider/region when withCloudProviderRegion=false", async () => {
+            await provider.updateTreeViewDescription({ withCloudProviderRegion: false });
+
+            assert.strictEqual(
+              provider["treeView"].description,
+              `${testResource.name} | ${testEnvironment.name}`,
+            );
+          });
+        } else {
+          it("should never include provider/region for non-CCloud resources", async () => {
+            await provider.updateTreeViewDescription({ withCloudProviderRegion: true });
+
+            assert.strictEqual(
+              provider["treeView"].description,
+              `${testResource.name} | ${testEnvironment.name}`,
+            );
+          });
+        }
+
+        it("should exclude environment name and skip getEnvironment() when withEnvironmentName=false", async () => {
+          await provider.updateTreeViewDescription({ withEnvironmentName: false });
+
+          const expectedParts = [testResource.name];
+          if (usingCCloudResource) {
+            expectedParts.push(`${TEST_CCLOUD_PROVIDER}/${TEST_CCLOUD_REGION}`);
+          }
+          assert.strictEqual(provider["treeView"].description, expectedParts.join(" | "));
+          sinon.assert.notCalled(stubbedLoader.getEnvironment);
+        });
+
+        it("should only include the resource name when other options are false", async () => {
+          await provider.updateTreeViewDescription({
+            withResourceName: true,
+            withCloudProviderRegion: false,
+            withEnvironmentName: false,
+          });
+
+          assert.strictEqual(provider["treeView"].description, testResource.name);
+          sinon.assert.notCalled(stubbedLoader.getEnvironment);
+        });
+      });
+    }
   });
 
   describe("reset()", () => {
