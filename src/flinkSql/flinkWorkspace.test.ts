@@ -1,4 +1,3 @@
-import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import {
@@ -6,7 +5,6 @@ import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import type { WorkspaceMetadataContext } from "./flinkWorkspace";
 import { openSqlStatementsAsDocuments } from "./flinkWorkspace";
@@ -14,10 +12,6 @@ import * as statementUtils from "./statementUtils";
 
 describe("flinkSql/flinkWorkspace.ts", function () {
   let sandbox: sinon.SinonSandbox;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -31,6 +25,9 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     let openTextDocumentStub: sinon.SinonStub;
     let showTextDocumentStub: sinon.SinonStub;
     let setFlinkDocumentMetadataStub: sinon.SinonStub;
+
+    const statement = "SELECT * FROM my_table";
+    const mockDocument = createMockDocument(statement);
 
     beforeEach(() => {
       openTextDocumentStub = sandbox.stub(vscode.workspace, "openTextDocument");
@@ -55,11 +52,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should open a single statement as a document without metadata", async function () {
-      const statement = "SELECT * FROM my_table";
-      const mockDocument = createMockDocument(statement);
-
       openTextDocumentStub.resolves(mockDocument);
-      showTextDocumentStub.resolves();
 
       await openSqlStatementsAsDocuments([statement]);
 
@@ -76,8 +69,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should open a single statement with metadata context", async function () {
-      const statement = "SELECT * FROM my_table";
-      const mockDocument = createMockDocument(statement);
       const metadataContext: WorkspaceMetadataContext = {
         catalog: TEST_CCLOUD_ENVIRONMENT,
         database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
@@ -85,7 +76,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       };
 
       openTextDocumentStub.resolves(mockDocument);
-      showTextDocumentStub.resolves();
       setFlinkDocumentMetadataStub.resolves();
 
       await openSqlStatementsAsDocuments([statement], metadataContext);
@@ -115,12 +105,11 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       openTextDocumentStub.onFirstCall().resolves(mockDocuments[0]);
       openTextDocumentStub.onSecondCall().resolves(mockDocuments[1]);
       openTextDocumentStub.onThirdCall().resolves(mockDocuments[2]);
-      showTextDocumentStub.resolves();
 
       await openSqlStatementsAsDocuments(statements);
 
-      assert.strictEqual(openTextDocumentStub.callCount, 3);
-      assert.strictEqual(showTextDocumentStub.callCount, 3);
+      sinon.assert.callCount(openTextDocumentStub, 3);
+      sinon.assert.callCount(showTextDocumentStub, 3);
 
       for (let i = 0; i < statements.length; i++) {
         sinon.assert.calledWith(openTextDocumentStub.getCall(i), {
@@ -144,12 +133,12 @@ describe("flinkSql/flinkWorkspace.ts", function () {
 
       openTextDocumentStub.onFirstCall().resolves(mockDocuments[0]);
       openTextDocumentStub.onSecondCall().resolves(mockDocuments[1]);
-      showTextDocumentStub.resolves();
+
       setFlinkDocumentMetadataStub.resolves();
 
       await openSqlStatementsAsDocuments(statements, metadataContext);
 
-      assert.strictEqual(setFlinkDocumentMetadataStub.callCount, 2);
+      sinon.assert.callCount(setFlinkDocumentMetadataStub, 2);
       sinon.assert.calledWith(
         setFlinkDocumentMetadataStub.getCall(0),
         mockDocuments[0].uri,
@@ -160,28 +149,10 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         mockDocuments[1].uri,
         metadataContext,
       );
-    });
-
-    it("should set metadata before showing the document", async function () {
-      const statement = "SELECT * FROM my_table";
-      const mockDocument = createMockDocument(statement);
-      const metadataContext: WorkspaceMetadataContext = {
-        computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
-      };
-
-      openTextDocumentStub.resolves(mockDocument);
-      showTextDocumentStub.resolves();
-      setFlinkDocumentMetadataStub.resolves();
-
-      await openSqlStatementsAsDocuments([statement], metadataContext);
-
-      // Verify setFlinkDocumentMetadata was called before showTextDocument
       sinon.assert.callOrder(setFlinkDocumentMetadataStub, showTextDocumentStub);
     });
 
     it("should handle partial metadata context", async function () {
-      const statement = "SELECT * FROM my_table";
-      const mockDocument = createMockDocument(statement);
       const metadataContext: WorkspaceMetadataContext = {
         database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
       };
@@ -197,8 +168,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should handle empty metadata context", async function () {
-      const statement = "SELECT * FROM my_table";
-      const mockDocument = createMockDocument(statement);
       const metadataContext: WorkspaceMetadataContext = {};
 
       openTextDocumentStub.resolves(mockDocument);

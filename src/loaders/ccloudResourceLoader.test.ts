@@ -2080,8 +2080,6 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should return the workspace when fetch succeeds", async () => {
-      //  only needs the auth check to pass so the test can verify the next behavior
-      getCCloudAuthSessionStub.resolves();
       workspacesApiStub.getWsV1Workspace.resolves(mockWorkspaceResponse);
 
       const result = await loader.getFlinkWorkspace(testParams);
@@ -2131,7 +2129,6 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should return null when workspace API call fails", async () => {
-      getCCloudAuthSessionStub.resolves();
       const apiError = new Error("Workspace not found");
       workspacesApiStub.getWsV1Workspace.rejects(apiError);
 
@@ -2143,7 +2140,6 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should build queryable with correct provider/region from params", async () => {
-      getCCloudAuthSessionStub.resolves();
       workspacesApiStub.getWsV1Workspace.resolves(mockWorkspaceResponse);
 
       await loader.getFlinkWorkspace(testParams);
