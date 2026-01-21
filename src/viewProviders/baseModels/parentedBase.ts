@@ -10,6 +10,19 @@ import type { BaseViewProviderData, RefreshableTreeViewProvider } from "./base";
 import { BaseViewProvider } from "./base";
 
 /**
+ * Options for customizing the tree view description
+ * {@link ParentedBaseViewProvider.updateTreeViewDescription updates}.
+ */
+export interface TreeViewDescriptionOptions {
+  /** Include the focused resource's name. (default: `true`) */
+  withResourceName?: boolean;
+  /** Include cloud provider/region for CCloud resources. (default: `true`) */
+  withCloudProviderRegion?: boolean;
+  /** Include the parent environment name. (default: `true`) */
+  withEnvironmentName?: boolean;
+}
+
+/**
  * Type describing 'focused parent' types for ParentedBaseViewProvider,
  * namely things which either are or come from a single Environment.
  */
@@ -131,8 +144,11 @@ export abstract class ParentedBaseViewProvider<
    * Examples:
    * - CCloud: `my-cluster | AWS/us-west-2 | production-env`
    * - Direct/Local: `my-cluster | local-env`
+   *
+   * @param options - {@link TreeViewDescriptionOptions Options} to customize which parts are
+   * included in the view description. All default to `true`.
    */
-  async updateTreeViewDescription(): Promise<void> {
+  async updateTreeViewDescription(options?: TreeViewDescriptionOptions): Promise<void> {
     const subLogger = this.logger.withCallpoint("updateTreeViewDescription");
 
     const focusedResource = this.resource;
@@ -142,21 +158,37 @@ export abstract class ParentedBaseViewProvider<
       return;
     }
 
-    subLogger.debug(
-      `called with ${focusedResource.constructor.name}, checking for environments...`,
-    );
-    const parentEnv: Environment | undefined = await ResourceLoader.getEnvironment(
-      focusedResource.connectionId,
-      focusedResource.environmentId,
-    );
+    const withResourceName = options?.withResourceName ?? true;
+    const withCloudProviderRegion = options?.withCloudProviderRegion ?? true;
+    const withEnvironmentName = options?.withEnvironmentName ?? true;
 
-    const parts: string[] = [focusedResource.name];
-    // only include provider/region for CCloud resources
-    if (isCCloud(focusedResource) && "provider" in focusedResource && "region" in focusedResource) {
+    subLogger.debug(`called with ${focusedResource.constructor.name}, building description...`, {
+      options: { withResourceName, withCloudProviderRegion, withEnvironmentName },
+    });
+
+    const parts: string[] = [];
+
+    if (withResourceName) {
+      parts.push(focusedResource.name);
+    }
+
+    if (
+      withCloudProviderRegion &&
+      isCCloud(focusedResource) &&
+      "provider" in focusedResource &&
+      "region" in focusedResource
+    ) {
       parts.push(`${focusedResource.provider}/${focusedResource.region}`);
     }
-    if (parentEnv) {
-      parts.push(parentEnv.name);
+
+    if (withEnvironmentName) {
+      const parentEnv: Environment | undefined = await ResourceLoader.getEnvironment(
+        focusedResource.connectionId,
+        focusedResource.environmentId,
+      );
+      if (parentEnv) {
+        parts.push(parentEnv.name);
+      }
     }
 
     subLogger.debug("setting view description", { parts });
