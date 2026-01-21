@@ -8,7 +8,7 @@ import {
 } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { IconNames } from "../icons";
-import { CCloudResourceLoader, ResourceLoader } from "../loaders";
+import { CCloudResourceLoader } from "../loaders";
 import { FlinkAIAgent, FlinkAIAgentTreeItem } from "../models/flinkAiAgent";
 import { FlinkAIConnection, FlinkAIConnectionTreeItem } from "../models/flinkAiConnection";
 import { FlinkAIModel, FlinkAIModelTreeItem } from "../models/flinkAiModel";
@@ -469,21 +469,5 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
       (db, refresh) => CCloudResourceLoader.getInstance().getFlinkAIAgents(db, refresh),
       forceDeepRefresh,
     );
-  }
-
-  /** Update the tree view description to show the currently-focused Flink Database's parent env
-   * name and the Flink Database name. */
-  async updateTreeViewDescription(): Promise<void> {
-    const db = this.database;
-    if (!db) {
-      this.treeView.description = "";
-      return;
-    }
-    const env = await ResourceLoader.getEnvironment(db.connectionId, db.environmentId);
-    if (env) {
-      this.treeView.description = `${env.name} | ${db.name}`;
-    } else {
-      this.treeView.description = db.name;
-    }
   }
 }

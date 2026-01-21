@@ -10,11 +10,25 @@ import type { BaseViewProviderData, RefreshableTreeViewProvider } from "./base";
 import { BaseViewProvider } from "./base";
 
 /**
+ * Options for customizing the tree view description
+ * {@link ParentedBaseViewProvider.updateTreeViewDescription updates}.
+ */
+export interface TreeViewDescriptionOptions {
+  /** Include the focused resource's name. (default: `true`) */
+  withResourceName?: boolean;
+  /** Include cloud provider/region for CCloud resources. (default: `true`) */
+  withCloudProviderRegion?: boolean;
+  /** Include the parent environment name. (default: `true`) */
+  withEnvironmentName?: boolean;
+}
+
+/**
  * Type describing 'focused parent' types for ParentedBaseViewProvider,
  * namely things which either are or come from a single Environment.
  */
 export type EnvironmentedBaseViewProviderData = BaseViewProviderData & {
   environmentId: EnvironmentId;
+  name: string;
 };
 
 /**
@@ -122,12 +136,19 @@ export abstract class ParentedBaseViewProvider<
   }
 
   /**
-   * Update the tree view description to show the currently-focused {@linkcode resource}'s parent
-   * {@link Environment} name and the resource ID.
+   * Update the tree view description to show the currently-focused {@linkcode resource}.
    *
-   * Reassigns {@linkcode environment} to the parent {@link Environment} of the {@linkcode resource}.
-   * */
-  async updateTreeViewDescription(): Promise<void> {
+   * Displays information from left to right in order of relevance:
+   * `{resource name} | {provider/region} | {environment name}`
+   *
+   * Examples:
+   * - CCloud: `my-cluster | AWS/us-west-2 | production-env`
+   * - Direct/Local: `my-cluster | local-env`
+   *
+   * @param options - {@link TreeViewDescriptionOptions Options} to customize which parts are
+   * included in the view description. All default to `true`.
+   */
+  async updateTreeViewDescription(options?: TreeViewDescriptionOptions): Promise<void> {
     const subLogger = this.logger.withCallpoint("updateTreeViewDescription");
 
     const focusedResource = this.resource;
@@ -137,20 +158,40 @@ export abstract class ParentedBaseViewProvider<
       return;
     }
 
-    subLogger.debug(
-      `called with ${focusedResource.constructor.name}, checking for environments...`,
-    );
-    const parentEnv: Environment | undefined = await ResourceLoader.getEnvironment(
-      focusedResource.connectionId,
-      focusedResource.environmentId,
-    );
+    const withResourceName = options?.withResourceName ?? true;
+    const withCloudProviderRegion = options?.withCloudProviderRegion ?? true;
+    const withEnvironmentName = options?.withEnvironmentName ?? true;
 
-    if (parentEnv) {
-      subLogger.debug("found environment, setting view description");
-      this.treeView.description = `${parentEnv.name} | ${focusedResource.id}`;
-    } else {
-      subLogger.debug(`couldn't find parent environment for ${focusedResource.constructor.name}`);
-      this.treeView.description = "";
+    subLogger.debug(`called with ${focusedResource.constructor.name}, building description...`, {
+      options: { withResourceName, withCloudProviderRegion, withEnvironmentName },
+    });
+
+    const parts: string[] = [];
+
+    if (withResourceName) {
+      parts.push(focusedResource.name);
     }
+
+    if (
+      withCloudProviderRegion &&
+      isCCloud(focusedResource) &&
+      "provider" in focusedResource &&
+      "region" in focusedResource
+    ) {
+      parts.push(`${focusedResource.provider}/${focusedResource.region}`);
+    }
+
+    if (withEnvironmentName) {
+      const parentEnv: Environment | undefined = await ResourceLoader.getEnvironment(
+        focusedResource.connectionId,
+        focusedResource.environmentId,
+      );
+      if (parentEnv) {
+        parts.push(parentEnv.name);
+      }
+    }
+
+    subLogger.debug("setting view description", { parts });
+    this.treeView.description = parts.join(" | ");
   }
 }
