@@ -257,9 +257,8 @@ export function extractSqlStatementsFromWorkspace(
 export async function selectSqlStatementsForOpening(
   sqlStatements: ExtractedSqlStatement[],
 ): Promise<string[] | undefined> {
-  const quickPickItems: StatementQuickPickItem[] = sqlStatements.map((extracted) => ({
-    // label is empty: to avoid visual clutter, description used instead, but type requires label
-    label: "",
+  const quickPickItems: StatementQuickPickItem[] = sqlStatements.map((extracted, index) => ({
+    label: `Statement ${index + 1}`,
     description: extracted.statement.trim().replace(/\s+/g, " "),
     statement: extracted.statement,
   }));
