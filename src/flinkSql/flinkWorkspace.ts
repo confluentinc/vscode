@@ -1,5 +1,4 @@
-import type { Disposable, QuickPickItem, Uri } from "vscode";
-import { workspace as vscodeWorkspace, window } from "vscode";
+import * as vscode from "vscode";
 import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import { flinkWorkspaceUri } from "../emitters";
 import { logError } from "../errors";
@@ -45,7 +44,7 @@ export interface WorkspaceMetadataContext {
  *
  * @param uri The URI containing workspace parameters
  */
-export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
+export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<void> {
   logger.debug("Handling Flink workspace URI event", { uri: uri.toString() });
 
   const params = extractWorkspaceParamsFromUri(uri);
@@ -64,12 +63,12 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
   const sqlStatements = extractSqlStatementsFromWorkspace(workspace);
 
   if (sqlStatements.length === 0) {
-    const document = await vscodeWorkspace.openTextDocument({
+    const document = await vscode.workspace.openTextDocument({
       language: FLINK_SQL_LANGUAGE_ID,
       content: `No Flink SQL statements were found in this workspace.`,
     });
     await setFlinkDocumentMetadata(document.uri, metadataContext);
-    await window.showTextDocument(document);
+    await vscode.window.showTextDocument(document);
     return;
   }
 
@@ -95,7 +94,7 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
  * @param uri The URI containing workspace parameters in its query string
  * @returns Parsed workspace parameters, or null if required parameters are missing
  */
-export function extractWorkspaceParamsFromUri(uri: Uri): FlinkWorkspaceParams | null {
+export function extractWorkspaceParamsFromUri(uri: vscode.Uri): FlinkWorkspaceParams | null {
   const params = new URLSearchParams(uri.query);
 
   const environmentId = params.get("environmentId");
@@ -228,7 +227,7 @@ export function extractSqlStatementsFromWorkspace(
 }
 
 /** QuickPick item with statement data. */
-interface StatementQuickPickItem extends QuickPickItem {
+interface StatementQuickPickItem extends vscode.QuickPickItem {
   statement: string;
   value: string;
   statementIndex: number;
@@ -280,7 +279,7 @@ export async function openSqlStatementsAsDocuments(
   metadataContext?: WorkspaceMetadataContext,
 ): Promise<void> {
   for (const statement of sqlStatements) {
-    const document = await vscodeWorkspace.openTextDocument({
+    const document = await vscode.workspace.openTextDocument({
       language: FLINK_SQL_LANGUAGE_ID,
       content: statement,
     });
@@ -290,7 +289,7 @@ export async function openSqlStatementsAsDocuments(
       await setFlinkDocumentMetadata(document.uri, metadataContext);
     }
 
-    await window.showTextDocument(document, { preview: false });
+    await vscode.window.showTextDocument(document, { preview: false });
   }
 }
 
@@ -298,6 +297,6 @@ export async function openSqlStatementsAsDocuments(
  * Register a handler for the flinkWorkspaceUri event emitter.
  * @returns A Disposable that unregisters the handler when disposed
  */
-export function setFlinkWorkspaceListener(): Disposable {
+export function setFlinkWorkspaceListener(): vscode.Disposable {
   return flinkWorkspaceUri.event(handleFlinkWorkspaceUriEvent);
 }
