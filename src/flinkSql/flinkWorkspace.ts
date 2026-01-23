@@ -262,6 +262,7 @@ export async function selectSqlStatementsForOpening(
   sqlStatements: ExtractedSqlStatement[],
 ): Promise<string[] | undefined> {
   const quickPickItems: StatementQuickPickItem[] = sqlStatements.map((extracted, index) => ({
+    // label is empty: to avoid visual clutter, description used instead, but type requires label
     label: "",
     description: extracted.statement.trim().split("\n")[0].slice(0, 100),
     statement: extracted.statement,
