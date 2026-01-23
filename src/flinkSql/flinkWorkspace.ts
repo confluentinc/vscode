@@ -47,7 +47,7 @@ export interface ExtractedSqlStatement {
 }
 
 /** QuickPick item with statement data. */
-interface StatementQuickPickItem extends vscode.QuickPickItem {
+export interface StatementQuickPickItem extends vscode.QuickPickItem {
   statement: string;
 }
 
