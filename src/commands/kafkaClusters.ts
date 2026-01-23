@@ -3,7 +3,11 @@ import { registerCommandWithLogging } from ".";
 import { fetchTopicAuthorizedOperations } from "../authz/topics";
 import type { TopicV3Api } from "../clients/kafkaRest";
 import { ResponseError } from "../clients/kafkaRest";
-import { flinkDatabaseViewResourceChanged, topicsViewResourceChanged } from "../emitters";
+import {
+  flinkDatabaseViewResourceChanged,
+  topicChanged,
+  topicsViewResourceChanged,
+} from "../emitters";
 import { ClusterSelectSyncOption, SYNC_ON_KAFKA_SELECT } from "../extensionSettings/constants";
 import { ResourceLoader } from "../loaders/resourceLoader";
 import { Logger } from "../logging";
@@ -89,7 +93,7 @@ export async function selectFlinkDatabaseViewKafkaClusterCommand(
   void vscode.commands.executeCommand("confluent-flink-database.focus");
 }
 
-async function deleteTopicCommand(topic: KafkaTopic) {
+export async function deleteTopicCommand(topic: KafkaTopic) {
   if (!(topic instanceof KafkaTopic)) {
     return;
   }
@@ -145,10 +149,13 @@ async function deleteTopicCommand(topic: KafkaTopic) {
         // Another 1/3 way done now.
         progress.report({ increment: 33 });
 
-        // explicitly deep refresh the topics view after deleting a topic, so that repainting
-        // ommitting the newly deleted topic is a foreground task we block on before
-        // closing the progress window.
-        await TopicViewProvider.getInstance().refresh(true, topic);
+        // look up the parent Kafka cluster in order to fire the topicChanged event
+        const loader = ResourceLoader.getInstance(topic.connectionId);
+        const clusters = await loader.getKafkaClustersForEnvironmentId(topic.environmentId);
+        const cluster = clusters.find((c) => c.id === topic.clusterId);
+        if (cluster) {
+          topicChanged.fire({ change: "deleted", cluster });
+        }
       } catch (error) {
         const errorMessage = `Failed to delete topic: ${error}`;
         logger.error(errorMessage);
@@ -238,10 +245,9 @@ export async function createTopicCommand(item?: KafkaCluster): Promise<boolean> 
         await waitForTopicToExist(client, cluster.id, topicName, isLocal(cluster));
         progress.report({ increment: 33 });
 
-        // Refresh in the foreground after creating a topic, so that the new topic is visible
-        // immediately after the progress window closes (assuming topics view is showing this cluster).
-
-        await topicsViewProvider.refresh(true, cluster);
+        // notify subscribers of the new topic (mainly the Topics and Flink Database views so they
+        // can refresh if focused on the same cluster/database)
+        topicChanged.fire({ change: "added", cluster });
 
         return true; // indicate the user actually created a topic.
       } catch (error) {
