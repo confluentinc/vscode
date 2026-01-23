@@ -15,8 +15,10 @@ import {
   TEST_VARCHAR_COLUMN,
 } from "../../tests/unit/testResources/flinkRelation";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
+import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources/kafkaCluster";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResponseError } from "../clients/flinkArtifacts";
+import type { EventChangeType } from "../emitters";
 import type { CCloudResourceLoader } from "../loaders";
 import { FlinkAIAgentTreeItem } from "../models/flinkAiAgent";
 import { FlinkAIConnectionTreeItem } from "../models/flinkAiConnection";
@@ -951,6 +953,109 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         sinon.assert.calledOnce(refreshUDFsStub);
         sinon.assert.calledWith(refreshUDFsStub, db, true);
+      });
+    });
+
+    describe("topicChangedHandler", () => {
+      let refreshRelationsStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        refreshRelationsStub = sandbox.stub(viewProvider, "refreshRelationsContainer");
+      });
+
+      it("should do nothing if no database is focused", async () => {
+        viewProvider["resource"] = null;
+
+        await viewProvider.topicChangedHandler({
+          change: "added",
+          cluster: TEST_CCLOUD_KAFKA_CLUSTER,
+        });
+
+        sinon.assert.notCalled(refreshRelationsStub);
+      });
+
+      for (const change of ["added", "deleted"] as EventChangeType[]) {
+        it(`should do nothing if the cluster ID does not match the focused database ID (topic ${change})`, async () => {
+          const db = CCloudKafkaCluster.create({
+            ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            id: "some-other-cluster-id",
+          }) as CCloudFlinkDbKafkaCluster;
+          viewProvider["resource"] = db;
+
+          await viewProvider.topicChangedHandler({
+            change,
+            cluster: TEST_CCLOUD_KAFKA_CLUSTER,
+          });
+
+          sinon.assert.notCalled(refreshRelationsStub);
+        });
+
+        it(`should refresh the Relations container when the cluster ID matches the focused database ID (topic ${change})`, async () => {
+          const matchingClusterId = "lkc-matching-cluster";
+          const db = CCloudKafkaCluster.create({
+            ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            id: matchingClusterId,
+          }) as CCloudFlinkDbKafkaCluster;
+          viewProvider["resource"] = db;
+
+          const matchingCluster = CCloudKafkaCluster.create({
+            ...TEST_CCLOUD_KAFKA_CLUSTER,
+            id: matchingClusterId,
+          });
+          await viewProvider.topicChangedHandler({
+            change,
+            cluster: matchingCluster,
+          });
+
+          sinon.assert.calledOnce(refreshRelationsStub);
+          sinon.assert.calledWith(refreshRelationsStub, db, true);
+        });
+      }
+    });
+
+    describe("updateTreeViewDescription()", () => {
+      const initialDescription = "Initial description";
+
+      function getDescription(): string | undefined {
+        return viewProvider["treeView"].description;
+      }
+
+      beforeEach(() => {
+        viewProvider["treeView"].description = initialDescription;
+      });
+
+      it("does nothing when no database is set", async () => {
+        viewProvider["resource"] = null;
+        await viewProvider.updateTreeViewDescription();
+        assert.strictEqual(getDescription(), "");
+      });
+
+      it("sets to mix of database name and environment name when database is set", async () => {
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER; // in TEST_CCLOUD_ENVIRONMENT.
+
+        const parentEnvironment = {
+          ...TEST_CCLOUD_ENVIRONMENT,
+          name: "Test Env Name",
+        } as CCloudEnvironment;
+
+        ccloudLoader.getEnvironment.resolves(parentEnvironment);
+
+        await viewProvider.updateTreeViewDescription();
+
+        assert.strictEqual(
+          getDescription(),
+          `${parentEnvironment.name} | ${TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name}`,
+        );
+      });
+
+      it("sets to database name when no parent environment is found", async () => {
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER; // in TEST_CCLOUD_ENVIRONMENT.
+
+        ccloudLoader.getEnvironment.resolves(undefined);
+
+        await viewProvider.updateTreeViewDescription();
+
+        assert.strictEqual(getDescription(), TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name);
       });
     });
   });
