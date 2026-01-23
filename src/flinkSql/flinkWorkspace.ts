@@ -1,5 +1,5 @@
-import type { Uri } from "vscode";
-import * as vscode from "vscode";
+import type { Disposable, QuickPickItem, Uri } from "vscode";
+import { workspace as vscodeWorkspace, window } from "vscode";
 import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import { flinkWorkspaceUri } from "../emitters";
 import { logError } from "../errors";
@@ -9,6 +9,7 @@ import type { CCloudEnvironment } from "../models/environment";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
+import { createEnhancedQuickPick } from "../quickpicks/utils/quickPickUtils";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import { setFlinkDocumentMetadata } from "./statementUtils";
 
@@ -63,17 +64,24 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
   const sqlStatements = extractSqlStatementsFromWorkspace(workspace);
 
   if (sqlStatements.length === 0) {
-    const document = await vscode.workspace.openTextDocument({
+    const document = await vscodeWorkspace.openTextDocument({
       language: FLINK_SQL_LANGUAGE_ID,
       content: `No Flink SQL statements were found in this workspace.`,
     });
     await setFlinkDocumentMetadata(document.uri, metadataContext);
-    await vscode.window.showTextDocument(document);
+    await window.showTextDocument(document);
+    return;
+  }
+
+  // Show selection dialog for user to choose which statements to open
+  const selectedStatements = await selectSqlStatementsForOpening(sqlStatements);
+  if (!selectedStatements || selectedStatements.length === 0) {
+    logger.debug("User cancelled statement selection or selected no statements");
     return;
   }
 
   try {
-    await openSqlStatementsAsDocuments(sqlStatements, metadataContext);
+    await openSqlStatementsAsDocuments(selectedStatements, metadataContext);
   } catch (error) {
     logError(error, "Failed to open Flink SQL statements as documents");
     await showErrorNotificationWithButtons(
@@ -175,16 +183,25 @@ export async function extractMetadataFromWorkspace(
 }
 
 /**
+ * Represents a SQL statement extracted from a workspace block,
+ * including optional description metadata from block properties.
+ */
+export interface ExtractedSqlStatement {
+  statement: string;
+  description?: string;
+}
+
+/**
  * Extract SQL statements from workspace blocks.
- * Each block contains code_options.source array of SQL lines.
+ * Each block contains code_options.source array of SQL lines and optional properties.
  *
  * @param workspace The workspace containing SQL blocks
- * @returns Array of SQL statement strings
+ * @returns Array of extracted SQL statements with optional descriptions
  */
 export function extractSqlStatementsFromWorkspace(
   workspace: GetWsV1Workspace200Response,
-): string[] {
-  const sqlStatements: string[] = [];
+): ExtractedSqlStatement[] {
+  const sqlStatements: ExtractedSqlStatement[] = [];
 
   if (!workspace.spec.blocks || !Array.isArray(workspace.spec.blocks)) {
     logger.debug("No blocks found in workspace spec");
@@ -199,12 +216,57 @@ export function extractSqlStatementsFromWorkspace(
 
     const sqlStatement = block.code_options.source.join("\n");
     if (sqlStatement.trim()) {
-      sqlStatements.push(sqlStatement);
+      sqlStatements.push({
+        statement: sqlStatement,
+        description: block.properties?.description,
+      });
     }
   }
 
   logger.debug(`Extracted ${sqlStatements.length} SQL statements from workspace`);
   return sqlStatements;
+}
+
+/** QuickPick item with statement data. */
+interface StatementQuickPickItem extends QuickPickItem {
+  statement: string;
+  value: string;
+  statementIndex: number;
+}
+
+/**
+ * Shows a quickpick dialog allowing the user to select which SQL statements to open.
+ * All statements are pre-selected by default.
+ * @param sqlStatements Array of extracted SQL statements to choose from
+ * @returns Promise that resolves to selected statement strings, or undefined if cancelled
+ */
+export async function selectSqlStatementsForOpening(
+  sqlStatements: ExtractedSqlStatement[],
+): Promise<string[] | undefined> {
+  const quickPickItems: StatementQuickPickItem[] = sqlStatements.map((extracted, index) => ({
+    // label is empty: to avoid visual clutter, description used instead, but type requires label
+    label: "",
+    description: extracted.statement.trim().replace(/\s+/g, " "),
+    statement: extracted.statement,
+    value: extracted.statement,
+    statementIndex: index + 1,
+  }));
+
+  const result = await createEnhancedQuickPick(quickPickItems, {
+    title: "Select Flink SQL Statements to Open",
+    placeHolder: "Select statements to open as documents (all selected by default)",
+    canSelectMany: true,
+    ignoreFocusOut: true,
+    matchOnDescription: true,
+    matchOnDetail: true,
+    selectedItems: quickPickItems,
+  });
+
+  if (result.selectedItems.length === 0) {
+    return undefined;
+  }
+
+  return result.selectedItems.map((item) => item.statement);
 }
 
 /**
@@ -218,7 +280,7 @@ export async function openSqlStatementsAsDocuments(
   metadataContext?: WorkspaceMetadataContext,
 ): Promise<void> {
   for (const statement of sqlStatements) {
-    const document = await vscode.workspace.openTextDocument({
+    const document = await vscodeWorkspace.openTextDocument({
       language: FLINK_SQL_LANGUAGE_ID,
       content: statement,
     });
@@ -228,7 +290,7 @@ export async function openSqlStatementsAsDocuments(
       await setFlinkDocumentMetadata(document.uri, metadataContext);
     }
 
-    await vscode.window.showTextDocument(document, { preview: false });
+    await window.showTextDocument(document, { preview: false });
   }
 }
 
@@ -236,6 +298,6 @@ export async function openSqlStatementsAsDocuments(
  * Register a handler for the flinkWorkspaceUri event emitter.
  * @returns A Disposable that unregisters the handler when disposed
  */
-export function setFlinkWorkspaceListener(): vscode.Disposable {
+export function setFlinkWorkspaceListener(): Disposable {
   return flinkWorkspaceUri.event(handleFlinkWorkspaceUriEvent);
 }
