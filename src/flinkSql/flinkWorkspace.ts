@@ -38,6 +38,28 @@ export interface WorkspaceMetadataContext {
 }
 
 /**
+ * Represents a SQL statement extracted from a workspace block,
+ * including optional description metadata from block properties.
+ */
+export interface ExtractedSqlStatement {
+  statement: string;
+  description?: string;
+}
+
+/** QuickPick item with statement data. */
+interface StatementQuickPickItem extends vscode.QuickPickItem {
+  statement: string;
+}
+
+/** Error thrown when Flink workspace URI is missing required parameters. */
+export class FlinkWorkspaceUriError extends Error {
+  constructor(public readonly missingParams: string[]) {
+    super(`Flink workspace URI missing required parameters: ${missingParams.join(", ")}`);
+    this.name = "FlinkWorkspaceUriError";
+  }
+}
+
+/**
  * Handle a flinkWorkspace URI event by creating and opening a .flink.sql file.
  * Validates the workspace exists before creating the file, then extracts metadata
  * from the workspace to set on opened documents.
@@ -47,13 +69,25 @@ export interface WorkspaceMetadataContext {
 export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<void> {
   logger.debug("Handling Flink workspace URI event", { uri: uri.toString() });
 
-  const params = extractWorkspaceParamsFromUri(uri);
+  let params: FlinkWorkspaceParams;
+  try {
+    params = extractWorkspaceParamsFromUri(uri);
+  } catch (error) {
+    if (error instanceof FlinkWorkspaceUriError) {
+      logError(error, "Invalid Flink workspace URI");
+      await showErrorNotificationWithButtons(
+        `Invalid Flink workspace link: missing required parameters (${error.missingParams.join(", ")}). Please use a complete workspace link from Confluent Cloud.`,
+      );
+      return;
+    }
+    throw error;
+  }
 
   const loader = CCloudResourceLoader.getInstance();
-  const workspace = await loader.getFlinkWorkspace(params as FlinkWorkspaceParams);
+  const workspace = await loader.getFlinkWorkspace(params);
   if (!workspace) {
     await showErrorNotificationWithButtons(
-      `Unable to load Flink workspace: ${params?.workspaceName}. Please verify the workspace exists and you have access.`,
+      `Unable to load Flink workspace: ${params.workspaceName}. Please verify the workspace exists and you have access.`,
     );
     return;
   }
@@ -92,9 +126,10 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
 /**
  * Extract Flink workspace parameters from a URI's query string.
  * @param uri The URI containing workspace parameters in its query string
- * @returns Parsed workspace parameters, or null if required parameters are missing
+ * @returns Parsed workspace parameters
+ * @throws {FlinkWorkspaceUriError} If required parameters are missing
  */
-export function extractWorkspaceParamsFromUri(uri: vscode.Uri): FlinkWorkspaceParams | null {
+export function extractWorkspaceParamsFromUri(uri: vscode.Uri): FlinkWorkspaceParams {
   const params = new URLSearchParams(uri.query);
 
   const environmentId = params.get("environmentId");
@@ -109,11 +144,7 @@ export function extractWorkspaceParamsFromUri(uri: vscode.Uri): FlinkWorkspacePa
     .map(([key]) => key);
 
   if (missingParams.length > 0) {
-    logError(
-      new Error("Missing required Flink workspace URI parameters"),
-      `URI missing parameters: ${missingParams.join(", ")}`,
-    );
-    return null;
+    throw new FlinkWorkspaceUriError(missingParams);
   }
 
   return requiredParams as FlinkWorkspaceParams;
@@ -182,15 +213,6 @@ export async function extractMetadataFromWorkspace(
 }
 
 /**
- * Represents a SQL statement extracted from a workspace block,
- * including optional description metadata from block properties.
- */
-export interface ExtractedSqlStatement {
-  statement: string;
-  description?: string;
-}
-
-/**
  * Extract SQL statements from workspace blocks.
  * Each block contains code_options.source array of SQL lines and optional properties.
  *
@@ -226,13 +248,6 @@ export function extractSqlStatementsFromWorkspace(
   return sqlStatements;
 }
 
-/** QuickPick item with statement data. */
-interface StatementQuickPickItem extends vscode.QuickPickItem {
-  statement: string;
-  value: string;
-  statementIndex: number;
-}
-
 /**
  * Shows a quickpick dialog allowing the user to select which SQL statements to open.
  * All statements are pre-selected by default.
@@ -242,13 +257,11 @@ interface StatementQuickPickItem extends vscode.QuickPickItem {
 export async function selectSqlStatementsForOpening(
   sqlStatements: ExtractedSqlStatement[],
 ): Promise<string[] | undefined> {
-  const quickPickItems: StatementQuickPickItem[] = sqlStatements.map((extracted, index) => ({
+  const quickPickItems: StatementQuickPickItem[] = sqlStatements.map((extracted) => ({
     // label is empty: to avoid visual clutter, description used instead, but type requires label
     label: "",
     description: extracted.statement.trim().replace(/\s+/g, " "),
     statement: extracted.statement,
-    value: extracted.statement,
-    statementIndex: index + 1,
   }));
 
   const result = await createEnhancedQuickPick(quickPickItems, {
