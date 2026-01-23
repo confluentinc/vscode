@@ -2,29 +2,13 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import type { Disposable } from "vscode";
 import { EventEmitter, TreeItem, Uri, window } from "vscode";
+import { createTestResource } from "../../../tests/unit/testResources/base";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
-import { ConnectionType } from "../../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../../constants";
 import * as contextValues from "../../context/values";
 import { ContextValues } from "../../context/values";
 import { SEARCH_DECORATION_URI_SCHEME } from "../utils/search";
 import type { BaseViewProviderData } from "./base";
 import { BaseViewProvider } from "./base";
-
-/** Helper function to create a test object that satisfies {@link BaseViewProviderData}. */
-function createTestResource(
-  id: string,
-  name: string,
-  children?: BaseViewProviderData[],
-): BaseViewProviderData {
-  return {
-    id,
-    connectionId: CCLOUD_CONNECTION_ID,
-    connectionType: ConnectionType.Ccloud,
-    searchableText: () => name,
-    children,
-  };
-}
 
 /** Sample view provider subclass for testing {@link BaseViewProvider}. */
 class TestViewProvider extends BaseViewProvider<BaseViewProviderData> {

@@ -740,4 +740,25 @@ describe("SchemasViewProvider", () => {
       sinon.assert.notCalled(treeviewRevealStub);
     });
   });
+
+  describe("updateTreeViewDescription()", () => {
+    let superUpdateStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      // we can't stub `super` directly, so we have to stub from the parent (ParentedBaseViewProvider)
+      // in order to assert `super.updateTreeViewDescription` is called correctly
+      superUpdateStub = sandbox.stub(
+        Object.getPrototypeOf(SchemasViewProvider.prototype),
+        "updateTreeViewDescription",
+      );
+    });
+
+    it("should call super.updateTreeViewDescription without the resource name", async () => {
+      provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+      await provider.updateTreeViewDescription();
+
+      sinon.assert.calledWithExactly(superUpdateStub, { withResourceName: false });
+    });
+  });
 });

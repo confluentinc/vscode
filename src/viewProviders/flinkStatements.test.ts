@@ -540,38 +540,35 @@ describe("FlinkStatementsViewProvider", () => {
   });
 
   describe("updateTreeViewDescription()", () => {
+    let superUpdateStub: sinon.SinonStub;
+
     beforeEach(() => {
-      // start each test with no selection, as users would initially see
-      viewProvider["resource"] = null;
-      viewProvider["treeView"].description = "";
-    });
-
-    it("handles initial state with no resource focused", async () => {
-      await viewProvider.updateTreeViewDescription();
-
-      assert.strictEqual(viewProvider["treeView"].description, "");
-    });
-
-    it("updates to FCP description when user selects a compute pool", async () => {
-      viewProvider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
-
-      await viewProvider.updateTreeViewDescription();
-
-      assert.strictEqual(
-        viewProvider["treeView"].description,
-        `FCP: ${TEST_CCLOUD_FLINK_COMPUTE_POOL.name} | ${TEST_CCLOUD_FLINK_COMPUTE_POOL.id}`,
+      // we can't stub `super` directly, so we have to stub from the parent (ParentedBaseViewProvider)
+      // in order to assert `super.updateTreeViewDescription` is called correctly
+      superUpdateStub = sandbox.stub(
+        Object.getPrototypeOf(FlinkStatementsViewProvider.prototype),
+        "updateTreeViewDescription",
       );
     });
 
-    it("updates to Env description when user selects an environment", async () => {
+    it("should call super.updateTreeViewDescription with environment-only options when focused on an environment", async () => {
       viewProvider["resource"] = TEST_CCLOUD_ENVIRONMENT;
 
       await viewProvider.updateTreeViewDescription();
 
-      assert.strictEqual(
-        viewProvider["treeView"].description,
-        `ENV: ${TEST_CCLOUD_ENVIRONMENT.name} | ${TEST_CCLOUD_ENVIRONMENT.id}`,
-      );
+      sinon.assert.calledOnceWithExactly(superUpdateStub, {
+        withResourceName: true,
+        withCloudProviderRegion: false,
+        withEnvironmentName: false,
+      });
+    });
+
+    it("should call super.updateTreeViewDescription with default options when focused on a compute pool", async () => {
+      viewProvider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+
+      await viewProvider.updateTreeViewDescription();
+
+      sinon.assert.calledOnceWithExactly(superUpdateStub);
     });
   });
 });
