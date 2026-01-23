@@ -72,8 +72,15 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
     return;
   }
 
+  // Show selection dialog for user to choose which statements to open
+  const selectedStatements = await selectSqlStatementsForOpening(sqlStatements);
+  if (!selectedStatements || selectedStatements.length === 0) {
+    logger.debug("User cancelled statement selection or selected no statements");
+    return;
+  }
+
   try {
-    await openSqlStatementsAsDocuments(sqlStatements, metadataContext);
+    await openSqlStatementsAsDocuments(selectedStatements, metadataContext);
   } catch (error) {
     logError(error, "Failed to open Flink SQL statements as documents");
     await showErrorNotificationWithButtons(
@@ -175,16 +182,25 @@ export async function extractMetadataFromWorkspace(
 }
 
 /**
+ * Represents a SQL statement extracted from a workspace block,
+ * including optional description metadata from block properties.
+ */
+export interface ExtractedSqlStatement {
+  statement: string;
+  description?: string;
+}
+
+/**
  * Extract SQL statements from workspace blocks.
- * Each block contains code_options.source array of SQL lines.
+ * Each block contains code_options.source array of SQL lines and optional properties.
  *
  * @param workspace The workspace containing SQL blocks
- * @returns Array of SQL statement strings
+ * @returns Array of extracted SQL statements with optional descriptions
  */
 export function extractSqlStatementsFromWorkspace(
   workspace: GetWsV1Workspace200Response,
-): string[] {
-  const sqlStatements: string[] = [];
+): ExtractedSqlStatement[] {
+  const sqlStatements: ExtractedSqlStatement[] = [];
 
   if (!workspace.spec.blocks || !Array.isArray(workspace.spec.blocks)) {
     logger.debug("No blocks found in workspace spec");
@@ -199,12 +215,62 @@ export function extractSqlStatementsFromWorkspace(
 
     const sqlStatement = block.code_options.source.join("\n");
     if (sqlStatement.trim()) {
-      sqlStatements.push(sqlStatement);
+      sqlStatements.push({
+        statement: sqlStatement,
+        description: block.properties?.description,
+      });
     }
   }
 
   logger.debug(`Extracted ${sqlStatements.length} SQL statements from workspace`);
   return sqlStatements;
+}
+
+/**
+ * Generate a preview label for a SQL statement.
+ * Shows the first line, truncated to maxLength if needed.
+ * @param statement The full SQL statement
+ * @param maxLength Maximum length for the preview
+ * @returns A preview string suitable for quickpick display
+ */
+function generateStatementPreview(statement: string, maxLength: number = 60): string {
+  const firstLine = statement.split("\n")[0].trim();
+  if (firstLine.length <= maxLength) {
+    return firstLine;
+  }
+  return firstLine.substring(0, maxLength - 3) + "...";
+}
+
+/**
+ * Shows a quickpick dialog allowing the user to select which SQL statements to open.
+ * All statements are pre-selected by default.
+ * @param sqlStatements Array of extracted SQL statements to choose from
+ * @returns Promise that resolves to selected statement strings, or undefined if cancelled
+ */
+export async function selectSqlStatementsForOpening(
+  sqlStatements: ExtractedSqlStatement[],
+): Promise<string[] | undefined> {
+  const quickPickItems = sqlStatements.map((extracted, index) => ({
+    label: generateStatementPreview(extracted.statement),
+    detail: `Statement ${index + 1}`,
+    statement: extracted.statement,
+    picked: true, // Pre-select all statements by default
+  }));
+
+  const selectedItems = await vscode.window.showQuickPick(quickPickItems, {
+    title: "Select Flink SQL Statements to Open",
+    placeHolder: "Select statements to open as documents (all selected by default)",
+    canPickMany: true,
+    ignoreFocusOut: true,
+    matchOnDescription: true,
+    matchOnDetail: true,
+  });
+
+  if (!selectedItems || selectedItems.length === 0) {
+    return undefined;
+  }
+
+  return selectedItems.map((item) => item.statement);
 }
 
 /**
