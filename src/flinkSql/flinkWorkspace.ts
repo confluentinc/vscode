@@ -1,8 +1,6 @@
 import type { Disposable, QuickPickItem, Uri } from "vscode";
 import { workspace as vscodeWorkspace, window } from "vscode";
 import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
-import { ResourceDocumentProvider } from "../documentProviders";
-import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { flinkWorkspaceUri } from "../emitters";
 import { logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
@@ -229,7 +227,7 @@ export function extractSqlStatementsFromWorkspace(
   return sqlStatements;
 }
 
-/** QuickPick item with statement data and preview button. */
+/** QuickPick item with statement data. */
 interface StatementQuickPickItem extends QuickPickItem {
   statement: string;
   value: string;
@@ -237,24 +235,8 @@ interface StatementQuickPickItem extends QuickPickItem {
 }
 
 /**
- * Shows a SQL statement preview in a read-only document.
- * @param statement The SQL statement to display
- * @param statementIndex The 1-based index of the statement for the title
- */
-async function showStatementPreview(statement: string, statementIndex: number): Promise<void> {
-  const uri = ResourceDocumentProvider.baseResourceToUri(
-    FLINKSTATEMENT_URI_SCHEME,
-    { sqlStatement: statement },
-    `Statement ${statementIndex} Preview.flinksql`,
-  );
-  const document = await vscodeWorkspace.openTextDocument(uri);
-  await window.showTextDocument(document, { preview: true, preserveFocus: true });
-}
-
-/**
  * Shows a quickpick dialog allowing the user to select which SQL statements to open.
- * All statements are pre-selected by default. Each item has a preview button to view
- * the full statement in a webview panel.
+ * All statements are pre-selected by default.
  * @param sqlStatements Array of extracted SQL statements to choose from
  * @returns Promise that resolves to selected statement strings, or undefined if cancelled
  */
@@ -264,7 +246,7 @@ export async function selectSqlStatementsForOpening(
   const quickPickItems: StatementQuickPickItem[] = sqlStatements.map((extracted, index) => ({
     // label is empty: to avoid visual clutter, description used instead, but type requires label
     label: "",
-    description: extracted.statement.trim().split("\n")[0].slice(0, 100),
+    description: extracted.statement.trim().replace(/\s+/g, " "),
     statement: extracted.statement,
     value: extracted.statement,
     statementIndex: index + 1,
@@ -278,9 +260,6 @@ export async function selectSqlStatementsForOpening(
     matchOnDescription: true,
     matchOnDetail: true,
     selectedItems: quickPickItems,
-    onItemButtonClicked: ({ item }) => {
-      void showStatementPreview(item.statement, item.statementIndex);
-    },
   });
 
   if (result.selectedItems.length === 0) {
