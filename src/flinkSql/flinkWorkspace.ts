@@ -1,4 +1,3 @@
-import type { Uri } from "vscode";
 import * as vscode from "vscode";
 import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import { flinkWorkspaceUri } from "../emitters";
@@ -9,6 +8,7 @@ import type { CCloudEnvironment } from "../models/environment";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
+import { createEnhancedQuickPick } from "../quickpicks/utils/quickPickUtils";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import { setFlinkDocumentMetadata } from "./statementUtils";
 
@@ -38,22 +38,56 @@ export interface WorkspaceMetadataContext {
 }
 
 /**
+ * Represents a SQL statement extracted from a workspace block,
+ * including optional description metadata from block properties.
+ */
+export interface ExtractedSqlStatement {
+  statement: string;
+  description?: string;
+}
+
+/** QuickPick item with statement data. */
+export interface StatementQuickPickItem extends vscode.QuickPickItem {
+  statement: string;
+}
+
+/** Error thrown when Flink workspace URI is missing required parameters. */
+export class FlinkWorkspaceUriError extends Error {
+  constructor(public readonly missingParams: string[]) {
+    super(`Flink workspace URI missing required parameters: ${missingParams.join(", ")}`);
+    this.name = "FlinkWorkspaceUriError";
+  }
+}
+
+/**
  * Handle a flinkWorkspace URI event by creating and opening a .flink.sql file.
  * Validates the workspace exists before creating the file, then extracts metadata
  * from the workspace to set on opened documents.
  *
  * @param uri The URI containing workspace parameters
  */
-export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
+export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<void> {
   logger.debug("Handling Flink workspace URI event", { uri: uri.toString() });
 
-  const params = extractWorkspaceParamsFromUri(uri);
+  let params: FlinkWorkspaceParams;
+  try {
+    params = extractWorkspaceParamsFromUri(uri);
+  } catch (error) {
+    if (error instanceof FlinkWorkspaceUriError) {
+      logError(error, "Invalid Flink workspace URI");
+      await showErrorNotificationWithButtons(
+        `Invalid Flink workspace link: missing required parameters (${error.missingParams.join(", ")}). Please use a complete workspace link from Confluent Cloud.`,
+      );
+      return;
+    }
+    throw error;
+  }
 
   const loader = CCloudResourceLoader.getInstance();
-  const workspace = await loader.getFlinkWorkspace(params as FlinkWorkspaceParams);
+  const workspace = await loader.getFlinkWorkspace(params);
   if (!workspace) {
     await showErrorNotificationWithButtons(
-      `Unable to load Flink workspace: ${params?.workspaceName}. Please verify the workspace exists and you have access.`,
+      `Unable to load Flink workspace: ${params.workspaceName}. Please verify the workspace exists and you have access.`,
     );
     return;
   }
@@ -72,8 +106,15 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
     return;
   }
 
+  // Show selection dialog for user to choose which statements to open
+  const selectedStatements = await selectSqlStatementsForOpening(sqlStatements);
+  if (!selectedStatements || selectedStatements.length === 0) {
+    logger.debug("User cancelled statement selection or selected no statements");
+    return;
+  }
+
   try {
-    await openSqlStatementsAsDocuments(sqlStatements, metadataContext);
+    await openSqlStatementsAsDocuments(selectedStatements, metadataContext);
   } catch (error) {
     logError(error, "Failed to open Flink SQL statements as documents");
     await showErrorNotificationWithButtons(
@@ -85,9 +126,10 @@ export async function handleFlinkWorkspaceUriEvent(uri: Uri): Promise<void> {
 /**
  * Extract Flink workspace parameters from a URI's query string.
  * @param uri The URI containing workspace parameters in its query string
- * @returns Parsed workspace parameters, or null if required parameters are missing
+ * @returns Parsed workspace parameters
+ * @throws {FlinkWorkspaceUriError} If required parameters are missing
  */
-export function extractWorkspaceParamsFromUri(uri: Uri): FlinkWorkspaceParams | null {
+export function extractWorkspaceParamsFromUri(uri: vscode.Uri): FlinkWorkspaceParams {
   const params = new URLSearchParams(uri.query);
 
   const environmentId = params.get("environmentId");
@@ -102,11 +144,7 @@ export function extractWorkspaceParamsFromUri(uri: Uri): FlinkWorkspaceParams | 
     .map(([key]) => key);
 
   if (missingParams.length > 0) {
-    logError(
-      new Error("Missing required Flink workspace URI parameters"),
-      `URI missing parameters: ${missingParams.join(", ")}`,
-    );
-    return null;
+    throw new FlinkWorkspaceUriError(missingParams);
   }
 
   return requiredParams as FlinkWorkspaceParams;
@@ -176,15 +214,15 @@ export async function extractMetadataFromWorkspace(
 
 /**
  * Extract SQL statements from workspace blocks.
- * Each block contains code_options.source array of SQL lines.
+ * Each block contains code_options.source array of SQL lines and optional properties.
  *
  * @param workspace The workspace containing SQL blocks
- * @returns Array of SQL statement strings
+ * @returns Array of extracted SQL statements with optional descriptions
  */
 export function extractSqlStatementsFromWorkspace(
   workspace: GetWsV1Workspace200Response,
-): string[] {
-  const sqlStatements: string[] = [];
+): ExtractedSqlStatement[] {
+  const sqlStatements: ExtractedSqlStatement[] = [];
 
   if (!workspace.spec.blocks || !Array.isArray(workspace.spec.blocks)) {
     logger.debug("No blocks found in workspace spec");
@@ -199,12 +237,47 @@ export function extractSqlStatementsFromWorkspace(
 
     const sqlStatement = block.code_options.source.join("\n");
     if (sqlStatement.trim()) {
-      sqlStatements.push(sqlStatement);
+      sqlStatements.push({
+        statement: sqlStatement,
+        description: block.properties?.description,
+      });
     }
   }
 
   logger.debug(`Extracted ${sqlStatements.length} SQL statements from workspace`);
   return sqlStatements;
+}
+
+/**
+ * Shows a quickpick dialog allowing the user to select which SQL statements to open.
+ * All statements are pre-selected by default.
+ * @param sqlStatements Array of extracted SQL statements to choose from
+ * @returns Promise that resolves to selected statement strings, or undefined if cancelled
+ */
+export async function selectSqlStatementsForOpening(
+  sqlStatements: ExtractedSqlStatement[],
+): Promise<string[] | undefined> {
+  const quickPickItems: StatementQuickPickItem[] = sqlStatements.map((extracted, index) => ({
+    label: `Statement ${index + 1}`,
+    description: extracted.statement.trim().replace(/\s+/g, " "),
+    statement: extracted.statement,
+  }));
+
+  const result = await createEnhancedQuickPick(quickPickItems, {
+    title: "Select Flink SQL Statements to Open",
+    placeHolder: "Select statements to open as documents (all selected by default)",
+    canSelectMany: true,
+    ignoreFocusOut: true,
+    matchOnDescription: true,
+    matchOnDetail: true,
+    selectedItems: quickPickItems,
+  });
+
+  if (result.selectedItems.length === 0) {
+    return undefined;
+  }
+
+  return result.selectedItems.map((item) => item.statement);
 }
 
 /**
