@@ -5,12 +5,14 @@ import type {
   EnvironmentChangeEvent,
   SchemaVersionChangeEvent,
   SubjectChangeEvent,
+  TopicChangeEvent,
 } from "../emitters";
 import {
   environmentChanged,
   localKafkaConnected,
   schemaSubjectChanged,
   schemaVersionsChanged,
+  topicChanged,
   topicSearchSet,
   topicsViewResourceChanged,
 } from "../emitters";
@@ -252,7 +254,18 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
       localKafkaConnected.event(this.localKafkaConnectedHandler.bind(this)),
       schemaSubjectChanged.event(this.subjectChangeHandler.bind(this)),
       schemaVersionsChanged.event(this.subjectChangeHandler.bind(this)),
+      topicChanged.event(this.topicChangedHandler.bind(this)),
     ];
+  }
+
+  /** Handler for when a topic is added or deleted from a Kafka cluster. */
+  async topicChangedHandler(event: TopicChangeEvent): Promise<void> {
+    if (this.kafkaCluster?.equals(event.cluster)) {
+      this.logger.debug(`topic ${event.change} in the focused cluster, refreshing view`, {
+        cluster: event.cluster.name,
+      });
+      await this.refresh(true);
+    }
   }
 
   async environmentChangedHandler(envEvent: EnvironmentChangeEvent): Promise<void> {
