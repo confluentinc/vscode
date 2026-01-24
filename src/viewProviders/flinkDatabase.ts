@@ -1,9 +1,11 @@
 import { ThemeIcon, type Disposable, type TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
+import type { TopicChangeEvent } from "../emitters";
 import {
   artifactsChanged,
   flinkDatabaseViewResourceChanged,
   flinkDatabaseViewSearchSet,
+  topicChanged,
   udfsChanged,
 } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
@@ -309,6 +311,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     return [
       artifactsChanged.event(this.artifactsChangedHandler.bind(this)),
       udfsChanged.event(this.udfsChangedHandler.bind(this)),
+      topicChanged.event(this.topicChangedHandler.bind(this)),
     ];
   }
 
@@ -390,6 +393,20 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
   async udfsChangedHandler(dbWithUpdatedUdfs: CCloudFlinkDbKafkaCluster): Promise<void> {
     if (this.database && this.database.id === dbWithUpdatedUdfs.id) {
       await this.refreshUDFsContainer(this.database, true);
+    }
+  }
+
+  /**
+   * Handler for when a topic is added or deleted from a Kafka cluster.
+   * If the cluster matches the current Flink database, we need to refresh the Relations container
+   * since a new table (topic) should be available.
+   */
+  async topicChangedHandler(event: TopicChangeEvent): Promise<void> {
+    if (this.database && this.database.id === event.cluster.id) {
+      this.logger.debug(`topic ${event.change}, refreshing Relations container`, {
+        clusterName: event.cluster.name,
+      });
+      await this.refreshRelationsContainer(this.database, true);
     }
   }
 

@@ -16,7 +16,7 @@ import {
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import type { SubjectChangeEvent } from "../emitters";
+import type { EventChangeType, SubjectChangeEvent } from "../emitters";
 import type { CCloudResourceLoader } from "../loaders";
 import { TopicFetchError } from "../loaders/utils/loaderUtils";
 import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
@@ -501,7 +501,7 @@ describe("viewProviders/topics.ts", () => {
           sinon.assert.notCalled(refreshStub);
         });
 
-        for (const change of ["added", "deleted"] as const) {
+        for (const change of ["added", "deleted"] as EventChangeType[]) {
           it(`calls reset() when a subject is ${change} in the current environment`, async () => {
             provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
             await provider.subjectChangeHandler({
@@ -510,6 +510,44 @@ describe("viewProviders/topics.ts", () => {
             } as SubjectChangeEvent);
             sinon.assert.calledOnce(refreshStub);
             // Must be a deep refresh to do the right thing and re-correlate topics and subjects.
+            sinon.assert.calledWith(refreshStub, true);
+          });
+        }
+      });
+
+      describe("topicChangedHandler", () => {
+        it("should do nothing when no cluster is focused", async () => {
+          provider.kafkaCluster = null;
+
+          await provider.topicChangedHandler({
+            change: "added",
+            cluster: TEST_CCLOUD_KAFKA_CLUSTER,
+          });
+
+          sinon.assert.notCalled(refreshStub);
+        });
+
+        for (const change of ["added", "deleted"] as EventChangeType[]) {
+          it(`should do nothing when handling an event for a different cluster than the one focused (topic ${change})`, async () => {
+            provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+
+            await provider.topicChangedHandler({
+              change,
+              cluster: TEST_CCLOUD_KAFKA_CLUSTER,
+            });
+
+            sinon.assert.notCalled(refreshStub);
+          });
+
+          it(`should call .refresh(true) when a topic is ${change} in the focused cluster`, async () => {
+            provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+
+            await provider.topicChangedHandler({
+              change,
+              cluster: TEST_CCLOUD_KAFKA_CLUSTER,
+            });
+
+            sinon.assert.calledOnce(refreshStub);
             sinon.assert.calledWith(refreshStub, true);
           });
         }
@@ -531,6 +569,7 @@ describe("viewProviders/topics.ts", () => {
         ["localKafkaConnected", "localKafkaConnectedHandler"],
         ["schemaSubjectChanged", "subjectChangeHandler"],
         ["schemaVersionsChanged", "subjectChangeHandler"],
+        ["topicChanged", "topicChangedHandler"],
       ];
 
       it("should return the expected number of listeners", () => {

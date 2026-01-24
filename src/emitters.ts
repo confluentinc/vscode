@@ -157,3 +157,12 @@ export const udfsChanged = new vscode.EventEmitter<CCloudFlinkDbKafkaCluster>();
 
 /** Event emitter for searching the Flink Database view */
 export const flinkDatabaseViewSearchSet = new vscode.EventEmitter<string | null>();
+
+/** Event type used by {@link topicChanged} */
+export type TopicChangeEvent = {
+  change: EventChangeType;
+  cluster: KafkaCluster;
+};
+
+/** Fires when a topic has been created or deleted in a Kafka cluster. */
+export const topicChanged = new vscode.EventEmitter<TopicChangeEvent>();
