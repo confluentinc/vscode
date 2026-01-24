@@ -16,6 +16,7 @@ import {
 } from "../../tests/unit/testResources/flinkRelation";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources/kafkaCluster";
+import { TEST_CCLOUD_SUBJECT_WITH_SCHEMAS } from "../../tests/unit/testResources/schema";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResponseError } from "../clients/flinkArtifacts";
 import type { EventChangeType } from "../emitters";
@@ -1005,6 +1006,57 @@ describe("viewProviders/flinkDatabase.ts", () => {
           await viewProvider.topicChangedHandler({
             change,
             cluster: matchingCluster,
+          });
+
+          sinon.assert.calledOnce(refreshRelationsStub);
+          sinon.assert.calledWith(refreshRelationsStub, db, true);
+        });
+      }
+    });
+
+    describe("schemaChangedHandler", () => {
+      let refreshRelationsStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        refreshRelationsStub = sandbox.stub(viewProvider, "refreshRelationsContainer").resolves();
+      });
+
+      it("should do nothing if no database is selected", async () => {
+        viewProvider["resource"] = null;
+        await viewProvider.schemaChangedHandler({
+          change: "added",
+          subject: TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+        });
+
+        sinon.assert.notCalled(refreshRelationsStub);
+      });
+
+      for (const change of ["added", "deleted"] as EventChangeType[]) {
+        it(`should do nothing if the subject environment ID does not match the database environment ID (subject ${change})`, async () => {
+          const db = CCloudKafkaCluster.create({
+            ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            environmentId: "some-other-env-id" as EnvironmentId,
+          }) as CCloudFlinkDbKafkaCluster;
+          viewProvider["resource"] = db;
+
+          await viewProvider.schemaChangedHandler({
+            change,
+            subject: TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+          });
+
+          sinon.assert.notCalled(refreshRelationsStub);
+        });
+
+        it(`should refresh Relations container when environment ID matches (subject ${change})`, async () => {
+          const db = CCloudKafkaCluster.create({
+            ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            environmentId: TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.environmentId,
+          }) as CCloudFlinkDbKafkaCluster;
+          viewProvider["resource"] = db;
+
+          await viewProvider.schemaChangedHandler({
+            change,
+            subject: TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
           });
 
           sinon.assert.calledOnce(refreshRelationsStub);
