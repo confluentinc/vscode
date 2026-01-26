@@ -5,9 +5,10 @@ import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import * as quickPickUtils from "../quickpicks/utils/quickPickUtils";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
-import type { WorkspaceMetadataContext } from "./flinkWorkspace";
-import { openSqlStatementsAsDocuments } from "./flinkWorkspace";
+import type { ExtractedSqlStatement, WorkspaceMetadataContext } from "./flinkWorkspace";
+import { openSqlStatementsAsDocuments, selectSqlStatementsForOpening } from "./flinkWorkspace";
 import * as statementUtils from "./statementUtils";
 
 describe("flinkSql/flinkWorkspace.ts", function () {
@@ -179,6 +180,131 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       // Empty metadata context is still truthy, so setFlinkDocumentMetadata should be called
       sinon.assert.calledOnce(setFlinkDocumentMetadataStub);
       sinon.assert.calledWith(setFlinkDocumentMetadataStub, mockDocument.uri, metadataContext);
+    });
+  });
+
+  describe("selectSqlStatementsForOpening()", function () {
+    let createEnhancedQuickPickStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      createEnhancedQuickPickStub = sandbox.stub(quickPickUtils, "createEnhancedQuickPick");
+    });
+
+    it("should return undefined when user selects no statements", async function () {
+      createEnhancedQuickPickStub.resolves({
+        quickPick: { dispose: sandbox.stub() },
+        selectedItems: [],
+      });
+
+      const statements: ExtractedSqlStatement[] = [{ statement: "SELECT 1" }];
+      const result = await selectSqlStatementsForOpening(statements);
+
+      sinon.assert.match(result, undefined);
+    });
+
+    it("should return all statement strings when user keeps all selected", async function () {
+      const statements: ExtractedSqlStatement[] = [
+        { statement: "SELECT * FROM table1" },
+        { statement: "SELECT * FROM table2" },
+      ];
+
+      createEnhancedQuickPickStub.resolves({
+        quickPick: { dispose: sandbox.stub() },
+        selectedItems: [
+          { label: "Statement 1", statement: "SELECT * FROM table1" },
+          { label: "Statement 2", statement: "SELECT * FROM table2" },
+        ],
+      });
+
+      const result = await selectSqlStatementsForOpening(statements);
+
+      sinon.assert.match(result, ["SELECT * FROM table1", "SELECT * FROM table2"]);
+    });
+
+    it("should return only selected statement strings when user deselects some", async function () {
+      const statements: ExtractedSqlStatement[] = [
+        { statement: "SELECT 1" },
+        { statement: "SELECT 2" },
+        { statement: "SELECT 3" },
+      ];
+
+      createEnhancedQuickPickStub.resolves({
+        quickPick: { dispose: sandbox.stub() },
+        selectedItems: [{ label: "Statement 2", statement: "SELECT 2" }],
+      });
+
+      const result = await selectSqlStatementsForOpening(statements);
+
+      sinon.assert.match(result, ["SELECT 2"]);
+    });
+
+    it("should format quick pick items with labels and normalized descriptions", async function () {
+      const statements: ExtractedSqlStatement[] = [
+        { statement: "SELECT *\n  FROM\n    my_table" },
+        { statement: "INSERT INTO target SELECT * FROM source" },
+      ];
+
+      createEnhancedQuickPickStub.resolves({
+        quickPick: { dispose: sandbox.stub() },
+        selectedItems: [],
+      });
+
+      await selectSqlStatementsForOpening(statements);
+
+      sinon.assert.calledOnce(createEnhancedQuickPickStub);
+
+      const items = createEnhancedQuickPickStub.firstCall.args[0];
+      sinon.assert.match(items.length, 2);
+
+      // First item: multiline statement gets whitespace normalized in description
+      sinon.assert.match(items[0].label, "Statement 1");
+      sinon.assert.match(items[0].description, "SELECT * FROM my_table");
+      sinon.assert.match(items[0].statement, "SELECT *\n  FROM\n    my_table");
+
+      // Second item
+      sinon.assert.match(items[1].label, "Statement 2");
+      sinon.assert.match(items[1].description, "INSERT INTO target SELECT * FROM source");
+      sinon.assert.match(items[1].statement, "INSERT INTO target SELECT * FROM source");
+    });
+
+    it("should pass correct options to createEnhancedQuickPick", async function () {
+      const statements: ExtractedSqlStatement[] = [{ statement: "SELECT 1" }];
+
+      createEnhancedQuickPickStub.resolves({
+        quickPick: { dispose: sandbox.stub() },
+        selectedItems: [],
+      });
+
+      await selectSqlStatementsForOpening(statements);
+
+      sinon.assert.calledOnce(createEnhancedQuickPickStub);
+
+      const options = createEnhancedQuickPickStub.firstCall.args[1];
+      sinon.assert.match(options.title, "Select Flink SQL Statements to Open");
+      sinon.assert.match(options.canSelectMany, true);
+      sinon.assert.match(options.ignoreFocusOut, true);
+      sinon.assert.match(options.matchOnDescription, true);
+      sinon.assert.match(options.matchOnDetail, true);
+    });
+
+    it("should pre-select all items by default", async function () {
+      const statements: ExtractedSqlStatement[] = [
+        { statement: "SELECT 1" },
+        { statement: "SELECT 2" },
+      ];
+
+      createEnhancedQuickPickStub.resolves({
+        quickPick: { dispose: sandbox.stub() },
+        selectedItems: [],
+      });
+
+      await selectSqlStatementsForOpening(statements);
+
+      const items = createEnhancedQuickPickStub.firstCall.args[0];
+      const options = createEnhancedQuickPickStub.firstCall.args[1];
+
+      // selectedItems should match all items (pre-selected)
+      sinon.assert.match(options.selectedItems, items);
     });
   });
 });

@@ -8,6 +8,7 @@ import type { CCloudEnvironment } from "../models/environment";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
+import type { QuickPickItemWithValue } from "../quickpicks/types";
 import { createEnhancedQuickPick } from "../quickpicks/utils/quickPickUtils";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import { setFlinkDocumentMetadata } from "./statementUtils";
@@ -44,11 +45,6 @@ export interface WorkspaceMetadataContext {
 export interface ExtractedSqlStatement {
   statement: string;
   description?: string;
-}
-
-/** QuickPick item with statement data. */
-export interface StatementQuickPickItem extends vscode.QuickPickItem {
-  statement: string;
 }
 
 /** Error thrown when Flink workspace URI is missing required parameters. */
@@ -257,11 +253,14 @@ export function extractSqlStatementsFromWorkspace(
 export async function selectSqlStatementsForOpening(
   sqlStatements: ExtractedSqlStatement[],
 ): Promise<string[] | undefined> {
-  const quickPickItems: StatementQuickPickItem[] = sqlStatements.map((extracted, index) => ({
-    label: `Statement ${index + 1}`,
-    description: extracted.statement.trim().replace(/\s+/g, " "),
-    statement: extracted.statement,
-  }));
+  const quickPickItems: QuickPickItemWithValue<string>[] = sqlStatements.map(
+    (extracted, index) => ({
+      label: `Cell ${index + 1}:`,
+      description: extracted.statement.trim().replace(/\s+/g, " "),
+      value: extracted.statement,
+      detail: extracted.description ? `Description: ${extracted.description}` : undefined,
+    }),
+  );
 
   const result = await createEnhancedQuickPick(quickPickItems, {
     title: "Select Flink SQL Statements to Open",
@@ -277,7 +276,9 @@ export async function selectSqlStatementsForOpening(
     return undefined;
   }
 
-  return result.selectedItems.map((item) => item.statement);
+  return result.selectedItems
+    .map((item) => item.value)
+    .filter((value): value is string => value !== undefined);
 }
 
 /**
