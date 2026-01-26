@@ -3,7 +3,11 @@ import { registerCommandWithLogging } from ".";
 import { fetchTopicAuthorizedOperations } from "../authz/topics";
 import type { TopicV3Api } from "../clients/kafkaRest";
 import { ResponseError } from "../clients/kafkaRest";
-import { flinkDatabaseViewResourceChanged, topicsViewResourceChanged } from "../emitters";
+import {
+  flinkDatabaseViewResourceChanged,
+  topicChanged,
+  topicsViewResourceChanged,
+} from "../emitters";
 import { ClusterSelectSyncOption, SYNC_ON_KAFKA_SELECT } from "../extensionSettings/constants";
 import { ResourceLoader } from "../loaders/resourceLoader";
 import { Logger } from "../logging";
@@ -20,6 +24,7 @@ import { getSidecar } from "../sidecar";
 import { removeProtocolPrefix } from "../utils/bootstrapServers";
 import { TopicViewProvider } from "../viewProviders/topics";
 import { selectSchemaRegistryCommand } from "./schemaRegistry";
+import { waitForTopicToBeDeleted, waitForTopicToExist } from "./utils/topics";
 
 const logger = new Logger("commands.kafkaClusters");
 
@@ -89,7 +94,7 @@ export async function selectFlinkDatabaseViewKafkaClusterCommand(
   void vscode.commands.executeCommand("confluent-flink-database.focus");
 }
 
-async function deleteTopicCommand(topic: KafkaTopic) {
+export async function deleteTopicCommand(topic: KafkaTopic) {
   if (!(topic instanceof KafkaTopic)) {
     return;
   }
@@ -145,10 +150,13 @@ async function deleteTopicCommand(topic: KafkaTopic) {
         // Another 1/3 way done now.
         progress.report({ increment: 33 });
 
-        // explicitly deep refresh the topics view after deleting a topic, so that repainting
-        // ommitting the newly deleted topic is a foreground task we block on before
-        // closing the progress window.
-        await TopicViewProvider.getInstance().refresh(true, topic);
+        // look up the parent Kafka cluster in order to fire the topicChanged event
+        const loader = ResourceLoader.getInstance(topic.connectionId);
+        const clusters = await loader.getKafkaClustersForEnvironmentId(topic.environmentId);
+        const cluster = clusters.find((c) => c.id === topic.clusterId);
+        if (cluster) {
+          topicChanged.fire({ change: "deleted", cluster });
+        }
       } catch (error) {
         const errorMessage = `Failed to delete topic: ${error}`;
         logger.error(errorMessage);
@@ -238,10 +246,9 @@ export async function createTopicCommand(item?: KafkaCluster): Promise<boolean> 
         await waitForTopicToExist(client, cluster.id, topicName, isLocal(cluster));
         progress.report({ increment: 33 });
 
-        // Refresh in the foreground after creating a topic, so that the new topic is visible
-        // immediately after the progress window closes (assuming topics view is showing this cluster).
-
-        await topicsViewProvider.refresh(true, cluster);
+        // notify subscribers of the new topic (mainly the Topics and Flink Database views so they
+        // can refresh if focused on the same cluster/database)
+        topicChanged.fire({ change: "added", cluster });
 
         return true; // indicate the user actually created a topic.
       } catch (error) {
@@ -275,65 +282,6 @@ export async function createTopicCommand(item?: KafkaCluster): Promise<boolean> 
       }
     },
   );
-}
-
-async function waitForTopicToExist(
-  client: TopicV3Api,
-  clusterId: string,
-  topicName: string,
-  isLocal: boolean,
-  timeoutMs: number = 3000,
-) {
-  const startTime = Date.now();
-  const topicKind = isLocal ? "local" : "CCloud";
-  while (Date.now() - startTime < timeoutMs) {
-    try {
-      // will raise an error with a 404 status code if the topic doesn't exist
-      await client.getKafkaTopic({
-        cluster_id: clusterId,
-        topic_name: topicName,
-      });
-      const elapsedMs = Date.now() - startTime;
-      logger.info(`${topicKind} topic "${topicName}" was created in ${elapsedMs}ms`);
-      return;
-    } catch (error) {
-      // is an expected 404 error, the topic creation hasn't completed yet.
-      logger.warn(`${topicKind} topic "${topicName}" not available yet: ${error}`);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-  throw new Error(`${topicKind} topic "${topicName}" was not created within ${timeoutMs}ms`);
-}
-
-async function waitForTopicToBeDeleted(
-  client: TopicV3Api,
-  clusterId: string,
-  topicName: string,
-  isLocal: boolean,
-  // It may be that deleting topics that had a lot of data takes longer than creating them, so
-  // be generous with the default timeout
-  timeoutMs: number = 10000,
-) {
-  const startTime = Date.now();
-  const topicKind = isLocal ? "local" : "CCloud";
-  while (Date.now() - startTime < timeoutMs) {
-    try {
-      // will raise an error with a 404 status code if the topic doesn't exist.
-      await client.getKafkaTopic({
-        cluster_id: clusterId,
-        topic_name: topicName,
-      });
-      logger.warn(`${topicKind} topic "${topicName}" still exists`);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      // topic is no longer found, yay, deletion complete.
-      const elapsedMs = Date.now() - startTime;
-      logger.info(`${topicKind} topic "${topicName}" was deleted in ${elapsedMs}ms`);
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-  throw new Error(`${topicKind} topic "${topicName}" was not deleted within ${timeoutMs}ms`);
 }
 
 export async function copyBootstrapServers(item: KafkaCluster) {

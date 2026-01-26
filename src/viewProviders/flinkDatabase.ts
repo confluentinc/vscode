@@ -1,9 +1,13 @@
 import { ThemeIcon, type Disposable, type TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
+import type { SchemaVersionChangeEvent, SubjectChangeEvent, TopicChangeEvent } from "../emitters";
 import {
   artifactsChanged,
   flinkDatabaseViewResourceChanged,
   flinkDatabaseViewSearchSet,
+  schemaSubjectChanged,
+  schemaVersionsChanged,
+  topicChanged,
   udfsChanged,
 } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
@@ -309,6 +313,9 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     return [
       artifactsChanged.event(this.artifactsChangedHandler.bind(this)),
       udfsChanged.event(this.udfsChangedHandler.bind(this)),
+      topicChanged.event(this.topicChangedHandler.bind(this)),
+      schemaSubjectChanged.event(this.schemaChangedHandler.bind(this)),
+      schemaVersionsChanged.event(this.schemaChangedHandler.bind(this)),
     ];
   }
 
@@ -390,6 +397,37 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
   async udfsChangedHandler(dbWithUpdatedUdfs: CCloudFlinkDbKafkaCluster): Promise<void> {
     if (this.database && this.database.id === dbWithUpdatedUdfs.id) {
       await this.refreshUDFsContainer(this.database, true);
+    }
+  }
+
+  /**
+   * Handler for when a topic is added or deleted from a Kafka cluster.
+   * If the cluster matches the current Flink database, we need to refresh the Relations container
+   * since a new table (topic) should be available.
+   */
+  async topicChangedHandler(event: TopicChangeEvent): Promise<void> {
+    if (this.database && this.database.id === event.cluster.id) {
+      this.logger.debug(`topic ${event.change}, refreshing Relations container`, {
+        clusterName: event.cluster.name,
+      });
+      await this.refreshRelationsContainer(this.database, true);
+    }
+  }
+
+  /**
+   * Handler for when a schema subject or version was created or deleted in a Schema Registry.
+   * If the schema's environment matches the Flink Database's environment, refresh
+   * the Relations container since a Flink table/view structure may have changed.
+   */
+  async schemaChangedHandler(event: SubjectChangeEvent | SchemaVersionChangeEvent): Promise<void> {
+    const { subject, change } = event;
+
+    if (this.database?.environmentId === subject.environmentId) {
+      this.logger.debug(
+        `schema subject ${change} in the focused environment, refreshing Relations`,
+        { subject: subject.name },
+      );
+      await this.refreshRelationsContainer(this.database, true);
     }
   }
 
