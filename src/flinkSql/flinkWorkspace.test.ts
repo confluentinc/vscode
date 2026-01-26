@@ -27,6 +27,24 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     sandbox.restore();
   });
 
+  function createMockWorkspace(
+    blocks?: GetWsV1Workspace200Response["spec"]["blocks"],
+  ): GetWsV1Workspace200Response {
+    return {
+      spec: {
+        blocks,
+      },
+    } as GetWsV1Workspace200Response;
+  }
+
+  function createMockDocument(content: string): vscode.TextDocument {
+    return {
+      uri: vscode.Uri.parse(`untitled:${content.substring(0, 10)}`),
+      languageId: FLINK_SQL_LANGUAGE_ID,
+      getText: () => content,
+    } as vscode.TextDocument;
+  }
+
   describe("openSqlStatementsAsDocuments()", function () {
     let openTextDocumentStub: sinon.SinonStub;
     let showTextDocumentStub: sinon.SinonStub;
@@ -40,15 +58,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       showTextDocumentStub = sandbox.stub(vscode.window, "showTextDocument");
       setFlinkDocumentMetadataStub = sandbox.stub(statementUtils, "setFlinkDocumentMetadata");
     });
-
-    function createMockDocument(content: string): vscode.TextDocument {
-      return {
-        uri: vscode.Uri.parse(`untitled:${content.substring(0, 10)}`),
-        languageId: FLINK_SQL_LANGUAGE_ID,
-        getText: () => content,
-      } as vscode.TextDocument;
-    }
-
     it("should do nothing when given an empty array", async function () {
       await openSqlStatementsAsDocuments([]);
 
@@ -314,16 +323,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
   });
 
   describe("extractSqlStatementsFromWorkspace()", function () {
-    function createMockWorkspace(
-      blocks?: GetWsV1Workspace200Response["spec"]["blocks"],
-    ): GetWsV1Workspace200Response {
-      return {
-        spec: {
-          blocks,
-        },
-      } as GetWsV1Workspace200Response;
-    }
-
     it("should return empty array when workspace has no blocks", function () {
       const workspace = createMockWorkspace(undefined);
 
