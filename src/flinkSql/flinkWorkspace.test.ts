@@ -421,7 +421,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       sinon.assert.calledOnce(logErrorStub);
     });
 
-    it("should return context with database when flinkable cluster is found", async function () {
+    it("should return context with database when cluster with Flink pools is found", async function () {
       const testEnvironment = new CCloudEnvironment({
         ...TEST_CCLOUD_ENVIRONMENT,
         flinkComputePools: [],
@@ -443,7 +443,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       sinon.assert.match(result.database, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
     });
 
-    it("should not set database when cluster is not flinkable", async function () {
+    it("should not set database when cluster has no Flink pools", async function () {
       const testEnvironment = new CCloudEnvironment({
         ...TEST_CCLOUD_ENVIRONMENT,
         flinkComputePools: [],
