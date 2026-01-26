@@ -390,6 +390,7 @@ async function setupContextValues() {
     "ccloud-flinkable-kafka-cluster",
     "ccloud-kafka-topic",
     "ccloud-kafka-topic-with-schema",
+    // consumer groups and consumers have dynamic context values based on state; can't include here
     "ccloud-schema-registry",
     "ccloud-flink-compute-pool",
     "ccloud-flink-statement",
@@ -410,6 +411,7 @@ async function setupContextValues() {
     "flinkable-ccloud-environment",
     "ccloud-kafka-cluster",
     "ccloud-flinkable-kafka-cluster",
+    // consumer groups and consumers have dynamic context values based on state; can't include here
     "ccloud-schema-registry", // only ID, no name
     "ccloud-flink-compute-pool",
     "ccloud-flink-artifact",
