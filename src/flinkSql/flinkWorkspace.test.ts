@@ -68,6 +68,19 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     } as vscode.TextDocument;
   }
 
+  function createUri(queryParams: Record<string, string>): vscode.Uri {
+    const query = new URLSearchParams(queryParams).toString();
+    return vscode.Uri.parse(`vscode://confluent.vscode-confluent/flinkWorkspace?${query}`);
+  }
+
+  const validParams = {
+    environmentId: "env-123",
+    organizationId: "org-456",
+    workspaceName: "my-workspace",
+    provider: "aws",
+    region: "us-east-1",
+  };
+
   describe("openSqlStatementsAsDocuments()", function () {
     let openTextDocumentStub: sinon.SinonStub;
     let showTextDocumentStub: sinon.SinonStub;
@@ -716,19 +729,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
   });
 
   describe("extractWorkspaceParamsFromUri()", function () {
-    function createUri(queryParams: Record<string, string>): vscode.Uri {
-      const query = new URLSearchParams(queryParams).toString();
-      return vscode.Uri.parse(`vscode://confluent.vscode-confluent/flinkWorkspace?${query}`);
-    }
-
-    const validParams = {
-      environmentId: "env-123",
-      organizationId: "org-456",
-      workspaceName: "my-workspace",
-      provider: "aws",
-      region: "us-east-1",
-    };
-
     it("should extract all parameters from a valid URI", function () {
       const uri = createUri(validParams);
 
