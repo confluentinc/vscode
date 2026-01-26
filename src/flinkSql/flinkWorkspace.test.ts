@@ -735,11 +735,11 @@ describe("flinkSql/flinkWorkspace.ts", function () {
 
       const result = extractWorkspaceParamsFromUri(uri);
 
-      sinon.assert.match(result.environmentId, "env-123");
-      sinon.assert.match(result.organizationId, "org-456");
-      sinon.assert.match(result.workspaceName, "my-workspace");
-      sinon.assert.match(result.provider, "aws");
-      sinon.assert.match(result.region, "us-east-1");
+      assert.strictEqual(result.environmentId, "env-123");
+      assert.strictEqual(result.organizationId, "org-456");
+      assert.strictEqual(result.workspaceName, "my-workspace");
+      assert.strictEqual(result.provider, "aws");
+      assert.strictEqual(result.region, "us-east-1");
     });
 
     it("should throw FlinkWorkspaceUriError when environmentId is missing", function () {
@@ -750,14 +750,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         region: validParams.region,
       });
 
-      assert.throws(
-        () => extractWorkspaceParamsFromUri(uri),
-        (error: FlinkWorkspaceUriError) => {
-          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
-          assert.deepStrictEqual(error.missingParams, ["environmentId"]);
-          return true;
-        },
-      );
+      assert.throws(() => extractWorkspaceParamsFromUri(uri), FlinkWorkspaceUriError);
     });
 
     it("should throw FlinkWorkspaceUriError when organizationId is missing", function () {
@@ -768,14 +761,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         region: validParams.region,
       });
 
-      assert.throws(
-        () => extractWorkspaceParamsFromUri(uri),
-        (error: FlinkWorkspaceUriError) => {
-          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
-          assert.deepStrictEqual(error.missingParams, ["organizationId"]);
-          return true;
-        },
-      );
+      assert.throws(() => extractWorkspaceParamsFromUri(uri), FlinkWorkspaceUriError);
     });
 
     it("should throw FlinkWorkspaceUriError when workspaceName is missing", function () {
@@ -786,14 +772,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         region: validParams.region,
       });
 
-      assert.throws(
-        () => extractWorkspaceParamsFromUri(uri),
-        (error: FlinkWorkspaceUriError) => {
-          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
-          assert.deepStrictEqual(error.missingParams, ["workspaceName"]);
-          return true;
-        },
-      );
+      assert.throws(() => extractWorkspaceParamsFromUri(uri), FlinkWorkspaceUriError);
     });
 
     it("should throw FlinkWorkspaceUriError when provider is missing", function () {
@@ -804,14 +783,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         region: validParams.region,
       });
 
-      assert.throws(
-        () => extractWorkspaceParamsFromUri(uri),
-        (error: FlinkWorkspaceUriError) => {
-          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
-          assert.deepStrictEqual(error.missingParams, ["provider"]);
-          return true;
-        },
-      );
+      assert.throws(() => extractWorkspaceParamsFromUri(uri), FlinkWorkspaceUriError);
     });
 
     it("should throw FlinkWorkspaceUriError when region is missing", function () {
@@ -822,46 +794,37 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         provider: validParams.provider,
       });
 
-      assert.throws(
-        () => extractWorkspaceParamsFromUri(uri),
-        (error: FlinkWorkspaceUriError) => {
-          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
-          assert.deepStrictEqual(error.missingParams, ["region"]);
-          return true;
-        },
-      );
+      assert.throws(() => extractWorkspaceParamsFromUri(uri), FlinkWorkspaceUriError);
     });
 
-    it("should throw FlinkWorkspaceUriError with multiple missing params", function () {
+    it("should include all missing params in error when multiple are missing", function () {
       const uri = createUri({
         workspaceName: "my-workspace",
       });
 
-      assert.throws(
-        () => extractWorkspaceParamsFromUri(uri),
-        (error: FlinkWorkspaceUriError) => {
-          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
-          assert.strictEqual(error.missingParams.length, 4);
-          assert.strictEqual(error.missingParams.includes("environmentId"), true);
-          assert.strictEqual(error.missingParams.includes("organizationId"), true);
-          assert.strictEqual(error.missingParams.includes("provider"), true);
-          assert.strictEqual(error.missingParams.includes("region"), true);
-          return true;
-        },
-      );
+      try {
+        extractWorkspaceParamsFromUri(uri);
+        assert.fail("Expected FlinkWorkspaceUriError to be thrown");
+      } catch (error) {
+        assert.ok(error instanceof FlinkWorkspaceUriError);
+        assert.strictEqual(error.missingParams.length, 4);
+        assert.ok(error.missingParams.includes("environmentId"));
+        assert.ok(error.missingParams.includes("organizationId"));
+        assert.ok(error.missingParams.includes("provider"));
+        assert.ok(error.missingParams.includes("region"));
+      }
     });
 
-    it("should throw FlinkWorkspaceUriError when all params are missing", function () {
+    it("should include all five params in error when none are provided", function () {
       const uri = createUri({});
 
-      assert.throws(
-        () => extractWorkspaceParamsFromUri(uri),
-        (error: FlinkWorkspaceUriError) => {
-          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
-          assert.strictEqual(error.missingParams.length, 5);
-          return true;
-        },
-      );
+      try {
+        extractWorkspaceParamsFromUri(uri);
+        assert.fail("Expected FlinkWorkspaceUriError to be thrown");
+      } catch (error) {
+        assert.ok(error instanceof FlinkWorkspaceUriError);
+        assert.strictEqual(error.missingParams.length, 5);
+      }
     });
 
     it("should treat empty string values as missing", function () {
@@ -870,14 +833,13 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         environmentId: "",
       });
 
-      assert.throws(
-        () => extractWorkspaceParamsFromUri(uri),
-        (error: FlinkWorkspaceUriError) => {
-          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
-          assert.deepStrictEqual(error.missingParams, ["environmentId"]);
-          return true;
-        },
-      );
+      try {
+        extractWorkspaceParamsFromUri(uri);
+        assert.fail("Expected FlinkWorkspaceUriError to be thrown");
+      } catch (error) {
+        assert.ok(error instanceof FlinkWorkspaceUriError);
+        assert.deepStrictEqual(error.missingParams, ["environmentId"]);
+      }
     });
 
     it("should ignore extra parameters in the URI", function () {
@@ -889,11 +851,11 @@ describe("flinkSql/flinkWorkspace.ts", function () {
 
       const result = extractWorkspaceParamsFromUri(uri);
 
-      sinon.assert.match(result.environmentId, "env-123");
-      sinon.assert.match(result.organizationId, "org-456");
-      sinon.assert.match(result.workspaceName, "my-workspace");
-      sinon.assert.match(result.provider, "aws");
-      sinon.assert.match(result.region, "us-east-1");
+      assert.strictEqual(result.environmentId, "env-123");
+      assert.strictEqual(result.organizationId, "org-456");
+      assert.strictEqual(result.workspaceName, "my-workspace");
+      assert.strictEqual(result.provider, "aws");
+      assert.strictEqual(result.region, "us-east-1");
     });
 
     it("should handle URL-encoded parameter values", function () {
@@ -904,7 +866,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
 
       const result = extractWorkspaceParamsFromUri(uri);
 
-      sinon.assert.match(result.workspaceName, "my workspace with spaces");
+      assert.strictEqual(result.workspaceName, "my workspace with spaces");
     });
   });
 });
