@@ -1,10 +1,12 @@
 import { ThemeIcon, type Disposable, type TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
-import type { TopicChangeEvent } from "../emitters";
+import type { SchemaVersionChangeEvent, SubjectChangeEvent, TopicChangeEvent } from "../emitters";
 import {
   artifactsChanged,
   flinkDatabaseViewResourceChanged,
   flinkDatabaseViewSearchSet,
+  schemaSubjectChanged,
+  schemaVersionsChanged,
   topicChanged,
   udfsChanged,
 } from "../emitters";
@@ -312,6 +314,8 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
       artifactsChanged.event(this.artifactsChangedHandler.bind(this)),
       udfsChanged.event(this.udfsChangedHandler.bind(this)),
       topicChanged.event(this.topicChangedHandler.bind(this)),
+      schemaSubjectChanged.event(this.schemaChangedHandler.bind(this)),
+      schemaVersionsChanged.event(this.schemaChangedHandler.bind(this)),
     ];
   }
 
@@ -406,6 +410,23 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
       this.logger.debug(`topic ${event.change}, refreshing Relations container`, {
         clusterName: event.cluster.name,
       });
+      await this.refreshRelationsContainer(this.database, true);
+    }
+  }
+
+  /**
+   * Handler for when a schema subject or version was created or deleted in a Schema Registry.
+   * If the schema's environment matches the Flink Database's environment, refresh
+   * the Relations container since a Flink table/view structure may have changed.
+   */
+  async schemaChangedHandler(event: SubjectChangeEvent | SchemaVersionChangeEvent): Promise<void> {
+    const { subject, change } = event;
+
+    if (this.database?.environmentId === subject.environmentId) {
+      this.logger.debug(
+        `schema subject ${change} in the focused environment, refreshing Relations`,
+        { subject: subject.name },
+      );
       await this.refreshRelationsContainer(this.database, true);
     }
   }
