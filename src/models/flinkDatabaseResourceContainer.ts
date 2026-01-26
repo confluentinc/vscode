@@ -1,7 +1,7 @@
-import { ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { IconNames } from "../icons";
+import { ERROR_ICON, IconNames } from "../icons";
 import { Logger } from "../logging";
 import type { FlinkArtifact } from "./flinkArtifact";
 import type { FlinkDatabaseResource } from "./flinkDatabaseResource";
@@ -17,9 +17,6 @@ export enum FlinkDatabaseContainerLabel {
   AI_MODELS = "AI Models",
   AI_AGENTS = "AI Agents",
 }
-
-/** Error icon to use for Flink Database resource containers items if fetching resources fails. */
-export const ERROR_ICON = new ThemeIcon("warning", new ThemeColor("problemsErrorIcon.foreground"));
 
 /** Poll interval to use when waiting for a container to finish loading. */
 export const LOADING_POLL_INTERVAL_MS = 100;
