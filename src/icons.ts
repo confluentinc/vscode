@@ -1,3 +1,5 @@
+import { ThemeColor, ThemeIcon } from "vscode";
+
 /**
  * Ids to use with ThemeIcons for different Confluent/Kafka resources
  * @see https://code.visualstudio.com/api/references/icons-in-labels
@@ -41,3 +43,6 @@ export enum IconNames {
   /** General-purpose icon to use when we don't have a dedicated icon for a given resource. */
   PLACEHOLDER = "symbol-misc",
 }
+
+/** Red "warning" icon to use when dealing with connectivity issues or failed resource fetching. */
+export const ERROR_ICON = new ThemeIcon("warning", new ThemeColor("problemsErrorIcon.foreground"));
