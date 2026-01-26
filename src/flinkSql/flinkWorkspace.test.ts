@@ -861,7 +861,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     it("should handle URL-encoded parameter values", function () {
       const uri = createUri({
         ...validParams,
-        workspaceName: "my%20workspace%20with%20spaces",
+        workspaceName: "my workspace with spaces",
       });
 
       const result = extractWorkspaceParamsFromUri(uri);
