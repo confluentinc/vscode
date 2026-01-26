@@ -5,10 +5,15 @@ import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import { WsV1BlockTypeEnum, type GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import * as quickPickUtils from "../quickpicks/utils/quickPickUtils";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import type { ExtractedSqlStatement, WorkspaceMetadataContext } from "./flinkWorkspace";
-import { openSqlStatementsAsDocuments, selectSqlStatementsForOpening } from "./flinkWorkspace";
+import {
+  extractSqlStatementsFromWorkspace,
+  openSqlStatementsAsDocuments,
+  selectSqlStatementsForOpening,
+} from "./flinkWorkspace";
 import * as statementUtils from "./statementUtils";
 
 describe("flinkSql/flinkWorkspace.ts", function () {
@@ -21,6 +26,24 @@ describe("flinkSql/flinkWorkspace.ts", function () {
   afterEach(() => {
     sandbox.restore();
   });
+
+  function createMockWorkspace(
+    blocks?: GetWsV1Workspace200Response["spec"]["blocks"],
+  ): GetWsV1Workspace200Response {
+    return {
+      spec: {
+        blocks,
+      },
+    } as GetWsV1Workspace200Response;
+  }
+
+  function createMockDocument(content: string): vscode.TextDocument {
+    return {
+      uri: vscode.Uri.parse(`untitled:${content.substring(0, 10)}`),
+      languageId: FLINK_SQL_LANGUAGE_ID,
+      getText: () => content,
+    } as vscode.TextDocument;
+  }
 
   describe("openSqlStatementsAsDocuments()", function () {
     let openTextDocumentStub: sinon.SinonStub;
@@ -35,15 +58,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       showTextDocumentStub = sandbox.stub(vscode.window, "showTextDocument");
       setFlinkDocumentMetadataStub = sandbox.stub(statementUtils, "setFlinkDocumentMetadata");
     });
-
-    function createMockDocument(content: string): vscode.TextDocument {
-      return {
-        uri: vscode.Uri.parse(`untitled:${content.substring(0, 10)}`),
-        languageId: FLINK_SQL_LANGUAGE_ID,
-        getText: () => content,
-      } as vscode.TextDocument;
-    }
-
     it("should do nothing when given an empty array", async function () {
       await openSqlStatementsAsDocuments([]);
 
@@ -305,6 +319,176 @@ describe("flinkSql/flinkWorkspace.ts", function () {
 
       // selectedItems should match all items (pre-selected)
       sinon.assert.match(options.selectedItems, items);
+    });
+  });
+
+  describe("extractSqlStatementsFromWorkspace()", function () {
+    it("should return empty array when workspace has no blocks", function () {
+      const workspace = createMockWorkspace(undefined);
+
+      const result = extractSqlStatementsFromWorkspace(workspace);
+
+      sinon.assert.match(result, []);
+    });
+
+    it("should return empty array when blocks is an empty array", function () {
+      const workspace = createMockWorkspace([]);
+
+      const result = extractSqlStatementsFromWorkspace(workspace);
+
+      sinon.assert.match(result, []);
+    });
+
+    it("should skip blocks with no code_options", function () {
+      const workspace = createMockWorkspace([
+        { properties: { content: "Some text" } },
+        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } },
+      ]);
+
+      const result = extractSqlStatementsFromWorkspace(workspace);
+
+      sinon.assert.match(result.length, 1);
+      sinon.assert.match(result[0].statement, "SELECT 1");
+    });
+
+    it("should skip blocks with empty source array", function () {
+      const workspace = createMockWorkspace([
+        { type: WsV1BlockTypeEnum.Code, code_options: { source: [] } },
+        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 2"] } },
+      ]);
+
+      const result = extractSqlStatementsFromWorkspace(workspace);
+
+      sinon.assert.match(result.length, 1);
+      sinon.assert.match(result[0].statement, "SELECT 2");
+    });
+
+    it("should skip blocks with only whitespace content", function () {
+      const workspace = createMockWorkspace([
+        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["   ", "\t", "\n"] } },
+        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } },
+      ]);
+
+      const result = extractSqlStatementsFromWorkspace(workspace);
+
+      sinon.assert.match(result.length, 1);
+      sinon.assert.match(result[0].statement, "SELECT 1");
+    });
+
+    it("should extract a single SQL statement", function () {
+      const workspace = createMockWorkspace([
+        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT * FROM my_table"] } },
+      ]);
+
+      const result = extractSqlStatementsFromWorkspace(workspace);
+
+      sinon.assert.match(result.length, 1);
+      sinon.assert.match(result[0].statement, "SELECT * FROM my_table");
+      sinon.assert.match(result[0].description, undefined);
+    });
+
+    it("should join multiline source arrays with newlines", function () {
+      const workspace = createMockWorkspace([
+        {
+          type: WsV1BlockTypeEnum.Code,
+          code_options: {
+            source: ["SELECT *", "FROM my_table", "WHERE id = 1"],
+          },
+        },
+      ]);
+
+      const result = extractSqlStatementsFromWorkspace(workspace);
+
+      sinon.assert.match(result.length, 1);
+      sinon.assert.match(result[0].statement, "SELECT *\nFROM my_table\nWHERE id = 1");
+    });
+
+    it("should extract multiple SQL statements from multiple blocks", function () {
+      const workspace = createMockWorkspace([
+        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } },
+        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 2"] } },
+        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 3"] } },
+      ]);
+
+      const result = extractSqlStatementsFromWorkspace(workspace);
+
+      sinon.assert.match(result.length, 3);
+      sinon.assert.match(result[0].statement, "SELECT 1");
+      sinon.assert.match(result[1].statement, "SELECT 2");
+      sinon.assert.match(result[2].statement, "SELECT 3");
+    });
+
+    it("should include description from block properties", function () {
+      const workspace = createMockWorkspace([
+        {
+          type: WsV1BlockTypeEnum.Code,
+          code_options: { source: ["SELECT * FROM orders"] },
+          properties: { description: "Query all orders" },
+        },
+      ]);
+
+      const result = extractSqlStatementsFromWorkspace(workspace);
+
+      sinon.assert.match(result.length, 1);
+      sinon.assert.match(result[0].statement, "SELECT * FROM orders");
+      sinon.assert.match(result[0].description, "Query all orders");
+    });
+
+    it("should handle blocks with and without descriptions", function () {
+      const workspace = createMockWorkspace([
+        {
+          type: WsV1BlockTypeEnum.Code,
+          code_options: { source: ["SELECT 1"] },
+          properties: { description: "First query" },
+        },
+        {
+          type: WsV1BlockTypeEnum.Code,
+          code_options: { source: ["SELECT 2"] },
+        },
+        {
+          type: WsV1BlockTypeEnum.Code,
+          code_options: { source: ["SELECT 3"] },
+          properties: { description: "Third query" },
+        },
+      ]);
+
+      const result = extractSqlStatementsFromWorkspace(workspace);
+
+      sinon.assert.match(result.length, 3);
+      sinon.assert.match(result[0].description, "First query");
+      sinon.assert.match(result[1].description, undefined);
+      sinon.assert.match(result[2].description, "Third query");
+    });
+
+    it("should handle mixed block types (skip non-code blocks without source)", function () {
+      const workspace = createMockWorkspace([
+        { properties: { content: "Some markdown text" } },
+        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } },
+        { properties: {} },
+        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 2"] } },
+      ]);
+
+      const result = extractSqlStatementsFromWorkspace(workspace);
+
+      sinon.assert.match(result.length, 2);
+      sinon.assert.match(result[0].statement, "SELECT 1");
+      sinon.assert.match(result[1].statement, "SELECT 2");
+    });
+
+    it("should preserve whitespace within SQL statements", function () {
+      const workspace = createMockWorkspace([
+        {
+          type: WsV1BlockTypeEnum.Code,
+          code_options: {
+            source: ["SELECT", "    column1,", "    column2", "FROM table1"],
+          },
+        },
+      ]);
+
+      const result = extractSqlStatementsFromWorkspace(workspace);
+
+      sinon.assert.match(result.length, 1);
+      sinon.assert.match(result[0].statement, "SELECT\n    column1,\n    column2\nFROM table1");
     });
   });
 });
