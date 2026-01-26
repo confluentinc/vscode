@@ -211,8 +211,8 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       createEnhancedQuickPickStub.resolves({
         quickPick: { dispose: sandbox.stub() },
         selectedItems: [
-          { label: "Statement 1", statement: "SELECT * FROM table1" },
-          { label: "Statement 2", statement: "SELECT * FROM table2" },
+          { label: "Cell 1:", value: "SELECT * FROM table1" },
+          { label: "Cell 2:", value: "SELECT * FROM table2" },
         ],
       });
 
@@ -230,7 +230,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
 
       createEnhancedQuickPickStub.resolves({
         quickPick: { dispose: sandbox.stub() },
-        selectedItems: [{ label: "Statement 2", statement: "SELECT 2" }],
+        selectedItems: [{ label: "Cell 2:", value: "SELECT 2" }],
       });
 
       const result = await selectSqlStatementsForOpening(statements);
@@ -257,14 +257,14 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       sinon.assert.match(items.length, 2);
 
       // First item: multiline statement gets whitespace normalized in description
-      sinon.assert.match(items[0].label, "Statement 1");
+      sinon.assert.match(items[0].label, "Cell 1:");
       sinon.assert.match(items[0].description, "SELECT * FROM my_table");
-      sinon.assert.match(items[0].statement, "SELECT *\n  FROM\n    my_table");
+      sinon.assert.match(items[0].value, "SELECT *\n  FROM\n    my_table");
 
       // Second item
-      sinon.assert.match(items[1].label, "Statement 2");
+      sinon.assert.match(items[1].label, "Cell 2:");
       sinon.assert.match(items[1].description, "INSERT INTO target SELECT * FROM source");
-      sinon.assert.match(items[1].statement, "INSERT INTO target SELECT * FROM source");
+      sinon.assert.match(items[1].value, "INSERT INTO target SELECT * FROM source");
     });
 
     it("should pass correct options to createEnhancedQuickPick", async function () {
