@@ -1,3 +1,4 @@
+import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
@@ -749,13 +750,14 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         region: validParams.region,
       });
 
-      try {
-        extractWorkspaceParamsFromUri(uri);
-        sinon.assert.fail("Expected FlinkWorkspaceUriError to be thrown");
-      } catch (error) {
-        sinon.assert.match(error instanceof FlinkWorkspaceUriError, true);
-        sinon.assert.match((error as FlinkWorkspaceUriError).missingParams, ["environmentId"]);
-      }
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        (error: FlinkWorkspaceUriError) => {
+          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
+          assert.deepStrictEqual(error.missingParams, ["environmentId"]);
+          return true;
+        },
+      );
     });
 
     it("should throw FlinkWorkspaceUriError when organizationId is missing", function () {
@@ -766,13 +768,14 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         region: validParams.region,
       });
 
-      try {
-        extractWorkspaceParamsFromUri(uri);
-        sinon.assert.fail("Expected FlinkWorkspaceUriError to be thrown");
-      } catch (error) {
-        sinon.assert.match(error instanceof FlinkWorkspaceUriError, true);
-        sinon.assert.match((error as FlinkWorkspaceUriError).missingParams, ["organizationId"]);
-      }
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        (error: FlinkWorkspaceUriError) => {
+          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
+          assert.deepStrictEqual(error.missingParams, ["organizationId"]);
+          return true;
+        },
+      );
     });
 
     it("should throw FlinkWorkspaceUriError when workspaceName is missing", function () {
@@ -783,13 +786,14 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         region: validParams.region,
       });
 
-      try {
-        extractWorkspaceParamsFromUri(uri);
-        sinon.assert.fail("Expected FlinkWorkspaceUriError to be thrown");
-      } catch (error) {
-        sinon.assert.match(error instanceof FlinkWorkspaceUriError, true);
-        sinon.assert.match((error as FlinkWorkspaceUriError).missingParams, ["workspaceName"]);
-      }
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        (error: FlinkWorkspaceUriError) => {
+          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
+          assert.deepStrictEqual(error.missingParams, ["workspaceName"]);
+          return true;
+        },
+      );
     });
 
     it("should throw FlinkWorkspaceUriError when provider is missing", function () {
@@ -800,13 +804,14 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         region: validParams.region,
       });
 
-      try {
-        extractWorkspaceParamsFromUri(uri);
-        sinon.assert.fail("Expected FlinkWorkspaceUriError to be thrown");
-      } catch (error) {
-        sinon.assert.match(error instanceof FlinkWorkspaceUriError, true);
-        sinon.assert.match((error as FlinkWorkspaceUriError).missingParams, ["provider"]);
-      }
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        (error: FlinkWorkspaceUriError) => {
+          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
+          assert.deepStrictEqual(error.missingParams, ["provider"]);
+          return true;
+        },
+      );
     });
 
     it("should throw FlinkWorkspaceUriError when region is missing", function () {
@@ -817,13 +822,14 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         provider: validParams.provider,
       });
 
-      try {
-        extractWorkspaceParamsFromUri(uri);
-        sinon.assert.fail("Expected FlinkWorkspaceUriError to be thrown");
-      } catch (error) {
-        sinon.assert.match(error instanceof FlinkWorkspaceUriError, true);
-        sinon.assert.match((error as FlinkWorkspaceUriError).missingParams, ["region"]);
-      }
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        (error: FlinkWorkspaceUriError) => {
+          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
+          assert.deepStrictEqual(error.missingParams, ["region"]);
+          return true;
+        },
+      );
     });
 
     it("should throw FlinkWorkspaceUriError with multiple missing params", function () {
@@ -831,30 +837,31 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         workspaceName: "my-workspace",
       });
 
-      try {
-        extractWorkspaceParamsFromUri(uri);
-        sinon.assert.fail("Expected FlinkWorkspaceUriError to be thrown");
-      } catch (error) {
-        sinon.assert.match(error instanceof FlinkWorkspaceUriError, true);
-        const missingParams = (error as FlinkWorkspaceUriError).missingParams;
-        sinon.assert.match(missingParams.includes("environmentId"), true);
-        sinon.assert.match(missingParams.includes("organizationId"), true);
-        sinon.assert.match(missingParams.includes("provider"), true);
-        sinon.assert.match(missingParams.includes("region"), true);
-        sinon.assert.match(missingParams.length, 4);
-      }
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        (error: FlinkWorkspaceUriError) => {
+          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
+          assert.strictEqual(error.missingParams.length, 4);
+          assert.strictEqual(error.missingParams.includes("environmentId"), true);
+          assert.strictEqual(error.missingParams.includes("organizationId"), true);
+          assert.strictEqual(error.missingParams.includes("provider"), true);
+          assert.strictEqual(error.missingParams.includes("region"), true);
+          return true;
+        },
+      );
     });
 
     it("should throw FlinkWorkspaceUriError when all params are missing", function () {
       const uri = createUri({});
 
-      try {
-        extractWorkspaceParamsFromUri(uri);
-        sinon.assert.fail("Expected FlinkWorkspaceUriError to be thrown");
-      } catch (error) {
-        sinon.assert.match(error instanceof FlinkWorkspaceUriError, true);
-        sinon.assert.match((error as FlinkWorkspaceUriError).missingParams.length, 5);
-      }
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        (error: FlinkWorkspaceUriError) => {
+          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
+          assert.strictEqual(error.missingParams.length, 5);
+          return true;
+        },
+      );
     });
 
     it("should treat empty string values as missing", function () {
@@ -863,13 +870,14 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         environmentId: "",
       });
 
-      try {
-        extractWorkspaceParamsFromUri(uri);
-        sinon.assert.fail("Expected FlinkWorkspaceUriError to be thrown");
-      } catch (error) {
-        sinon.assert.match(error instanceof FlinkWorkspaceUriError, true);
-        sinon.assert.match((error as FlinkWorkspaceUriError).missingParams, ["environmentId"]);
-      }
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        (error: FlinkWorkspaceUriError) => {
+          assert.strictEqual(error instanceof FlinkWorkspaceUriError, true);
+          assert.deepStrictEqual(error.missingParams, ["environmentId"]);
+          return true;
+        },
+      );
     });
 
     it("should ignore extra parameters in the URI", function () {
