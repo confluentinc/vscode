@@ -148,6 +148,9 @@ generates `src/graphql/sidecarGraphQL.d.ts` (auto-generated, do not edit).
 - **Design for stubbing**: When writing new functions, avoid calling other functions in the same
   module that you'll need to stub—Sinon can only stub module exports, not internal calls within the
   same file. Extract such dependencies to separate modules or pass them as parameters.
+- Do not test side effects like logging
+- Make sure to set up any common stubs in the top-level describe block to ensure they apply to all
+  tests.
 
 ### Functional Tests
 
@@ -161,9 +164,6 @@ generates `src/graphql/sidecarGraphQL.d.ts` (auto-generated, do not edit).
 - Require Docker for local Kafka/SR instances
 - Do not include conditionals within E2E tests to manage tests dimensions, as it violates ESLint
   rules. Instead, use test tags and filtering at runtime.
-- Do not test side effects, such as log file contents, within E2E tests.
-- Make sure to set up any common stubs in the top-level describe block to ensure they apply to all
-  tests.
 
 ## Critical Requirements
 
