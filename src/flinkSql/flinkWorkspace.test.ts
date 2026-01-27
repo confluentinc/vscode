@@ -1,15 +1,28 @@
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+  TEST_CCLOUD_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
-import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { WsV1BlockTypeEnum, type GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
+import {
+  TEST_CCLOUD_FLINK_COMPUTE_POOL,
+  TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+} from "../../tests/unit/testResources/flinkComputePool";
+import {
+  GetWsV1Workspace200ResponseApiVersionEnum,
+  GetWsV1Workspace200ResponseKindEnum,
+  WsV1BlockTypeEnum,
+  type GetWsV1Workspace200Response,
+} from "../clients/flinkWorkspaces";
+import type { CCloudResourceLoader } from "../loaders";
+import { CCloudEnvironment } from "../models/environment";
 import * as quickPickUtils from "../quickpicks/utils/quickPickUtils";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import type { ExtractedSqlStatement, WorkspaceMetadataContext } from "./flinkWorkspace";
 import {
+  extractMetadataFromWorkspace,
   extractSqlStatementsFromWorkspace,
   openSqlStatementsAsDocuments,
   selectSqlStatementsForOpening,
@@ -18,9 +31,11 @@ import * as statementUtils from "./statementUtils";
 
 describe("flinkSql/flinkWorkspace.ts", function () {
   let sandbox: sinon.SinonSandbox;
+  let ccloudLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    ccloudLoaderStub = getStubbedCCloudResourceLoader(sandbox);
   });
 
   afterEach(() => {
@@ -28,13 +43,21 @@ describe("flinkSql/flinkWorkspace.ts", function () {
   });
 
   function createMockWorkspace(
-    blocks?: GetWsV1Workspace200Response["spec"]["blocks"],
+    overrides: Omit<Partial<GetWsV1Workspace200Response>, "spec"> & {
+      spec?: Partial<GetWsV1Workspace200Response["spec"]>;
+    } = {},
   ): GetWsV1Workspace200Response {
     return {
+      api_version: GetWsV1Workspace200ResponseApiVersionEnum.WsV1,
+      kind: GetWsV1Workspace200ResponseKindEnum.Workspace,
+      metadata: {},
+      name: "test-workspace",
+      environment_id: overrides.environment_id,
       spec: {
-        blocks,
+        display_name: "Test Workspace",
+        ...overrides.spec,
       },
-    } as GetWsV1Workspace200Response;
+    } satisfies GetWsV1Workspace200Response;
   }
 
   function createMockDocument(content: string): vscode.TextDocument {
@@ -322,9 +345,174 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
   });
 
+  describe("extractMetadataFromWorkspace()", function () {
+    it("should return empty context when workspace has no environment_id", async function () {
+      const workspace = createMockWorkspace({});
+
+      const result = await extractMetadataFromWorkspace(workspace);
+
+      sinon.assert.match(result, {});
+    });
+
+    it("should return empty context when environment not found", async function () {
+      const workspace = createMockWorkspace({ environment_id: "env-unknown" });
+
+      ccloudLoaderStub.getEnvironments.resolves([]);
+
+      const result = await extractMetadataFromWorkspace(workspace);
+
+      sinon.assert.match(result, {});
+    });
+
+    it("should return context with catalog when environment is found", async function () {
+      const testEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [],
+      });
+
+      const workspace = createMockWorkspace({ environment_id: testEnvironment.id });
+
+      ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
+
+      const result = await extractMetadataFromWorkspace(workspace);
+
+      sinon.assert.match(result.catalog, testEnvironment);
+      sinon.assert.match(result.computePool, undefined);
+      sinon.assert.match(result.database, undefined);
+    });
+
+    it("should return context with catalog and computePool when both are found", async function () {
+      const testEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+      });
+
+      const workspace = createMockWorkspace({
+        environment_id: testEnvironment.id,
+        spec: { compute_pool: { id: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } },
+      });
+
+      ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
+
+      const result = await extractMetadataFromWorkspace(workspace);
+
+      sinon.assert.match(result.catalog, testEnvironment);
+      sinon.assert.match(result.computePool, TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      sinon.assert.match(result.database, undefined);
+    });
+
+    it("should return undefined when compute pool not found in environment", async function () {
+      const testEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [],
+      });
+
+      const workspace = createMockWorkspace({
+        environment_id: testEnvironment.id,
+        spec: { compute_pool: { id: "lfcp-unknown" } },
+      });
+
+      ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
+
+      const result = await extractMetadataFromWorkspace(workspace);
+
+      sinon.assert.match(result.catalog, testEnvironment);
+      sinon.assert.match(result.computePool, undefined);
+    });
+
+    it("should return context with database when provided cluster matches existing compute pool", async function () {
+      const testEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+      });
+
+      // The workspace passes the cluster id matching the existing compute pool,
+      // which is also available in the Flink pools array for that cluster by default
+      const workspace = createMockWorkspace({
+        environment_id: testEnvironment.id,
+        spec: { properties: { "sql-database": TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id } },
+      });
+
+      ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
+      ccloudLoaderStub.getKafkaClustersForEnvironmentId.resolves([
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+      ]);
+
+      const result = await extractMetadataFromWorkspace(workspace);
+
+      sinon.assert.match(result.catalog, testEnvironment);
+      sinon.assert.match(result.database, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+    });
+
+    it("should not set database in context when provided cluster is not associated with any compute pools", async function () {
+      const testEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [],
+      });
+
+      const workspace = createMockWorkspace({
+        environment_id: testEnvironment.id,
+        spec: { properties: { "sql-database": TEST_CCLOUD_KAFKA_CLUSTER.id } },
+      });
+
+      ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
+      // This cluster exists but is not linked to any compute pool
+      ccloudLoaderStub.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
+
+      const result = await extractMetadataFromWorkspace(workspace);
+
+      sinon.assert.match(result.catalog, testEnvironment);
+      sinon.assert.match(result.database, undefined);
+    });
+
+    it("should return full context with catalog, computePool, and database", async function () {
+      const testEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+      });
+
+      const workspace = createMockWorkspace({
+        environment_id: testEnvironment.id,
+        spec: {
+          compute_pool: { id: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID },
+          properties: { "sql-database": TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id },
+        },
+      });
+
+      ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
+      ccloudLoaderStub.getKafkaClustersForEnvironmentId.resolves([
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+      ]);
+
+      const result = await extractMetadataFromWorkspace(workspace);
+
+      sinon.assert.match(result.catalog, testEnvironment);
+      sinon.assert.match(result.computePool, TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      sinon.assert.match(result.database, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+    });
+
+    it("should not fetch kafka clusters when no database ID in properties", async function () {
+      const testEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [],
+      });
+
+      const workspace = createMockWorkspace({
+        environment_id: testEnvironment.id,
+        spec: { properties: { "other-property": "value" } },
+      });
+
+      ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
+
+      await extractMetadataFromWorkspace(workspace);
+
+      sinon.assert.notCalled(ccloudLoaderStub.getKafkaClustersForEnvironmentId);
+    });
+  });
+
   describe("extractSqlStatementsFromWorkspace()", function () {
     it("should return empty array when workspace has no blocks", function () {
-      const workspace = createMockWorkspace(undefined);
+      const workspace = createMockWorkspace({});
 
       const result = extractSqlStatementsFromWorkspace(workspace);
 
@@ -332,7 +520,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should return empty array when blocks is an empty array", function () {
-      const workspace = createMockWorkspace([]);
+      const workspace = createMockWorkspace({ spec: { blocks: [] } });
 
       const result = extractSqlStatementsFromWorkspace(workspace);
 
@@ -340,10 +528,14 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should skip blocks with no code_options", function () {
-      const workspace = createMockWorkspace([
-        { properties: { content: "Some text" } },
-        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } },
-      ]);
+      const workspace = createMockWorkspace({
+        spec: {
+          blocks: [
+            { properties: { content: "Some text" } },
+            { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } },
+          ],
+        },
+      });
 
       const result = extractSqlStatementsFromWorkspace(workspace);
 
@@ -352,10 +544,14 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should skip blocks with empty source array", function () {
-      const workspace = createMockWorkspace([
-        { type: WsV1BlockTypeEnum.Code, code_options: { source: [] } },
-        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 2"] } },
-      ]);
+      const workspace = createMockWorkspace({
+        spec: {
+          blocks: [
+            { type: WsV1BlockTypeEnum.Code, code_options: { source: [] } },
+            { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 2"] } },
+          ],
+        },
+      });
 
       const result = extractSqlStatementsFromWorkspace(workspace);
 
@@ -364,10 +560,14 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should skip blocks with only whitespace content", function () {
-      const workspace = createMockWorkspace([
-        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["   ", "\t", "\n"] } },
-        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } },
-      ]);
+      const workspace = createMockWorkspace({
+        spec: {
+          blocks: [
+            { type: WsV1BlockTypeEnum.Code, code_options: { source: ["   ", "\t", "\n"] } },
+            { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } },
+          ],
+        },
+      });
 
       const result = extractSqlStatementsFromWorkspace(workspace);
 
@@ -376,9 +576,13 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should extract a single SQL statement", function () {
-      const workspace = createMockWorkspace([
-        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT * FROM my_table"] } },
-      ]);
+      const workspace = createMockWorkspace({
+        spec: {
+          blocks: [
+            { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT * FROM my_table"] } },
+          ],
+        },
+      });
 
       const result = extractSqlStatementsFromWorkspace(workspace);
 
@@ -388,14 +592,18 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should join multiline source arrays with newlines", function () {
-      const workspace = createMockWorkspace([
-        {
-          type: WsV1BlockTypeEnum.Code,
-          code_options: {
-            source: ["SELECT *", "FROM my_table", "WHERE id = 1"],
-          },
+      const workspace = createMockWorkspace({
+        spec: {
+          blocks: [
+            {
+              type: WsV1BlockTypeEnum.Code,
+              code_options: {
+                source: ["SELECT *", "FROM my_table", "WHERE id = 1"],
+              },
+            },
+          ],
         },
-      ]);
+      });
 
       const result = extractSqlStatementsFromWorkspace(workspace);
 
@@ -404,11 +612,15 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should extract multiple SQL statements from multiple blocks", function () {
-      const workspace = createMockWorkspace([
-        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } },
-        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 2"] } },
-        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 3"] } },
-      ]);
+      const workspace = createMockWorkspace({
+        spec: {
+          blocks: [
+            { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } },
+            { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 2"] } },
+            { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 3"] } },
+          ],
+        },
+      });
 
       const result = extractSqlStatementsFromWorkspace(workspace);
 
@@ -419,13 +631,17 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should include description from block properties", function () {
-      const workspace = createMockWorkspace([
-        {
-          type: WsV1BlockTypeEnum.Code,
-          code_options: { source: ["SELECT * FROM orders"] },
-          properties: { description: "Query all orders" },
+      const workspace = createMockWorkspace({
+        spec: {
+          blocks: [
+            {
+              type: WsV1BlockTypeEnum.Code,
+              code_options: { source: ["SELECT * FROM orders"] },
+              properties: { description: "Query all orders" },
+            },
+          ],
         },
-      ]);
+      });
 
       const result = extractSqlStatementsFromWorkspace(workspace);
 
@@ -435,22 +651,26 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should handle blocks with and without descriptions", function () {
-      const workspace = createMockWorkspace([
-        {
-          type: WsV1BlockTypeEnum.Code,
-          code_options: { source: ["SELECT 1"] },
-          properties: { description: "First query" },
+      const workspace = createMockWorkspace({
+        spec: {
+          blocks: [
+            {
+              type: WsV1BlockTypeEnum.Code,
+              code_options: { source: ["SELECT 1"] },
+              properties: { description: "First query" },
+            },
+            {
+              type: WsV1BlockTypeEnum.Code,
+              code_options: { source: ["SELECT 2"] },
+            },
+            {
+              type: WsV1BlockTypeEnum.Code,
+              code_options: { source: ["SELECT 3"] },
+              properties: { description: "Third query" },
+            },
+          ],
         },
-        {
-          type: WsV1BlockTypeEnum.Code,
-          code_options: { source: ["SELECT 2"] },
-        },
-        {
-          type: WsV1BlockTypeEnum.Code,
-          code_options: { source: ["SELECT 3"] },
-          properties: { description: "Third query" },
-        },
-      ]);
+      });
 
       const result = extractSqlStatementsFromWorkspace(workspace);
 
@@ -461,12 +681,16 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should handle mixed block types (skip non-code blocks without source)", function () {
-      const workspace = createMockWorkspace([
-        { properties: { content: "Some markdown text" } },
-        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } },
-        { properties: {} },
-        { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 2"] } },
-      ]);
+      const workspace = createMockWorkspace({
+        spec: {
+          blocks: [
+            { properties: { content: "Some markdown text" } },
+            { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } },
+            { properties: {} },
+            { type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 2"] } },
+          ],
+        },
+      });
 
       const result = extractSqlStatementsFromWorkspace(workspace);
 
@@ -476,14 +700,18 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     });
 
     it("should preserve whitespace within SQL statements", function () {
-      const workspace = createMockWorkspace([
-        {
-          type: WsV1BlockTypeEnum.Code,
-          code_options: {
-            source: ["SELECT", "    column1,", "    column2", "FROM table1"],
-          },
+      const workspace = createMockWorkspace({
+        spec: {
+          blocks: [
+            {
+              type: WsV1BlockTypeEnum.Code,
+              code_options: {
+                source: ["SELECT", "    column1,", "    column2", "FROM table1"],
+              },
+            },
+          ],
         },
-      ]);
+      });
 
       const result = extractSqlStatementsFromWorkspace(workspace);
 
