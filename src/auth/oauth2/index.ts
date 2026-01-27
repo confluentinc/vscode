@@ -68,3 +68,6 @@ export {
   type ControlPlaneExchangeOptions,
   type DataPlaneExchangeOptions,
 } from "./tokenExchange";
+
+// Callback Server
+export { OAuthCallbackServer, type CallbackHandler } from "./callbackServer";
