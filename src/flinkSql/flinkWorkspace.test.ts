@@ -864,6 +864,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         workspaceName: "my workspace with spaces",
       });
       // createUri encodes the parameters, so we verify that here
+      // might need to expand the function for + vs %20 checks
       assert.ok(uri.query.includes("my+workspace+with+spaces"), uri.query);
 
       const result = extractWorkspaceParamsFromUri(uri);
