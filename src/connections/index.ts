@@ -79,3 +79,11 @@ export {
   type ConnectionStatusChangeEvent,
   type ConnectionTestResult,
 } from "./handlers";
+
+// Manager
+export {
+  ConnectionManager,
+  type ConnectionCreatedEvent,
+  type ConnectionDeletedEvent,
+  type ConnectionUpdatedEvent,
+} from "./connectionManager";
