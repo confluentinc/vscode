@@ -69,3 +69,10 @@ export {
   ConnectionStorage,
   type ConnectionsById,
 } from "./storage";
+
+// Handlers
+export {
+  ConnectionHandler,
+  type ConnectionStatusChangeEvent,
+  type ConnectionTestResult,
+} from "./handlers";
