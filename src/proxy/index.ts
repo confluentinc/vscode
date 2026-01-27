@@ -67,3 +67,23 @@ export {
   type ListResourcesOptions,
   type ListSchemaRegistriesOptions,
 } from "./ccloudControlPlaneProxy";
+
+// CCloud Data Plane API Proxy (Flink)
+export {
+  CCloudDataPlaneProxy,
+  createCCloudDataPlaneProxy,
+  type CCloudDataPlaneProxyConfig,
+  type CreateStatementOptions,
+  type CreateWorkspaceOptions,
+  type FlinkListResponse,
+  type FlinkStatement,
+  type FlinkStatementException,
+  type FlinkStatementMetadata,
+  type FlinkStatementResult,
+  type FlinkStatementSpec,
+  type FlinkStatementStatus,
+  type FlinkWorkspace,
+  type FlinkWorkspaceSpec,
+  type ListStatementsOptions,
+  type ListWorkspacesOptions,
+} from "./ccloudDataPlaneProxy";
