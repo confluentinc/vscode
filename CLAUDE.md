@@ -161,6 +161,9 @@ generates `src/graphql/sidecarGraphQL.d.ts` (auto-generated, do not edit).
 - Require Docker for local Kafka/SR instances
 - Do not include conditionals within E2E tests to manage tests dimensions, as it violates ESLint
   rules. Instead, use test tags and filtering at runtime.
+- Do not test side effects, such as log file contents, within E2E tests.
+- Make sure to set up any common stubs in the top-level describe block to ensure they apply to all
+  tests.
 
 ## Critical Requirements
 
