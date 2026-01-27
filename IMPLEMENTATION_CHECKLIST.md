@@ -1,6 +1,7 @@
 # Sidecar Removal - Implementation Checklist
 
-This checklist tracks all implementation tasks for the sidecar removal migration. Update task status as work progresses.
+This checklist tracks all implementation tasks for the sidecar removal migration. Update task status
+as work progresses.
 
 **Legend**: `[ ]` Not started | `[~]` In progress | `[x]` Complete | `[-]` Blocked/Deferred
 
@@ -11,6 +12,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 **Goal**: Create base infrastructure for internal connection management
 
 ### 1.1 Connection State Types
+
 - [x] Create `src/connections/types.ts` (renamed from connectionState.ts for clarity)
   - [x] Define `ConnectionType` enum (CCLOUD, LOCAL, DIRECT)
   - [x] Define `ConnectedState` enum (NONE, ATTEMPTING, SUCCESS, EXPIRED, FAILED)
@@ -28,21 +30,26 @@ This checklist tracks all implementation tasks for the sidecar removal migration
   - [x] Define `ScramCredentials` interface
   - [x] Define `MtlsCredentials` interface
   - [x] Define `KerberosCredentials` interface
-- [x] Write unit tests for type validation (47 tests in types.test.ts, credentials.test.ts, spec.test.ts)
+- [x] Write unit tests for type validation (47 tests in types.test.ts, credentials.test.ts,
+      spec.test.ts)
 
 ### 1.2 Connection Storage
+
 - [x] Create `src/connections/storage.ts` (renamed from connectionStorage.ts for consistency)
   - [x] Implement `ConnectionStorage` class
   - [x] Use VS Code `SecretStorage` for sensitive data (tokens, passwords)
-  - [-] Use VS Code `Memento` for non-sensitive connection specs (deferred - using SecretStorage for all connection data since specs may contain credentials)
+  - [-] Use VS Code `Memento` for non-sensitive connection specs (deferred - using SecretStorage for
+    all connection data since specs may contain credentials)
   - [x] Implement `saveConnection(spec: ConnectionSpec)` method
   - [x] Implement `getConnection(id: string)` method
   - [x] Implement `getAllConnections()` method
   - [x] Implement `deleteConnection(id: string)` method
-  - [-] Implement migration from existing sidecar storage format (not needed - sidecar stores in memory only, no persistent data to migrate)
+  - [-] Implement migration from existing sidecar storage format (not needed - sidecar stores in
+    memory only, no persistent data to migrate)
 - [x] Write unit tests for ConnectionStorage (23 tests in storage.test.ts)
 
 ### 1.3 Connection Handler Base
+
 - [x] Create `src/connections/handlers/connectionHandler.ts`
   - [x] Define abstract `ConnectionHandler` class
   - [x] Extend `DisposableCollection`
@@ -59,6 +66,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for ConnectionHandler base (20 tests)
 
 ### 1.4 Connection Type Handlers
+
 - [x] Create `src/connections/handlers/directConnectionHandler.ts`
   - [x] Implement `DirectConnectionHandler` class
   - [x] Support all credential types (Basic, API Key, SCRAM, OAuth, mTLS, Kerberos)
@@ -81,12 +89,14 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [-] Organization/environment/cluster discovery (deferred to Phase 4 - Resource Fetcher Layer)
 
 ### 1.5 Connection Events
+
 - [-] Create `src/connections/connectionEvents.ts` (integrated into ConnectionManager instead)
   - [x] Event emitters for: created, updated, deleted, status changed (via ConnectionManager)
   - [x] Typed event handlers (ConnectionCreatedEvent, ConnectionUpdatedEvent, etc.)
   - [x] Status change forwarding from handlers
 
 ### 1.6 Connection Manager
+
 - [x] Create `src/connections/connectionManager.ts`
   - [x] Implement `ConnectionManager` singleton
   - [x] Extend `DisposableCollection`
@@ -104,12 +114,15 @@ This checklist tracks all implementation tasks for the sidecar removal migration
   - [x] Wire up ConnectionStorage
   - [x] Event emitters integrated (created, updated, deleted, statusChanged)
 - [x] Write unit tests for ConnectionManager (37 tests)
-- [-] Integration tests comparing behavior to sidecar (deferred to Phase 6 - will validate during cleanup)
+- [-] Integration tests comparing behavior to sidecar (deferred to Phase 6 - will validate during
+  cleanup)
 
 ### 1.7 Feature Flag Integration
+
 - [-] Feature flag integration deferred to Phase 3/4 when HTTP proxy and resource fetchers are ready
 - [-] The flag will toggle between sidecar-based and internal connection management paths
-- [-] Current Phase 1 implementation provides foundation; actual switching requires Phase 2-4 completion
+- [-] Current Phase 1 implementation provides foundation; actual switching requires Phase 2-4
+  completion
 
 ---
 
@@ -118,6 +131,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 **Goal**: Implement OAuth2 PKCE flow and credential handling internally
 
 ### 2.1 OAuth Types and Configuration
+
 - [x] Create `src/auth/oauth2/types.ts`
   - [x] Define `OAuthTokens` interface (id_token, access_token, refresh_token, expires_at)
   - [x] Define `PKCEParams` interface (code_verifier, code_challenge, state)
@@ -133,6 +147,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests (13 tests in types.test.ts, config.test.ts)
 
 ### 2.2 PKCE Implementation
+
 - [x] Create `src/auth/oauth2/pkce.ts`
   - [x] Implement `generateCodeVerifier()` function (cryptographically random)
   - [x] Implement `generateCodeChallenge(verifier: string)` function (SHA-256, base64url)
@@ -142,6 +157,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for PKCE functions (12 tests)
 
 ### 2.3 Token Manager
+
 - [x] Create `src/auth/oauth2/tokenManager.ts`
   - [x] Implement `TokenManager` class
   - [x] Extend `DisposableCollection`
@@ -157,6 +173,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for TokenManager (34 tests)
 
 ### 2.4 Token Exchange
+
 - [x] Create `src/auth/oauth2/tokenExchange.ts`
   - [x] Implement `exchangeCodeForTokens(code, verifier, redirectUri)` function
   - [x] Implement `refreshAccessToken(refreshToken)` function
@@ -165,6 +182,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for token exchange functions (17 tests)
 
 ### 2.5 OAuth Callback Server (Fallback)
+
 - [x] Create `src/auth/oauth2/callbackServer.ts`
   - [x] Implement `OAuthCallbackServer` class
   - [x] Implement `vscode.Disposable`
@@ -179,6 +197,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for OAuthCallbackServer (15 tests)
 
 ### 2.6 VS Code URI Handler
+
 - [x] Create `src/auth/oauth2/uriHandler.ts`
   - [x] Implement `OAuthUriHandler` class
   - [x] Implement `vscode.UriHandler` interface
@@ -190,6 +209,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for OAuthUriHandler (12 tests)
 
 ### 2.7 Auth Service
+
 - [x] Create `src/auth/oauth2/authService.ts`
   - [x] Implement `AuthService` class (singleton)
   - [x] Extend `DisposableCollection`
@@ -204,6 +224,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [-] Write integration tests for full OAuth flow (deferred to integration phase)
 
 ### 2.8 Credential Handlers
+
 - [x] Create `src/auth/credentials/credentialResolver.ts`
   - [x] Implement `resolveCredentials(credentials: Credentials)` function
   - [x] Return appropriate headers/config for each credential type
@@ -222,6 +243,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for credential handlers (44 tests)
 
 ### 2.9 CCloud Provider Refactor
+
 - [-] Modify `src/authn/ccloudProvider.ts` (deferred to Phase 6 - cleanup phase)
   - [-] Add feature flag check for internal OAuth
   - [-] Integrate with AuthService when flag enabled
@@ -229,11 +251,13 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [-] Write tests comparing internal vs sidecar OAuth behavior (deferred)
 
 ### 2.10 Feature Flag Integration
+
 - [-] Feature flag integration deferred to Phase 6
 - [-] Will toggle between sidecar-based and internal OAuth paths
 - [-] Current Phase 2 implementation provides the internal OAuth foundation
 
-**Phase 2 Test Summary**: 175 tests total (types: 13, pkce: 12, tokenManager: 34, tokenExchange: 17, callbackServer: 15, uriHandler: 12, authService: 28, credentials: 44)
+**Phase 2 Test Summary**: 175 tests total (types: 13, pkce: 12, tokenManager: 34, tokenExchange: 17,
+callbackServer: 15, uriHandler: 12, authService: 28, credentials: 44)
 
 ---
 
@@ -242,6 +266,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 **Goal**: Replace sidecar's request proxying with direct HTTP calls
 
 ### 3.1 HTTP Client Foundation
+
 - [x] Create `src/proxy/httpClient.ts`
   - [x] Implement `HttpClient` class with createHttpClient factory
   - [x] Use fetch API (web-compatible)
@@ -258,6 +283,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for HttpClient (33 tests)
 
 ### 3.2 Kafka REST Proxy
+
 - [x] Create `src/proxy/kafkaRestProxy.ts`
   - [x] Implement `KafkaRestProxy` class
   - [x] Implement topics list endpoint (`/kafka/v3/clusters/{id}/topics`)
@@ -271,6 +297,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for KafkaRestProxy (27 tests)
 
 ### 3.3 Schema Registry Proxy
+
 - [x] Create `src/proxy/schemaRegistryProxy.ts`
   - [x] Implement `SchemaRegistryProxy` class
   - [x] Implement subjects list endpoint (`/subjects`)
@@ -287,6 +314,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for SchemaRegistryProxy (38 tests)
 
 ### 3.4 CCloud Control Plane Proxy
+
 - [x] Create `src/proxy/ccloudControlPlaneProxy.ts`
   - [x] Implement `CCloudControlPlaneProxy` class
   - [x] Base URL: `https://api.confluent.cloud`
@@ -297,10 +325,11 @@ This checklist tracks all implementation tasks for the sidecar removal migration
   - [x] Implement Schema Registry endpoint (`/api/srcm/v3/clusters`)
   - [x] Implement Flink compute pools endpoint (`/api/fcpm/v2/compute-pools`)
   - [x] Handle pagination with fetchAllPages helper
-  - [x] Implement fetchAll* methods for each resource type
+  - [x] Implement fetchAll\* methods for each resource type
 - [x] Write unit tests for CCloudControlPlaneProxy (24 tests)
 
 ### 3.5 CCloud Data Plane Proxy (Flink)
+
 - [x] Create `src/proxy/ccloudDataPlaneProxy.ts`
   - [x] Implement `CCloudDataPlaneProxy` class
   - [x] Flink statements CRUD (`/sql/v1/.../statements`)
@@ -313,6 +342,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for CCloudDataPlaneProxy (26 tests)
 
 ### 3.6 Module Exports
+
 - [x] Create `src/proxy/index.ts`
   - [x] Export HttpClient, HttpError, TimeoutError, and types
   - [x] Export KafkaRestProxy and types
@@ -321,15 +351,18 @@ This checklist tracks all implementation tasks for the sidecar removal migration
   - [x] Export CCloudDataPlaneProxy and types
 
 ### 3.7 TLS Configuration
+
 - [-] TLS configuration deferred - mTLS handled via Node.js agent options when needed
 - [-] Basic TLS (HTTPS) works out of the box with fetch API
 
 ### 3.8 Feature Flag Integration
+
 - [-] Feature flag integration deferred to Phase 6
 - [-] Will toggle between sidecar-based and internal proxy paths
 - [-] Current Phase 3 implementation provides the internal proxy foundation
 
-**Phase 3 Test Summary**: 148 tests total (httpClient: 33, kafkaRestProxy: 27, schemaRegistryProxy: 38, ccloudControlPlaneProxy: 24, ccloudDataPlaneProxy: 26)
+**Phase 3 Test Summary**: 148 tests total (httpClient: 33, kafkaRestProxy: 27, schemaRegistryProxy:
+38, ccloudControlPlaneProxy: 24, ccloudDataPlaneProxy: 26)
 
 ---
 
@@ -338,6 +371,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 **Goal**: Replace GraphQL queries with direct REST API calls
 
 ### 4.1 Resource Fetcher Types
+
 - [x] Create `src/fetchers/types.ts`
   - [x] Define `TopicData` interface for topic information
   - [x] Define `TopicFetcher` interface with `fetchTopics()` method
@@ -347,6 +381,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for types (6 tests)
 
 ### 4.2 Topic Fetcher
+
 - [x] Create `src/fetchers/topicFetcher.ts`
   - [x] Implement `TopicFetcherImpl` class using KafkaRestProxy
   - [x] Implement `fetchTopics(cluster)` method
@@ -357,6 +392,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for TopicFetcher (9 tests)
 
 ### 4.3 Schema Fetcher
+
 - [x] Create `src/fetchers/schemaFetcher.ts`
   - [x] Implement `SchemaFetcherImpl` class using SchemaRegistryProxy
   - [x] Implement `fetchSubjects(schemaRegistry)` method
@@ -369,6 +405,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for SchemaFetcher (18 tests)
 
 ### 4.4 CCloud Resource Fetcher
+
 - [x] Create `src/fetchers/ccloudResourceFetcher.ts`
   - [x] Implement `CCloudResourceFetcherImpl` class using CCloudControlPlaneProxy
   - [x] Implement `fetchEnvironments()` method with nested resources
@@ -381,12 +418,15 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for CCloudResourceFetcher (14 tests)
 
 ### 4.5 Module Exports
+
 - [x] Create `src/fetchers/index.ts`
   - [x] Export all fetcher types and interfaces
-  - [x] Export factory functions (createTopicFetcher, createSchemaFetcher, createCCloudResourceFetcher)
+  - [x] Export factory functions (createTopicFetcher, createSchemaFetcher,
+        createCCloudResourceFetcher)
   - [x] Export error classes
 
 ### 4.6 Local Resource Fetcher
+
 - [x] Create `src/fetchers/localResourceFetcher.ts`
   - [x] Implement `LocalResourceFetcher` class
   - [x] Implement Docker API integration via existing `docker/containers.ts`
@@ -398,6 +438,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for LocalResourceFetcher (14 tests)
 
 ### 4.7 Direct Resource Fetcher
+
 - [x] Create `src/fetchers/directResourceFetcher.ts`
   - [x] Implement `DirectResourceFetcher` class
   - [x] Build DirectEnvironment from connection specs
@@ -406,6 +447,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for DirectResourceFetcher (12 tests)
 
 ### 4.8 Loader Integration
+
 - [-] Modify `src/loaders/cachingResourceLoader.ts` (not needed - integration at subclass level)
   - [-] Add feature flag check for internal fetchers
   - [-] Replace `getEnvironmentsFromGraphQL()` with fetcher call
@@ -425,41 +467,62 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [-] Write integration tests comparing GraphQL vs fetcher results (deferred to end-to-end testing)
 
 ### 4.9 Feature Flag Integration
-- [-] Add `migration.useInternalFetchers` setting to `package.json` (hidden setting, not in package.json)
+
+- [-] Add `migration.useInternalFetchers` setting to `package.json` (hidden setting, not in
+  package.json)
 - [x] Add setting to `src/extensionSettings/constants.ts`
   - [x] Added `USE_INTERNAL_FETCHERS` as hidden `Setting<boolean>` type
   - [x] Key: `confluent.migration.useInternalFetchers`
   - [x] Default: false (use sidecar GraphQL)
 
-**Phase 4 Test Summary**: 73 tests total (types: 6, topicFetcher: 9, schemaFetcher: 18, ccloudResourceFetcher: 14, localResourceFetcher: 14, directResourceFetcher: 12)
+**Phase 4 Test Summary**: 73 tests total (types: 6, topicFetcher: 9, schemaFetcher: 18,
+ccloudResourceFetcher: 14, localResourceFetcher: 14, directResourceFetcher: 12)
 
 ---
 
-## Phase 5: WebSocket Layer
+## Phase 5: Flink Language Service Direct WebSocket
 
-**Goal**: Replace sidecar WebSocket with direct connections or event emitters
+**Goal**: Connect directly to CCloud Flink LSP instead of proxying through sidecar
 
-### 5.1 Event Router
-- [ ] Create `src/websocket/eventRouter.ts`
-  - [ ] Implement `EventRouter` class
-  - [ ] Replace WebSocket-based events with internal EventEmitter
-  - [ ] Route connection state changes
-  - [ ] Route resource update notifications
+### 5.1 Flink LSP Direct Client
 
-### 5.2 CCloud WebSocket (if needed)
-- [ ] Evaluate if direct CCloud WebSocket is required
-- [ ] Create `src/websocket/ccloudWebsocket.ts` (if needed)
-  - [ ] Implement direct WebSocket connection to CCloud
-  - [ ] Handle reconnection logic
-  - [ ] Parse and route messages
+- [x] Create `src/flinkSql/privateEndpointResolver.ts`
+  - [x] Implement PLATTC format support (flink.{region}.{provider}.private.confluent.cloud)
+  - [x] Implement CCN Domain format support (flink.{domainId}.{region}.{provider}.confluent.cloud)
+  - [x] Implement CCN GLB format support (flink-{networkId}.{region}.{provider}.glb.confluent.cloud)
+  - [x] Implement CCN Peering format support (flink-{peeringId}.{region}.{provider}.confluent.cloud)
+  - [x] Implement `buildFlinkLspUrl()` function with private endpoint detection
+  - [x] Implement `resolvePrivateEndpoint()` function for URL transformation
+- [x] Create `src/flinkSql/flinkLspAuth.ts`
+  - [x] Define `FlinkLspAuthMessage` interface
+  - [x] Implement `sendAuthMessage()` function for WebSocket auth
+  - [x] Implement `replaceTokenPlaceholder()` for LSP message token injection
+  - [x] Implement `createTokenReplacer()` for message interception
+- [x] Create `src/flinkSql/flinkLanguageServiceClient.ts`
+  - [x] Implement `FlinkLanguageServiceClient` interface
+  - [x] Implement `FlinkLspClient` class with connection lifecycle
+  - [x] Implement `connect()` method with auth message sending
+  - [x] Implement connection state management
+  - [x] Implement Disposable pattern
+- [x] Write unit tests (privateEndpointResolver: 23 tests, flinkLspAuth: 14 tests, flinkLanguageServiceClient: 17 tests)
 
-### 5.3 Flink Language Service
-- [ ] Create `src/websocket/flinkLanguageService.ts`
-  - [ ] Implement `FlinkLanguageServiceProxy` class
-  - [ ] Establish direct WebSocket to CCloud data plane
-  - [ ] Handle LSP message routing
-  - [ ] Implement reconnection logic
-- [ ] Write unit tests for FlinkLanguageServiceProxy
+### 5.2 FlinkLanguageClientManager Integration
+
+- [x] Modify `src/flinkSql/flinkLanguageClientManager.ts`
+  - [x] Check `USE_INTERNAL_FETCHERS` flag in `buildFlinkSqlWebSocketUrl()`
+  - [x] Use direct CCloud URL when flag enabled
+  - [x] Use sidecar URL when flag disabled
+  - [x] Modify `initializeLanguageClient()` for dual connection modes
+  - [x] For direct mode: send auth message after WebSocket opens
+  - [x] For sidecar mode: wait for "OK" message (existing behavior)
+  - [x] Get data plane token from TokenManager for direct mode
+- [x] Existing tests pass (79 tests)
+
+### Note: Connection Events
+
+Connection state event wiring (ConnectionManager → existing emitters in `src/emitters.ts`) will be
+handled in Phase 6 cleanup, not Phase 5. The internal ConnectionManager from Phase 1 already has
+EventEmitters that can be wired to existing emitters.
 
 ---
 
@@ -468,6 +531,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 **Goal**: Remove all sidecar-related code
 
 ### 6.1 Extension Activation Update
+
 - [ ] Modify `src/extension.ts`
   - [ ] Remove sidecar initialization code
   - [ ] Initialize ConnectionManager instead
@@ -476,6 +540,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
   - [ ] Update disposal handling
 
 ### 6.2 Sidecar Code Removal
+
 - [ ] Remove `src/sidecar/sidecarManager.ts`
 - [ ] Remove `src/sidecar/sidecarHandle.ts`
 - [ ] Remove `src/sidecar/websocketManager.ts`
@@ -483,6 +548,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [ ] Remove any other sidecar-related files
 
 ### 6.3 GraphQL Removal
+
 - [ ] Remove `src/graphql/sidecar.graphql`
 - [ ] Remove `src/graphql/ccloud.ts`
 - [ ] Remove `src/graphql/local.ts`
@@ -491,17 +557,20 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [ ] Remove gql.tada dependencies (if no longer needed)
 
 ### 6.4 Build Process Update
+
 - [ ] Remove sidecar binary from resources
 - [ ] Update `gulpfile.js` to remove sidecar packaging
 - [ ] Update `.vscodeignore` if needed
 - [ ] Update `package.json` scripts
 
 ### 6.5 Feature Flag Cleanup
+
 - [ ] Remove all `migration.*` feature flags
 - [ ] Remove adapter functions
 - [ ] Remove conditional code paths
 
 ### 6.6 Documentation Update
+
 - [ ] Update README.md
 - [ ] Update CLAUDE.md to remove sidecar references
 - [ ] Archive or remove SIDECAR_REMOVAL_REFACTOR.md
@@ -512,21 +581,24 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 ## Testing Milestones
 
 ### Unit Test Coverage
+
 - [x] Phase 1: Connection management tests passing (215 tests)
 - [x] Phase 2: Authentication tests passing (175 tests)
 - [x] Phase 3: Proxy layer tests passing (148 tests)
 - [x] Phase 4: Resource fetcher tests passing (73 tests)
-- [ ] Phase 5: WebSocket layer tests passing
+- [x] Phase 5: Flink LSP direct connection tests passing (54 tests)
 - [ ] Overall coverage target: 80%+
-- **Total tests so far: 611 tests**
+- **Total tests so far: 665 tests**
 
 ### Integration Testing
+
 - [ ] CCloud connection flow works end-to-end
 - [ ] Local Docker connection flow works end-to-end
 - [ ] Direct connection flow works end-to-end
 - [ ] Parallel path validation passes (sidecar vs internal)
 
 ### E2E Testing
+
 - [ ] All existing E2E tests pass with internal implementation
 - [ ] OAuth flow works on desktop
 - [ ] OAuth flow works on web (when URI handler enabled in Auth0)
@@ -535,6 +607,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [ ] Flink SQL execution works
 
 ### Platform Testing
+
 - [ ] macOS desktop verified
 - [ ] Windows desktop verified
 - [ ] Linux desktop verified
@@ -547,12 +620,14 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 ## External Dependencies
 
 ### Auth0 Configuration
+
 - [ ] Request Auth0 config update to add VS Code URI scheme
 - [ ] Test VS Code URI handler in production
 - [ ] Request Auth0 config to remove static port callback
 - [ ] Remove local HTTP server fallback code
 
 ### Documentation
+
 - [ ] Document new architecture for team
 - [ ] Update troubleshooting guides
 - [ ] Update contribution guidelines
@@ -563,7 +638,8 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 
 _Add implementation notes, blockers, or decisions here as work progresses._
 
-### Branch Stack (Phases 1-4 Complete)
+### Branch Stack (Phases 1-5 Complete)
+
 ```
 djs/vscode-lite
 └── phase-1/connection-state-types - Core types, credentials, specs
@@ -587,10 +663,12 @@ djs/vscode-lite
                                                                         └── phase-3/ccloud-data-plane-proxy - Flink API proxy
                                                                             └── phase-4/resource-fetchers - Topic, schema, CCloud fetchers
                                                                                 └── phase-4/local-direct-fetchers - Local & direct fetchers
-                                                                                    └── phase-4/loader-integration - Loader integration ← current
+                                                                                    └── phase-4/loader-integration - Loader integration
+                                                                                        └── phase-5/event-router - Flink LSP direct WebSocket ← current
 ```
 
 ### Test Summary (Phase 1)
+
 - types.test.ts: 16 tests
 - credentials.test.ts: 19 tests
 - spec.test.ts: 12 tests
@@ -603,6 +681,7 @@ djs/vscode-lite
 - **Total Phase 1 tests: 215 tests**
 
 ### Test Summary (Phase 2)
+
 - types.test.ts: 7 tests
 - config.test.ts: 6 tests
 - pkce.test.ts: 12 tests
@@ -620,6 +699,7 @@ djs/vscode-lite
 - **Total Phase 2 tests: 175 tests**
 
 ### Test Summary (Phase 3)
+
 - httpClient.test.ts: 33 tests
 - kafkaRestProxy.test.ts: 27 tests
 - schemaRegistryProxy.test.ts: 38 tests
@@ -628,6 +708,7 @@ djs/vscode-lite
 - **Total Phase 3 tests: 148 tests**
 
 ### Test Summary (Phase 4)
+
 - types.test.ts: 6 tests
 - topicFetcher.test.ts: 9 tests
 - schemaFetcher.test.ts: 18 tests
@@ -636,22 +717,40 @@ djs/vscode-lite
 - directResourceFetcher.test.ts: 12 tests
 - **Total Phase 4 tests: 73 tests**
 
+### Test Summary (Phase 5)
+
+- privateEndpointResolver.test.ts: 23 tests
+- flinkLspAuth.test.ts: 14 tests
+- flinkLanguageServiceClient.test.ts: 17 tests
+- **Total Phase 5 tests: 54 tests**
+
 ### Cumulative Test Count
+
 - Phase 1: 215 tests
 - Phase 2: 175 tests
 - Phase 3: 148 tests
 - Phase 4: 73 tests
-- **Total: 611 tests**
+- Phase 5: 54 tests
+- **Total: 665 tests**
 
 ### Decisions Made
-- **File naming**: Using shorter names (`types.ts`, `spec.ts`, `storage.ts`) instead of longer names (`connectionState.ts`, `connectionStorage.ts`) for consistency and brevity
-- **Storage strategy**: Using SecretStorage for all connection data (not just credentials) because ConnectionSpec objects may contain embedded credentials. This simplifies the implementation and ensures all sensitive data is secured.
-- **No migration needed**: Sidecar stores connection data in memory only - it's lost when the process exits. No persistent data migration is required.
-- **Type guards**: Added helper functions (`isConnectedStateUsable`, `isCredentialType`, etc.) for type-safe state checking
-- **Branded types**: Using branded `ConnectionId` type (`string & { readonly __brand: "ConnectionId" }`) for type safety
+
+- **File naming**: Using shorter names (`types.ts`, `spec.ts`, `storage.ts`) instead of longer names
+  (`connectionState.ts`, `connectionStorage.ts`) for consistency and brevity
+- **Storage strategy**: Using SecretStorage for all connection data (not just credentials) because
+  ConnectionSpec objects may contain embedded credentials. This simplifies the implementation and
+  ensures all sensitive data is secured.
+- **No migration needed**: Sidecar stores connection data in memory only - it's lost when the
+  process exits. No persistent data migration is required.
+- **Type guards**: Added helper functions (`isConnectedStateUsable`, `isCredentialType`, etc.) for
+  type-safe state checking
+- **Branded types**: Using branded `ConnectionId` type
+  (`string & { readonly __brand: "ConnectionId" }`) for type safety
 
 ### Blockers
+
 - None currently
 
 ### Open Questions
+
 - None currently
