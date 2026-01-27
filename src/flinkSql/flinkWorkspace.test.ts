@@ -1,3 +1,4 @@
+import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
@@ -24,6 +25,8 @@ import type { ExtractedSqlStatement, WorkspaceMetadataContext } from "./flinkWor
 import {
   extractMetadataFromWorkspace,
   extractSqlStatementsFromWorkspace,
+  extractWorkspaceParamsFromUri,
+  FlinkWorkspaceUriError,
   openSqlStatementsAsDocuments,
   selectSqlStatementsForOpening,
 } from "./flinkWorkspace";
@@ -67,6 +70,19 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       getText: () => content,
     } as vscode.TextDocument;
   }
+
+  function createUri(queryParams: Record<string, string>): vscode.Uri {
+    const query = new URLSearchParams(queryParams).toString();
+    return vscode.Uri.parse(`vscode://confluent.vscode-confluent/flinkWorkspace?${query}`);
+  }
+
+  const validParams = {
+    environmentId: "env-123",
+    organizationId: "org-456",
+    workspaceName: "my-workspace",
+    provider: "aws",
+    region: "us-east-1",
+  };
 
   describe("openSqlStatementsAsDocuments()", function () {
     let openTextDocumentStub: sinon.SinonStub;
@@ -717,6 +733,141 @@ describe("flinkSql/flinkWorkspace.ts", function () {
 
       sinon.assert.match(result.length, 1);
       sinon.assert.match(result[0].statement, "SELECT\n    column1,\n    column2\nFROM table1");
+    });
+  });
+
+  describe("extractWorkspaceParamsFromUri()", function () {
+    it("should extract all parameters from a valid URI", function () {
+      const uri = createUri(validParams);
+
+      const result = extractWorkspaceParamsFromUri(uri);
+
+      assert.strictEqual(result.environmentId, validParams.environmentId);
+      assert.strictEqual(result.organizationId, validParams.organizationId);
+      assert.strictEqual(result.workspaceName, validParams.workspaceName);
+      assert.strictEqual(result.provider, validParams.provider);
+      assert.strictEqual(result.region, validParams.region);
+    });
+
+    it("should throw FlinkWorkspaceUriError when environmentId is missing", function () {
+      const uri = createUri({
+        organizationId: validParams.organizationId,
+        workspaceName: validParams.workspaceName,
+        provider: validParams.provider,
+        region: validParams.region,
+      });
+
+      assert.throws(() => extractWorkspaceParamsFromUri(uri), FlinkWorkspaceUriError);
+    });
+
+    it("should throw FlinkWorkspaceUriError when organizationId is missing", function () {
+      const uri = createUri({
+        environmentId: validParams.environmentId,
+        workspaceName: validParams.workspaceName,
+        provider: validParams.provider,
+        region: validParams.region,
+      });
+
+      assert.throws(() => extractWorkspaceParamsFromUri(uri), FlinkWorkspaceUriError);
+    });
+
+    it("should throw FlinkWorkspaceUriError when workspaceName is missing", function () {
+      const uri = createUri({
+        environmentId: validParams.environmentId,
+        organizationId: validParams.organizationId,
+        provider: validParams.provider,
+        region: validParams.region,
+      });
+
+      assert.throws(() => extractWorkspaceParamsFromUri(uri), FlinkWorkspaceUriError);
+    });
+
+    it("should throw FlinkWorkspaceUriError when provider is missing", function () {
+      const uri = createUri({
+        environmentId: validParams.environmentId,
+        organizationId: validParams.organizationId,
+        workspaceName: validParams.workspaceName,
+        region: validParams.region,
+      });
+
+      assert.throws(() => extractWorkspaceParamsFromUri(uri), FlinkWorkspaceUriError);
+    });
+
+    it("should throw FlinkWorkspaceUriError when region is missing", function () {
+      const uri = createUri({
+        environmentId: validParams.environmentId,
+        organizationId: validParams.organizationId,
+        workspaceName: validParams.workspaceName,
+        provider: validParams.provider,
+      });
+
+      assert.throws(() => extractWorkspaceParamsFromUri(uri), FlinkWorkspaceUriError);
+    });
+
+    it("should include all missing params in error when multiple are missing", function () {
+      const uri = createUri({
+        workspaceName: "my-workspace",
+      });
+
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        new FlinkWorkspaceUriError(["environmentId", "organizationId", "provider", "region"]),
+      );
+    });
+
+    it("should include all five params in error when none are provided", function () {
+      const uri = createUri({});
+
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        new FlinkWorkspaceUriError([
+          "environmentId",
+          "organizationId",
+          "provider",
+          "region",
+          "workspaceName",
+        ]),
+      );
+    });
+
+    it("should treat empty string values as missing", function () {
+      const uri = createUri({
+        ...validParams,
+        environmentId: "",
+      });
+
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        new FlinkWorkspaceUriError(["environmentId"]),
+      );
+    });
+
+    it("should ignore extra parameters in the URI", function () {
+      const uri = createUri({
+        ...validParams,
+        extraParam: "should-be-ignored",
+        anotherExtra: "also-ignored",
+      });
+
+      const result = extractWorkspaceParamsFromUri(uri);
+
+      assert.strictEqual(result.environmentId, "env-123");
+      assert.strictEqual(result.organizationId, "org-456");
+      assert.strictEqual(result.workspaceName, "my-workspace");
+      assert.strictEqual(result.provider, "aws");
+      assert.strictEqual(result.region, "us-east-1");
+    });
+
+    it("should handle URL-encoded parameter values", function () {
+      const uri = createUri({
+        ...validParams,
+        workspaceName: "my workspace with spaces",
+      });
+      // createUri encodes the parameters, so we verify that here
+      assert.ok(uri.query.includes("workspaceName=my%20workspace%20with%20spaces"));
+
+      const result = extractWorkspaceParamsFromUri(uri);
+      assert.strictEqual(result.workspaceName, "my workspace with spaces");
     });
   });
 });
