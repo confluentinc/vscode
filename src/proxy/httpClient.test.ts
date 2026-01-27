@@ -47,7 +47,7 @@ describe("proxy/httpClient", function () {
 
       // Verify by making a request
       fetchStub.resolves(mockResponse({ test: true }));
-      testClient.get("/test");
+      void testClient.get("/test");
 
       assert.ok(fetchStub.calledOnce);
       const url = fetchStub.firstCall.args[0];
@@ -61,7 +61,7 @@ describe("proxy/httpClient", function () {
 
       const testClient = new HttpClient(config);
       fetchStub.resolves(mockResponse({}));
-      testClient.get("/path");
+      void testClient.get("/path");
 
       const url = fetchStub.firstCall.args[0];
       assert.ok(!url.includes("//path"));
@@ -427,7 +427,7 @@ describe("proxy/httpClient", function () {
       const testClient = createHttpClient({ baseUrl: "https://test.com" });
 
       fetchStub.resolves(mockResponse({}));
-      testClient.get("/path");
+      void testClient.get("/path");
 
       assert.ok(fetchStub.calledOnce);
     });

@@ -21,3 +21,15 @@ export {
   type HttpResponse,
   type RequestOptions,
 } from "./httpClient";
+
+// Kafka REST API v3 Proxy
+export {
+  createKafkaRestProxy,
+  KafkaRestProxy,
+  type CreateTopicOptions,
+  type KafkaRestProxyConfig,
+  type ListTopicsOptions,
+  type ProduceRecordData,
+  type ProduceRecordOptions,
+  type UpdateTopicConfigOptions,
+} from "./kafkaRestProxy";
