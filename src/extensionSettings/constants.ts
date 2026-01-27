@@ -14,6 +14,18 @@ export const LOCAL_MEDUSA_IMAGE = new Setting<string>("confluent.localDocker.med
 /** Docker image tag to use when creating local Medusa containers. */
 export const LOCAL_MEDUSA_IMAGE_TAG = new Setting<string>("confluent.localDocker.medusaImageTag");
 
+// ===== MIGRATION FLAGS (hidden, for internal testing) =====
+/**
+ * Enable internal resource fetchers instead of sidecar GraphQL queries.
+ * This is a migration flag for testing the sidecar removal. When enabled,
+ * resource loaders will use direct HTTP calls via the internal proxy/fetcher
+ * implementations instead of querying the sidecar via GraphQL.
+ * Default: false (use sidecar GraphQL)
+ */
+export const USE_INTERNAL_FETCHERS = new Setting<boolean>(
+  "confluent.migration.useInternalFetchers",
+);
+
 // ===== MAIN CONFIGS =====
 
 /** Whether to show an error notification on sidecar process exceptions (for debugging purposes). */

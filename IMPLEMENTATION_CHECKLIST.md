@@ -406,26 +406,32 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Write unit tests for DirectResourceFetcher (12 tests)
 
 ### 4.8 Loader Integration
-- [ ] Modify `src/loaders/cachingResourceLoader.ts`
-  - [ ] Add feature flag check for internal fetchers
-  - [ ] Replace `getEnvironmentsFromGraphQL()` with fetcher call
-  - [ ] Update caching to work with new data format
-- [ ] Modify `src/loaders/ccloudResourceLoader.ts`
-  - [ ] Inject `CCloudResourceFetcher`
-  - [ ] Update methods to use fetcher when flag enabled
-- [ ] Modify `src/loaders/localResourceLoader.ts`
-  - [ ] Inject `LocalResourceFetcher`
-  - [ ] Update methods to use fetcher when flag enabled
-- [ ] Modify `src/loaders/directResourceLoader.ts`
-  - [ ] Inject `DirectResourceFetcher`
-  - [ ] Update methods to use fetcher when flag enabled
-- [ ] Write integration tests comparing GraphQL vs fetcher results
+- [-] Modify `src/loaders/cachingResourceLoader.ts` (not needed - integration at subclass level)
+  - [-] Add feature flag check for internal fetchers
+  - [-] Replace `getEnvironmentsFromGraphQL()` with fetcher call
+  - [-] Update caching to work with new data format
+- [x] Modify `src/loaders/ccloudResourceLoader.ts`
+  - [x] Import `createCCloudResourceFetcher` from fetchers
+  - [x] Check `USE_INTERNAL_FETCHERS` flag in `getEnvironmentsFromGraphQL()`
+  - [x] Use fetcher when flag enabled, fall back to GraphQL
+- [x] Modify `src/loaders/localResourceLoader.ts`
+  - [x] Import `createLocalResourceFetcher` from fetchers
+  - [x] Check `USE_INTERNAL_FETCHERS` flag in `getEnvironmentsFromGraphQL()`
+  - [x] Use fetcher when flag enabled, fall back to GraphQL
+- [x] Modify `src/loaders/directResourceLoader.ts`
+  - [x] Import `createDirectResourceFetcher` from fetchers
+  - [x] Check `USE_INTERNAL_FETCHERS` flag in `getEnvironmentsFromGraphQL()`
+  - [x] Use fetcher when flag enabled, fall back to GraphQL
+- [-] Write integration tests comparing GraphQL vs fetcher results (deferred to end-to-end testing)
 
 ### 4.9 Feature Flag Integration
-- [ ] Add `migration.useInternalFetchers` setting to `package.json`
-- [ ] Add setting to `src/extensionSettings/constants.ts`
+- [-] Add `migration.useInternalFetchers` setting to `package.json` (hidden setting, not in package.json)
+- [x] Add setting to `src/extensionSettings/constants.ts`
+  - [x] Added `USE_INTERNAL_FETCHERS` as hidden `Setting<boolean>` type
+  - [x] Key: `confluent.migration.useInternalFetchers`
+  - [x] Default: false (use sidecar GraphQL)
 
-**Phase 4 Test Summary (so far)**: 73 tests total (types: 6, topicFetcher: 9, schemaFetcher: 18, ccloudResourceFetcher: 14, localResourceFetcher: 14, directResourceFetcher: 12)
+**Phase 4 Test Summary**: 73 tests total (types: 6, topicFetcher: 9, schemaFetcher: 18, ccloudResourceFetcher: 14, localResourceFetcher: 14, directResourceFetcher: 12)
 
 ---
 
@@ -509,7 +515,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Phase 1: Connection management tests passing (215 tests)
 - [x] Phase 2: Authentication tests passing (175 tests)
 - [x] Phase 3: Proxy layer tests passing (148 tests)
-- [~] Phase 4: Resource fetcher tests passing (73 tests so far)
+- [x] Phase 4: Resource fetcher tests passing (73 tests)
 - [ ] Phase 5: WebSocket layer tests passing
 - [ ] Overall coverage target: 80%+
 - **Total tests so far: 611 tests**
@@ -557,7 +563,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 
 _Add implementation notes, blockers, or decisions here as work progresses._
 
-### Branch Stack (Phases 1-3 Complete, Phase 4 In Progress)
+### Branch Stack (Phases 1-4 Complete)
 ```
 djs/vscode-lite
 └── phase-1/connection-state-types - Core types, credentials, specs
@@ -567,17 +573,21 @@ djs/vscode-lite
                 └── phase-1/local-connection-handler - LocalConnectionHandler
                     └── phase-1/ccloud-connection-handler - CCloudConnectionHandler
                         └── phase-1/connection-manager - ConnectionManager
-                            └── phase-2/oauth-types - OAuth types and config
-                                └── phase-2/pkce - PKCE implementation
+                            └── phase-2/oauth-types-config - OAuth types and config
+                                └── phase-2/pkce-implementation - PKCE implementation
                                     └── phase-2/token-manager - TokenManager class
                                         └── phase-2/token-exchange - Token exchange functions
                                             └── phase-2/callback-server - OAuth callback server
                                                 └── phase-2/uri-handler - VS Code URI handler
                                                     └── phase-2/auth-service - AuthService class
-                                                        └── phase-2/credential-handlers - All credential handlers
-                                                            └── phase-3/http-client - HttpClient foundation
-                                                                └── phase-3/proxy-classes - All proxy implementations
-                                                                    └── phase-4/fetcher-layer - Resource fetchers ← current
+                                                        └── phase-3/http-client - HttpClient foundation
+                                                            └── phase-3/kafka-rest-proxy - Kafka REST v3 proxy
+                                                                └── phase-3/schema-registry-proxy - Schema Registry proxy
+                                                                    └── phase-3/ccloud-control-plane-proxy - CCloud API proxy
+                                                                        └── phase-3/ccloud-data-plane-proxy - Flink API proxy
+                                                                            └── phase-4/resource-fetchers - Topic, schema, CCloud fetchers
+                                                                                └── phase-4/local-direct-fetchers - Local & direct fetchers
+                                                                                    └── phase-4/loader-integration - Loader integration ← current
 ```
 
 ### Test Summary (Phase 1)
@@ -617,20 +627,20 @@ djs/vscode-lite
 - ccloudDataPlaneProxy.test.ts: 26 tests
 - **Total Phase 3 tests: 148 tests**
 
-### Test Summary (Phase 4, in progress)
+### Test Summary (Phase 4)
 - types.test.ts: 6 tests
 - topicFetcher.test.ts: 9 tests
 - schemaFetcher.test.ts: 18 tests
 - ccloudResourceFetcher.test.ts: 14 tests
 - localResourceFetcher.test.ts: 14 tests
 - directResourceFetcher.test.ts: 12 tests
-- **Total Phase 4 tests (so far): 73 tests**
+- **Total Phase 4 tests: 73 tests**
 
 ### Cumulative Test Count
 - Phase 1: 215 tests
 - Phase 2: 175 tests
 - Phase 3: 148 tests
-- Phase 4: 73 tests (in progress)
+- Phase 4: 73 tests
 - **Total: 611 tests**
 
 ### Decisions Made

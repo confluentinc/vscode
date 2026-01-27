@@ -11,6 +11,8 @@ import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected, flinkStatementDeleted } from "../emitters";
+import { USE_INTERNAL_FETCHERS } from "../extensionSettings/constants";
+import { createCCloudResourceFetcher } from "../fetchers";
 import type { FlinkWorkspaceParams } from "../flinkSql/flinkWorkspace";
 import type { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
 import {
@@ -150,7 +152,19 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
   /** Fulfill ResourceLoader::getEnvironmentsFromGraphQL */
   protected async getEnvironmentsFromGraphQL(): Promise<CCloudEnvironment[]> {
-    // Drive the GQL query.
+    // Check feature flag for internal fetcher usage
+    if (USE_INTERNAL_FETCHERS.value) {
+      logger.debug("Using internal fetcher for CCloud resources");
+      const fetcher = createCCloudResourceFetcher({
+        getAccessToken: async () => {
+          const session = await getCCloudAuthSession();
+          return session?.accessToken;
+        },
+      });
+      return await fetcher.fetchEnvironments();
+    }
+
+    // Fall back to GraphQL
     return await getCCloudResources();
   }
 
