@@ -13,6 +13,7 @@ export enum IconNames {
   CCLOUD_ENVIRONMENT = "confluent-environment",
   KAFKA_CLUSTER = "confluent-kafka-cluster",
   KAFKA_CLUSTER_PRIVATE = "confluent-kafka-cluster-private",
+  CONSUMER_GROUP = "confluent-consumer-group",
   LOCAL_RESOURCE_GROUP = "device-desktop",
   SCHEMA_REGISTRY = "confluent-schema-registry",
   KEY_SUBJECT = "key",
