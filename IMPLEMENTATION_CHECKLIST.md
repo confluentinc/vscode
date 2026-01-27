@@ -387,21 +387,23 @@ This checklist tracks all implementation tasks for the sidecar removal migration
   - [x] Export error classes
 
 ### 4.6 Local Resource Fetcher
-- [ ] Create `src/fetchers/localResourceFetcher.ts`
-  - [ ] Implement `LocalResourceFetcher` class
-  - [ ] Implement Docker API integration
-  - [ ] Implement container discovery
-  - [ ] Implement port mapping detection
-  - [ ] Implement Kafka REST endpoint detection
-  - [ ] Implement Schema Registry endpoint detection
-- [ ] Write unit tests for LocalResourceFetcher
+- [x] Create `src/fetchers/localResourceFetcher.ts`
+  - [x] Implement `LocalResourceFetcher` class
+  - [x] Implement Docker API integration via existing `docker/containers.ts`
+  - [x] Implement container discovery for Kafka, Schema Registry, Medusa
+  - [x] Implement port mapping detection
+  - [x] Implement Kafka REST endpoint detection (port 8082)
+  - [x] Implement Schema Registry endpoint detection
+  - [x] Build LocalEnvironment with discovered resources
+- [x] Write unit tests for LocalResourceFetcher (14 tests)
 
 ### 4.7 Direct Resource Fetcher
-- [ ] Create `src/fetchers/directResourceFetcher.ts`
-  - [ ] Implement `DirectResourceFetcher` class
-  - [ ] Validate configured endpoints
-  - [ ] Fetch resources from user-configured URLs
-- [ ] Write unit tests for DirectResourceFetcher
+- [x] Create `src/fetchers/directResourceFetcher.ts`
+  - [x] Implement `DirectResourceFetcher` class
+  - [x] Build DirectEnvironment from connection specs
+  - [x] Generate consistent cluster/registry IDs from endpoints
+  - [x] Handle Kafka-only, SR-only, and combined configurations
+- [x] Write unit tests for DirectResourceFetcher (12 tests)
 
 ### 4.8 Loader Integration
 - [ ] Modify `src/loaders/cachingResourceLoader.ts`
@@ -423,7 +425,7 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [ ] Add `migration.useInternalFetchers` setting to `package.json`
 - [ ] Add setting to `src/extensionSettings/constants.ts`
 
-**Phase 4 Test Summary (so far)**: 47 tests total (types: 6, topicFetcher: 9, schemaFetcher: 18, ccloudResourceFetcher: 14)
+**Phase 4 Test Summary (so far)**: 73 tests total (types: 6, topicFetcher: 9, schemaFetcher: 18, ccloudResourceFetcher: 14, localResourceFetcher: 14, directResourceFetcher: 12)
 
 ---
 
@@ -507,10 +509,10 @@ This checklist tracks all implementation tasks for the sidecar removal migration
 - [x] Phase 1: Connection management tests passing (215 tests)
 - [x] Phase 2: Authentication tests passing (175 tests)
 - [x] Phase 3: Proxy layer tests passing (148 tests)
-- [~] Phase 4: Resource fetcher tests passing (47 tests so far)
+- [~] Phase 4: Resource fetcher tests passing (73 tests so far)
 - [ ] Phase 5: WebSocket layer tests passing
 - [ ] Overall coverage target: 80%+
-- **Total tests so far: 585 tests**
+- **Total tests so far: 611 tests**
 
 ### Integration Testing
 - [ ] CCloud connection flow works end-to-end
@@ -620,14 +622,16 @@ djs/vscode-lite
 - topicFetcher.test.ts: 9 tests
 - schemaFetcher.test.ts: 18 tests
 - ccloudResourceFetcher.test.ts: 14 tests
-- **Total Phase 4 tests (so far): 47 tests**
+- localResourceFetcher.test.ts: 14 tests
+- directResourceFetcher.test.ts: 12 tests
+- **Total Phase 4 tests (so far): 73 tests**
 
 ### Cumulative Test Count
 - Phase 1: 215 tests
 - Phase 2: 175 tests
 - Phase 3: 148 tests
-- Phase 4: 47 tests (in progress)
-- **Total: 585 tests**
+- Phase 4: 73 tests (in progress)
+- **Total: 611 tests**
 
 ### Decisions Made
 - **File naming**: Using shorter names (`types.ts`, `spec.ts`, `storage.ts`) instead of longer names (`connectionState.ts`, `connectionStorage.ts`) for consistency and brevity

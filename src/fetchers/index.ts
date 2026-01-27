@@ -27,3 +27,20 @@ export {
   type CCloudResourceFetcherConfig,
   CCLOUD_CONNECTION_ID,
 } from "./ccloudResourceFetcher";
+
+// Local Resource Fetcher
+export {
+  createLocalResourceFetcher,
+  type LocalResourceFetcher,
+  type LocalResourceFetcherConfig,
+  type DiscoveredKafkaCluster,
+  type DiscoveredSchemaRegistry,
+  type DiscoveredMedusa,
+} from "./localResourceFetcher";
+
+// Direct Resource Fetcher
+export {
+  createDirectResourceFetcher,
+  type DirectResourceFetcher,
+  type DirectResourceFetcherConfig,
+} from "./directResourceFetcher";
