@@ -22,7 +22,15 @@ import { handleFeedback } from "./chat/telemetry";
 import { registerChatTools } from "./chat/tools/registration";
 import { FlinkSqlCodelensProvider } from "./codelens/flinkSqlProvider";
 import { registerCommandWithLogging } from "./commands";
-import { ConnectionManager } from "./connections/connectionManager";
+import { ConnectionManager, type ConnectionStatusChangeEvent } from "./connections/connectionManager";
+import { ConnectedState } from "./connections/types";
+import {
+  connectionDisconnected,
+  connectionStable,
+  directConnectionCreated,
+  directConnectionsChanged,
+} from "./emitters";
+import type { ConnectionId } from "./models/resource";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
 import { registerDiffCommands } from "./commands/diffs";
@@ -191,6 +199,38 @@ async function _activateExtension(
   const connectionManager = ConnectionManager.getInstance();
   context.subscriptions.push(connectionManager);
   logger.info("Connection manager initialized");
+
+  // Wire ConnectionManager events to existing emitters for backward compatibility
+  context.subscriptions.push(
+    connectionManager.onConnectionCreated((event) => {
+      directConnectionCreated.fire(event.connectionId as unknown as ConnectionId);
+      directConnectionsChanged.fire();
+    }),
+    connectionManager.onConnectionDeleted(() => {
+      directConnectionsChanged.fire();
+    }),
+    connectionManager.onConnectionUpdated(() => {
+      directConnectionsChanged.fire();
+    }),
+    connectionManager.onConnectionStatusChanged((event: ConnectionStatusChangeEvent) => {
+      // Check if any component transitioned to SUCCESS
+      const isNowConnected =
+        event.currentStatus.kafkaCluster?.state === ConnectedState.SUCCESS ||
+        event.currentStatus.schemaRegistry?.state === ConnectedState.SUCCESS ||
+        event.currentStatus.ccloud?.state === ConnectedState.SUCCESS;
+
+      const wasConnected =
+        event.previousStatus?.kafkaCluster?.state === ConnectedState.SUCCESS ||
+        event.previousStatus?.schemaRegistry?.state === ConnectedState.SUCCESS ||
+        event.previousStatus?.ccloud?.state === ConnectedState.SUCCESS;
+
+      if (isNowConnected && !wasConnected) {
+        connectionStable.fire(event.connectionId as unknown as ConnectionId);
+      } else if (!isNowConnected && wasConnected) {
+        connectionDisconnected.fire(event.connectionId as unknown as ConnectionId);
+      }
+    }),
+  );
 
   // set up the config change listener to respond to settings changes
   const settingsListener: vscode.Disposable = createConfigChangeListener();

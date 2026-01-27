@@ -152,9 +152,6 @@ describe("DirectConnectionManager behavior", () => {
     // Note: This test will pass or fail based on actual connection validation
     // In real testing environment, we'd stub the DirectConnectionHandler
     assert.ok(result.errorMessage || result.success);
-    const storedConnections: DirectConnectionsById =
-      await getResourceManager().getDirectConnections();
-    // Size depends on validation result
   });
 
   it("createConnection() should not store the new connection spec if dryRun is `true`", async () => {

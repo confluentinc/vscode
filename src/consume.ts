@@ -7,13 +7,7 @@ import {
   canAccessSchemaForTopic,
   showNoSchemaAccessWarningNotification,
 } from "./authz/schemaRegistry";
-import {
-  ResponseError,
-  type PartitionConsumeRecord,
-  type PartitionOffset,
-  type SimpleConsumeMultiPartitionRequest,
-  type SimpleConsumeMultiPartitionResponse,
-} from "./clients/sidecar";
+import { ResponseError, type PartitionConsumeRecord } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { LOCAL_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context/extension";
@@ -25,10 +19,17 @@ import { Logger } from "./logging";
 import type { ConnectionId, EnvironmentId } from "./models/resource";
 import { type KafkaTopic } from "./models/topic";
 import { showErrorNotificationWithButtons } from "./notifications";
+import {
+  createKafkaConsumeProxy,
+  type ConsumeRecord,
+  type ConsumeRequest,
+  type ConsumeResponse,
+  type KafkaConsumeProxy,
+  type PartitionOffset,
+} from "./proxy/kafkaRestProxy";
 import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
 import { topicQuickPick } from "./quickpicks/topics";
 import { scheduler } from "./scheduler";
-import { getSidecar, type SidecarHandle } from "./sidecar";
 import { BitSet, includesSubstring, Stream } from "./stream/stream";
 import { hashed, logUsage, UserEvent } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
@@ -36,7 +37,84 @@ import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
 
+import { getCCloudAuthSession } from "./authn/utils";
+import { getResourceManager } from "./storage/resourceManager";
+import { ConnectionType } from "./clients/sidecar";
+import type { KafkaRestProxyConfig } from "./proxy/kafkaRestProxy";
+
 const logger = new Logger("consume");
+
+/**
+ * Creates a KafkaConsumeProxy for the given topic based on its connection type.
+ */
+async function createConsumeProxyForTopic(topic: KafkaTopic): Promise<KafkaConsumeProxy> {
+  let config: KafkaRestProxyConfig;
+
+  switch (topic.connectionType) {
+    case ConnectionType.Ccloud: {
+      // CCloud connections use the data plane API with OAuth token
+      const session = await getCCloudAuthSession();
+      if (!session) {
+        throw new Error("Not authenticated to Confluent Cloud");
+      }
+      config = {
+        baseUrl: `https://${topic.clusterId}.${getCloudRegion(topic)}.confluent.cloud`,
+        clusterId: topic.clusterId,
+        auth: { type: "bearer", token: session.accessToken },
+      };
+      break;
+    }
+    case ConnectionType.Local: {
+      // Local connections use local REST proxy
+      config = {
+        baseUrl: "http://localhost:8082",
+        clusterId: topic.clusterId,
+      };
+      break;
+    }
+    case ConnectionType.Direct: {
+      // Direct connections use the configured REST proxy URL
+      const connectionSpec = await getResourceManager().getDirectConnection(topic.connectionId);
+      if (!connectionSpec?.kafka_cluster) {
+        throw new Error("Direct connection not found or missing Kafka configuration");
+      }
+      // For direct connections, we need the REST proxy URL which may be derived
+      // from the bootstrap servers or configured separately
+      const bootstrapServers = connectionSpec.kafka_cluster.bootstrap_servers;
+      // Assume REST proxy is on port 8082 of the first bootstrap server
+      const host = bootstrapServers?.split(",")[0]?.split(":")[0] ?? "localhost";
+      config = {
+        baseUrl: `http://${host}:8082`,
+        clusterId: topic.clusterId,
+        auth: connectionSpec.kafka_cluster.credentials
+          ? {
+              type: "basic",
+              username:
+                (connectionSpec.kafka_cluster.credentials as { username?: string }).username ?? "",
+              password:
+                (connectionSpec.kafka_cluster.credentials as { password?: string }).password ?? "",
+            }
+          : undefined,
+      };
+      break;
+    }
+    default:
+      throw new Error(`Unsupported connection type: ${topic.connectionType}`);
+  }
+
+  return createKafkaConsumeProxy(config);
+}
+
+/**
+ * Gets the cloud region for a CCloud topic.
+ * This is a placeholder - in reality we'd get this from the cluster metadata.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function getCloudRegion(topic: KafkaTopic): string {
+  // TODO: Get actual region from cluster metadata - for now use placeholder
+  // The topic parameter will be used once we have proper cluster metadata
+  return "us-west-2.aws";
+}
 
 export function activateMessageViewer(context: ExtensionContext) {
   /* All active message viewer instances share the same scheduler to perform API
@@ -71,7 +149,9 @@ export function activateMessageViewer(context: ExtensionContext) {
         if (!(await canAccessSchemaForTopic(topic))) {
           showNoSchemaAccessWarningNotification();
         }
-        const sidecar = await getSidecar();
+
+        // Create the consume proxy for this topic's cluster
+        const consumeProxy = await createConsumeProxyForTopic(topic);
 
         // this panel going to be active, so setting its topic to the currently active
         activeTopic = topic;
@@ -104,7 +184,7 @@ export function activateMessageViewer(context: ExtensionContext) {
             config,
             (value) => (activeConfig = config = value),
             topic,
-            sidecar,
+            consumeProxy,
             schedule,
           );
         }
@@ -209,27 +289,14 @@ function messageViewerStartPollingCommand(
   config: MessageViewerConfig,
   onConfigChange: (config: MessageViewerConfig) => void,
   topic: KafkaTopic,
-  sidecar: SidecarHandle,
+  consumeProxy: KafkaConsumeProxy,
   schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
 ) {
-  const service = sidecar.getKafkaConsumeApi(topic.connectionId);
-  const partitionApi = sidecar.getPartitionV3Api(topic.clusterId, topic.connectionId);
-
   const consume = async (
-    request: SimpleConsumeMultiPartitionRequest,
+    request: ConsumeRequest,
     signal: AbortSignal,
-  ): Promise<SimpleConsumeMultiPartitionResponse> => {
-    const response =
-      await service.gatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePostRaw(
-        {
-          cluster_id: topic.clusterId,
-          topic_name: topic.name,
-          x_connection_id: topic.connectionId,
-          SimpleConsumeMultiPartitionRequest: request,
-        },
-        { signal },
-      );
-    return response.raw.json();
+  ): Promise<ConsumeResponse> => {
+    return consumeProxy.consume(topic.name, request, signal);
   };
 
   const os = ObservableScope();
@@ -241,7 +308,7 @@ function messageViewerStartPollingCommand(
   const mode = os.signal<"beginning" | "latest" | "timestamp">(config.consumeMode);
 
   /** Parameters used by Consume API. */
-  const params = os.signal<SimpleConsumeMultiPartitionRequest>(
+  const params = os.signal<ConsumeRequest>(
     config.consumeMode === "latest"
       ? DEFAULT_CONSUME_PARAMS
       : config.consumeMode === "timestamp" && config.consumeTimestamp != null
@@ -267,7 +334,7 @@ function messageViewerStartPollingCommand(
   const isStreamFull = os.signal(false);
 
   /** Most recent response payload from Consume API. */
-  const latestResult = os.signal<SimpleConsumeMultiPartitionResponse | null>(null);
+  const latestResult = os.signal<ConsumeResponse | null>(null);
   /** Most recent failure info */
   const latestError = os.signal<{ message: string } | null>(null);
 
@@ -411,20 +478,22 @@ function messageViewerStartPollingCommand(
     return bins;
   });
 
-  let queue: PartitionConsumeRecord[] = [];
+  let queue: ConsumeRecord[] = [];
   function flushMessages(stream: Stream) {
     const search = os.peek(textFilter);
     while (queue.length > 0) {
       /* Pick messages from the queue one by one since we may stop putting
       them into stream but we don't want to drop the rest. */
       const message = queue.shift()!;
+      // Cast to PartitionConsumeRecord for compatibility with Stream class
+      const record = message as unknown as PartitionConsumeRecord;
 
       /* New messages inserted into the stream instance and its index is
       stored for further processing by existing filters. */
-      const index = stream.insert(message);
+      const index = stream.insert(record);
 
       if (search != null) {
-        if (includesSubstring(message, search.regexp)) {
+        if (includesSubstring(record, search.regexp)) {
           search.bitset.set(index);
         } else {
           search.bitset.unset(index);
@@ -594,9 +663,9 @@ function messageViewerStartPollingCommand(
         ) satisfies MessageResponse<"GetMessagesExtent">;
       }
       case "GetPartitionStats": {
-        return partitionApi
-          .listKafkaPartitions({ cluster_id: topic.clusterId, topic_name: topic.name })
-          .then((v) => v.data) satisfies Promise<MessageResponse<"GetPartitionStats">>;
+        return consumeProxy.listPartitions(topic.name).then((v) => v.data) satisfies Promise<
+          MessageResponse<"GetPartitionStats">
+        >;
       }
       case "GetConsumedPartitions": {
         return partitionConsumed() satisfies MessageResponse<"GetConsumedPartitions">;
@@ -830,7 +899,7 @@ function getParams(
   mode: "beginning" | "latest" | "timestamp",
   timestamp: number | undefined,
   max_poll_records: number,
-): SimpleConsumeMultiPartitionRequest {
+): ConsumeRequest {
   return mode === "beginning"
     ? { ...DEFAULT_CONSUME_PARAMS, max_poll_records, from_beginning: true }
     : mode === "timestamp"
@@ -853,10 +922,10 @@ function getTextFilterParams(query: string, capacity: number) {
 
 /** Compute partition offsets for the next consume request, based on response of the previous one. */
 function getOffsets(
-  params: SimpleConsumeMultiPartitionRequest,
-  results: SimpleConsumeMultiPartitionResponse | null,
+  params: ConsumeRequest,
+  results: ConsumeResponse | null,
   partitions: number[] | null,
-): SimpleConsumeMultiPartitionRequest {
+): ConsumeRequest {
   if (results?.partition_data_list != null) {
     const { max_poll_records, message_max_bytes, fetch_max_bytes } = params;
     const offsets = results.partition_data_list.reduce((list, { partition_id, next_offset }) => {

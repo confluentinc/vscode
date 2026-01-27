@@ -305,28 +305,31 @@ export class KafkaRestProxy {
    * @returns Produce response with offset information.
    */
   async produceRecord(options: ProduceRecordOptions): Promise<ProduceResponse> {
+    // Build the produce request body
+    // Note: We use type assertions because our extended interfaces include additional
+    // fields (like schema_id) that aren't in the generated OpenAPI types
     const body: ProduceRequest = {
       partition_id: options.partitionId,
       headers: options.headers?.map((h) => ({ name: h.name, value: btoa(h.value) })),
       key: options.key
-        ? {
+        ? ({
             type: options.key.type,
             data: options.key.data,
             schema_id: options.key.schemaId,
             schema_version: options.key.schemaVersion,
             subject: options.key.subject,
-          }
+          } as ProduceRequestData)
         : undefined,
       value: options.value
-        ? {
+        ? ({
             type: options.value.type,
             data: options.value.data,
             schema_id: options.value.schemaId,
             schema_version: options.value.schemaVersion,
             subject: options.value.subject,
-          }
+          } as ProduceRequestData)
         : undefined,
-      timestamp: options.timestamp,
+      timestamp: options.timestamp ? new Date(options.timestamp) : undefined,
     };
 
     const response = await this.client.post<ProduceResponse>(
@@ -370,6 +373,182 @@ export function createKafkaRestProxy(config: KafkaRestProxyConfig): KafkaRestPro
   return new KafkaRestProxy(config);
 }
 
+/**
+ * Offset for a partition when consuming.
+ */
+export interface PartitionOffset {
+  /** Partition ID. */
+  partition_id?: number;
+  /** Offset to start consuming from. */
+  offset?: number;
+}
+
+/**
+ * Request for consuming messages from multiple partitions.
+ */
+export interface ConsumeRequest {
+  /** Partition offsets to consume from. */
+  offsets?: PartitionOffset[];
+  /** Maximum number of records to poll. */
+  max_poll_records?: number;
+  /** Timestamp to start consuming from. */
+  timestamp?: number;
+  /** Maximum bytes to fetch. */
+  fetch_max_bytes?: number;
+  /** Maximum bytes per message. */
+  message_max_bytes?: number;
+  /** Whether to start from beginning. */
+  from_beginning?: boolean;
+}
+
+/**
+ * Header in a consumed record.
+ */
+export interface ConsumeRecordHeader {
+  /** Header name. */
+  name?: string;
+  /** Header value (base64 encoded). */
+  value?: string;
+}
+
+/**
+ * Metadata about a consumed record's schema.
+ */
+export interface ConsumeRecordMetadata {
+  /** Key schema ID. */
+  key_schema_id?: number;
+  /** Key schema subject. */
+  key_schema_subject?: string;
+  /** Key schema version. */
+  key_schema_version?: number;
+  /** Value schema ID. */
+  value_schema_id?: number;
+  /** Value schema subject. */
+  value_schema_subject?: string;
+  /** Value schema version. */
+  value_schema_version?: number;
+}
+
+/**
+ * A consumed record from a partition.
+ */
+export interface ConsumeRecord {
+  /** Partition ID. */
+  partition_id?: number;
+  /** Record offset. */
+  offset?: number;
+  /** Record timestamp. */
+  timestamp?: number;
+  /** Timestamp type. */
+  timestamp_type?: "NO_TIMESTAMP_TYPE" | "CREATE_TIME" | "LOG_APPEND_TIME";
+  /** Record headers. */
+  headers?: ConsumeRecordHeader[];
+  /** Record key. */
+  key?: unknown;
+  /** Record value. */
+  value?: unknown;
+  /** Schema metadata. */
+  metadata?: ConsumeRecordMetadata;
+  /** Key decoding error. */
+  key_decoding_error?: string;
+  /** Value decoding error. */
+  value_decoding_error?: string;
+}
+
+/**
+ * Data for a partition in a consume response.
+ */
+export interface ConsumePartitionData {
+  /** Partition ID. */
+  partition_id?: number;
+  /** Next offset to consume from. */
+  next_offset?: number;
+  /** Consumed records. */
+  records?: ConsumeRecord[];
+}
+
+/**
+ * Response from consuming messages.
+ */
+export interface ConsumeResponse {
+  /** Cluster ID. */
+  cluster_id?: string;
+  /** Topic name. */
+  topic_name?: string;
+  /** Partition data with consumed records. */
+  partition_data_list?: ConsumePartitionData[];
+}
+
+/**
+ * Kafka message consumer proxy.
+ *
+ * Provides a consume API similar to the sidecar's simple consume API.
+ */
+export class KafkaConsumeProxy {
+  private readonly client: HttpClient;
+  private readonly clusterId: string;
+  private readonly customHeaders: Record<string, string>;
+
+  constructor(config: KafkaRestProxyConfig) {
+    this.clusterId = config.clusterId;
+    this.customHeaders = config.headers ?? {};
+
+    this.client = createHttpClient({
+      baseUrl: config.baseUrl,
+      timeout: config.timeout ?? 30000,
+      auth: config.auth,
+      defaultHeaders: {
+        ...this.customHeaders,
+      },
+    });
+  }
+
+  /**
+   * Consumes messages from a topic.
+   *
+   * This method provides a simplified consume API that handles consumer
+   * group management internally.
+   *
+   * @param topicName Topic to consume from.
+   * @param request Consume request parameters.
+   * @param signal Optional abort signal.
+   * @returns Consume response with records.
+   */
+  async consume(
+    topicName: string,
+    request: ConsumeRequest,
+    signal?: AbortSignal,
+  ): Promise<ConsumeResponse> {
+    // Use the /records endpoint which is available in Confluent's Kafka REST
+    // This is a simplified consume that doesn't require consumer group setup
+    const path = `/kafka/v3/clusters/${encodeURIComponent(this.clusterId)}/topics/${encodeURIComponent(topicName)}/partitions/-/consume`;
+
+    const response = await this.client.post<ConsumeResponse>(path, request, { signal });
+    return response.data;
+  }
+
+  /**
+   * Lists partitions for a topic.
+   * @param topicName Topic name.
+   * @returns Partition data.
+   */
+  async listPartitions(topicName: string): Promise<{ data: PartitionData[] }> {
+    const response = await this.client.get<ListResponse<PartitionData>>(
+      `/kafka/v3/clusters/${encodeURIComponent(this.clusterId)}/topics/${encodeURIComponent(topicName)}/partitions`,
+    );
+    return { data: response.data.data };
+  }
+}
+
+/**
+ * Creates a Kafka consume proxy with the given configuration.
+ * @param config Proxy configuration.
+ * @returns A configured Kafka consume proxy.
+ */
+export function createKafkaConsumeProxy(config: KafkaRestProxyConfig): KafkaConsumeProxy {
+  return new KafkaConsumeProxy(config);
+}
+
 // Import types from generated clients
 import type {
   TopicData,
@@ -377,6 +556,7 @@ import type {
   TopicConfigData,
   ClusterData,
   ProduceRequest,
+  ProduceRequestData,
   ProduceResponse,
   CreateTopicRequestData,
   AlterConfigBatchRequestData,

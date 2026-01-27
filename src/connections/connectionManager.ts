@@ -19,6 +19,9 @@ import {
   LocalConnectionHandler,
 } from "./handlers";
 
+// Re-export types for use by consumers
+export type { ConnectionStatusChangeEvent };
+
 /** Event fired when a connection is created. */
 export interface ConnectionCreatedEvent {
   connectionId: ConnectionId;

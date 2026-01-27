@@ -74,6 +74,8 @@ export interface RequestOptions {
   auth?: AuthConfig;
   /** Skip retry logic for this request. */
   noRetry?: boolean;
+  /** Abort signal for cancelling the request. */
+  signal?: AbortSignal;
 }
 
 /**
@@ -305,6 +307,15 @@ export class HttpClient {
     // Create abort controller for timeout
     const controller = new AbortController();
     fetchOptions.signal = controller.signal;
+
+    // Link external signal to our controller if provided
+    if (options.signal) {
+      if (options.signal.aborted) {
+        controller.abort();
+      } else {
+        options.signal.addEventListener("abort", () => controller.abort(), { once: true });
+      }
+    }
 
     const timeoutId = setTimeout(() => {
       controller.abort();
