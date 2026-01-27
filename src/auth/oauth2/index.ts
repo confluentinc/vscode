@@ -71,3 +71,11 @@ export {
 
 // Callback Server
 export { OAuthCallbackServer, type CallbackHandler } from "./callbackServer";
+
+// URI Handler
+export {
+  createCallbackUri,
+  createErrorCallbackUri,
+  OAuthUriHandler,
+  type UriCallbackHandler,
+} from "./uriHandler";
