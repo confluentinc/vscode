@@ -79,3 +79,6 @@ export {
   OAuthUriHandler,
   type UriCallbackHandler,
 } from "./uriHandler";
+
+// Auth Service
+export { AuthService, AuthState, type AuthOptions, type AuthResult } from "./authService";
