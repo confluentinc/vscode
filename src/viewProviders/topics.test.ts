@@ -48,6 +48,7 @@ describe("viewProviders/topics.ts", () => {
 
       stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
       stubbedLoader.getTopicsForCluster.resolves([]);
+      stubbedLoader.getConsumerGroupsForCluster.resolves([]);
     });
 
     afterEach(() => {
@@ -64,7 +65,8 @@ describe("viewProviders/topics.ts", () => {
       it("no-arg refresh() when focused on a cluster should call onDidChangeTreeData.fire()", async () => {
         provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
         await provider.refresh();
-        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        // called once for topics, twice for consumer groups (loading start/end)
+        sinon.assert.called(onDidChangeTreeDataFireStub);
       });
 
       it("no-arg refresh() when no cluster is set should call onDidChangeTreeData.fire() once to clear (disconnect scenario)", async () => {
@@ -104,7 +106,8 @@ describe("viewProviders/topics.ts", () => {
       it("onlyIfMatching a kafka cluster when the cluster matches should call onDidChangeTreeData.fire()", async () => {
         provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
         await provider.refresh(false, TEST_CCLOUD_KAFKA_CLUSTER);
-        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        // called once for topics, twice for consumer groups (loading start/end)
+        sinon.assert.called(onDidChangeTreeDataFireStub);
       });
 
       it("onlyIfMatching a contained Kafka topic when the cluster doesn't match should do nothing", async () => {
@@ -116,7 +119,8 @@ describe("viewProviders/topics.ts", () => {
       it("onlyIfMatching a contained Kafka topic when the cluster matches should call onDidChangeTreeData.fire()", async () => {
         provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
         await provider.refresh(false, TEST_CCLOUD_KAFKA_TOPIC);
-        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        // called once for topics, twice for consumer groups (loading start/end)
+        sinon.assert.called(onDidChangeTreeDataFireStub);
       });
     });
 
@@ -565,6 +569,7 @@ describe("viewProviders/topics.ts", () => {
         ["schemaSubjectChanged", "subjectChangeHandler"],
         ["schemaVersionsChanged", "subjectChangeHandler"],
         ["topicChanged", "topicChangedHandler"],
+        ["consumerGroupsChanged", "consumerGroupsChangedHandler"],
       ];
 
       it("should return the expected number of listeners", () => {
