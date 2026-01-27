@@ -21,7 +21,7 @@ import { ClusterSelectSyncOption, SYNC_ON_KAFKA_SELECT } from "../extensionSetti
 import type { CCloudResourceLoader } from "../loaders";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import { KafkaTopic } from "../models/topic";
+import type { KafkaTopic } from "../models/topic";
 import * as kafkaClusterQuickpicks from "../quickpicks/kafkaClusters";
 import type { SidecarHandle } from "../sidecar";
 import { TopicViewProvider } from "../viewProviders/topics";
