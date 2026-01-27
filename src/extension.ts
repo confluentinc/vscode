@@ -22,6 +22,7 @@ import { handleFeedback } from "./chat/telemetry";
 import { registerChatTools } from "./chat/tools/registration";
 import { FlinkSqlCodelensProvider } from "./codelens/flinkSqlProvider";
 import { registerCommandWithLogging } from "./commands";
+import { ConnectionManager } from "./connections/connectionManager";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
 import { registerDiffCommands } from "./commands/diffs";
@@ -65,7 +66,6 @@ import {
   ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
 } from "./extensionSettings/constants";
 import { createConfigChangeListener } from "./extensionSettings/listener";
-import { updatePreferences } from "./extensionSettings/sidecarSync";
 import {
   disposeLaunchDarklyClient,
   getLaunchDarklyClient,
@@ -83,11 +83,6 @@ import { IconNames } from "./icons";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
 import { FlinkStatementResultsPanelProvider } from "./panelProviders/flinkStatementResults";
-import { getSidecar, getSidecarManager } from "./sidecar";
-import { createLocalConnection, getLocalConnection } from "./sidecar/connections/local";
-import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
-import { closeFormattedSidecarLogStream, SIDECAR_OUTPUT_CHANNEL } from "./sidecar/logging";
-import { WebsocketManager } from "./sidecar/websocketManager";
 import { getCCloudStatusBarItem } from "./statusBar/ccloudItem";
 import { SecretStorageKeys } from "./storage/constants";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
@@ -171,10 +166,9 @@ async function _activateExtension(
   setExtensionContext(context);
 
   // register the log output channels, debugging commands, and support commands to ensure we have
-  // visibility into the extension and sidecar logs and can download support .zip and/or file issues
+  // visibility into the extension logs and can download support .zip and/or file issues
   context.subscriptions.push(
     EXTENSION_OUTPUT_CHANNEL,
-    SIDECAR_OUTPUT_CHANNEL,
     ...registerDebugCommands(),
     ...registerSupportCommands(),
   );
@@ -193,18 +187,13 @@ async function _activateExtension(
   await Promise.all([setupStorage(), setupContextValues()]);
   logger.info("Storage and context values initialized");
 
-  // verify we can connect to the correct version of the sidecar, which may require automatically
-  // killing any (old) sidecar process and starting a new one, going through the handshake, etc.
-  logger.info("Starting/checking the sidecar...");
-  await getSidecar();
-  logger.info("Sidecar ready for use.");
+  // Initialize the internal connection manager
+  const connectionManager = ConnectionManager.getInstance();
+  context.subscriptions.push(connectionManager);
+  logger.info("Connection manager initialized");
 
-  // Rehydrate sidecar with local + any direct connections from the secret storage. Do this before
-  // setting up the resource view provider.
-  await rehydrateConnections();
-
-  // set up the preferences listener to keep the sidecar in sync with the user/workspace settings
-  const settingsListener: vscode.Disposable = await setupPreferences();
+  // set up the config change listener to respond to settings changes
+  const settingsListener: vscode.Disposable = createConfigChangeListener();
   context.subscriptions.push(settingsListener);
 
   // set up the different view providers
@@ -280,8 +269,7 @@ async function _activateExtension(
   ];
   logger.info("Commands registered");
 
-  // Construct the singletons, let them register their event listeners
-  context.subscriptions.push(getSidecarManager());
+  // Construct the resource loader singletons, let them register their event listeners
   context.subscriptions.push(...constructResourceLoaderSingletons());
 
   // if the Flink CCloud language server setting is enabled, get the client manager ready for use
@@ -304,7 +292,6 @@ async function _activateExtension(
 
   context.subscriptions.push(
     uriHandler,
-    WebsocketManager.getInstance(),
     FlinkStatementManager.getInstance(),
     ...authProviderDisposables,
     ...viewProviderDisposables,
@@ -321,10 +308,6 @@ async function _activateExtension(
   EventListener.getInstance().start();
   // reset the Docker credentials secret so `src/docker/configs.ts` can pull it fresh
   void context.secrets.delete(SecretStorageKeys.DOCKER_CREDS_SECRET_KEY);
-
-  // Watch for sidecar pushing connection state changes over websocket.
-  // (side effect of causing the watcher to be created)
-  ConnectionStateWatcher.getInstance();
 
   const directConnectionManager = DirectConnectionManager.getInstance();
   context.subscriptions.push(directConnectionManager);
@@ -469,18 +452,6 @@ async function setupContextValues() {
 }
 
 /**
- * Pass initial {@link vscode.WorkspaceConfiguration} settings to the sidecar's Preferences API on
- * startup to ensure the sidecar is in sync with the extension's settings before other requests are made.
- * @returns A {@link vscode.Disposable} for the extension settings listener
- */
-async function setupPreferences(): Promise<vscode.Disposable> {
-  // pass initial configs to the sidecar on startup
-  await updatePreferences();
-  logger.info("Initial preferences passed to sidecar");
-  return createConfigChangeListener();
-}
-
-/**
  * Set up the feature flags for the extension. This includes setting the defaults, initializing the
  * LaunchDarkly client, and checking if the extension is enabled or disabled.
  */
@@ -618,48 +589,19 @@ export function deactivate() {
   disposeLaunchDarklyClient();
   disableCCloudStatusPolling();
 
-  // close the sidecar log file stream, if it exists
-  closeFormattedSidecarLogStream();
-
   // close the file stream used with EXTENSION_OUTPUT_CHANNEL -- needs to be done last to avoid any other cleanup logging attempting to write to the file stream
   EXTENSION_OUTPUT_CHANNEL.dispose();
   console.info("Extension deactivated");
 }
 
 /**
- * Rehydrate the direct connections from the secret storage at startup time, informing
- * the sidecar about them.
- *
- * Also go ahead and create the local connection in the sidecar if it doesn't exist yet
- * (as would be the case if opening a second workspace talking to the sidecar).
+ * Rehydrate the direct connections from the secret storage at startup time.
  */
 export async function rehydrateConnections(): Promise<void> {
-  const createConnectionPromises = [
-    // Rehydrate the direct connections from secret storage.
-    async () => {
-      try {
-        await DirectConnectionManager.getInstance().rehydrateConnections();
-      } catch (error) {
-        logger.error("Failed to rehydrate direct connections", { error });
-      }
-    },
-    // Create the local connection if it doesn't exist yet.
-    // (Must happen before we try to GraphQL query it, for instance.)
-    async () => {
-      if (!(await getLocalConnection())) {
-        try {
-          await createLocalConnection();
-        } catch (error) {
-          logger.error("Failed to create local connection for rehydration", { error });
-        }
-      }
-    },
-    // Do not need to pre-create the distinquished ccloud connection, as its creation is
-    // explicitly handled in the auth provider, and no codepath should try to GraphQL query
-    // it unless hasCCloudAuthSession() is true, which will only be the case if the
-    // ccloud connection exists and is valid.
-  ];
-
-  await Promise.all(createConnectionPromises.map((fn) => fn()));
-  logger.info("Rehydrated direct connections and created local connection if needed");
+  try {
+    await DirectConnectionManager.getInstance().rehydrateConnections();
+    logger.info("Rehydrated direct connections from storage");
+  } catch (error) {
+    logger.error("Failed to rehydrate direct connections", { error });
+  }
 }

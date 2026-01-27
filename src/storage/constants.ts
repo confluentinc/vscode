@@ -36,6 +36,12 @@ export enum GlobalStorageKeys {
   LAST_ACTIVATED_EXTENSION_VERSION = "lastActivatedExtensionVersion",
 }
 
+/** Keys for global state storage. */
+export enum GlobalStateKeys {
+  /** The currently selected CCloud organization ID. */
+  CURRENT_ORGANIZATION_ID = "currentOrganizationId",
+}
+
 /** Keys for use within UriMetadata records */
 export enum UriMetadataKeys {
   FLINK_COMPUTE_POOL_ID = "flinkComputePoolId",

@@ -1,14 +1,12 @@
 import { randomUUID } from "crypto";
 import type { Disposable, SecretStorageChangeEvent } from "vscode";
-import { ProgressLocation, window } from "vscode";
-import type {
-  Connection,
-  ConnectionsList,
-  ConnectionSpec,
-  ConnectionsResourceApi,
-} from "./clients/sidecar";
+import { window } from "vscode";
+import type { ConnectionSpec as SidecarConnectionSpec } from "./clients/sidecar";
 import { ConnectionType, ResponseError } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
+import { DirectConnectionHandler } from "./connections/handlers/directConnectionHandler";
+import type { ConnectionSpec as InternalConnectionSpec } from "./connections/spec";
+import { ConnectionType as InternalConnectionType } from "./connections/types";
 import { getCredentialsType } from "./directConnections/credentials";
 import { hasCCloudDomain } from "./directConnections/utils";
 import { directConnectionsChanged, environmentChanged } from "./emitters";
@@ -16,13 +14,6 @@ import { ExtensionContextNotSetError } from "./errors";
 import { DirectResourceLoader, ResourceLoader } from "./loaders";
 import { Logger } from "./logging";
 import type { ConnectionId, EnvironmentId } from "./models/resource";
-import { getSidecar } from "./sidecar";
-import {
-  tryToCreateConnection,
-  tryToDeleteConnection,
-  tryToUpdateConnection,
-} from "./sidecar/connections";
-import { ConnectionStateWatcher, waitForConnectionToBeStable } from "./sidecar/connections/watcher";
 import { SecretStorageKeys } from "./storage/constants";
 import type { CustomConnectionSpec, DirectConnectionsById } from "./storage/resourceManager";
 import { getResourceManager } from "./storage/resourceManager";
@@ -33,10 +24,53 @@ import { DisposableCollection } from "./utils/disposables";
 const logger = new Logger("directConnectManager");
 
 /**
+ * Converts a sidecar ConnectionSpec to the internal ConnectionSpec format.
+ * The sidecar uses snake_case properties while internal uses camelCase.
+ */
+function convertToInternalSpec(spec: SidecarConnectionSpec): InternalConnectionSpec {
+  return {
+    id: spec.id as unknown as InternalConnectionSpec["id"],
+    name: spec.name ?? "",
+    type:
+      spec.type === ConnectionType.Direct
+        ? InternalConnectionType.DIRECT
+        : InternalConnectionType.LOCAL,
+    kafkaCluster: spec.kafka_cluster
+      ? {
+          bootstrapServers: spec.kafka_cluster.bootstrap_servers ?? "",
+          // Pass credentials through - they'll be validated by DirectConnectionHandler
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          credentials: spec.kafka_cluster.credentials as any,
+          ssl: spec.kafka_cluster.ssl
+            ? {
+                enabled: spec.kafka_cluster.ssl.enabled ?? false,
+                verifyHostname: spec.kafka_cluster.ssl.verify_hostname ?? true,
+              }
+            : undefined,
+        }
+      : undefined,
+    schemaRegistry: spec.schema_registry
+      ? {
+          uri: spec.schema_registry.uri ?? "",
+          // Pass credentials through - they'll be validated by DirectConnectionHandler
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          credentials: spec.schema_registry.credentials as any,
+          ssl: spec.schema_registry.ssl
+            ? {
+                enabled: spec.schema_registry.ssl.enabled ?? false,
+                verifyHostname: spec.schema_registry.ssl.verify_hostname ?? true,
+              }
+            : undefined,
+        }
+      : undefined,
+  };
+}
+
+/**
  * Singleton class responsible for the following:
  *   associated context value(s) to enable/disable actions
  * - creating connections via input from the webview form and updating the Resources view
- * - fetching connections from persistent storage and deconflicting with the sidecar
+ * - fetching connections from persistent storage
  * - deleting connections through actions on the Resources view
  * - firing events when the connection list changes or a specific connection is updated/deleted
  */
@@ -156,20 +190,17 @@ export class DirectConnectionManager extends DisposableCollection {
   async createConnection(
     spec: CustomConnectionSpec,
     dryRun: boolean = false,
-  ): Promise<{ connection: Connection | null; errorMessage: string | null }> {
-    let incomingSpec: ConnectionSpec = spec;
+  ): Promise<{ success: boolean; errorMessage: string | null }> {
+    let incomingSpec: SidecarConnectionSpec = spec;
     // check for an existing ConnectionSpec
-    const currentSpec: ConnectionSpec | null = await getResourceManager().getDirectConnection(
-      spec.id,
-    );
+    const currentSpec: SidecarConnectionSpec | null =
+      await getResourceManager().getDirectConnection(spec.id);
     if (dryRun && currentSpec) {
       incomingSpec.id = randomUUID() as ConnectionId; // dryRun must have unique ID
     }
-    const { connection, errorMessage } = await this.createOrUpdateConnection(
-      incomingSpec,
-      false,
-      dryRun,
-    );
+
+    // Validate the connection
+    const { errorMessage } = await this.validateConnection(incomingSpec);
 
     logUsage(UserEvent.DirectConnectionAction, {
       action: dryRun ? "tested" : "created",
@@ -182,7 +213,7 @@ export class DirectConnectionManager extends DisposableCollection {
       hasCCloudDomain: hasCCloudDomain(spec.kafka_cluster) || hasCCloudDomain(spec.schema_registry),
     });
 
-    if (connection && !dryRun) {
+    if (!errorMessage && !dryRun) {
       // save the new connection in secret storage. This will then ultimately trigger
       // the directConnectionsChanged event listener when it changes the secret storage
       // key value.
@@ -190,7 +221,7 @@ export class DirectConnectionManager extends DisposableCollection {
       // create a new ResourceLoader instance for managing the new connection's resources
       this.initResourceLoader(spec.id);
     }
-    return { connection, errorMessage };
+    return { success: !errorMessage, errorMessage };
   }
 
   async deleteConnection(id: ConnectionId): Promise<void> {
@@ -209,12 +240,8 @@ export class DirectConnectionManager extends DisposableCollection {
     // of loaders with current loaders.
     ResourceLoader.deregisterInstance(id);
 
-    await Promise.all([
-      // Rewrite the secret storage key to remove the connection.
-      resourceManager.deleteDirectConnection(id),
-      // Tell the sidecar to delete the connection.
-      tryToDeleteConnection(id),
-    ]);
+    // Rewrite the secret storage key to remove the connection.
+    await resourceManager.deleteDirectConnection(id);
 
     logUsage(UserEvent.DirectConnectionAction, {
       action: "deleted",
@@ -231,12 +258,10 @@ export class DirectConnectionManager extends DisposableCollection {
   }
 
   async updateConnection(incomingSpec: CustomConnectionSpec): Promise<void> {
-    // tell the sidecar about the updated spec
-    const { connection, errorMessage } = await this.createOrUpdateConnection(incomingSpec, true);
-    if (errorMessage || !connection) {
-      window.showErrorMessage(
-        `Error: Failed to update connection. ${errorMessage ?? "No connection object returned"}`,
-      );
+    // Validate the updated spec
+    const { errorMessage } = await this.validateConnection(incomingSpec);
+    if (errorMessage) {
+      window.showErrorMessage(`Error: Failed to update connection. ${errorMessage}`);
       return;
     }
 
@@ -260,69 +285,37 @@ export class DirectConnectionManager extends DisposableCollection {
   }
 
   /**
-   * Attempt to create or update a {@link Connection} in the sidecar based on the provided
-   * {@link ConnectionSpec}.
+   * Validate a connection spec using the DirectConnectionHandler.
    *
-   * If the request/operation fails, the `errorMessage` will be populated with the error message and
-   * the `connection` will be `null`.
-   * Otherwise, the `connection` will be the updated/created connection object and the `errorMessage`
-   * will be `null`.
+   * If validation fails, the `errorMessage` will be populated with the error message.
+   * Otherwise, the `errorMessage` will be `null`.
    */
-  private async createOrUpdateConnection(
-    spec: ConnectionSpec,
-    update: boolean = false,
-    dryRun: boolean = false,
-  ): Promise<{ connection: Connection | null; errorMessage: string | null }> {
-    let connection: Connection | null = null;
+  private async validateConnection(
+    spec: SidecarConnectionSpec,
+  ): Promise<{ errorMessage: string | null }> {
     let errorMessage: string | null = null;
 
-    logger.debug("Starting createOrUpdateConnection()");
-    // While all this happening, show a progress notification over the resource view(s)...
+    logger.debug("Starting validateConnection()");
 
     try {
-      connection = update
-        ? await tryToUpdateConnection(spec)
-        : await tryToCreateConnection(spec, dryRun);
-      const connectionId = connection.spec.id as ConnectionId;
-      if (!dryRun) {
-        // Show "new connection loading" progress activity in both the resources view and a notification.
-        const title = `${update ? "Updating" : "Creating"} connection ...`;
-
-        await window.withProgress(
-          {
-            location: { viewId: "confluent-resources" },
-            title,
-          },
-          async () => {
-            await window.withProgress(
-              {
-                location: ProgressLocation.Notification,
-                title: title,
-              },
-              async () => {
-                await waitForConnectionToBeStable(connectionId);
-                logger.debug(`Connection "${spec.name}" is now stable and usable.`);
-              },
-            );
-          },
-        );
+      // Convert sidecar spec format to internal spec format
+      const internalSpec = convertToInternalSpec(spec);
+      const handler = new DirectConnectionHandler(internalSpec);
+      const testResult = await handler.testConnection();
+      if (!testResult.success) {
+        errorMessage = testResult.error ?? "Connection test failed";
       }
     } catch (error) {
-      // logging happens in the above call
       if (error instanceof ResponseError) {
         errorMessage = await error.response.clone().text();
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-      const testOrCreate = dryRun ? "test" : "create";
-      const msg = `Failed to ${update ? "update" : testOrCreate} connection. ${errorMessage}`;
-      logger.error(msg);
-      if (!dryRun) window.showErrorMessage(msg);
-      errorMessage = msg;
+      logger.error("Connection validation failed:", errorMessage);
     }
 
-    logger.debug("Ending createOrUpdateConnection()");
-    return { connection, errorMessage };
+    logger.debug("Ending validateConnection()");
+    return { errorMessage };
   }
 
   /**
@@ -334,59 +327,24 @@ export class DirectConnectionManager extends DisposableCollection {
   }
 
   /**
-   * Compare the known connections between our SecretStorage and the sidecar, creating any missing
-   * connections in the sidecar.
-   *
-   * Also ensure the {@link DirectResourceLoader} instances are available for the {@link ConnectionId}.
+   * Load stored connections from SecretStorage and ensure {@link DirectResourceLoader}
+   * instances are available for each {@link ConnectionId}.
    */
   async rehydrateConnections() {
-    const sidecar = await getSidecar();
-    const client: ConnectionsResourceApi = sidecar.getConnectionsResourceApi();
+    const storedConnections: DirectConnectionsById =
+      await getResourceManager().getDirectConnections();
 
-    const [sidecarConnections, storedConnections]: [ConnectionsList, DirectConnectionsById] =
-      await Promise.all([
-        client.gatewayV1ConnectionsGet(),
-        getResourceManager().getDirectConnections(),
-      ]);
-    const sidecarDirectConnections: Connection[] = sidecarConnections.data.filter(
-      (connection: Connection) => connection.spec.type === ConnectionType.Direct,
-    );
-    logger.debug(
-      `looked up existing direct connections -> sidecar: ${sidecarDirectConnections.length}, stored: ${Array.from(storedConnections.entries()).length}`,
-    );
+    logger.debug(`rehydrating ${storedConnections.size} stored direct connection(s)`);
 
-    // if there are any stored connections that the sidecar doesn't know about, create them
-    const newConnectionPromises: Promise<Connection>[] = [];
-    // and also keep track of which ones we need to make a GET request against for the first time to
-    // ensure they're properly loaded in the sidecar
-    const connectionIdsToCheck: ConnectionId[] = [];
-    for (const [id, connectionSpec] of storedConnections.entries()) {
-      if (!sidecarDirectConnections.find((conn) => conn.spec.id === id)) {
-        logger.debug("telling sidecar about stored connection:", { id });
-        newConnectionPromises.push(tryToCreateConnection(connectionSpec));
-        connectionIdsToCheck.push(id);
-      }
-      // create a new ResourceLoader instance for managing the new connection's resources
+    // Create ResourceLoader instances for each stored connection
+    for (const id of storedConnections.keys()) {
       this.initResourceLoader(id);
     }
 
-    if (newConnectionPromises.length > 0) {
-      // wait for all new connections to be created before checking their status
-      await Promise.all(newConnectionPromises);
-      // kick off background checks to ensure the new connections are usable
-      connectionIdsToCheck.forEach((id) => void waitForConnectionToBeStable(id));
-      logger.debug(
-        `created and checked ${connectionIdsToCheck.length} new connection(s), firing event`,
-      );
+    if (storedConnections.size > 0) {
+      logger.debug(`initialized ${storedConnections.size} direct connection loader(s)`);
+      // Fire event to notify views that connections are ready
+      directConnectionsChanged.fire();
     }
-
-    // rehydrate the websocket connection state watcher with the known connections to let it fire
-    // off events as needed and determine connection stability, and also let any callers of the
-    // watcher's `getLatestConnectionEvent` method get the latest connection status (e.g. if they
-    // missed the initial event(s))
-    const watcher = ConnectionStateWatcher.getInstance();
-    sidecarDirectConnections.forEach((conn) => {
-      watcher.cacheConnectionIfNeeded(conn);
-    });
   }
 }

@@ -3,7 +3,6 @@ import type { RotatingFileStream } from "rotating-file-stream";
 import { createStream } from "rotating-file-stream";
 import type { Event, LogLevel, LogOutputChannel } from "vscode";
 import { Uri, window } from "vscode";
-import { SIDECAR_LOGFILE_NAME } from "./sidecar/constants";
 import { WriteableTmpDir } from "./utils/file";
 import { existsSync, readdirSync, statSync, unlinkSync } from "./utils/fsWrappers";
 
@@ -416,12 +415,8 @@ export function cleanupOldLogFiles() {
   cutoffDate.setDate(now.getDate() - LOG_CLEANUP_DAYS_THRESHOLD);
 
   const logFiles: string[] = readdirSync(logfileDir).filter((file) => {
-    // any `vscode-confluent*.log` files, excluding the sidecar log file
-    return (
-      file.startsWith(`${BASEFILE_PREFIX}-`) &&
-      file.endsWith(".log") &&
-      file !== SIDECAR_LOGFILE_NAME
-    );
+    // any `vscode-confluent*.log` files
+    return file.startsWith(`${BASEFILE_PREFIX}-`) && file.endsWith(".log");
   });
   logger.debug(
     `found ${logFiles.length} extension log file(s) in "${logfileDir}":`,

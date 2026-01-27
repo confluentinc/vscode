@@ -13,12 +13,11 @@ import {
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./constants";
-import { updatePreferences } from "./sidecarSync";
 
 const logger = new Logger("extensionSettings.listener");
 
-/** Any settings that require syncing with the sidecar's preferences API. */
-export const PREFERENCES_SYNC_SETTINGS = [
+/** Settings that affect connection/SSL behavior. */
+export const CONNECTION_SETTINGS = [
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
   KRB5_CONFIG_PATH,
@@ -30,12 +29,11 @@ export function createConfigChangeListener(): Disposable {
   // NOTE: this fires from any VS Code configuration, not just configs from our extension
   const disposable: Disposable = workspace.onDidChangeConfiguration(
     async (event: ConfigurationChangeEvent) => {
-      const changedId = PREFERENCES_SYNC_SETTINGS.find((setting) =>
+      const changedSetting = CONNECTION_SETTINGS.find((setting) =>
         event.affectsConfiguration(setting.id),
       );
-      if (changedId) {
-        logger.debug(`"${changedId.id}" setting changed`);
-        await updatePreferences();
+      if (changedSetting) {
+        logger.debug(`"${changedSetting.id}" setting changed`, { value: changedSetting.value });
         return;
       }
 

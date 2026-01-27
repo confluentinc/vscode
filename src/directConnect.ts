@@ -2,8 +2,8 @@ import { randomUUID } from "crypto";
 import { platform } from "os";
 import type { Disposable, Uri, WebviewPanel } from "vscode";
 import { ViewColumn, commands, env, window } from "vscode";
-import type { AuthErrors, ConnectedState, Connection } from "./clients/sidecar";
-import { ConnectionType } from "./clients/sidecar";
+import type { AuthErrors, Connection } from "./clients/sidecar";
+import { ConnectedState, ConnectionType } from "./clients/sidecar";
 import { DirectConnectionManager } from "./directConnectManager";
 import { getCredentialsType } from "./directConnections/credentials";
 import type { SupportedAuthTypes } from "./directConnections/types";
@@ -90,11 +90,8 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     }
     let result: PostResponse = { success: false, message: "" };
     const manager = DirectConnectionManager.getInstance();
-    const { connection: newConnection, errorMessage } = await manager.createConnection(
-      updatedSpec,
-      false,
-    );
-    if (errorMessage || !newConnection) {
+    const { success, errorMessage } = await manager.createConnection(updatedSpec, false);
+    if (errorMessage || !success) {
       return {
         success: false,
         message: errorMessage ?? "Unknown error while creating connection",
@@ -105,7 +102,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
       directConnectForm.dispose();
       await showInfoNotificationWithButtons(`New Connection Created`, {
         "Edit Connection": () => {
-          commands.executeCommand("confluent.connections.direct.edit", newConnection.id);
+          commands.executeCommand("confluent.connections.direct.edit", updatedSpec.id);
         },
       });
     }
@@ -121,11 +118,8 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
       testSpec = deepMerge(connection, testSpec);
     }
     const manager = DirectConnectionManager.getInstance();
-    const { connection: testConnection, errorMessage } = await manager.createConnection(
-      testSpec,
-      true,
-    );
-    if (errorMessage || !testConnection) {
+    const { success, errorMessage } = await manager.createConnection(testSpec, true);
+    if (errorMessage || !success) {
       return {
         success: false,
         message: errorMessage ?? "Unknown error while testing connection.",
@@ -133,7 +127,15 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
       };
     }
 
-    return parseTestResult(testConnection);
+    // Return success - without sidecar status details, we just report overall success
+    return {
+      success: true,
+      message: "Connection test successful.",
+      testResults: {
+        kafkaState: testSpec.kafka_cluster ? ConnectedState.Success : undefined,
+        schemaState: testSpec.schema_registry ? ConnectedState.Success : undefined,
+      },
+    };
   }
 
   async function updateConnection(body: any): Promise<PostResponse> {

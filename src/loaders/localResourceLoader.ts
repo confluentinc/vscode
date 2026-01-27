@@ -1,8 +1,6 @@
 import { ConnectionType } from "../clients/sidecar";
 import { LOCAL_CONNECTION_ID } from "../constants";
-import { USE_INTERNAL_FETCHERS } from "../extensionSettings/constants";
 import { createLocalResourceFetcher } from "../fetchers";
-import { getLocalResources } from "../graphql/local";
 import { Logger } from "../logging";
 import type { LocalEnvironment } from "../models/environment";
 import type { LocalKafkaCluster } from "../models/kafkaCluster";
@@ -39,15 +37,9 @@ export class LocalResourceLoader extends CachingResourceLoader<
   }
 
   protected async getEnvironmentsFromGraphQL(): Promise<LocalEnvironment[]> {
-    // Check feature flag for internal fetcher usage
-    if (USE_INTERNAL_FETCHERS.value) {
-      logger.debug("Using internal fetcher for local resources");
-      const fetcher = createLocalResourceFetcher();
-      const environment = await fetcher.discoverResources();
-      return environment ? [environment] : [];
-    }
-
-    // Fall back to GraphQL
-    return await getLocalResources();
+    logger.debug("Using internal fetcher for local resources");
+    const fetcher = createLocalResourceFetcher();
+    const environment = await fetcher.discoverResources();
+    return environment ? [environment] : [];
   }
 }

@@ -11,7 +11,6 @@ import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected, flinkStatementDeleted } from "../emitters";
-import { USE_INTERNAL_FETCHERS } from "../extensionSettings/constants";
 import { createCCloudResourceFetcher } from "../fetchers";
 import type { FlinkWorkspaceParams } from "../flinkSql/flinkWorkspace";
 import type { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
@@ -22,8 +21,7 @@ import {
   submitFlinkStatement,
   waitForStatementCompletion,
 } from "../flinkSql/statementUtils";
-import { getCCloudResources } from "../graphql/ccloud";
-import { getCurrentOrganization } from "../graphql/organizations";
+import { getCurrentOrganization } from "../fetchers/organizationFetcher";
 import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
 import type { FlinkAIAgent } from "../models/flinkAiAgent";
@@ -152,20 +150,14 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
   /** Fulfill ResourceLoader::getEnvironmentsFromGraphQL */
   protected async getEnvironmentsFromGraphQL(): Promise<CCloudEnvironment[]> {
-    // Check feature flag for internal fetcher usage
-    if (USE_INTERNAL_FETCHERS.value) {
-      logger.debug("Using internal fetcher for CCloud resources");
-      const fetcher = createCCloudResourceFetcher({
-        getAccessToken: async () => {
-          const session = await getCCloudAuthSession();
-          return session?.accessToken;
-        },
-      });
-      return await fetcher.fetchEnvironments();
-    }
-
-    // Fall back to GraphQL
-    return await getCCloudResources();
+    logger.debug("Using internal fetcher for CCloud resources");
+    const fetcher = createCCloudResourceFetcher({
+      getAccessToken: async () => {
+        const session = await getCCloudAuthSession();
+        return session?.accessToken;
+      },
+    });
+    return await fetcher.fetchEnvironments();
   }
 
   /** Fulfill ResourceLoader::reset(), taking care of clearing in-memory cached organization. */
