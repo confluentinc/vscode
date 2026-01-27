@@ -33,3 +33,18 @@ export {
   type ProduceRecordOptions,
   type UpdateTopicConfigOptions,
 } from "./kafkaRestProxy";
+
+// Schema Registry API Proxy
+export {
+  createSchemaRegistryProxy,
+  SchemaRegistryProxy,
+  type CompatibilityCheckOptions,
+  type CompatibilityMode,
+  type DeleteOptions,
+  type ListSchemasOptions,
+  type ListSubjectsOptions,
+  type RegisterSchemaOptions,
+  type SchemaReferenceInput,
+  type SchemaRegistryProxyConfig,
+  type SchemaType,
+} from "./schemaRegistryProxy";
