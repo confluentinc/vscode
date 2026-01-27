@@ -53,8 +53,7 @@ export class ConsumerGroup implements IResourceBase, ISearchable, IdItem {
   members: Consumer[] = [];
   isSimple: boolean;
 
-  // https://github.com/confluentinc/vscode/issues/3232
-  iconName: IconNames = IconNames.PLACEHOLDER;
+  iconName: IconNames = IconNames.CONSUMER_GROUP;
 
   constructor(
     props: Pick<
@@ -323,7 +322,7 @@ export class ConsumerGroupContainer extends vscode.TreeItem implements ISearchab
 
     this.id = `${connectionId}-${clusterId}-consumer-groups`;
     this.contextValue = this._defaultContextValue;
-    this._defaultIcon = new vscode.ThemeIcon("symbol-event");
+    this._defaultIcon = new vscode.ThemeIcon(IconNames.CONSUMER_GROUP);
     this.iconPath = this._defaultIcon;
 
     this.logger = new Logger("models.ConsumerGroupContainer");
