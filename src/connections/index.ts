@@ -61,3 +61,11 @@ export {
   type TLSConfig,
   type TrustStore,
 } from "./spec";
+
+// Storage
+export {
+  connectionSpecFromJSON,
+  connectionSpecToJSON,
+  ConnectionStorage,
+  type ConnectionsById,
+} from "./storage";
