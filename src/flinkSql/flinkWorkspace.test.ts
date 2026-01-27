@@ -802,29 +802,31 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         workspaceName: "my-workspace",
       });
 
-      try {
-        extractWorkspaceParamsFromUri(uri);
-        assert.fail("Expected FlinkWorkspaceUriError to be thrown");
-      } catch (error) {
-        assert.ok(error instanceof FlinkWorkspaceUriError);
-        assert.strictEqual(error.missingParams.length, 4);
-        assert.ok(error.missingParams.includes("environmentId"));
-        assert.ok(error.missingParams.includes("organizationId"));
-        assert.ok(error.missingParams.includes("provider"));
-        assert.ok(error.missingParams.includes("region"));
-      }
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        (error: unknown) => {
+          assert.ok(error instanceof FlinkWorkspaceUriError);
+          assert.strictEqual(error.missingParams.length, 4);
+          assert.ok(error.missingParams.includes("environmentId"));
+          assert.ok(error.missingParams.includes("organizationId"));
+          assert.ok(error.missingParams.includes("provider"));
+          assert.ok(error.missingParams.includes("region"));
+          return true;
+        },
+      );
     });
 
     it("should include all five params in error when none are provided", function () {
       const uri = createUri({});
 
-      try {
-        extractWorkspaceParamsFromUri(uri);
-        assert.fail("Expected FlinkWorkspaceUriError to be thrown");
-      } catch (error) {
-        assert.ok(error instanceof FlinkWorkspaceUriError);
-        assert.strictEqual(error.missingParams.length, 5);
-      }
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        (error: unknown) => {
+          assert.ok(error instanceof FlinkWorkspaceUriError);
+          assert.strictEqual(error.missingParams.length, 5);
+          return true;
+        },
+      );
     });
 
     it("should treat empty string values as missing", function () {
@@ -833,13 +835,14 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         environmentId: "",
       });
 
-      try {
-        extractWorkspaceParamsFromUri(uri);
-        assert.fail("Expected FlinkWorkspaceUriError to be thrown");
-      } catch (error) {
-        assert.ok(error instanceof FlinkWorkspaceUriError);
-        assert.deepStrictEqual(error.missingParams, ["environmentId"]);
-      }
+      assert.throws(
+        () => extractWorkspaceParamsFromUri(uri),
+        (error: unknown) => {
+          assert.ok(error instanceof FlinkWorkspaceUriError);
+          assert.deepStrictEqual(error.missingParams, ["environmentId"]);
+          return true;
+        },
+      );
     });
 
     it("should ignore extra parameters in the URI", function () {
