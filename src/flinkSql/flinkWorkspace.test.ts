@@ -823,9 +823,9 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         new FlinkWorkspaceUriError([
           "environmentId",
           "organizationId",
+          "workspaceName",
           "provider",
           "region",
-          "workspaceName",
         ]),
       );
     });
@@ -864,7 +864,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         workspaceName: "my workspace with spaces",
       });
       // createUri encodes the parameters, so we verify that here
-      assert.ok(uri.query.includes("workspaceName=my%20workspace%20with%20spaces"));
+      assert.ok(uri.query.includes("my+workspace+with+spaces"), uri.query);
 
       const result = extractWorkspaceParamsFromUri(uri);
       assert.strictEqual(result.workspaceName, "my workspace with spaces");
