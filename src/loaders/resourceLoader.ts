@@ -11,6 +11,7 @@ import type { ConnectionId, EnvironmentId, IResourceBase } from "../models/resou
 import type { Schema } from "../models/schema";
 import { Subject, subjectMatchesTopicName } from "../models/schema";
 import type { SchemaRegistry } from "../models/schemaRegistry";
+import type { ConsumerGroup } from "../models/consumerGroup";
 import type { KafkaTopic } from "../models/topic";
 import { showWarningNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
@@ -132,6 +133,17 @@ export abstract class ResourceLoader extends DisposableCollection implements IRe
     cluster: KafkaCluster,
     forceRefresh?: boolean,
   ): Promise<KafkaTopic[]>;
+
+  /**
+   * Return the consumer groups for a given Kafka cluster.
+   * @param cluster The Kafka cluster to fetch consumer groups for.
+   * @param forceRefresh If true, will ignore any cached consumer groups and fetch anew.
+   * @returns An array of consumer groups for the cluster.
+   */
+  public abstract getConsumerGroupsForCluster(
+    cluster: KafkaCluster,
+    forceRefresh?: boolean,
+  ): Promise<ConsumerGroup[]>;
 
   // Schema registry methods.
 
