@@ -12,9 +12,11 @@ import {
   TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
 } from "../../tests/unit/testResources/flinkComputePool";
 import { WsV1BlockTypeEnum, type GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
+import * as emitters from "../emitters";
 import * as errors from "../errors";
 import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
+import * as notifications from "../notifications";
 import * as quickPickUtils from "../quickpicks/utils/quickPickUtils";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import type { ExtractedSqlStatement, WorkspaceMetadataContext } from "./flinkWorkspace";
@@ -23,8 +25,10 @@ import {
   extractSqlStatementsFromWorkspace,
   extractWorkspaceParamsFromUri,
   FlinkWorkspaceUriError,
+  handleFlinkWorkspaceUriEvent,
   openSqlStatementsAsDocuments,
   selectSqlStatementsForOpening,
+  setFlinkWorkspaceListener,
 } from "./flinkWorkspace";
 import * as statementUtils from "./statementUtils";
 
@@ -32,6 +36,10 @@ describe("flinkSql/flinkWorkspace.ts", function () {
   let sandbox: sinon.SinonSandbox;
   let ccloudLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
   let logErrorStub: sinon.SinonStub;
+
+  // before(async () => {
+  //   await getTestExtensionContext();
+  // });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -356,6 +364,28 @@ describe("flinkSql/flinkWorkspace.ts", function () {
 
       // selectedItems should match all items (pre-selected)
       sinon.assert.match(options.selectedItems, items);
+    });
+
+    it("should include detail field when statement has description", async function () {
+      const statements: ExtractedSqlStatement[] = [
+        { statement: "SELECT 1", description: "First query description" },
+        { statement: "SELECT 2" },
+      ];
+
+      createEnhancedQuickPickStub.resolves({
+        quickPick: { dispose: sandbox.stub() },
+        selectedItems: [],
+      });
+
+      await selectSqlStatementsForOpening(statements);
+
+      const items = createEnhancedQuickPickStub.firstCall.args[0];
+
+      // First item should have detail with description
+      sinon.assert.match(items[0].detail, "Description: First query description");
+
+      // Second item should have no detail
+      sinon.assert.match(items[1].detail, undefined);
     });
   });
 
@@ -870,6 +900,249 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       const result = extractWorkspaceParamsFromUri(uri);
 
       assert.strictEqual(result.workspaceName, "my workspace with spaces");
+    });
+  });
+
+  describe("handleFlinkWorkspaceUriEvent()", function () {
+    let openTextDocumentStub: sinon.SinonStub;
+    let showTextDocumentStub: sinon.SinonStub;
+    let setFlinkDocumentMetadataStub: sinon.SinonStub;
+    let createEnhancedQuickPickStub: sinon.SinonStub;
+    let showErrorNotificationStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      openTextDocumentStub = sandbox.stub(vscode.workspace, "openTextDocument");
+      showTextDocumentStub = sandbox.stub(vscode.window, "showTextDocument");
+      setFlinkDocumentMetadataStub = sandbox.stub(statementUtils, "setFlinkDocumentMetadata");
+      createEnhancedQuickPickStub = sandbox.stub(quickPickUtils, "createEnhancedQuickPick");
+      showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+    });
+
+    it("should show error notification when URI is missing required parameters", async function () {
+      const invalidUri = createUri({ workspaceName: "my-workspace" });
+
+      await handleFlinkWorkspaceUriEvent(invalidUri);
+
+      sinon.assert.calledOnce(showErrorNotificationStub);
+      sinon.assert.calledOnce(logErrorStub);
+      const errorMessage = showErrorNotificationStub.firstCall.args[0] as string;
+      assert.ok(errorMessage.includes("Invalid Flink workspace link"));
+      assert.ok(errorMessage.includes("missing required parameters"));
+
+      sinon.assert.notCalled(ccloudLoaderStub.getFlinkWorkspace);
+    });
+
+    it("should show error notification when workspace is not found", async function () {
+      const uri = createUri(validParams);
+      ccloudLoaderStub.getFlinkWorkspace.resolves(undefined);
+
+      await handleFlinkWorkspaceUriEvent(uri);
+
+      sinon.assert.calledOnce(showErrorNotificationStub);
+      const errorMessage = showErrorNotificationStub.firstCall.args[0] as string;
+      assert.ok(errorMessage.includes("Unable to load Flink workspace"));
+      assert.ok(errorMessage.includes(validParams.workspaceName));
+
+      sinon.assert.notCalled(openTextDocumentStub);
+    });
+
+    it("should open placeholder document when workspace has no SQL statements", async function () {
+      const testEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [],
+      });
+
+      const workspace = createMockWorkspace({
+        environment_id: testEnvironment.id,
+        blocks: [],
+      });
+
+      const mockDocument = createMockDocument("No Flink SQL statements");
+
+      ccloudLoaderStub.getFlinkWorkspace.resolves(workspace);
+      ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
+      openTextDocumentStub.resolves(mockDocument);
+
+      await handleFlinkWorkspaceUriEvent(createUri(validParams));
+
+      sinon.assert.calledOnce(openTextDocumentStub);
+      const docOptions = openTextDocumentStub.firstCall.args[0];
+      assert.strictEqual(docOptions.language, FLINK_SQL_LANGUAGE_ID);
+      assert.ok(docOptions.content.includes("No Flink SQL statements were found"));
+
+      sinon.assert.calledOnce(setFlinkDocumentMetadataStub);
+      sinon.assert.calledOnce(showTextDocumentStub);
+      sinon.assert.calledWith(showTextDocumentStub, mockDocument);
+
+      sinon.assert.notCalled(createEnhancedQuickPickStub);
+    });
+
+    it("should return early when user cancels statement selection", async function () {
+      const testEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [],
+      });
+
+      const workspace = createMockWorkspace({
+        environment_id: testEnvironment.id,
+        blocks: [{ type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } }],
+      });
+
+      ccloudLoaderStub.getFlinkWorkspace.resolves(workspace);
+      ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
+
+      createEnhancedQuickPickStub.resolves({
+        quickPick: { dispose: sandbox.stub() },
+        selectedItems: [],
+      });
+
+      await handleFlinkWorkspaceUriEvent(createUri(validParams));
+
+      sinon.assert.calledOnce(createEnhancedQuickPickStub);
+      sinon.assert.notCalled(openTextDocumentStub);
+      sinon.assert.notCalled(showTextDocumentStub);
+    });
+
+    it("should open selected SQL statements as documents with metadata", async function () {
+      const testEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+      });
+
+      const statements = ["SELECT * FROM table1", "SELECT * FROM table2"];
+      const workspace = createMockWorkspace({
+        environment_id: testEnvironment.id,
+        compute_pool: { id: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID },
+        blocks: statements.map((s) => ({
+          type: WsV1BlockTypeEnum.Code,
+          code_options: { source: [s] },
+        })),
+      });
+
+      ccloudLoaderStub.getFlinkWorkspace.resolves(workspace);
+      ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
+
+      const mockDocuments = statements.map((s) => createMockDocument(s));
+      openTextDocumentStub.onFirstCall().resolves(mockDocuments[0]);
+      openTextDocumentStub.onSecondCall().resolves(mockDocuments[1]);
+
+      createEnhancedQuickPickStub.resolves({
+        quickPick: { dispose: sandbox.stub() },
+        selectedItems: [
+          { label: "Cell 1:", value: statements[0] },
+          { label: "Cell 2:", value: statements[1] },
+        ],
+      });
+
+      await handleFlinkWorkspaceUriEvent(createUri(validParams));
+
+      sinon.assert.callCount(openTextDocumentStub, 2);
+      sinon.assert.callCount(setFlinkDocumentMetadataStub, 2);
+      sinon.assert.callCount(showTextDocumentStub, 2);
+
+      sinon.assert.notCalled(showErrorNotificationStub);
+    });
+
+    it("should open only user-selected statements", async function () {
+      const testEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [],
+      });
+
+      const statements = ["SELECT 1", "SELECT 2", "SELECT 3"];
+      const workspace = createMockWorkspace({
+        environment_id: testEnvironment.id,
+        blocks: statements.map((s) => ({
+          type: WsV1BlockTypeEnum.Code,
+          code_options: { source: [s] },
+        })),
+      });
+
+      ccloudLoaderStub.getFlinkWorkspace.resolves(workspace);
+      ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
+      openTextDocumentStub.resolves(createMockDocument("SELECT 2"));
+
+      createEnhancedQuickPickStub.resolves({
+        quickPick: { dispose: sandbox.stub() },
+        selectedItems: [{ label: "Cell 2:", value: "SELECT 2" }],
+      });
+
+      await handleFlinkWorkspaceUriEvent(createUri(validParams));
+
+      sinon.assert.calledOnce(openTextDocumentStub);
+      const docOptions = openTextDocumentStub.firstCall.args[0];
+      assert.strictEqual(docOptions.content, "SELECT 2");
+    });
+
+    it("should show error notification when opening documents fails", async function () {
+      const testEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [],
+      });
+
+      const workspace = createMockWorkspace({
+        environment_id: testEnvironment.id,
+        blocks: [{ type: WsV1BlockTypeEnum.Code, code_options: { source: ["SELECT 1"] } }],
+      });
+
+      ccloudLoaderStub.getFlinkWorkspace.resolves(workspace);
+      ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
+
+      createEnhancedQuickPickStub.resolves({
+        quickPick: { dispose: sandbox.stub() },
+        selectedItems: [{ label: "Cell 1:", value: "SELECT 1" }],
+      });
+
+      const errorMessage = "Failed to open text document";
+      openTextDocumentStub.rejects(new Error(errorMessage));
+
+      await handleFlinkWorkspaceUriEvent(createUri(validParams));
+
+      sinon.assert.calledOnce(showErrorNotificationStub);
+      sinon.assert.calledOnce(logErrorStub);
+      const notificationMessage = showErrorNotificationStub.firstCall.args[0] as string;
+      assert.ok(notificationMessage.includes("Failed to open Flink SQL workspace"));
+      assert.ok(notificationMessage.includes(errorMessage));
+    });
+
+    it("should pass correct params to getFlinkWorkspace", async function () {
+      ccloudLoaderStub.getFlinkWorkspace.resolves(undefined);
+
+      await handleFlinkWorkspaceUriEvent(createUri(validParams));
+
+      sinon.assert.calledOnce(ccloudLoaderStub.getFlinkWorkspace);
+      const params = ccloudLoaderStub.getFlinkWorkspace.firstCall.args[0];
+      assert.strictEqual(params.environmentId, validParams.environmentId);
+      assert.strictEqual(params.organizationId, validParams.organizationId);
+      assert.strictEqual(params.workspaceName, validParams.workspaceName);
+      assert.strictEqual(params.provider, validParams.provider);
+      assert.strictEqual(params.region, validParams.region);
+    });
+
+    it("should rethrow non-FlinkWorkspaceUriError errors", async function () {
+      const testError = new Error("Unexpected error");
+      sandbox.stub(URLSearchParams.prototype, "get").throws(testError);
+
+      await assert.rejects(
+        () => handleFlinkWorkspaceUriEvent(createUri(validParams)),
+        (error: Error) => {
+          assert.strictEqual(error.message, "Unexpected error");
+          return true;
+        },
+      );
+    });
+  });
+
+  describe("setFlinkWorkspaceListener()", function () {
+    it("should register event handler and return disposable", function () {
+      const mockDisposable = { dispose: sandbox.stub() };
+      const eventStub = sandbox.stub(emitters.flinkWorkspaceUri, "event").returns(mockDisposable);
+
+      const result = setFlinkWorkspaceListener();
+
+      sinon.assert.calledOnce(eventStub);
+      sinon.assert.calledWith(eventStub, handleFlinkWorkspaceUriEvent);
+      assert.strictEqual(result, mockDisposable);
     });
   });
 });
