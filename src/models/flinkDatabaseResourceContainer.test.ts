@@ -4,10 +4,9 @@ import { ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { createFakeFlinkDatabaseResource } from "../../tests/unit/testResources/flinkDatabaseResource";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { IconNames } from "../icons";
+import { ERROR_ICON, IconNames } from "../icons";
 import type { FlinkDatabaseResource } from "./flinkDatabaseResource";
 import {
-  ERROR_ICON,
   FlinkDatabaseResourceContainer,
   LOADING_POLL_INTERVAL_MS,
 } from "./flinkDatabaseResourceContainer";
