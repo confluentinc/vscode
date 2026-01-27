@@ -48,3 +48,22 @@ export {
   type SchemaRegistryProxyConfig,
   type SchemaType,
 } from "./schemaRegistryProxy";
+
+// CCloud Control Plane API Proxy
+export {
+  CCloudControlPlaneProxy,
+  createCCloudControlPlaneProxy,
+  type CCloudControlPlaneProxyConfig,
+  type CCloudEnvironmentData,
+  type CCloudFlinkComputePoolData,
+  type CCloudKafkaClusterData,
+  type CCloudListResponse,
+  type CCloudOrganization,
+  type CCloudSchemaRegistryData,
+  type CCloudUser,
+  type ListEnvironmentsOptions,
+  type ListFlinkComputePoolsOptions,
+  type ListKafkaClustersOptions,
+  type ListResourcesOptions,
+  type ListSchemaRegistriesOptions,
+} from "./ccloudControlPlaneProxy";
