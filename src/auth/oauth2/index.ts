@@ -55,3 +55,16 @@ export {
 
 // Token Manager
 export { TokenManager, type AllTokenStatus, type TokenStatus } from "./tokenManager";
+
+// Token Exchange
+export {
+  exchangeCodeForIdToken,
+  exchangeControlPlaneTokenForDataPlaneToken,
+  exchangeIdTokenForControlPlaneToken,
+  performFullTokenExchange,
+  performTokenRefresh,
+  refreshTokens,
+  TokenExchangeError,
+  type ControlPlaneExchangeOptions,
+  type DataPlaneExchangeOptions,
+} from "./tokenExchange";
