@@ -12,3 +12,5 @@ export {
 } from "./connectionHandler";
 
 export { DirectConnectionHandler } from "./directConnectionHandler";
+
+export { LocalConnectionHandler } from "./localConnectionHandler";
