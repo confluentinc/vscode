@@ -10,3 +10,5 @@ export {
   type ConnectionStatusChangeEvent,
   type ConnectionTestResult,
 } from "./connectionHandler";
+
+export { DirectConnectionHandler } from "./directConnectionHandler";

@@ -73,6 +73,7 @@ export {
 // Handlers
 export {
   ConnectionHandler,
+  DirectConnectionHandler,
   type ConnectionStatusChangeEvent,
   type ConnectionTestResult,
 } from "./handlers";
