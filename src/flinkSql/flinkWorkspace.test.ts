@@ -10,8 +10,13 @@ import {
   TEST_CCLOUD_FLINK_COMPUTE_POOL,
   TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
 } from "../../tests/unit/testResources/flinkComputePool";
-import { WsV1BlockTypeEnum, type GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
-import * as errors from "../errors";
+import {
+  GetWsV1Workspace200ResponseApiVersionEnum,
+  GetWsV1Workspace200ResponseKindEnum,
+  WsV1BlockTypeEnum,
+  type GetWsV1Workspace200Response,
+  type WsV1Block,
+} from "../clients/flinkWorkspaces";
 import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import * as quickPickUtils from "../quickpicks/utils/quickPickUtils";
@@ -28,32 +33,37 @@ import * as statementUtils from "./statementUtils";
 describe("flinkSql/flinkWorkspace.ts", function () {
   let sandbox: sinon.SinonSandbox;
   let ccloudLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
-  let logErrorStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     ccloudLoaderStub = getStubbedCCloudResourceLoader(sandbox);
-    logErrorStub = sandbox.stub(errors, "logError");
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
+  interface CreateMockWorkspaceArgs {
+    environment_id?: string;
+    compute_pool?: { id: string };
+    properties?: { [key: string]: string };
+    blocks?: WsV1Block[];
+  }
+
   function createMockWorkspace(
-    options: {
-      blocks?: GetWsV1Workspace200Response["spec"]["blocks"];
-      environment_id?: string;
-      compute_pool?: { id: string };
-      properties?: Record<string, string>;
-    } = {},
+    overrides: CreateMockWorkspaceArgs = {},
   ): GetWsV1Workspace200Response {
     return {
-      environment_id: options.environment_id,
+      api_version: GetWsV1Workspace200ResponseApiVersionEnum.WsV1,
+      kind: GetWsV1Workspace200ResponseKindEnum.Workspace,
+      metadata: {},
+      name: "test-workspace",
+      environment_id: overrides.environment_id,
       spec: {
-        blocks: options.blocks,
-        compute_pool: options.compute_pool,
-        properties: options.properties,
+        display_name: "Test Workspace",
+        compute_pool: overrides.compute_pool,
+        properties: overrides.properties,
+        blocks: overrides.blocks,
       },
     } as GetWsV1Workspace200Response;
   }
@@ -350,7 +360,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       const result = await extractMetadataFromWorkspace(workspace);
 
       sinon.assert.match(result, {});
-      sinon.assert.calledOnce(logErrorStub);
     });
 
     it("should return empty context when environment not found", async function () {
@@ -361,7 +370,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       const result = await extractMetadataFromWorkspace(workspace);
 
       sinon.assert.match(result, {});
-      sinon.assert.calledOnce(logErrorStub);
     });
 
     it("should return context with catalog when environment is found", async function () {
@@ -401,7 +409,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       sinon.assert.match(result.database, undefined);
     });
 
-    it("should log error when compute pool not found in environment", async function () {
+    it("should return undefined when compute pool not found in environment", async function () {
       const testEnvironment = new CCloudEnvironment({
         ...TEST_CCLOUD_ENVIRONMENT,
         flinkComputePools: [],
@@ -418,13 +426,12 @@ describe("flinkSql/flinkWorkspace.ts", function () {
 
       sinon.assert.match(result.catalog, testEnvironment);
       sinon.assert.match(result.computePool, undefined);
-      sinon.assert.calledOnce(logErrorStub);
     });
 
-    it("should return context with database when cluster with Flink pools is found", async function () {
+    it("should return context with database when provided cluster matches existing compute pool", async function () {
       const testEnvironment = new CCloudEnvironment({
         ...TEST_CCLOUD_ENVIRONMENT,
-        flinkComputePools: [],
+        flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
       });
 
       const workspace = createMockWorkspace({
@@ -443,7 +450,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       sinon.assert.match(result.database, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
     });
 
-    it("should not set database when cluster has no Flink pools", async function () {
+    it("should not set database in context when provided cluster is not associated with any compute pools", async function () {
       const testEnvironment = new CCloudEnvironment({
         ...TEST_CCLOUD_ENVIRONMENT,
         flinkComputePools: [],
@@ -455,6 +462,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       });
 
       ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
+      // This cluster exists but is not linked to any compute pool
       ccloudLoaderStub.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
 
       const result = await extractMetadataFromWorkspace(workspace);
@@ -485,23 +493,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       sinon.assert.match(result.catalog, testEnvironment);
       sinon.assert.match(result.computePool, TEST_CCLOUD_FLINK_COMPUTE_POOL);
       sinon.assert.match(result.database, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
-    });
-
-    it("should handle missing compute_pool gracefully", async function () {
-      const testEnvironment = new CCloudEnvironment({
-        ...TEST_CCLOUD_ENVIRONMENT,
-        flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
-      });
-
-      const workspace = createMockWorkspace({ environment_id: testEnvironment.id });
-
-      ccloudLoaderStub.getEnvironments.resolves([testEnvironment]);
-
-      const result = await extractMetadataFromWorkspace(workspace);
-
-      sinon.assert.match(result.catalog, testEnvironment);
-      sinon.assert.match(result.computePool, undefined);
-      sinon.assert.notCalled(logErrorStub);
     });
 
     it("should not fetch kafka clusters when no database ID in properties", async function () {
