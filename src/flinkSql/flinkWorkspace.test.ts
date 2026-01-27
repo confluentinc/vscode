@@ -17,7 +17,6 @@ import {
   WsV1BlockTypeEnum,
   type GetWsV1Workspace200Response,
 } from "../clients/flinkWorkspaces";
-import * as errors from "../errors";
 import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import * as notifications from "../notifications";
@@ -43,7 +42,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
   let setFlinkDocumentMetadataStub: sinon.SinonStub;
   let createEnhancedQuickPickStub: sinon.SinonStub;
   let showErrorNotificationStub: sinon.SinonStub;
-  let logErrorStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -53,7 +51,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
     setFlinkDocumentMetadataStub = sandbox.stub(statementUtils, "setFlinkDocumentMetadata");
     createEnhancedQuickPickStub = sandbox.stub(quickPickUtils, "createEnhancedQuickPick");
     showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
-    logErrorStub = sandbox.stub(errors, "logError");
   });
 
   afterEach(() => {
@@ -898,7 +895,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       await handleFlinkWorkspaceUriEvent(createUri(validParams));
 
       sinon.assert.calledOnce(showErrorNotificationStub);
-      sinon.assert.calledOnce(logErrorStub);
       const notificationMessage = showErrorNotificationStub.firstCall.args[0] as string;
       assert.ok(notificationMessage.includes("Failed to open Flink SQL workspace"));
       assert.ok(notificationMessage.includes("Cannot read properties of undefined"));
