@@ -72,6 +72,7 @@ export {
 
 // Handlers
 export {
+  CCloudConnectionHandler,
   ConnectionHandler,
   DirectConnectionHandler,
   LocalConnectionHandler,

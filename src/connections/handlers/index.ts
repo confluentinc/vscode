@@ -14,3 +14,5 @@ export {
 export { DirectConnectionHandler } from "./directConnectionHandler";
 
 export { LocalConnectionHandler } from "./localConnectionHandler";
+
+export { CCloudConnectionHandler } from "./ccloudConnectionHandler";
