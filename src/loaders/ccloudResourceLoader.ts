@@ -44,6 +44,7 @@ import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { CCloudOrganization } from "../models/organization";
 import type {
+  ConnectionId,
   EnvironmentId,
   IFlinkQueryable,
   IProviderRegion,
@@ -54,6 +55,7 @@ import { showErrorNotificationWithButtons } from "../notifications";
 import type { SidecarHandle } from "../sidecar";
 import { getSidecar } from "../sidecar";
 import { tryToUpdateConnection } from "../sidecar/connections";
+import { waitForConnectionToBeStable } from "../sidecar/connections/watcher";
 import { WorkspaceStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
@@ -862,7 +864,6 @@ export class CCloudResourceLoader extends CachingResourceLoader<
         `This workspace belongs to a different organization. Switch from "${currentOrg.name}" to continue?`,
         { modal: true },
         "Switch Organization",
-        "Cancel",
       );
 
       if (switchChoice !== "Switch Organization") {
@@ -884,8 +885,14 @@ export class CCloudResourceLoader extends CachingResourceLoader<
         return null;
       }
 
+      // Wait for sidecar to fully process the org switch before any GraphQL queries
+      await waitForConnectionToBeStable(CCLOUD_CONNECTION_ID as ConnectionId);
+
       await this.reset();
       ccloudOrganizationChanged.fire();
+
+      // Ensure environments are loaded for the new org before proceeding
+      await this.ensureCoarseResourcesLoaded();
     }
 
     const sidecar = await getSidecar();
