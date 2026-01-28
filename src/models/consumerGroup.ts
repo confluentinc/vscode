@@ -233,7 +233,7 @@ export class ConsumerTreeItem extends vscode.TreeItem {
       : resource.consumerId;
     super(label);
 
-    this.id = `${resource.clusterId}-${resource.consumerGroupId}`;
+    this.id = `${resource.clusterId}-${resource.clientId}-${resource.consumerId}`;
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-consumer-group-member`;
 
