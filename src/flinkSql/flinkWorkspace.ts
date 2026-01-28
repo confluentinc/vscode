@@ -80,7 +80,6 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
   }
 
   const loader = CCloudResourceLoader.getInstance();
-
   const workspace = await loader.getFlinkWorkspace(params);
   if (!workspace) {
     await showErrorNotificationWithButtons(
