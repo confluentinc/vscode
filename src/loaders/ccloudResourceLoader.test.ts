@@ -46,7 +46,13 @@ import {
   SqlV1StatementListKindEnum,
   StatementsSqlV1Api,
 } from "../clients/flinkSql";
-import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
+import {
+  CCLOUD_AUTH_CALLBACK_URI,
+  CCLOUD_BASE_PATH,
+  CCLOUD_CONNECTION_ID,
+  CCLOUD_CONNECTION_SPEC,
+} from "../constants";
+import * as emitters from "../emitters";
 import * as statementUtils from "../flinkSql/statementUtils";
 import * as graphqlCCloud from "../graphql/ccloud";
 import * as graphqlOrgs from "../graphql/organizations";
@@ -80,6 +86,8 @@ import type { FlinkAIConnection } from "../models/flinkAiConnection";
 import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
 import type { FlinkRelation } from "../models/flinkRelation";
 import type { FlinkUdf } from "../models/flinkUDF";
+import * as notifications from "../notifications";
+import * as connections from "../sidecar/connections";
 import { WorkspaceStorageKeys } from "../storage/constants";
 import {
   CCloudResourceLoader,
@@ -2071,12 +2079,23 @@ describe("CCloudResourceLoader", () => {
       },
     };
 
+    let getCurrentOrganizationStub: sinon.SinonStub;
+    let tryToUpdateConnectionStub: sinon.SinonStub;
+    let loaderResetStub: sinon.SinonStub;
+    let ccloudOrganizationChangedFireStub: sinon.SinonStub;
+    let showErrorNotificationStub: sinon.SinonStub;
+
     beforeEach(() => {
       stubbedSidecar = getSidecarStub(sandbox);
       workspacesApiStub = sandbox.createStubInstance(WorkspacesWsV1Api);
       stubbedSidecar.getFlinkWorkspacesWsV1Api.returns(workspacesApiStub);
 
       getCCloudAuthSessionStub = sandbox.stub(authnUtils, "getCCloudAuthSession");
+      getCurrentOrganizationStub = sandbox.stub(graphqlOrgs, "getCurrentOrganization");
+      tryToUpdateConnectionStub = sandbox.stub(connections, "tryToUpdateConnection");
+      loaderResetStub = sandbox.stub(loader, "reset");
+      ccloudOrganizationChangedFireStub = sandbox.stub(emitters.ccloudOrganizationChanged, "fire");
+      showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
     });
 
     it("should return the workspace when fetch succeeds", async () => {
@@ -2151,6 +2170,105 @@ describe("CCloudResourceLoader", () => {
       assert.strictEqual(queryable.environmentId, testParams.environmentId);
       assert.strictEqual(queryable.provider, testParams.provider);
       assert.strictEqual(queryable.region, testParams.region);
+    });
+
+    it("should not switch organizations when current org matches params", async () => {
+      workspacesApiStub.getWsV1Workspace.resolves(mockWorkspaceResponse);
+      getCurrentOrganizationStub.resolves({
+        id: testParams.organizationId,
+        name: "Test Org",
+        current: true,
+      });
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.deepStrictEqual(result, mockWorkspaceResponse);
+      sinon.assert.calledOnce(getCurrentOrganizationStub);
+      sinon.assert.notCalled(tryToUpdateConnectionStub);
+      sinon.assert.notCalled(loaderResetStub);
+      sinon.assert.notCalled(ccloudOrganizationChangedFireStub);
+    });
+
+    it("should switch organizations when current org differs from params", async () => {
+      workspacesApiStub.getWsV1Workspace.resolves(mockWorkspaceResponse);
+      getCurrentOrganizationStub.resolves({
+        id: "different-org-id",
+        name: "Different Org",
+        current: true,
+      });
+      tryToUpdateConnectionStub.resolves({});
+      loaderResetStub.resolves();
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.deepStrictEqual(result, mockWorkspaceResponse);
+      sinon.assert.calledOnce(getCurrentOrganizationStub);
+      sinon.assert.calledOnce(tryToUpdateConnectionStub);
+      sinon.assert.calledOnceWithExactly(tryToUpdateConnectionStub, {
+        ...CCLOUD_CONNECTION_SPEC,
+        ccloud_config: {
+          organization_id: testParams.organizationId,
+          ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
+        },
+      });
+      sinon.assert.calledOnce(loaderResetStub);
+      sinon.assert.calledOnce(ccloudOrganizationChangedFireStub);
+    });
+
+    it("should not switch organizations when no current org exists", async () => {
+      workspacesApiStub.getWsV1Workspace.resolves(mockWorkspaceResponse);
+      getCurrentOrganizationStub.resolves(undefined);
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.deepStrictEqual(result, mockWorkspaceResponse);
+      sinon.assert.calledOnce(getCurrentOrganizationStub);
+      sinon.assert.notCalled(tryToUpdateConnectionStub);
+      sinon.assert.notCalled(loaderResetStub);
+      sinon.assert.notCalled(ccloudOrganizationChangedFireStub);
+    });
+
+    it("should switch organizations before fetching workspace", async () => {
+      workspacesApiStub.getWsV1Workspace.resolves(mockWorkspaceResponse);
+      getCurrentOrganizationStub.resolves({
+        id: "different-org-id",
+        name: "Different Org",
+        current: true,
+      });
+      tryToUpdateConnectionStub.resolves({});
+      loaderResetStub.resolves();
+
+      await loader.getFlinkWorkspace(testParams);
+
+      // Verify the order: org switch happens before workspace fetch
+      sinon.assert.callOrder(
+        tryToUpdateConnectionStub,
+        loaderResetStub,
+        ccloudOrganizationChangedFireStub,
+        workspacesApiStub.getWsV1Workspace,
+      );
+    });
+
+    it("should show error notification and return null when org switch fails", async () => {
+      getCurrentOrganizationStub.resolves({
+        id: "different-org-id",
+        name: "Different Org",
+        current: true,
+      });
+      tryToUpdateConnectionStub.rejects(new Error("Invalid organization"));
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.strictEqual(result, null);
+      sinon.assert.calledOnce(tryToUpdateConnectionStub);
+      sinon.assert.calledOnce(showErrorNotificationStub);
+      sinon.assert.calledWithMatch(
+        showErrorNotificationStub,
+        sinon.match.string.and(sinon.match(/unable to switch to organization/)),
+      );
+      sinon.assert.notCalled(loaderResetStub);
+      sinon.assert.notCalled(ccloudOrganizationChangedFireStub);
+      sinon.assert.notCalled(workspacesApiStub.getWsV1Workspace);
     });
   });
 });
