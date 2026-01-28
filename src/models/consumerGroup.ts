@@ -79,7 +79,8 @@ export class ConsumerGroup implements IResourceBase, ISearchable, IdItem {
   }
 
   get id(): string {
-    return `${this.clusterId}-${this.consumerGroupId}`;
+    // this can't include the cluster ID since this will be used in Copy commands
+    return this.consumerGroupId;
   }
 
   get hasMembers(): boolean {
@@ -147,7 +148,8 @@ export class Consumer implements IResourceBase, ISearchable, IdItem {
   }
 
   get id(): string {
-    return `${this.clusterId}-${this.consumerGroupId}-${this.consumerId}`;
+    // this can't include the cluster ID since this will be used in Copy commands
+    return this.consumerId;
   }
 
   searchableText(): string {
@@ -169,7 +171,7 @@ export class ConsumerGroupTreeItem extends vscode.TreeItem {
   constructor(resource: ConsumerGroup) {
     super(resource.consumerGroupId);
 
-    this.id = resource.id;
+    this.id = `${resource.clusterId}-${resource.consumerGroupId}`;
     this.resource = resource;
     // includes state for conditional menu visibility, like:
     // "ccloud-consumer-group-STABLE" or "local-consumer-group-EMPTY"
@@ -231,7 +233,7 @@ export class ConsumerTreeItem extends vscode.TreeItem {
       : resource.consumerId;
     super(label);
 
-    this.id = resource.id;
+    this.id = `${resource.clusterId}-${resource.consumerGroupId}`;
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-consumer-group-member`;
 
