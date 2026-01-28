@@ -8,7 +8,7 @@ import {
   Uri,
   workspace,
 } from "vscode";
-import type { ConnectionStatus, ConnectionType } from "../clients/sidecar";
+import type { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { ContextValues, getContextValue, setContextValue } from "../context/values";
 import {
@@ -59,9 +59,7 @@ import type {
 } from "../models/schemaRegistry";
 import { SchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
 import { showErrorNotificationWithButtons } from "../notifications";
-import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
-import { updateLocalConnection } from "../sidecar/connections/local";
-import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
+import { hasCCloudAuthSession } from "../authn/ccloudSession";
 import { BaseViewProvider } from "./baseModels/base";
 import { updateCollapsibleStateFromSearch } from "./utils/collapsing";
 import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
@@ -331,21 +329,8 @@ export class DirectConnectionRow extends SingleEnvironmentConnectionRow<
 
   override async getEnvironments(deepRefresh: boolean = false): Promise<DirectEnvironment[]> {
     const environments = await this.loader.getEnvironments(deepRefresh);
-
-    if (environments.length > 0) {
-      // Augment with information from websocket events, if available.
-      // Taken from old resources view updateEnvironmentFromConnectionStatus().
-      const watcher = ConnectionStateWatcher.getInstance();
-      const latestStatus: ConnectionStatus | undefined = watcher.getLatestConnectionEvent(
-        this.connectionId,
-      )?.connection.status;
-      if (latestStatus) {
-        const env = environments[0];
-        env.kafkaConnectionFailed = latestStatus.kafka_cluster?.errors?.sign_in?.message;
-        env.schemaRegistryConnectionFailed = latestStatus.schema_registry?.errors?.sign_in?.message;
-      }
-    }
-
+    // TODO: Augment with connection error information from ConnectionManager
+    // once the connection status tracking is fully migrated
     return environments;
   }
 
@@ -448,9 +433,8 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
 
   override async refresh(deepRefresh: boolean): Promise<void> {
     this.logger.debug("Refreshing LocalConnectionRow", { deepRefresh });
-
-    await updateLocalConnection();
-
+    // The LocalResourceLoader.getEnvironmentsFromGraphQL() now uses the internal
+    // LocalResourceFetcher which discovers Docker containers directly
     await super.refresh(deepRefresh);
   }
 
