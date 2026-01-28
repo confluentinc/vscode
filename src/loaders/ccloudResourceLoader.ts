@@ -1,4 +1,5 @@
 import type { Disposable } from "vscode";
+import * as vscode from "vscode";
 
 import { getCCloudAuthSession } from "../authn/utils";
 import type { ArtifactV1FlinkArtifactListDataInner } from "../clients/flinkArtifacts";
@@ -9,8 +10,12 @@ import type {
 import type { ListSqlv1StatementsRequest } from "../clients/flinkSql";
 import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
-import { ccloudConnected, flinkStatementDeleted } from "../emitters";
+import {
+  CCLOUD_AUTH_CALLBACK_URI,
+  CCLOUD_CONNECTION_ID,
+  CCLOUD_CONNECTION_SPEC,
+} from "../constants";
+import { ccloudConnected, ccloudOrganizationChanged, flinkStatementDeleted } from "../emitters";
 import type { FlinkWorkspaceParams } from "../flinkSql/flinkWorkspace";
 import type { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
 import {
@@ -39,14 +44,18 @@ import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { CCloudOrganization } from "../models/organization";
 import type {
+  ConnectionId,
   EnvironmentId,
   IFlinkQueryable,
   IProviderRegion,
   OrganizationId,
 } from "../models/resource";
 import type { CCloudSchemaRegistry } from "../models/schemaRegistry";
+import { showErrorNotificationWithButtons } from "../notifications";
 import type { SidecarHandle } from "../sidecar";
 import { getSidecar } from "../sidecar";
+import { tryToUpdateConnection } from "../sidecar/connections";
+import { waitForConnectionToBeStable } from "../sidecar/connections/watcher";
 import { WorkspaceStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
@@ -824,6 +833,8 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   /**
    * Fetch a Flink workspace from the API.
    * Uses the provider/region from the params to query the region-scoped Workspaces API directly.
+   * If the organization ID in params differs from the current organization, switches to the
+   * correct organization before fetching the workspace.
    *
    * @param params Workspace parameters containing environmentId, organizationId, workspaceName, provider, and region
    * @returns The workspace response if found and validation succeeds, null otherwise
@@ -844,6 +855,44 @@ export class CCloudResourceLoader extends CachingResourceLoader<
         return null; // User cancelled - silent exit
       }
       throw error;
+    }
+
+    // Check if we need to switch organizations
+    const currentOrg = await getCurrentOrganization();
+    if (currentOrg && currentOrg.id !== params.organizationId) {
+      const switchChoice = await vscode.window.showInformationMessage(
+        `This workspace belongs to a different organization. Switch from "${currentOrg.name}" to continue?`,
+        { modal: true },
+        "Switch Organization",
+      );
+
+      if (switchChoice !== "Switch Organization") {
+        return null;
+      }
+
+      try {
+        await tryToUpdateConnection({
+          ...CCLOUD_CONNECTION_SPEC,
+          ccloud_config: {
+            organization_id: params.organizationId,
+            ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
+          },
+        });
+      } catch {
+        await showErrorNotificationWithButtons(
+          `Invalid Flink workspace link: unable to switch to organization "${params.organizationId}". Please verify you have access to this organization and that it exists.`,
+        );
+        return null;
+      }
+
+      // Wait for sidecar to fully process the org switch before any GraphQL queries
+      await waitForConnectionToBeStable(CCLOUD_CONNECTION_ID as ConnectionId);
+
+      await this.reset();
+      ccloudOrganizationChanged.fire();
+
+      // Ensure environments are loaded for the new org before proceeding
+      await this.ensureCoarseResourcesLoaded();
     }
 
     const sidecar = await getSidecar();
