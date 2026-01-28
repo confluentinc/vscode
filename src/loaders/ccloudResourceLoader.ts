@@ -867,7 +867,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
         });
       } catch {
         await showErrorNotificationWithButtons(
-          `Invalid Flink workspace link: unable to switch to organization "${params.organizationId}". Please verify you have access to this organization.`,
+          `Invalid Flink workspace link: unable to switch to organization "${params.organizationId}". Please verify you have access to this organization and that it exists.`,
         );
         return null;
       }
