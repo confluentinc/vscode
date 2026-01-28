@@ -9,8 +9,12 @@ import type {
 import type { ListSqlv1StatementsRequest } from "../clients/flinkSql";
 import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
-import { ccloudConnected, flinkStatementDeleted } from "../emitters";
+import {
+  CCLOUD_AUTH_CALLBACK_URI,
+  CCLOUD_CONNECTION_ID,
+  CCLOUD_CONNECTION_SPEC,
+} from "../constants";
+import { ccloudConnected, ccloudOrganizationChanged, flinkStatementDeleted } from "../emitters";
 import type { FlinkWorkspaceParams } from "../flinkSql/flinkWorkspace";
 import type { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
 import {
@@ -45,8 +49,10 @@ import type {
   OrganizationId,
 } from "../models/resource";
 import type { CCloudSchemaRegistry } from "../models/schemaRegistry";
+import { showErrorNotificationWithButtons } from "../notifications";
 import type { SidecarHandle } from "../sidecar";
 import { getSidecar } from "../sidecar";
+import { tryToUpdateConnection } from "../sidecar/connections";
 import { WorkspaceStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
@@ -824,6 +830,8 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   /**
    * Fetch a Flink workspace from the API.
    * Uses the provider/region from the params to query the region-scoped Workspaces API directly.
+   * If the organization ID in params differs from the current organization, switches to the
+   * correct organization before fetching the workspace.
    *
    * @param params Workspace parameters containing environmentId, organizationId, workspaceName, provider, and region
    * @returns The workspace response if found and validation succeeds, null otherwise
@@ -844,6 +852,28 @@ export class CCloudResourceLoader extends CachingResourceLoader<
         return null; // User cancelled - silent exit
       }
       throw error;
+    }
+
+    // Check if we need to switch organizations
+    const currentOrg = await getCurrentOrganization();
+    if (currentOrg && currentOrg.id !== params.organizationId) {
+      try {
+        await tryToUpdateConnection({
+          ...CCLOUD_CONNECTION_SPEC,
+          ccloud_config: {
+            organization_id: params.organizationId,
+            ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
+          },
+        });
+      } catch {
+        await showErrorNotificationWithButtons(
+          `Invalid Flink workspace link: unable to switch to organization "${params.organizationId}". Please verify you have access to this organization.`,
+        );
+        return null;
+      }
+
+      await this.reset();
+      ccloudOrganizationChanged.fire();
     }
 
     const sidecar = await getSidecar();
