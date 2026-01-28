@@ -1,4 +1,5 @@
 import type { Disposable } from "vscode";
+import * as vscode from "vscode";
 
 import { getCCloudAuthSession } from "../authn/utils";
 import type { ArtifactV1FlinkArtifactListDataInner } from "../clients/flinkArtifacts";
@@ -857,6 +858,17 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     // Check if we need to switch organizations
     const currentOrg = await getCurrentOrganization();
     if (currentOrg && currentOrg.id !== params.organizationId) {
+      const switchChoice = await vscode.window.showInformationMessage(
+        `This workspace belongs to a different organization. Switch from "${currentOrg.name}" to continue?`,
+        { modal: true },
+        "Switch Organization",
+        "Cancel",
+      );
+
+      if (switchChoice !== "Switch Organization") {
+        return null;
+      }
+
       try {
         await tryToUpdateConnection({
           ...CCLOUD_CONNECTION_SPEC,
