@@ -73,6 +73,7 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
     if (error instanceof FlinkWorkspaceUriError) {
       logError(error, "Invalid Flink workspace URI");
       logUsage(UserEvent.FlinkWorkspaceUriAction, {
+        action: "open deeplink",
         status: "invalid URI",
         missingParams: error.missingParams.join(","),
       });
@@ -88,6 +89,7 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
   const workspace = await loader.getFlinkWorkspace(params);
   if (!workspace) {
     logUsage(UserEvent.FlinkWorkspaceUriAction, {
+      action: "open deeplink",
       status: "workspace not found",
     });
     await showErrorNotificationWithButtons(
@@ -102,6 +104,7 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
 
   if (sqlStatements.length === 0) {
     logUsage(UserEvent.FlinkWorkspaceUriAction, {
+      action: "open deeplink",
       status: "no statements found",
     });
     const document = await vscode.workspace.openTextDocument({
@@ -118,6 +121,7 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
   if (!selectedStatements || selectedStatements.length === 0) {
     logger.debug("User cancelled statement selection or selected no statements");
     logUsage(UserEvent.FlinkWorkspaceUriAction, {
+      action: "cancel deeplink selection or avoid selection",
       status: "selection cancelled",
     });
     return;
@@ -126,6 +130,7 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
   try {
     await openSqlStatementsAsDocuments(selectedStatements, metadataContext);
     logUsage(UserEvent.FlinkWorkspaceUriAction, {
+      action: "open deeplink",
       status: "documents opened",
       totalStatements: sqlStatements.length,
       selectedStatements: selectedStatements.length,
@@ -133,6 +138,7 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
   } catch (error) {
     logError(error, "Failed to open Flink SQL statements as documents");
     logUsage(UserEvent.FlinkWorkspaceUriAction, {
+      action: "open deeplink",
       status: "open documents failed",
       error: error instanceof Error ? error.message : String(error),
     });
