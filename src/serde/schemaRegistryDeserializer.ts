@@ -205,7 +205,7 @@ class SchemaRegistryDeserializerImpl implements RecordDeserializer {
     const errorCache = getErrorCache();
     const cachedError = errorCache.getError(this.config.connectionId, schemaId);
     if (cachedError) {
-      logger.debug(`Using cached error for schema ${schemaId}: ${cachedError}`);
+      // Silently return cached error - already logged when first encountered
       return {
         ...applyFallbackChain(buffer),
         errorMessage: cachedError,
