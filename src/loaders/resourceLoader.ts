@@ -1,5 +1,10 @@
 import { TokenManager } from "../auth/oauth2/tokenManager";
-import { ConnectionType, CredentialType } from "../connections";
+import {
+  ConnectionType,
+  instanceOfApiKeyCredentials,
+  instanceOfBasicCredentials,
+  instanceOfScramCredentials,
+} from "../connections";
 import { isResponseError, logError } from "../errors";
 import { Logger } from "../logging";
 import type { Environment } from "../models/environment";
@@ -407,18 +412,27 @@ export abstract class ResourceLoader extends DisposableCollection implements IRe
         const spec = await resourceManager.getDirectConnection(schemaRegistry.connectionId);
         if (spec?.schemaRegistry?.credentials) {
           const creds = spec.schemaRegistry.credentials;
-          if (creds.type === CredentialType.BASIC) {
+          // Use type guards which handle both modern (with type discriminator)
+          // and legacy credentials (detected by property names)
+          if (instanceOfBasicCredentials(creds)) {
             return {
               type: "basic",
               username: creds.username,
               password: creds.password,
             };
           }
-          if (creds.type === CredentialType.API_KEY) {
+          if (instanceOfApiKeyCredentials(creds)) {
             return {
               type: "basic",
               username: creds.apiKey,
               password: creds.apiSecret,
+            };
+          }
+          if (instanceOfScramCredentials(creds)) {
+            return {
+              type: "basic",
+              username: creds.username,
+              password: creds.password,
             };
           }
         }

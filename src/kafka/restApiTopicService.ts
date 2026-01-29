@@ -11,8 +11,7 @@ import { TokenManager } from "../auth/oauth2/tokenManager";
 import { ConnectionType, CredentialType } from "../connections";
 import { Logger } from "../logging";
 import type { KafkaCluster } from "../models/kafkaCluster";
-import type { AuthConfig } from "../proxy/httpClient";
-import { HttpError } from "../proxy/httpClient";
+import { createHttpClient, HttpError, type AuthConfig } from "../proxy/httpClient";
 import {
   createKafkaRestProxy,
   type KafkaRestApiVersion,
@@ -63,6 +62,12 @@ const logger = new Logger("kafka.restApiTopicService");
 const instances: Map<KafkaRestApiVersion, RestApiTopicService> = new Map();
 
 /**
+ * Cache of discovered cluster IDs for LOCAL clusters.
+ * Maps extension's internal cluster ID to the actual Kafka cluster ID.
+ */
+const clusterIdCache: Map<string, string> = new Map();
+
+/**
  * TopicService implementation using Kafka REST API.
  *
  * Supports v2 (REST Proxy), v3 (Confluent Cloud), and v3-local (confluent-local) API versions.
@@ -92,6 +97,7 @@ export class RestApiTopicService implements TopicService {
    */
   static resetInstances(): void {
     instances.clear();
+    clusterIdCache.clear();
   }
 
   /**
@@ -223,7 +229,8 @@ export class RestApiTopicService implements TopicService {
    * Creates a KafkaRestProxy for the given cluster.
    */
   private async createProxy(cluster: KafkaCluster): Promise<KafkaRestProxy> {
-    if (!cluster.uri) {
+    const baseUrl = cluster.uri;
+    if (!baseUrl) {
       throw new KafkaAdminError(
         `Kafka cluster ${cluster.id} has no REST URI configured`,
         KafkaAdminErrorCategory.INVALID,
@@ -232,12 +239,79 @@ export class RestApiTopicService implements TopicService {
 
     const auth = await this.getAuthConfig(cluster);
 
+    // For v3-local API, we need to discover the actual Kafka cluster ID
+    // because the extension's internal ID doesn't match the real cluster ID
+    let clusterId: string = cluster.id;
+    if (this.apiVersion === "v3-local") {
+      clusterId = await this.discoverClusterId(baseUrl, cluster.id, auth);
+    }
+
     return createKafkaRestProxy({
-      baseUrl: cluster.uri,
-      clusterId: cluster.id,
+      baseUrl,
+      clusterId,
       auth,
       apiVersion: this.apiVersion,
     });
+  }
+
+  /**
+   * Discovers the actual Kafka cluster ID from the REST API.
+   *
+   * For LOCAL connections, the extension uses an internal ID (e.g., Docker container hash)
+   * but the v3 REST API requires the real Kafka cluster ID from /v3/clusters.
+   *
+   * @param baseUrl The REST API base URL.
+   * @param internalId The extension's internal cluster ID (for caching).
+   * @param auth Optional authentication config.
+   * @returns The actual Kafka cluster ID.
+   */
+  private async discoverClusterId(
+    baseUrl: string,
+    internalId: string,
+    auth?: AuthConfig,
+  ): Promise<string> {
+    // Check cache first
+    const cached = clusterIdCache.get(internalId);
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch from /v3/clusters endpoint
+    const client = createHttpClient({
+      baseUrl,
+      timeout: 30000,
+      auth,
+    });
+
+    try {
+      const response = await client.get<{
+        data: Array<{ cluster_id: string }>;
+      }>("/v3/clusters");
+
+      if (response.data.data.length === 0) {
+        throw new KafkaAdminError(
+          "No clusters found from REST API",
+          KafkaAdminErrorCategory.NOT_FOUND,
+        );
+      }
+
+      // Use the first (and typically only) cluster
+      const realClusterId = response.data.data[0].cluster_id;
+      logger.debug(`discovered real cluster ID ${realClusterId} for internal ID ${internalId}`);
+
+      // Cache the mapping
+      clusterIdCache.set(internalId, realClusterId);
+      return realClusterId;
+    } catch (error) {
+      if (error instanceof KafkaAdminError) {
+        throw error;
+      }
+      throw new KafkaAdminError(
+        `Failed to discover cluster ID: ${error instanceof Error ? error.message : String(error)}`,
+        KafkaAdminErrorCategory.TRANSIENT,
+        { cause: error instanceof Error ? error : undefined },
+      );
+    }
   }
 
   /**

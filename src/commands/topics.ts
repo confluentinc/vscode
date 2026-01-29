@@ -8,6 +8,7 @@ import { PRODUCE_MESSAGE_SCHEMA } from "../diagnostics/produceMessage";
 import { validateDocument } from "../diagnostics/validateDocument";
 import { getRangeForDocument } from "../documentParsing/json";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
+import { logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
@@ -19,6 +20,7 @@ import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   showErrorNotificationWithButtons,
 } from "../notifications";
+import { createKafkaRestProxy, type ProduceRecordData } from "../proxy/kafkaRestProxy";
 import type { SchemaKindSelection } from "../quickpicks/schemas";
 import { schemaKindMultiSelect } from "../quickpicks/schemas";
 import { uriQuickpick } from "../quickpicks/uris";
@@ -36,6 +38,8 @@ import { WebviewPanelCache } from "../webview-cache";
 import { handleWebviewMessage } from "../webview/comms/comms";
 import type { post } from "../webview/topic-config-form";
 import topicFormTemplate from "../webview/topic-config-form.html";
+import { createProduceRequestData } from "./utils/produceMessage";
+import { getProxyConfigForTopic } from "./utils/topics";
 import type { ProduceMessageSchemaOptions } from "./utils/types";
 
 const logger = new Logger("topics");
@@ -83,10 +87,37 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
   if (!topic || !(topic instanceof KafkaTopic)) {
     return;
   }
-  // Retrieve the current topic configuration data
-  // TODO: Phase 6 - Implement using KafkaRestProxy
-  const topicConfigRemoteItems = { data: [] as { name: string; value: string }[] };
-  logger.warn("Topic config editing not yet implemented with internal proxy");
+
+  // Retrieve the current topic configuration data using the REST proxy
+  const proxyConfig = await getProxyConfigForTopic(topic);
+  if (!proxyConfig) {
+    const errorMessage = `Could not find cluster configuration for topic "${topic.name}"`;
+    logger.error(errorMessage);
+    void showErrorNotificationWithButtons(errorMessage);
+    return;
+  }
+
+  const proxy = createKafkaRestProxy(proxyConfig);
+  let topicConfigRemoteItems: { data: { name: string; value: string }[] } = { data: [] };
+
+  try {
+    const configs = await proxy.listTopicConfigs(topic.name);
+    topicConfigRemoteItems = {
+      data: configs.map((c) => ({
+        name: c.name ?? "",
+        value: c.value ?? "",
+      })),
+    };
+    logger.debug(`Loaded ${configs.length} config entries for topic "${topic.name}"`);
+  } catch (error) {
+    logger.error(`Failed to load topic configs for "${topic.name}"`, { error });
+    logError(error, `Failed to load topic configuration for "${topic.name}"`, {
+      extra: { topicName: topic.name, clusterId: proxyConfig.clusterId },
+    });
+    void showErrorNotificationWithButtons(
+      `Failed to load topic configuration for "${topic.name}". The form will show default values.`,
+    );
+  }
 
   // Set up the webview, checking for existing form for this topic
   const [editConfigForm, formExists] = topicWebviewCache.findOrCreate(
@@ -105,13 +136,56 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
 
   // Form validation and submission logic
   async function validateOrUpdateConfig(
-    _topic: KafkaTopic,
-    _data: { [key: string]: unknown },
+    targetTopic: KafkaTopic,
+    data: { [key: string]: unknown },
     validateOnly: boolean = true,
   ): Promise<{ success: boolean; message: string | null }> {
-    // TODO: Phase 6 - Implement using KafkaRestProxy
-    logger.warn("Topic config validation not yet implemented with internal proxy");
-    return { success: true, message: validateOnly ? null : "Success!" };
+    if (validateOnly) {
+      // For validation, we just check the data format - actual validation happens on submit
+      return { success: true, message: null };
+    }
+
+    // Build the config updates from the form data
+    const configUpdates: Array<{ name: string; operation?: "DELETE" | "SET"; value?: string }> = [];
+
+    // Map form field names to topic config names
+    const fieldToConfigMap: Record<string, string> = {
+      cleanupPolicy: "cleanup.policy",
+      retentionSize: "retention.bytes",
+      retentionMs: "retention.ms",
+      maxMessageBytes: "max.message.bytes",
+    };
+
+    for (const [field, configName] of Object.entries(fieldToConfigMap)) {
+      if (field in data && data[field] !== undefined) {
+        configUpdates.push({
+          name: configName,
+          operation: "SET",
+          value: String(data[field]),
+        });
+      }
+    }
+
+    if (configUpdates.length === 0) {
+      return { success: true, message: "No changes to apply." };
+    }
+
+    try {
+      await proxy.updateTopicConfigs({
+        topicName: targetTopic.name,
+        configs: configUpdates,
+      });
+
+      logger.info(`Successfully updated config for topic "${targetTopic.name}"`);
+      return { success: true, message: "Configuration updated successfully!" };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to update topic config for "${targetTopic.name}"`, { error });
+      logError(error, `Failed to update topic configuration for "${targetTopic.name}"`, {
+        extra: { topicName: targetTopic.name },
+      });
+      return { success: false, message: `Failed to update configuration: ${errorMsg}` };
+    }
   }
 
   // Message processing to communicate with the webview
@@ -597,22 +671,66 @@ export interface ProduceResult {
   response: ProduceResponse;
 }
 
-/** Produce a single message to a Kafka topic. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+/**
+ * Produce a single message to a Kafka topic.
+ * @param content The message content to produce.
+ * @param topic The topic to produce to.
+ * @param schemaOptions Optional schema configuration for key and value serialization.
+ * @returns The produce result with timestamp and response.
+ */
 export async function produceMessage(
-  _content: ProduceMessage,
+  content: ProduceMessage,
   topic: KafkaTopic,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _schemaOptions: ProduceMessageSchemaOptions,
+  schemaOptions: ProduceMessageSchemaOptions,
 ): Promise<ProduceResult> {
-  // TODO: Phase 6 - Implement using KafkaRestProxy
-  // The proxy needs to be created with the proper connection/auth config
-  // which requires additional wiring from the ConnectionManager
-  logger.error("Message production not yet implemented with internal proxy", {
-    topic: topic.name,
-    clusterId: topic.clusterId,
-  });
-  throw new Error("Message production is not yet available. This feature is being migrated.");
+  // Get proxy config for the topic's cluster
+  const proxyConfig = await getProxyConfigForTopic(topic);
+  if (!proxyConfig) {
+    throw new Error(`Could not find cluster configuration for topic "${topic.name}"`);
+  }
+
+  const proxy = createKafkaRestProxy(proxyConfig);
+  const timestamp = new Date();
+
+  // Build the produce request using the existing helper
+  const { keyData, valueData } = await createProduceRequestData(content, schemaOptions);
+
+  // Build the produce request
+  const request: ProduceRequest = {
+    partition_id: content.partition_id,
+    headers: content.headers?.map((h) => ({
+      name: h.name ?? h.key ?? "",
+      value: btoa(h.value), // Base64 encode header values
+    })),
+    timestamp,
+    key: keyData,
+    value: valueData,
+  };
+
+  try {
+    const response = await proxy.produceRecord({
+      topicName: topic.name,
+      partitionId: content.partition_id,
+      key: keyData as ProduceRecordData,
+      value: valueData as ProduceRecordData,
+      headers: content.headers?.map((h) => ({
+        name: h.name ?? h.key ?? "",
+        value: h.value,
+      })),
+      timestamp: timestamp.toISOString(),
+    });
+
+    return { timestamp, response };
+  } catch (error) {
+    // Check if this is a bad request error (schema validation failure)
+    if (error instanceof Error && "response" in error) {
+      const resp = (error as { response: Response }).response;
+      if (resp.status === 400) {
+        throw new ProduceMessageBadRequestError(error.message, request, resp);
+      }
+    }
+    throw error;
+  }
 }
 
 export class ProduceMessageBadRequestError extends Error {

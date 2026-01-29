@@ -2,24 +2,24 @@ import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { fetchTopicAuthorizedOperations } from "../authz/topics";
 import { flinkDatabaseViewResourceChanged, topicsViewResourceChanged } from "../emitters";
+import { logError } from "../errors";
 import { ClusterSelectSyncOption, SYNC_ON_KAFKA_SELECT } from "../extensionSettings/constants";
+import { getTopicService, KafkaAdminError, KafkaAdminErrorCategory } from "../kafka";
 import { ResourceLoader } from "../loaders/resourceLoader";
 import { Logger } from "../logging";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
+import { showErrorNotificationWithButtons } from "../notifications";
 import {
   flinkDatabaseQuickpick,
   kafkaClusterQuickPick,
   kafkaClusterQuickPickWithViewProgress,
 } from "../quickpicks/kafkaClusters";
-// TODO: Phase 6 - Import KafkaRestProxy or use direct API calls
 import { removeProtocolPrefix } from "../utils/bootstrapServers";
 import { TopicViewProvider } from "../viewProviders/topics";
 import { selectSchemaRegistryCommand } from "./schemaRegistry";
-// Removing unused imports: waitForTopicToBeDeleted, waitForTopicToExist
-// These were used with the sidecar's topic management API
 
 const logger = new Logger("commands.kafkaClusters");
 
@@ -89,7 +89,22 @@ export async function selectFlinkDatabaseViewKafkaClusterCommand(
   void vscode.commands.executeCommand("confluent-flink-database.focus");
 }
 
-export async function deleteTopicCommand(topic: KafkaTopic) {
+/**
+ * Gets the KafkaCluster for the given topic.
+ * @param topic The topic to get the cluster for.
+ * @returns The KafkaCluster, or undefined if not found.
+ */
+async function getClusterForTopic(topic: KafkaTopic): Promise<KafkaCluster | undefined> {
+  const loader = ResourceLoader.getInstance(topic.connectionId);
+  const clusters = await loader.getKafkaClustersForEnvironmentId(topic.environmentId);
+  return clusters.find((c) => c.id === topic.clusterId);
+}
+
+/**
+ * Deletes a Kafka topic after user confirmation.
+ * @param topic The topic to delete.
+ */
+export async function deleteTopicCommand(topic: KafkaTopic): Promise<void> {
   if (!(topic instanceof KafkaTopic)) {
     return;
   }
@@ -122,14 +137,52 @@ export async function deleteTopicCommand(topic: KafkaTopic) {
     return;
   }
 
-  // TODO: Phase 6 - Implement topic deletion using KafkaRestProxy
-  logger.error("Topic deletion not yet implemented with internal proxy", {
-    topic: topic.name,
-    clusterId: topic.clusterId,
-  });
-  vscode.window.showErrorMessage(
-    "Topic deletion is not yet available. This feature is being migrated.",
-  );
+  // Get the cluster for the topic
+  const cluster = await getClusterForTopic(topic);
+  if (!cluster) {
+    const errorMessage = `Could not find cluster for topic "${topic.name}"`;
+    logger.error(errorMessage);
+    void showErrorNotificationWithButtons(errorMessage);
+    return;
+  }
+
+  // Delete the topic using the topic service
+  const topicService = getTopicService(cluster);
+  try {
+    await topicService.deleteTopic(cluster, topic.name);
+    logger.info(`Successfully deleted topic "${topic.name}" from cluster ${cluster.id}`);
+    vscode.window.showInformationMessage(`Successfully deleted topic "${topic.name}".`);
+    // Refresh the topics view to reflect the deletion
+    await TopicViewProvider.getInstance().refresh(true, cluster);
+  } catch (error) {
+    const errorMessage = `Failed to delete topic "${topic.name}"`;
+    logger.error(errorMessage, { error });
+    logError(error, errorMessage, { extra: { topicName: topic.name, clusterId: cluster.id } });
+
+    // Provide user-friendly error messages based on error category
+    let userMessage = errorMessage;
+    if (error instanceof KafkaAdminError) {
+      switch (error.category) {
+        case KafkaAdminErrorCategory.AUTH:
+          userMessage = `${errorMessage}: You do not have permission to delete this topic.`;
+          break;
+        case KafkaAdminErrorCategory.NOT_FOUND:
+          userMessage = `${errorMessage}: Topic not found. It may have already been deleted.`;
+          // Refresh to update the view anyway
+          await TopicViewProvider.getInstance().refresh(true, cluster);
+          break;
+        case KafkaAdminErrorCategory.TRANSIENT:
+          userMessage = `${errorMessage}: A temporary error occurred. Please try again.`;
+          break;
+        default:
+          userMessage = `${errorMessage}: ${error.message}`;
+      }
+    } else if (error instanceof Error) {
+      userMessage = `${errorMessage}: ${error.message}`;
+    }
+
+    void showErrorNotificationWithButtons(userMessage);
+  }
 }
 
 /**
@@ -180,6 +233,9 @@ export async function createTopicCommand(item?: KafkaCluster): Promise<boolean> 
     ignoreFocusOut: true,
     value: "1",
   });
+  if (!partitionsCount) {
+    return false;
+  }
 
   // CCloud Kafka clusters will return an error if replication factor is less than 3
   const defaultReplicationFactor = isCCloud(cluster) ? "3" : "1";
@@ -189,18 +245,74 @@ export async function createTopicCommand(item?: KafkaCluster): Promise<boolean> 
     ignoreFocusOut: true,
     value: defaultReplicationFactor,
   });
+  if (!replicationFactor) {
+    return false;
+  }
 
-  // TODO: Phase 6 - Implement topic creation using KafkaRestProxy
-  logger.error("Topic creation not yet implemented with internal proxy", {
-    topicName,
-    clusterId: cluster.id,
-    partitionsCount,
-    replicationFactor,
-  });
-  vscode.window.showErrorMessage(
-    "Topic creation is not yet available. This feature is being migrated.",
-  );
-  return false;
+  // Parse numeric values
+  const parsedPartitions = parseInt(partitionsCount, 10);
+  const parsedReplication = parseInt(replicationFactor, 10);
+
+  if (isNaN(parsedPartitions) || parsedPartitions < 1) {
+    vscode.window.showErrorMessage("Invalid partition count. Please enter a positive number.");
+    return false;
+  }
+
+  if (isNaN(parsedReplication) || parsedReplication < 1) {
+    vscode.window.showErrorMessage("Invalid replication factor. Please enter a positive number.");
+    return false;
+  }
+
+  // Create the topic using the topic service
+  const topicService = getTopicService(cluster);
+  try {
+    logger.info(`Creating topic "${topicName}" in cluster ${cluster.id}...`);
+    await topicService.createTopic(cluster, {
+      topicName,
+      partitionsCount: parsedPartitions,
+      replicationFactor: parsedReplication,
+    });
+
+    logger.info(`Successfully created topic "${topicName}" in cluster ${cluster.id}`);
+    vscode.window.showInformationMessage(`Successfully created topic "${topicName}".`);
+
+    // Refresh the topics view to show the new topic
+    await TopicViewProvider.getInstance().refresh(true, cluster);
+
+    return true;
+  } catch (error) {
+    const errorMessage = `Failed to create topic "${topicName}"`;
+    logger.error(errorMessage, { error });
+    logError(error, errorMessage, {
+      extra: { topicName, clusterId: cluster.id, partitionsCount, replicationFactor },
+    });
+
+    // Provide user-friendly error messages based on error category
+    let userMessage = errorMessage;
+    if (error instanceof KafkaAdminError) {
+      switch (error.category) {
+        case KafkaAdminErrorCategory.AUTH:
+          userMessage = `${errorMessage}: You do not have permission to create topics in this cluster.`;
+          break;
+        case KafkaAdminErrorCategory.ALREADY_EXISTS:
+          userMessage = `${errorMessage}: A topic with this name already exists.`;
+          break;
+        case KafkaAdminErrorCategory.INVALID:
+          userMessage = `${errorMessage}: Invalid topic configuration. ${error.message}`;
+          break;
+        case KafkaAdminErrorCategory.TRANSIENT:
+          userMessage = `${errorMessage}: A temporary error occurred. Please try again.`;
+          break;
+        default:
+          userMessage = `${errorMessage}: ${error.message}`;
+      }
+    } else if (error instanceof Error) {
+      userMessage = `${errorMessage}: ${error.message}`;
+    }
+
+    void showErrorNotificationWithButtons(userMessage);
+    return false;
+  }
 }
 
 export async function copyBootstrapServers(item: KafkaCluster) {

@@ -1,7 +1,8 @@
 import { createHash } from "crypto";
 import { toKafkaTopicOperations } from "../../authz/types";
 import { TokenManager } from "../../auth/oauth2/tokenManager";
-import { ConnectionType, CredentialType } from "../../connections";
+import { ConnectionType, type Credentials } from "../../connections";
+import { getCredentialsType } from "../../directConnections/credentials";
 import type { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";
 import {
   getTopicService,
@@ -245,6 +246,54 @@ async function fetchSchemaVersion(params: FetchSchemaVersionParams): Promise<Sch
 }
 
 /**
+ * Converts credentials to HTTP Basic auth configuration.
+ *
+ * Handles both modern credentials (with `type` discriminator) and
+ * legacy/imported credentials (without `type`, detected by property names).
+ * Also handles both camelCase and snake_case property names.
+ *
+ * @param credentials The credentials to convert.
+ * @returns Basic auth config, or undefined if no auth required.
+ */
+function credentialsToBasicAuth(credentials: Credentials | undefined): AuthConfig | undefined {
+  if (!credentials) {
+    return undefined;
+  }
+
+  // Detect credential type - handles both modern (with type) and legacy (property-based)
+  const authType = getCredentialsType(credentials);
+  const creds = credentials as unknown as Record<string, unknown>;
+
+  switch (authType) {
+    case "Basic":
+      return {
+        type: "basic",
+        username: (creds.username as string) ?? "",
+        password: (creds.password as string) ?? "",
+      };
+    case "API":
+      // API keys are sent as basic auth with key:secret
+      // Check both camelCase and snake_case property names
+      return {
+        type: "basic",
+        username: ((creds.apiKey ?? creds.api_key) as string) ?? "",
+        password: ((creds.apiSecret ?? creds.api_secret) as string) ?? "",
+      };
+    case "SCRAM":
+      // SCRAM credentials use basic auth transport
+      // Check standard, scram-specific, and snake_case variants
+      return {
+        type: "basic",
+        username: ((creds.username ?? creds.scramUsername ?? creds.scram_username) as string) ?? "",
+        password: ((creds.password ?? creds.scramPassword ?? creds.scram_password) as string) ?? "",
+      };
+    case "None":
+    default:
+      return undefined;
+  }
+}
+
+/**
  * Get authentication configuration for a Schema Registry based on connection type.
  */
 async function getAuthConfigForSchemaRegistry(
@@ -264,32 +313,7 @@ async function getAuthConfigForSchemaRegistry(
       const resourceManager = getResourceManager();
       const spec = await resourceManager.getDirectConnection(schemaRegistry.connectionId);
       if (spec?.schemaRegistry?.credentials) {
-        const creds = spec.schemaRegistry.credentials;
-
-        // Use the credential's type discriminator for typed access
-        if (creds.type === CredentialType.BASIC) {
-          return {
-            type: "basic",
-            username: creds.username,
-            password: creds.password,
-          };
-        }
-        if (creds.type === CredentialType.API_KEY) {
-          // API keys are sent as basic auth with key:secret
-          return {
-            type: "basic",
-            username: creds.apiKey,
-            password: creds.apiSecret,
-          };
-        }
-        if (creds.type === CredentialType.SCRAM) {
-          // SCRAM credentials are sent as basic auth
-          return {
-            type: "basic",
-            username: creds.username,
-            password: creds.password,
-          };
-        }
+        return credentialsToBasicAuth(spec.schemaRegistry.credentials);
       }
       return undefined;
     }
