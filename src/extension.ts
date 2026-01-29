@@ -355,6 +355,10 @@ async function _activateExtension(
   const directConnectionManager = DirectConnectionManager.getInstance();
   context.subscriptions.push(directConnectionManager);
 
+  // Rehydrate direct connections from secret storage so they appear in the Resources view
+  // This must happen after DirectConnectionManager is created but before views start loading
+  await rehydrateConnections();
+
   // ensure our diagnostic collection(s) are cleared when the extension is deactivated
   context.subscriptions.push(JSON_DIAGNOSTIC_COLLECTION);
 
