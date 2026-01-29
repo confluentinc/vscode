@@ -24,18 +24,38 @@ export function getCredentialsType(creds: any): SupportedAuthTypes {
 
   // Fallback: detect legacy/imported credentials by property names
   // (these don't have a `type` field)
-  if (hasProperties(creds, ["apiKey", "apiSecret"])) return "API";
-  if (hasProperties(creds, ["username", "password"]) && !hasProperties(creds, ["hashAlgorithm"])) {
+  // Check both camelCase and snake_case since imported JSON may use snake_case
+  if (
+    hasProperties(creds, ["apiKey", "apiSecret"]) ||
+    hasProperties(creds, ["api_key", "api_secret"])
+  )
+    return "API";
+  if (
+    (hasProperties(creds, ["username", "password"]) ||
+      hasProperties(creds, ["username", "password"])) &&
+    !hasProperties(creds, ["hashAlgorithm"]) &&
+    !hasProperties(creds, ["hash_algorithm"])
+  ) {
     return "Basic";
   }
   if (
     hasProperties(creds, ["scramUsername", "scramPassword"]) ||
-    hasProperties(creds, ["hashAlgorithm"])
+    hasProperties(creds, ["scram_username", "scram_password"]) ||
+    hasProperties(creds, ["hashAlgorithm"]) ||
+    hasProperties(creds, ["hash_algorithm"])
   ) {
     return "SCRAM";
   }
-  if (hasProperties(creds, ["tokensUrl", "clientId"])) return "OAuth";
-  if (hasProperties(creds, ["principal", "keytabPath"])) return "Kerberos";
+  if (
+    hasProperties(creds, ["tokensUrl", "clientId"]) ||
+    hasProperties(creds, ["tokens_url", "client_id"])
+  )
+    return "OAuth";
+  if (
+    hasProperties(creds, ["principal", "keytabPath"]) ||
+    hasProperties(creds, ["principal", "keytab_path"])
+  )
+    return "Kerberos";
 
   return "None";
 }

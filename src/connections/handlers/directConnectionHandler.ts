@@ -407,48 +407,116 @@ export class DirectConnectionHandler extends ConnectionHandler {
 
   /**
    * Validates that credentials are properly configured.
+   * Handles both modern credentials (with `type` discriminator) and
+   * legacy/imported credentials (without `type`, detected by property names).
    * @returns Error message if invalid, undefined if valid.
    */
   private validateCredentials(credentials: Credentials): string | undefined {
-    switch (credentials.type) {
+    // Detect credential type - use discriminator if present, otherwise detect from properties
+    const credType = this.detectCredentialType(credentials);
+    // Use unknown first to satisfy TypeScript when treating as record
+    const creds = credentials as unknown as Record<string, unknown>;
+
+    switch (credType) {
       case CredentialType.NONE:
         return undefined;
 
       case CredentialType.BASIC:
-        if (!credentials.username) return "Basic auth requires username";
-        if (!credentials.password) return "Basic auth requires password";
+        if (!creds.username) return "Basic auth requires username";
+        if (!creds.password) return "Basic auth requires password";
         return undefined;
 
       case CredentialType.API_KEY:
-        if (!credentials.apiKey) return "API key auth requires key";
-        if (!credentials.apiSecret) return "API key auth requires secret";
+        // Check both camelCase and snake_case (for imported JSON)
+        if (!creds.apiKey && !creds.api_key) return "API key auth requires key";
+        if (!creds.apiSecret && !creds.api_secret) return "API key auth requires secret";
         return undefined;
 
-      case CredentialType.SCRAM:
-        if (!credentials.username) return "SCRAM auth requires username";
-        if (!credentials.password) return "SCRAM auth requires password";
+      case CredentialType.SCRAM: {
+        const hasUsername = creds.username || creds.scramUsername || creds.scram_username;
+        const hasPassword = creds.password || creds.scramPassword || creds.scram_password;
+        if (!hasUsername) return "SCRAM auth requires username";
+        if (!hasPassword) return "SCRAM auth requires password";
         return undefined;
+      }
 
       case CredentialType.OAUTH:
-        if (!credentials.tokensUrl) return "OAuth requires token endpoint";
-        if (!credentials.clientId) return "OAuth requires client ID";
+        // Check both camelCase and snake_case (for imported JSON)
+        if (!creds.tokensUrl && !creds.tokens_url) return "OAuth requires token endpoint";
+        if (!creds.clientId && !creds.client_id) return "OAuth requires client ID";
         return undefined;
 
-      case CredentialType.MTLS:
-        if (!credentials.keystore?.path) return "mTLS requires certificate path";
+      case CredentialType.MTLS: {
+        const keystore = creds.keystore as Record<string, unknown> | undefined;
+        if (!keystore?.path) return "mTLS requires certificate path";
         return undefined;
+      }
 
       case CredentialType.KERBEROS:
-        if (!credentials.principal) return "Kerberos requires principal";
+        if (!creds.principal) return "Kerberos requires principal";
         return undefined;
 
       default:
-        return `Unknown credential type: ${(credentials as Credentials).type}`;
+        return `Unknown credential type: ${credType}`;
     }
   }
 
   /**
+   * Detects the credential type from a credentials object.
+   * Uses the `type` discriminator if present, otherwise detects from property names.
+   */
+  private detectCredentialType(credentials: Credentials): CredentialType {
+    // If type discriminator is present, use it
+    if (credentials.type) {
+      return credentials.type;
+    }
+
+    // Otherwise detect from property names (for imported JSON without type)
+    // Use unknown first to satisfy TypeScript when treating as record
+    const creds = credentials as unknown as Record<string, unknown>;
+
+    // API Key - check both camelCase and snake_case
+    if ((creds.apiKey && creds.apiSecret) || (creds.api_key && creds.api_secret)) {
+      return CredentialType.API_KEY;
+    }
+
+    // SCRAM - check for scram-specific fields
+    if (
+      creds.scramUsername ||
+      creds.scram_username ||
+      creds.hashAlgorithm ||
+      creds.hash_algorithm
+    ) {
+      return CredentialType.SCRAM;
+    }
+
+    // Basic - username/password without scram-specific fields
+    if (creds.username && creds.password) {
+      return CredentialType.BASIC;
+    }
+
+    // OAuth
+    if ((creds.tokensUrl && creds.clientId) || (creds.tokens_url && creds.client_id)) {
+      return CredentialType.OAUTH;
+    }
+
+    // Kerberos
+    if (creds.principal && (creds.keytabPath || creds.keytab_path)) {
+      return CredentialType.KERBEROS;
+    }
+
+    // mTLS
+    if (creds.keystore) {
+      return CredentialType.MTLS;
+    }
+
+    return CredentialType.NONE;
+  }
+
+  /**
    * Converts credentials to AuthConfig for the HTTP client.
+   * Handles both modern credentials (with `type` discriminator) and
+   * legacy/imported credentials (without `type`, detected by property names).
    * @param credentials The credentials to convert.
    * @returns AuthConfig for the HTTP client, or undefined for unsupported types.
    */
@@ -457,31 +525,39 @@ export class DirectConnectionHandler extends ConnectionHandler {
       return undefined;
     }
 
-    switch (credentials.type) {
+    const credType = this.detectCredentialType(credentials);
+    // Use unknown first to satisfy TypeScript when treating as record
+    const creds = credentials as unknown as Record<string, unknown>;
+
+    switch (credType) {
       case CredentialType.NONE:
         return undefined;
 
       case CredentialType.BASIC:
         return {
           type: "basic",
-          username: credentials.username,
-          password: credentials.password,
+          username: (creds.username as string) ?? "",
+          password: (creds.password as string) ?? "",
         };
 
       case CredentialType.API_KEY:
         // API keys are sent as basic auth with key:secret
+        // Handle both camelCase and snake_case (for imported JSON)
         return {
           type: "basic",
-          username: credentials.apiKey,
-          password: credentials.apiSecret,
+          username: ((creds.apiKey ?? creds.api_key) as string) ?? "",
+          password: ((creds.apiSecret ?? creds.api_secret) as string) ?? "",
         };
 
       case CredentialType.SCRAM:
         // SCRAM credentials are sent as basic auth
+        // Handle both camelCase and snake_case (for imported JSON)
         return {
           type: "basic",
-          username: credentials.username,
-          password: credentials.password,
+          username:
+            ((creds.username ?? creds.scramUsername ?? creds.scram_username) as string) ?? "",
+          password:
+            ((creds.password ?? creds.scramPassword ?? creds.scram_password) as string) ?? "",
         };
 
       case CredentialType.OAUTH:
