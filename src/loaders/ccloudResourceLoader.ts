@@ -44,7 +44,6 @@ import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { CCloudOrganization } from "../models/organization";
 import type {
-  ConnectionId,
   EnvironmentId,
   IFlinkQueryable,
   IProviderRegion,
@@ -879,14 +878,16 @@ export class CCloudResourceLoader extends CachingResourceLoader<
           },
         });
       } catch {
+        const session = await getCCloudAuthSession();
+        const userName = session?.account.label || "unknown";
         await showErrorNotificationWithButtons(
-          `Invalid Flink workspace link: unable to switch to organization "${params.organizationId}". Please verify you have access to this organization and that it exists.`,
+          `Invalid Flink workspace link: unable to switch to organization "${params.organizationId}". Signed in with user ${userName}. Please verify you have access to this organization.`,
         );
         return null;
       }
 
       // Wait for sidecar to fully process the org switch before any GraphQL queries
-      await waitForConnectionToBeStable(CCLOUD_CONNECTION_ID as ConnectionId);
+      await waitForConnectionToBeStable(CCLOUD_CONNECTION_ID);
 
       await this.reset();
       ccloudOrganizationChanged.fire();
