@@ -10,6 +10,7 @@ import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import type { QuickPickItemWithValue } from "../quickpicks/types";
 import { createEnhancedQuickPick } from "../quickpicks/utils/quickPickUtils";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import { setFlinkDocumentMetadata } from "./statementUtils";
 
@@ -71,6 +72,11 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
   } catch (error) {
     if (error instanceof FlinkWorkspaceUriError) {
       logError(error, "Invalid Flink workspace URI");
+      logUsage(UserEvent.FlinkWorkspaceUriAction, {
+        action: "open deeplink",
+        status: "invalid URI",
+        missingParams: error.missingParams.join(","),
+      });
       await showErrorNotificationWithButtons(
         `Invalid Flink workspace link: missing required parameters (${error.missingParams.join(", ")}). Please use a complete workspace link from Confluent Cloud.`,
       );
@@ -82,6 +88,10 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
   const loader = CCloudResourceLoader.getInstance();
   const workspace = await loader.getFlinkWorkspace(params);
   if (!workspace) {
+    logUsage(UserEvent.FlinkWorkspaceUriAction, {
+      action: "open deeplink",
+      status: "workspace not found",
+    });
     await showErrorNotificationWithButtons(
       `Unable to load Flink workspace: ${params.workspaceName}. Please verify the workspace exists and you have access.`,
     );
@@ -93,6 +103,10 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
   const sqlStatements = extractSqlStatementsFromWorkspace(workspace);
 
   if (sqlStatements.length === 0) {
+    logUsage(UserEvent.FlinkWorkspaceUriAction, {
+      action: "open deeplink",
+      status: "no statements found",
+    });
     const document = await vscode.workspace.openTextDocument({
       language: FLINK_SQL_LANGUAGE_ID,
       content: `No Flink SQL statements were found in this workspace.`,
@@ -106,13 +120,28 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
   const selectedStatements = await selectSqlStatementsForOpening(sqlStatements);
   if (!selectedStatements || selectedStatements.length === 0) {
     logger.debug("User cancelled statement selection or selected no statements");
+    logUsage(UserEvent.FlinkWorkspaceUriAction, {
+      action: "cancel deeplink selection or avoid selection",
+      status: "selection cancelled",
+    });
     return;
   }
 
   try {
     await openSqlStatementsAsDocuments(selectedStatements, metadataContext);
+    logUsage(UserEvent.FlinkWorkspaceUriAction, {
+      action: "select deeplinked statements",
+      status: "documents opened",
+      totalStatements: sqlStatements.length,
+      selectedStatements: selectedStatements.length,
+    });
   } catch (error) {
     logError(error, "Failed to open Flink SQL statements as documents");
+    logUsage(UserEvent.FlinkWorkspaceUriAction, {
+      action: "open deeplinked statements",
+      status: "open documents failed",
+      error: error instanceof Error ? error.message : String(error),
+    });
     await showErrorNotificationWithButtons(
       `Failed to open Flink SQL workspace: ${error instanceof Error ? error.message : String(error)}`,
     );

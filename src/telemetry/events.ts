@@ -31,6 +31,7 @@ export enum UserEvent {
   SidecarStartupFailure = "Sidecar Startup Failure",
   FlinkArtifactAction = "Flink Artifact Action",
   FlinkUDFAction = "Flink UDF Action",
+  FlinkWorkspaceUriAction = "Flink Workspace URI Action",
   /**
    * Used for basic settings changes like enabling/disabling a feature or changing enum/numeric
    * values.
