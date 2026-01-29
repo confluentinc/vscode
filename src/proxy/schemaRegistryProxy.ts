@@ -235,10 +235,20 @@ export class SchemaRegistryProxy {
    * @returns Schema definition string.
    */
   async getSchemaString(subject: string, version: string | number): Promise<string> {
-    const response = await this.client.get<string>(
+    // The /schema endpoint returns the raw schema definition.
+    // When the Accept header is application/json, Schema Registry returns Content-Type: application/json,
+    // which causes the HTTP client to parse the response as a JSON object.
+    // We need to handle both cases: when it's already a string, or when it's been parsed as an object.
+    const response = await this.client.get<string | object>(
       `/subjects/${encodeURIComponent(subject)}/versions/${version}/schema`,
     );
-    return response.data;
+
+    // If the response was parsed as JSON (returning an object), stringify it
+    if (typeof response.data === "object" && response.data !== null) {
+      return JSON.stringify(response.data);
+    }
+
+    return response.data as string;
   }
 
   /**
