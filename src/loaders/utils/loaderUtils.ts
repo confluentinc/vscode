@@ -1,8 +1,7 @@
 import { createHash } from "crypto";
 import { toKafkaTopicOperations } from "../../authz/types";
 import { TokenManager } from "../../auth/oauth2/tokenManager";
-import { ConnectionType } from "../../connections";
-import { getCredentialsType } from "../../directConnections/credentials";
+import { ConnectionType, CredentialType } from "../../connections";
 import type { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";
 import {
   getTopicService,
@@ -266,42 +265,29 @@ async function getAuthConfigForSchemaRegistry(
       const spec = await resourceManager.getDirectConnection(schemaRegistry.connectionId);
       if (spec?.schemaRegistry?.credentials) {
         const creds = spec.schemaRegistry.credentials;
-        // Use record type for property access to support both camelCase and snake_case
-        const credsRecord = creds as unknown as Record<string, unknown>;
 
-        // Use getCredentialsType to detect the credential type (handles both
-        // modern credentials with type discriminator and legacy credentials)
-        const credType = getCredentialsType(creds);
-
-        if (credType === "Basic") {
+        // Use the credential's type discriminator for typed access
+        if (creds.type === CredentialType.BASIC) {
           return {
             type: "basic",
-            username: (credsRecord.username as string) ?? "",
-            password: (credsRecord.password as string) ?? "",
+            username: creds.username,
+            password: creds.password,
           };
         }
-        if (credType === "API") {
+        if (creds.type === CredentialType.API_KEY) {
           // API keys are sent as basic auth with key:secret
-          // Handle both camelCase and snake_case (for imported JSON)
           return {
             type: "basic",
-            username: ((credsRecord.apiKey ?? credsRecord.api_key) as string) ?? "",
-            password: ((credsRecord.apiSecret ?? credsRecord.api_secret) as string) ?? "",
+            username: creds.apiKey,
+            password: creds.apiSecret,
           };
         }
-        if (credType === "SCRAM") {
+        if (creds.type === CredentialType.SCRAM) {
           // SCRAM credentials are sent as basic auth
-          // Handle both camelCase and snake_case (for imported JSON)
           return {
             type: "basic",
-            username:
-              ((credsRecord.username ??
-                credsRecord.scramUsername ??
-                credsRecord.scram_username) as string) ?? "",
-            password:
-              ((credsRecord.password ??
-                credsRecord.scramPassword ??
-                credsRecord.scram_password) as string) ?? "",
+            username: creds.username,
+            password: creds.password,
           };
         }
       }

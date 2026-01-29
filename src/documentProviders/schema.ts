@@ -101,6 +101,8 @@ async function getAuthConfigForSchemaRegistry(schema: Schema): Promise<AuthConfi
       const spec = await resourceManager.getDirectConnection(schema.connectionId);
       if (spec?.schemaRegistry?.credentials) {
         const creds = spec.schemaRegistry.credentials;
+
+        // Use the credential's type discriminator for typed access
         if (creds.type === CredentialType.BASIC) {
           return {
             type: "basic",
@@ -109,10 +111,19 @@ async function getAuthConfigForSchemaRegistry(schema: Schema): Promise<AuthConfi
           };
         }
         if (creds.type === CredentialType.API_KEY) {
+          // API keys are sent as basic auth with key:secret
           return {
             type: "basic",
             username: creds.apiKey,
             password: creds.apiSecret,
+          };
+        }
+        if (creds.type === CredentialType.SCRAM) {
+          // SCRAM credentials are sent as basic auth
+          return {
+            type: "basic",
+            username: creds.username,
+            password: creds.password,
           };
         }
       }
