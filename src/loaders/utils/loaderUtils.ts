@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { KAFKA_TOPIC_OPERATIONS } from "../../authz/constants";
 import { toKafkaTopicOperations } from "../../authz/types";
 import { TokenManager } from "../../auth/oauth2/tokenManager";
 import { ConnectionType, type Credentials } from "../../connections";
@@ -128,6 +129,19 @@ export function correlateTopicsWithSchemaSubjects(
       isFlinkable = (cluster as CCloudKafkaCluster).isFlinkable();
     }
 
+    // Determine authorized operations
+    // For LOCAL connections, empty array from REST API means "no ACLs configured" = all allowed
+    // The confluent-local container doesn't enforce ACLs, so treat [] as full access
+    let authorizedOps = topic.authorized_operations;
+    if (
+      cluster.connectionType === ConnectionType.Local &&
+      authorizedOps !== undefined &&
+      authorizedOps.length === 0
+    ) {
+      // LOCAL with empty ops: assume all operations allowed (no ACL enforcement)
+      authorizedOps = [...KAFKA_TOPIC_OPERATIONS];
+    }
+
     return new KafkaTopic({
       connectionId: cluster.connectionId,
       connectionType: cluster.connectionType,
@@ -140,9 +154,9 @@ export function correlateTopicsWithSchemaSubjects(
       clusterId: cluster.id,
       environmentId: cluster.environmentId,
       isFlinkable: isFlinkable,
-      operations: toKafkaTopicOperations(topic.authorized_operations ?? []),
+      operations: toKafkaTopicOperations(authorizedOps ?? []),
       // Only set operationsKnown if auth info was actually returned (not undefined)
-      operationsKnown: topic.authorized_operations !== undefined,
+      operationsKnown: authorizedOps !== undefined,
       children: matchingSubjects,
     });
   });
