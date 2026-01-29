@@ -90,6 +90,7 @@ import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageCl
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { setFlinkWorkspaceListener } from "./flinkSql/flinkWorkspace";
 import { IconNames } from "./icons";
+import { disposeTopicServices } from "./kafka";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
 import type { ConnectionId } from "./models/resource";
@@ -630,6 +631,9 @@ export function deactivate() {
 
   disposeLaunchDarklyClient();
   disableCCloudStatusPolling();
+
+  // dispose of Kafka topic services (Admin client connections)
+  disposeTopicServices();
 
   // close the file stream used with EXTENSION_OUTPUT_CHANNEL -- needs to be done last to avoid any other cleanup logging attempting to write to the file stream
   EXTENSION_OUTPUT_CHANNEL.dispose();

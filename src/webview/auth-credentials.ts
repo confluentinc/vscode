@@ -59,12 +59,29 @@ export class AuthCredentials extends HTMLElement {
   getInputId(name: string) {
     return this.identifier() + ".credentials." + name;
   }
+
+  /**
+   * Gets a credential value by key, checking both camelCase and snake_case.
+   * This handles credentials from imported JSON (which are converted to camelCase)
+   * as well as credentials that might still be in snake_case format.
+   */
+  getCredValue(snakeKey: string): string | undefined {
+    const creds = this.creds() as Record<string, unknown> | null | undefined;
+    if (!creds) return undefined;
+
+    // Convert snake_case to camelCase
+    const camelKey = snakeKey.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+
+    // Check camelCase first (from imported/converted JSON), then snake_case
+    const value = creds[camelKey] ?? creds[snakeKey];
+    return value as string | undefined;
+  }
+
   getHashAlgorithm() {
     // Default to SCRAM_SHA_256 unless WarpStream, which uses SCRAM_SHA_512
     return this.connectionType() === "WarpStream"
       ? "SCRAM_SHA_512"
-      : // @ts-expect-error the creds could be of any Credentials type
-        this.creds()?.hash_algorithm ?? "SCRAM_SHA_256";
+      : this.getCredValue("hash_algorithm") ?? "SCRAM_SHA_256";
   }
 
   // Add all initial form values to the form data, including defaults
@@ -186,7 +203,7 @@ export class AuthCredentials extends HTMLElement {
               data-attr-id="this.getInputId('username')"
               data-attr-name="this.getInputId('username')"
               type="text"
-              data-value="this.creds()?.username ?? null"
+              data-value="this.getCredValue('username') ?? null"
               data-on-input="this.updateValue(event)"
             />
           </div>
@@ -198,7 +215,7 @@ export class AuthCredentials extends HTMLElement {
               data-attr-id="this.getInputId('password')"
               data-attr-name="this.getInputId('password')"
               type="password"
-              data-value="this.creds()?.password ?? null"
+              data-value="this.getCredValue('password') ?? null"
               data-on-input="this.updateValue(event)"
             />
           </div>
@@ -215,7 +232,7 @@ export class AuthCredentials extends HTMLElement {
               data-attr-id="this.getInputId('api_key')"
               data-attr-name="this.getInputId('api_key')"
               type="text"
-              data-value="this.creds()?.api_key ?? null"
+              data-value="this.getCredValue('api_key') ?? null"
               data-on-input="this.updateValue(event)"
             />
           </div>
@@ -226,7 +243,7 @@ export class AuthCredentials extends HTMLElement {
               required
               data-attr-id="this.getInputId('api_secret')"
               data-attr-name="this.getInputId('api_secret')"
-              data-attr-value="this.creds()?.api_secret ?? null"
+              data-value="this.getCredValue('api_secret') ?? null"
               type="password"
               data-on-input="this.updateValue(event)"
             />
@@ -260,7 +277,7 @@ export class AuthCredentials extends HTMLElement {
                 data-attr-id="this.getInputId('scram_username')"
                 data-attr-name="this.getInputId('scram_username')"
                 type="text"
-                data-value="this.creds()?.scram_username ?? null"
+                data-value="this.getCredValue('scram_username') ?? null"
                 data-on-input="this.updateValue(event)"
               />
             </div>
@@ -272,7 +289,7 @@ export class AuthCredentials extends HTMLElement {
                 type="password"
                 data-attr-id="this.getInputId('scram_password')"
                 data-attr-name="this.getInputId('scram_password')"
-                data-value="this.creds()?.scram_password ?? null"
+                data-value="this.getCredValue('scram_password') ?? null"
                 data-on-input="this.updateValue(event)"
               />
             </div>
@@ -291,7 +308,7 @@ export class AuthCredentials extends HTMLElement {
                 type="url"
                 data-attr-id="this.getInputId('tokens_url')"
                 data-attr-name="this.getInputId('tokens_url')"
-                data-value="this.creds()?.tokens_url ?? null"
+                data-value="this.getCredValue('tokens_url') ?? null"
                 data-on-input="this.updateValue(event)"
                 title="The URL of the OAuth 2.0 identity provider's token endpoint. Must be a valid URL."
               />
@@ -303,7 +320,7 @@ export class AuthCredentials extends HTMLElement {
                 type="text"
                 data-attr-id="this.getInputId('scope')"
                 data-attr-name="this.getInputId('scope')"
-                data-value="this.creds()?.scope ?? null"
+                data-value="this.getCredValue('scope') ?? null"
                 data-on-input="this.updateValue(event)"
                 title="The scope to use. The scope is optional and required only when your identity provider doesn't have a default scope or your groups claim is linked to a scope path to use when connecting to the external service."
               />
@@ -317,7 +334,7 @@ export class AuthCredentials extends HTMLElement {
                 type="number"
                 data-attr-id="this.getInputId('connect_timeout_millis')"
                 data-attr-name="this.getInputId('connect_timeout_millis')"
-                data-value="this.creds()?.connect_timeout_millis ?? null"
+                data-value="this.getCredValue('connect_timeout_millis') ?? null"
                 data-on-input="this.updateValue(event)"
                 max="60000"
                 min="0"
@@ -336,7 +353,7 @@ export class AuthCredentials extends HTMLElement {
                 required
                 data-attr-id="this.getInputId('client_id')"
                 data-attr-name="this.getInputId('client_id')"
-                data-value="this.creds()?.client_id ?? null"
+                data-value="this.getCredValue('client_id') ?? null"
                 data-on-input="this.updateValue(event)"
                 title="The public identifier for the application as registered with the OAuth 2.0 identity provider."
               />
@@ -348,7 +365,7 @@ export class AuthCredentials extends HTMLElement {
                 type="password"
                 data-attr-id="this.getInputId('client_secret')"
                 data-attr-name="this.getInputId('client_secret')"
-                data-value="this.creds()?.client_secret ?? null"
+                data-value="this.getCredValue('client_secret') ?? null"
                 data-on-input="this.updateValue(event)"
                 title="The client secret known only to the application and the OAuth 2.0 identity provider."
               />
@@ -366,7 +383,7 @@ export class AuthCredentials extends HTMLElement {
                   type="text"
                   data-attr-id="this.getInputId('ccloud_logical_cluster_id')"
                   data-attr-name="this.getInputId('ccloud_logical_cluster_id')"
-                  data-value="this.creds()?.ccloud_logical_cluster_id ?? null"
+                  data-value="this.getCredValue('ccloud_logical_cluster_id') ?? null"
                   data-on-input="this.updateValue(event)"
                   title="Additional property that can be added in the request header to identify the logical cluster ID to connect to. For example, this may be a Confluent Cloud Kafka or Schema Registry cluster ID."
                 />
@@ -380,7 +397,7 @@ export class AuthCredentials extends HTMLElement {
                   type="text"
                   data-attr-id="this.getInputId('ccloud_identity_pool_id')"
                   data-attr-name="this.getInputId('ccloud_identity_pool_id')"
-                  data-value="this.creds()?.ccloud_identity_pool_id ?? null"
+                  data-value="this.getCredValue('ccloud_identity_pool_id') ?? null"
                   data-on-input="this.updateValue(event)"
                   title="Additional property that can be added in the request header to identify the principal ID for authorization. For example, this may be a Confluent Cloud identity pool ID."
                 />
@@ -400,7 +417,7 @@ export class AuthCredentials extends HTMLElement {
                 data-attr-id="this.getInputId('principal')"
                 data-attr-name="this.getInputId('principal')"
                 type="text"
-                data-value="this.creds()?.principal ?? null"
+                data-value="this.getCredValue('principal') ?? null"
                 data-on-input="this.updateValue(event)"
               />
             </div>
@@ -412,7 +429,7 @@ export class AuthCredentials extends HTMLElement {
                 data-attr-id="this.getInputId('service_name')"
                 data-attr-name="this.getInputId('service_name')"
                 type="text"
-                data-value="this.creds()?.service_name ?? 'kafka'"
+                data-value="this.getCredValue('service_name') ?? 'kafka'"
                 data-on-input="this.updateValue(event)"
               />
             </div>
@@ -427,7 +444,7 @@ export class AuthCredentials extends HTMLElement {
                 data-attr-name="this.getInputId('keytab_path')"
                 type="text"
                 placeholder="/path/to/keytab"
-                data-value="this.creds()?.keytab_path ?? null"
+                data-value="this.getCredValue('keytab_path') ?? null"
                 data-on-input="this.updateValue(event)"
               />
             </div>

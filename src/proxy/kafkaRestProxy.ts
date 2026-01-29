@@ -211,6 +211,19 @@ export class KafkaRestProxy {
       params.includeAuthorizedOperations = true;
     }
 
+    if (this.apiVersion === "v2") {
+      // v2 REST Proxy returns a plain string array: ["topic1", "topic2"]
+      const response = await this.client.get<string[]>(this.topicsPath(), { params });
+      // Transform to TopicData format (limited info available from v2 list endpoint)
+      return response.data.map((name) => ({
+        topic_name: name,
+        is_internal: name.startsWith("_"),
+        replication_factor: 0, // Not available from v2 list
+        partitions_count: 0, // Not available from v2 list
+      })) as TopicData[];
+    }
+
+    // v3 API returns wrapped response: { kind: "...", metadata: {...}, data: [...] }
     const response = await this.client.get<ListResponse<TopicData>>(this.topicsPath(), { params });
     return response.data.data;
   }

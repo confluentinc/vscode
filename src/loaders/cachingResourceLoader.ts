@@ -1,4 +1,4 @@
-import type { TopicData } from "../clients/kafkaRest";
+import type { SimpleTopicData } from "../kafka";
 import { Logger } from "../logging";
 import type { Environment, EnvironmentType } from "../models/environment";
 import type { KafkaCluster, KafkaClusterType } from "../models/kafkaCluster";
@@ -234,7 +234,7 @@ export abstract class CachingResourceLoader<
     // Do a deep fetch and schema subject correlation.
 
     // Deep fetch the topics and schema registry subject names concurrently.
-    const [subjects, responseTopics]: [Subject[], TopicData[]] = await Promise.all([
+    const [subjects, responseTopics]: [Subject[], SimpleTopicData[]] = await Promise.all([
       this.checkedGetSubjects(cluster.environmentId, forceDeepRefresh),
       fetchTopics(cluster),
     ]);

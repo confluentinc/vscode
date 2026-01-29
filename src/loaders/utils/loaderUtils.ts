@@ -1,9 +1,15 @@
 import { createHash } from "crypto";
 import { toKafkaTopicOperations } from "../../authz/types";
-import type { TopicData } from "../../clients/kafkaRest";
 import { TokenManager } from "../../auth/oauth2/tokenManager";
-import { ConnectionType, CredentialType } from "../../connections";
+import { ConnectionType } from "../../connections";
+import { getCredentialsType } from "../../directConnections/credentials";
 import type { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";
+import {
+  getTopicService,
+  KafkaAdminError,
+  topicInfoToTopicData,
+  type SimpleTopicData,
+} from "../../kafka";
 import { Logger } from "../../logging";
 import type { CCloudKafkaCluster, KafkaCluster } from "../../models/kafkaCluster";
 import { isCCloud } from "../../models/resource";
@@ -11,9 +17,7 @@ import { Schema, SchemaType, Subject, subjectMatchesTopicName } from "../../mode
 import type { SchemaRegistry } from "../../models/schemaRegistry";
 import { KafkaTopic } from "../../models/topic";
 import type { AuthConfig } from "../../proxy/httpClient";
-import { HttpError } from "../../proxy/httpClient";
 import * as schemaRegistryProxy from "../../proxy/schemaRegistryProxy";
-import * as kafkaRestProxy from "../../proxy/kafkaRestProxy";
 import { getResourceManager } from "../../storage/resourceManager";
 import { executeInWorkerPool, extract } from "../../utils/workerPool";
 import {
@@ -36,49 +40,40 @@ export class TopicFetchError extends Error {
 
 /**
  * Deep read and return of all topics in a Kafka cluster.
+ *
+ * Uses the appropriate TopicService implementation based on connection type
+ * and runtime environment:
+ * - CCloud: REST API (v3 with OAuth)
+ * - LOCAL/DIRECT on desktop: kafkajs Admin client
+ * - LOCAL/DIRECT on web: REST API fallback (v2 for LOCAL, v3 for DIRECT)
  */
-export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
+export async function fetchTopics(cluster: KafkaCluster): Promise<SimpleTopicData[]> {
   logger.debug(`fetching topics for ${cluster.connectionType} Kafka cluster ${cluster.id}`);
 
-  if (!cluster.uri) {
-    throw new TopicFetchError(`Kafka cluster ${cluster.id} has no REST URI configured`);
-  }
-
-  const auth = await getAuthConfigForCluster(cluster);
-
-  // LOCAL clusters use the v2 REST Proxy API (e.g., /topics)
-  // CCloud and Direct clusters use the v3 Kafka REST API (e.g., /kafka/v3/clusters/{id}/topics)
-  const apiVersion = cluster.connectionType === ConnectionType.Local ? "v2" : "v3";
-
-  const proxy = kafkaRestProxy.createKafkaRestProxy({
-    baseUrl: cluster.uri,
-    clusterId: cluster.id,
-    auth,
-    apiVersion,
-  });
+  const topicService = getTopicService(cluster);
 
   try {
-    let topics = await proxy.listTopics({
+    const topics = await topicService.listTopics(cluster, {
       includeAuthorizedOperations: true,
+      includeInternal: false,
     });
 
     logger.debug(
       `fetched ${topics.length} topic(s) for ${cluster.connectionType} Kafka cluster ${cluster.id}`,
     );
 
-    // Sort by name
-    if (topics.length > 1) {
-      topics.sort((a, b) => a.topic_name.localeCompare(b.topic_name));
-    }
+    // Convert to TopicData format for compatibility with existing code
+    let topicData = topics.map(topicInfoToTopicData);
 
     // Exclude "virtual" topics (e.g., Flink views) that have 0 replication factor
-    topics = topics.filter((topic) => topic.replication_factor > 0);
+    topicData = topicData.filter((topic) => (topic.replication_factor ?? 0) > 0);
 
-    return topics;
+    return topicData;
   } catch (error) {
-    if (error instanceof HttpError) {
-      // Check for private networking issues
-      if (error.status === 500 && cluster.uri && containsPrivateNetworkPattern(cluster.uri)) {
+    // Handle KafkaAdminError (from kafkajs or wrapped HTTP errors)
+    if (error instanceof KafkaAdminError) {
+      // Check for private networking issues (typically shows as transient errors)
+      if (cluster.uri && containsPrivateNetworkPattern(cluster.uri)) {
         showPrivateNetworkingHelpNotification({
           resourceName: cluster.name,
           resourceUrl: cluster.uri,
@@ -88,7 +83,7 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
       }
 
       throw new TopicFetchError(
-        `Failed to fetch topics from cluster ${cluster.id}: ${error.status} ${error.message}`,
+        `Failed to fetch topics from cluster ${cluster.id}: ${error.message}`,
       );
     }
 
@@ -99,12 +94,12 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
 }
 
 /**
- * Convert an array of {@link TopicData} to an array of {@link KafkaTopic}
+ * Convert an array of {@link SimpleTopicData} to an array of {@link KafkaTopic}
  * and set whether or not each topic has a matching schema by subject.
  */
 export function correlateTopicsWithSchemaSubjects(
   cluster: KafkaCluster,
-  topicsRespTopics: TopicData[],
+  topicsRespTopics: SimpleTopicData[],
   subjects: Subject[],
 ): KafkaTopic[] {
   const topics: KafkaTopic[] = topicsRespTopics.map((topic) => {
@@ -122,15 +117,15 @@ export function correlateTopicsWithSchemaSubjects(
       connectionId: cluster.connectionId,
       connectionType: cluster.connectionType,
       name: topic.topic_name,
-      is_internal: topic.is_internal,
-      replication_factor: topic.replication_factor,
-      partition_count: topic.partitions_count,
-      partitions: topic.partitions,
-      configs: topic.configs,
+      is_internal: topic.is_internal ?? false,
+      replication_factor: topic.replication_factor ?? 0,
+      partition_count: topic.partitions_count ?? 0,
+      partitions: topic.partitions ?? {},
+      configs: topic.configs ?? {},
       clusterId: cluster.id,
       environmentId: cluster.environmentId,
       isFlinkable: isFlinkable,
-      operations: toKafkaTopicOperations(topic.authorized_operations!),
+      operations: toKafkaTopicOperations(topic.authorized_operations ?? []),
       children: matchingSubjects,
     });
   });
@@ -271,61 +266,42 @@ async function getAuthConfigForSchemaRegistry(
       const spec = await resourceManager.getDirectConnection(schemaRegistry.connectionId);
       if (spec?.schemaRegistry?.credentials) {
         const creds = spec.schemaRegistry.credentials;
-        if (creds.type === CredentialType.BASIC) {
-          return {
-            type: "basic",
-            username: creds.username,
-            password: creds.password,
-          };
-        }
-        if (creds.type === CredentialType.API_KEY) {
-          return {
-            type: "basic",
-            username: creds.apiKey,
-            password: creds.apiSecret,
-          };
-        }
-      }
-      return undefined;
-    }
-    case ConnectionType.Local:
-    default:
-      // Local connections typically don't require authentication
-      return undefined;
-  }
-}
+        // Use record type for property access to support both camelCase and snake_case
+        const credsRecord = creds as unknown as Record<string, unknown>;
 
-/**
- * Get authentication configuration for a Kafka cluster based on connection type.
- */
-async function getAuthConfigForCluster(cluster: KafkaCluster): Promise<AuthConfig | undefined> {
-  switch (cluster.connectionType) {
-    case ConnectionType.Ccloud: {
-      // CCloud uses bearer token authentication
-      const token = (await TokenManager.getInstance().getDataPlaneToken()) || "";
-      return {
-        type: "bearer",
-        token,
-      };
-    }
-    case ConnectionType.Direct: {
-      // Direct connections may have credentials stored
-      const resourceManager = getResourceManager();
-      const spec = await resourceManager.getDirectConnection(cluster.connectionId);
-      if (spec?.kafkaCluster?.credentials) {
-        const creds = spec.kafkaCluster.credentials;
-        if (creds.type === CredentialType.BASIC) {
+        // Use getCredentialsType to detect the credential type (handles both
+        // modern credentials with type discriminator and legacy credentials)
+        const credType = getCredentialsType(creds);
+
+        if (credType === "Basic") {
           return {
             type: "basic",
-            username: creds.username,
-            password: creds.password,
+            username: (credsRecord.username as string) ?? "",
+            password: (credsRecord.password as string) ?? "",
           };
         }
-        if (creds.type === CredentialType.API_KEY) {
+        if (credType === "API") {
+          // API keys are sent as basic auth with key:secret
+          // Handle both camelCase and snake_case (for imported JSON)
           return {
             type: "basic",
-            username: creds.apiKey,
-            password: creds.apiSecret,
+            username: ((credsRecord.apiKey ?? credsRecord.api_key) as string) ?? "",
+            password: ((credsRecord.apiSecret ?? credsRecord.api_secret) as string) ?? "",
+          };
+        }
+        if (credType === "SCRAM") {
+          // SCRAM credentials are sent as basic auth
+          // Handle both camelCase and snake_case (for imported JSON)
+          return {
+            type: "basic",
+            username:
+              ((credsRecord.username ??
+                credsRecord.scramUsername ??
+                credsRecord.scram_username) as string) ?? "",
+            password:
+              ((credsRecord.password ??
+                credsRecord.scramPassword ??
+                credsRecord.scram_password) as string) ?? "",
           };
         }
       }

@@ -1,0 +1,145 @@
+/**
+ * Topic Service Factory.
+ *
+ * Factory for creating the appropriate TopicService implementation based on
+ * connection type and runtime environment.
+ *
+ * Decision tree:
+ * 1. CCloud → Always use REST API (v3 with OAuth)
+ * 2. LOCAL/DIRECT on Desktop → Use kafkajs Admin
+ * 3. LOCAL/DIRECT on Web → Use REST API (v2 for LOCAL, v3 for DIRECT)
+ */
+
+import { ConnectionType } from "../connections";
+import type { KafkaCluster } from "../models/kafkaCluster";
+import { isDesktopEnvironment } from "./environment";
+import { getKafkaAdminTopicService } from "./kafkaAdminTopicService";
+import { getRestApiTopicService } from "./restApiTopicService";
+import type { PartitionInfo, TopicInfo, TopicService } from "./topicService";
+
+/**
+ * Simplified TopicData interface for internal use.
+ *
+ * The generated TopicData from the OpenAPI spec is too strict and doesn't match
+ * the runtime response shape. This interface captures what we actually use.
+ */
+export interface SimpleTopicData {
+  topic_name: string;
+  is_internal?: boolean;
+  replication_factor?: number;
+  partitions_count?: number;
+  partitions?: unknown;
+  configs?: unknown;
+  authorized_operations?: string[];
+}
+
+/**
+ * Gets the appropriate TopicService for the given cluster.
+ *
+ * @param cluster The Kafka cluster to get a service for.
+ * @returns The appropriate TopicService implementation.
+ */
+export function getTopicService(cluster: KafkaCluster): TopicService {
+  // CCloud always uses REST API with OAuth
+  if (cluster.connectionType === ConnectionType.Ccloud) {
+    return getRestApiTopicService("v3");
+  }
+
+  // LOCAL and DIRECT connections
+  if (isDesktopEnvironment()) {
+    // Desktop: use kafkajs Admin for better performance
+    return getKafkaAdminTopicService();
+  }
+
+  // Web fallback: use REST API
+  // LOCAL uses v2 API (REST Proxy format)
+  // DIRECT uses v3 API (Confluent format)
+  const apiVersion = cluster.connectionType === ConnectionType.Local ? "v2" : "v3";
+  return getRestApiTopicService(apiVersion);
+}
+
+/**
+ * Converts TopicInfo from the TopicService to SimpleTopicData for compatibility with existing code.
+ *
+ * @param topic The TopicInfo to convert.
+ * @returns SimpleTopicData compatible with existing loader code.
+ */
+export function topicInfoToTopicData(topic: TopicInfo): SimpleTopicData {
+  return {
+    topic_name: topic.name,
+    is_internal: topic.isInternal,
+    replication_factor: topic.replicationFactor,
+    partitions_count: topic.partitionCount,
+    partitions:
+      topic.partitions.length > 0
+        ? {
+            data: topic.partitions.map((p) => ({
+              partition_id: p.partitionId,
+              leader: p.leader !== -1 ? { broker_id: p.leader } : undefined,
+              replicas:
+                p.replicas.length > 0
+                  ? { data: p.replicas.map((id) => ({ broker_id: id })) }
+                  : undefined,
+              isr: p.isr.length > 0 ? { data: p.isr.map((id) => ({ broker_id: id })) } : undefined,
+            })),
+          }
+        : undefined,
+    configs:
+      Object.keys(topic.configs).length > 0
+        ? {
+            data: Object.entries(topic.configs).map(([name, value]) => ({ name, value })),
+          }
+        : undefined,
+    authorized_operations: topic.authorizedOperations,
+  };
+}
+
+/**
+ * Converts SimpleTopicData from REST API to TopicInfo for unified handling.
+ *
+ * @param topicData The SimpleTopicData from REST API.
+ * @returns TopicInfo for the TopicService interface.
+ */
+export function topicDataToTopicInfo(topicData: SimpleTopicData): TopicInfo {
+  const partitionsRaw = topicData.partitions as
+    | {
+        data?: Array<{
+          partition_id: number;
+          leader?: { broker_id: number };
+          replicas?: { data?: Array<{ broker_id: number }> };
+          isr?: { data?: Array<{ broker_id: number }> };
+        }>;
+      }
+    | undefined;
+
+  const partitions: PartitionInfo[] = partitionsRaw?.data
+    ? partitionsRaw.data.map((p) => ({
+        partitionId: p.partition_id,
+        leader: p.leader?.broker_id ?? -1,
+        replicas: p.replicas?.data?.map((r) => r.broker_id) ?? [],
+        isr: p.isr?.data?.map((r) => r.broker_id) ?? [],
+      }))
+    : [];
+
+  const configsRaw = topicData.configs as
+    | { data?: Array<{ name?: string; value?: string }> }
+    | undefined;
+  const configs: Record<string, string> = {};
+  if (configsRaw?.data) {
+    for (const config of configsRaw.data) {
+      if (config.name && config.value !== undefined) {
+        configs[config.name] = config.value;
+      }
+    }
+  }
+
+  return {
+    name: topicData.topic_name,
+    isInternal: topicData.is_internal ?? false,
+    replicationFactor: topicData.replication_factor ?? 0,
+    partitionCount: topicData.partitions_count ?? partitions.length,
+    partitions,
+    configs,
+    authorizedOperations: topicData.authorized_operations,
+  };
+}
