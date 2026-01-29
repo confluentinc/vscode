@@ -2631,6 +2631,7 @@
     "gql.tada": "^1.8.3",
     "graphql": "^16.8.2",
     "inertial": "^0.4.1",
+    "@kafkajs/confluent-schema-registry": "^3.3.0",
     "kafkajs": "^2.2.4",
     "launchdarkly-electron-client-sdk": "^1.7.0",
     "launchdarkly-node-client-sdk": "^3.3.0",

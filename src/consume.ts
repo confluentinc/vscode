@@ -38,9 +38,12 @@ import messageViewerTemplate from "./webview/message-viewer.html";
 
 import { getCCloudAuthSession } from "./authn/utils";
 import { ConnectionType } from "./connections";
+import { getCredentialsType } from "./directConnections/credentials";
 import { isDesktopEnvironment } from "./kafka/environment";
 import { createNativeKafkaConsumer, type NativeKafkaConsumer } from "./kafka/nativeConsumer";
 import type { KafkaRestProxyConfig } from "./proxy/kafkaRestProxy";
+import { createSchemaRegistryDeserializer } from "./serde/schemaRegistryDeserializer";
+import type { SchemaRegistryDeserializerConfig } from "./serde/types";
 import { getResourceManager } from "./storage/resourceManager";
 
 const logger = new Logger("consume");
@@ -104,6 +107,91 @@ class NativeConsumerProxy implements MessageConsumer {
 }
 
 /**
+ * Gets Schema Registry configuration for a topic based on its connection type.
+ *
+ * @param topic The topic to get Schema Registry config for.
+ * @returns Schema Registry config if available, null otherwise.
+ */
+async function getSchemaRegistryConfig(
+  topic: KafkaTopic,
+): Promise<SchemaRegistryDeserializerConfig | null> {
+  const resourceManager = getResourceManager();
+
+  switch (topic.connectionType) {
+    case ConnectionType.Local: {
+      // confluent-local container includes Schema Registry at port 8081
+      // Get the actual Schema Registry to find the correct port (may be dynamic)
+      const registries = await resourceManager.getSchemaRegistries(topic.connectionId);
+      const registry = registries[0];
+      if (registry?.uri) {
+        logger.debug(`using Schema Registry at ${registry.uri} for local topic`);
+        return {
+          schemaRegistryUrl: registry.uri,
+          connectionId: topic.connectionId,
+          clusterId: topic.clusterId,
+        };
+      }
+      // Fallback to default port
+      logger.debug(`using default Schema Registry at localhost:8081 for local topic`);
+      return {
+        schemaRegistryUrl: "http://localhost:8081",
+        connectionId: topic.connectionId,
+        clusterId: topic.clusterId,
+      };
+    }
+    case ConnectionType.Direct: {
+      const spec = await resourceManager.getDirectConnection(topic.connectionId);
+      if (spec?.schemaRegistry?.uri) {
+        logger.debug(`using Schema Registry at ${spec.schemaRegistry.uri} for direct connection`);
+        const config: SchemaRegistryDeserializerConfig = {
+          schemaRegistryUrl: spec.schemaRegistry.uri,
+          connectionId: topic.connectionId,
+          clusterId: topic.clusterId,
+        };
+        // Add auth if credentials are configured
+        // Use getCredentialsType which handles both modern (with type discriminator)
+        // and legacy credentials (detected by property names like apiKey/apiSecret)
+        const creds = spec.schemaRegistry.credentials;
+        if (creds) {
+          const credType = getCredentialsType(creds);
+          const credsAny = creds as unknown as Record<string, string>;
+          switch (credType) {
+            case "Basic":
+              config.auth = {
+                username: credsAny.username,
+                password: credsAny.password,
+              };
+              break;
+            case "API":
+              // API key/secret uses HTTP Basic auth
+              // Handle both camelCase and snake_case property names
+              config.auth = {
+                username: credsAny.apiKey ?? credsAny.api_key,
+                password: credsAny.apiSecret ?? credsAny.api_secret,
+              };
+              break;
+            case "SCRAM":
+              config.auth = {
+                username: credsAny.username ?? credsAny.scramUsername ?? credsAny.scram_username,
+                password: credsAny.password ?? credsAny.scramPassword ?? credsAny.scram_password,
+              };
+              break;
+          }
+        }
+        return config;
+      }
+      logger.debug(`no Schema Registry configured for direct connection ${topic.connectionId}`);
+      return null;
+    }
+    case ConnectionType.Ccloud:
+      // CCloud out of scope - messages from REST proxy may already be decoded
+      return null;
+    default:
+      return null;
+  }
+}
+
+/**
  * Creates a message consumer for the given topic based on its connection type and environment.
  *
  * - Desktop + LOCAL/DIRECT: Uses native kafkajs consumer (full metadata including timestamps)
@@ -120,6 +208,19 @@ async function createConsumeProxyForTopic(topic: KafkaTopic): Promise<MessageCon
   ) {
     logger.debug(`using native kafkajs consumer for ${topic.connectionType} topic ${topic.name}`);
     const nativeConsumer = createNativeKafkaConsumer(topic);
+
+    // Configure Schema Registry deserializer if available
+    const srConfig = await getSchemaRegistryConfig(topic);
+    if (srConfig) {
+      logger.debug(
+        `configuring SR deserializer for topic ${topic.name}: url=${srConfig.schemaRegistryUrl}, auth=${srConfig.auth ? "yes" : "no"}`,
+      );
+      const deserializer = createSchemaRegistryDeserializer(srConfig);
+      nativeConsumer.setDeserializer(deserializer);
+    } else {
+      logger.debug(`no Schema Registry configured for topic ${topic.name}`);
+    }
+
     return new NativeConsumerProxy(nativeConsumer, topic.name);
   }
 

@@ -12,10 +12,12 @@ import { Logger } from "../logging";
 import type { KafkaTopic } from "../models/topic";
 import type {
   ConsumeRecord,
+  ConsumeRecordMetadata,
   ConsumeRequest,
   ConsumeResponse,
   ConsumePartitionData,
 } from "../proxy/kafkaRestProxy";
+import type { RecordDeserializer } from "../serde/types";
 import { getResourceManager } from "../storage/resourceManager";
 import { toSaslOptions } from "./saslConfig";
 
@@ -40,11 +42,20 @@ export class NativeKafkaConsumer {
   private fromBeginning: boolean | null = null;
   private readonly topic: KafkaTopic;
   private readonly clientId: string;
+  private deserializer: RecordDeserializer | null = null;
 
   constructor(topic: KafkaTopic) {
     this.topic = topic;
     const random = Math.random().toString(36).substring(2, 8);
     this.clientId = `vscode-consumer-${Date.now()}-${random}`;
+  }
+
+  /**
+   * Sets the deserializer for message keys and values.
+   * @param deserializer The deserializer to use, or null to disable deserialization.
+   */
+  setDeserializer(deserializer: RecordDeserializer | null): void {
+    this.deserializer = deserializer;
   }
 
   /**
@@ -197,7 +208,7 @@ export class NativeKafkaConsumer {
             return;
           }
 
-          const record = this.transformMessage(topic, partition, message);
+          const record = await this.transformMessage(topic, partition, message);
           records.push(record);
           messageCount++;
 
@@ -231,28 +242,47 @@ export class NativeKafkaConsumer {
 
   /**
    * Transforms a kafkajs message to ConsumeRecord format.
+   * Uses the deserializer if set, otherwise falls back to simple JSON/string parsing.
    */
-  private transformMessage(topic: string, partition: number, message: KafkaMessage): ConsumeRecord {
-    // Parse key
+  private async transformMessage(
+    topic: string,
+    partition: number,
+    message: KafkaMessage,
+  ): Promise<ConsumeRecord> {
     let key: unknown = null;
-    if (message.key) {
-      const keyStr = message.key.toString();
-      try {
-        key = JSON.parse(keyStr);
-      } catch {
-        key = keyStr;
-      }
-    }
-
-    // Parse value
     let value: unknown = null;
-    if (message.value) {
-      const valueStr = message.value.toString();
-      try {
-        value = JSON.parse(valueStr);
-      } catch {
-        value = valueStr;
+    let keyDecodingError: string | undefined;
+    let valueDecodingError: string | undefined;
+    let metadata: ConsumeRecordMetadata | undefined;
+
+    if (this.deserializer) {
+      // Use deserializer for key
+      const keyResult = await this.deserializer.deserialize(
+        message.key ? Buffer.from(message.key) : null,
+        { topicName: topic, isKey: true },
+      );
+      key = keyResult.value;
+      keyDecodingError = keyResult.errorMessage;
+
+      // Use deserializer for value
+      const valueResult = await this.deserializer.deserialize(
+        message.value ? Buffer.from(message.value) : null,
+        { topicName: topic, isKey: false },
+      );
+      value = valueResult.value;
+      valueDecodingError = valueResult.errorMessage;
+
+      // Build metadata from deserialization results (only if we have schema IDs)
+      if (keyResult.metadata.schemaId || valueResult.metadata.schemaId) {
+        metadata = {
+          key_schema_id: keyResult.metadata.schemaId,
+          value_schema_id: valueResult.metadata.schemaId,
+        };
       }
+    } else {
+      // Simple fallback parsing when no deserializer
+      key = this.simpleParse(message.key);
+      value = this.simpleParse(message.value);
     }
 
     // Convert headers
@@ -271,7 +301,26 @@ export class NativeKafkaConsumer {
       key,
       value,
       headers,
+      metadata,
+      key_decoding_error: keyDecodingError,
+      value_decoding_error: valueDecodingError,
     };
+  }
+
+  /**
+   * Simple parsing for messages when no deserializer is set.
+   * Tries JSON parse, falls back to string.
+   */
+  private simpleParse(buffer: Buffer | null): unknown {
+    if (!buffer) {
+      return null;
+    }
+    const str = buffer.toString();
+    try {
+      return JSON.parse(str);
+    } catch {
+      return str;
+    }
   }
 
   /**
