@@ -142,6 +142,21 @@ export class NativeKafkaConsumer {
     logger.debug(`nativeConsume: consumer created and subscribed to ${this.topic.name}`);
   }
 
+  /** Track whether consumer.run() has been called */
+  private isRunning = false;
+
+  /** Pending resolve callback for current poll */
+  private pollResolve: ((records: ConsumeRecord[]) => void) | null = null;
+
+  /** Records collected during current poll */
+  private pendingRecords: ConsumeRecord[] = [];
+
+  /** Maximum records for current poll */
+  private currentMaxRecords = 0;
+
+  /** Timeout handle for current poll */
+  private pollTimeout: ReturnType<typeof setTimeout> | null = null;
+
   /**
    * Polls for messages from the consumer.
    */
@@ -150,94 +165,108 @@ export class NativeKafkaConsumer {
     maxRecords: number,
     signal?: AbortSignal,
   ): Promise<ConsumeRecord[]> {
-    const records: ConsumeRecord[] = [];
+    // Reset state for this poll
+    this.pendingRecords = [];
+    this.currentMaxRecords = maxRecords;
 
-    // If specific offsets are provided, seek to them
-    if (request.offsets && request.offsets.length > 0) {
-      const admin = this.kafka!.admin();
-      await admin.connect();
-      try {
-        // Get partition metadata to build seek targets
-        const topicOffsets = await admin.fetchTopicOffsets(this.topic.name);
-        for (const offsetReq of request.offsets) {
-          if (offsetReq.partition_id !== undefined && offsetReq.offset !== undefined) {
-            const partitionInfo = topicOffsets.find((p) => p.partition === offsetReq.partition_id);
-            if (partitionInfo) {
-              // Seek is done via consumer.seek() after run() is called
-              // For now, we'll use the eachMessage approach which handles this
-            }
-          }
-        }
-      } finally {
-        await admin.disconnect();
-      }
-    }
+    // Store offsets to seek to after run() starts
+    const offsetsToSeek = request.offsets ?? [];
 
     return new Promise((resolve, reject) => {
-      let messageCount = 0;
-      let resolved = false;
+      this.pollResolve = resolve;
 
       // Set up abort handler
       if (signal) {
         signal.addEventListener(
           "abort",
           () => {
-            if (!resolved) {
-              resolved = true;
-              resolve(records);
-            }
+            this.finishPoll();
           },
           { once: true },
         );
       }
 
       // Set up timeout
-      const timeout = setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          this.consumer?.pause([{ topic: this.topic.name }]);
-          resolve(records);
-        }
+      this.pollTimeout = setTimeout(() => {
+        this.finishPoll();
       }, DEFAULT_POLL_TIMEOUT_MS);
 
-      // Run consumer
-      this.consumer!.run({
-        autoCommit: false,
-        eachMessage: async ({ topic, partition, message }: EachMessagePayload) => {
-          if (resolved || messageCount >= maxRecords) {
-            return;
-          }
-
-          const record = await this.transformMessage(topic, partition, message);
-          records.push(record);
-          messageCount++;
-
-          if (messageCount >= maxRecords) {
-            clearTimeout(timeout);
-            if (!resolved) {
-              resolved = true;
-              await this.consumer?.pause([{ topic: this.topic.name }]);
-              resolve(records);
+      // Start consumer.run() only once - it runs continuously
+      if (!this.isRunning) {
+        this.isRunning = true;
+        this.consumer!.run({
+          autoCommit: false,
+          eachMessage: async ({ topic, partition, message }: EachMessagePayload) => {
+            // Only process if we have an active poll
+            if (!this.pollResolve || this.pendingRecords.length >= this.currentMaxRecords) {
+              return;
             }
-          }
-        },
-      }).catch((error) => {
-        clearTimeout(timeout);
-        if (!resolved) {
-          resolved = true;
-          reject(error);
-        }
-      });
 
-      // Also resolve after timeout if no messages
-      setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timeout);
-          resolve(records);
+            const record = await this.transformMessage(topic, partition, message);
+            this.pendingRecords.push(record);
+
+            if (this.pendingRecords.length >= this.currentMaxRecords) {
+              this.finishPoll();
+            }
+          },
+        }).catch((error) => {
+          this.isRunning = false;
+          if (this.pollResolve) {
+            this.pollResolve = null;
+            reject(error);
+          }
+        });
+      } else {
+        // Consumer is already running - seek to offsets and resume
+        for (const offsetReq of offsetsToSeek) {
+          if (offsetReq.partition_id !== undefined && offsetReq.offset !== undefined) {
+            logger.debug(
+              `nativeConsume: seeking partition=${offsetReq.partition_id} to offset=${offsetReq.offset}`,
+            );
+            this.consumer!.seek({
+              topic: this.topic.name,
+              partition: offsetReq.partition_id,
+              offset: String(offsetReq.offset),
+            });
+          }
         }
+
+        // Resume the consumer
+        logger.debug(`nativeConsume: resuming consumer for topic=${this.topic.name}`);
+        this.consumer!.resume([{ topic: this.topic.name }]);
+      }
+
+      // Also resolve after timeout if no messages (backup timeout)
+      setTimeout(() => {
+        this.finishPoll();
       }, DEFAULT_POLL_TIMEOUT_MS + 500);
     });
+  }
+
+  /**
+   * Finishes the current poll, pausing the consumer and resolving with collected records.
+   */
+  private finishPoll(): void {
+    if (!this.pollResolve) {
+      return;
+    }
+
+    // Clear timeout if set
+    if (this.pollTimeout) {
+      clearTimeout(this.pollTimeout);
+      this.pollTimeout = null;
+    }
+
+    // Pause the consumer
+    this.consumer?.pause([{ topic: this.topic.name }]);
+
+    // Resolve with collected records
+    const resolve = this.pollResolve;
+    const records = [...this.pendingRecords];
+    this.pollResolve = null;
+    this.pendingRecords = [];
+
+    resolve(records);
   }
 
   /**
@@ -487,6 +516,9 @@ export class NativeKafkaConsumer {
    * Cleans up the consumer resources.
    */
   private async cleanup(): Promise<void> {
+    // Clear any pending poll state
+    this.finishPoll();
+
     if (this.consumer) {
       try {
         await this.consumer.disconnect();
@@ -498,6 +530,7 @@ export class NativeKafkaConsumer {
     this.kafka = null;
     this.subscribedTopic = null;
     this.fromBeginning = null;
+    this.isRunning = false;
   }
 
   /**
