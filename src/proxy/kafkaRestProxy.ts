@@ -573,6 +573,8 @@ export class KafkaConsumeProxy {
   private v2ConsumerId: string | null = null;
   private v2SubscribedTopic: string | null = null;
   private v2FromBeginning: boolean | null = null;
+  // Store records from initial poll (partition assignment poll may return records)
+  private v2InitialPollRecords: V2ConsumeRecord[] | null = null;
 
   constructor(config: KafkaRestProxyConfig) {
     this.clusterId = config.clusterId;
@@ -642,6 +644,15 @@ export class KafkaConsumeProxy {
     // Ensure consumer exists and is subscribed to the topic
     await this.ensureV2Consumer(topicName, request, signal);
 
+    // Check if we have records from the initial poll (partition assignment poll)
+    // that need to be returned first
+    if (this.v2InitialPollRecords && this.v2InitialPollRecords.length > 0) {
+      const records = this.v2InitialPollRecords;
+      this.v2InitialPollRecords = null;
+      logger.debug(`consumeV2: returning ${records.length} records from initial poll`);
+      return this.transformV2Response(topicName, records);
+    }
+
     // Build query params for the records request
     const params = new URLSearchParams();
     if (request.max_poll_records) {
@@ -664,25 +675,31 @@ export class KafkaConsumeProxy {
   /**
    * Ensures a v2 consumer exists and is subscribed to the topic.
    * Creates a new consumer if needed, or reuses existing one if subscribed to same topic.
-   * Recreates consumer if consume mode changes (from_beginning setting).
+   * Recreates consumer if consume mode changes (from_beginning setting) on a fresh request.
    */
   private async ensureV2Consumer(
     topicName: string,
     request: ConsumeRequest,
     signal?: AbortSignal,
   ): Promise<void> {
+    // For v2 consumers, from_beginning only matters at creation time.
+    // Once created, subsequent requests should reuse the consumer.
+    // A "fresh request" is when offsets is undefined (not just empty array).
+    // Empty array means we got a response (even if empty) and should continue polling.
+    // Undefined means the user changed mode or it's the first request.
+    const isFreshRequest = request.offsets === undefined;
     const fromBeginning = request.from_beginning ?? false;
+
     const needsRecreation =
       // Topic changed
       this.v2SubscribedTopic !== topicName ||
-      // Consume mode changed (from_beginning setting)
-      this.v2FromBeginning !== fromBeginning ||
-      // Fresh request without offsets indicates mode reset
-      (!request.offsets && this.v2ConsumerBaseUri !== null);
+      // Consume mode changed on a FRESH request (no offsets means starting over)
+      (isFreshRequest && this.v2FromBeginning !== fromBeginning && this.v2ConsumerBaseUri !== null);
 
     logger.debug(
       `ensureV2Consumer: topic=${topicName}, fromBeginning=${fromBeginning}, ` +
-        `existingUri=${this.v2ConsumerBaseUri}, needsRecreation=${needsRecreation}`,
+        `isFreshRequest=${isFreshRequest}, existingUri=${this.v2ConsumerBaseUri}, ` +
+        `needsRecreation=${needsRecreation}`,
     );
 
     // If we have an existing consumer with matching settings, reuse it
@@ -744,11 +761,18 @@ export class KafkaConsumeProxy {
     this.v2SubscribedTopic = topicName;
     this.v2FromBeginning = fromBeginning;
 
-    // Do an initial poll to trigger partition assignment (may return empty)
+    // Do an initial poll to trigger partition assignment
+    // IMPORTANT: This poll may return records, so we store them to return later
     try {
       const initialPollPath = `${this.v2ConsumerBaseUri}/records?timeout=1000`;
       logger.debug(`ensureV2Consumer: initial poll at ${initialPollPath}`);
-      await this.client.get(initialPollPath, { signal });
+      const initialResponse = await this.client.get<V2ConsumeRecord[]>(initialPollPath, { signal });
+      if (initialResponse.data && initialResponse.data.length > 0) {
+        logger.debug(
+          `ensureV2Consumer: initial poll returned ${initialResponse.data.length} records, storing for return`,
+        );
+        this.v2InitialPollRecords = initialResponse.data;
+      }
     } catch (err) {
       // Ignore errors on initial poll - it's just to trigger assignment
       logger.debug(`ensureV2Consumer: initial poll error (expected): ${err}`);
@@ -838,6 +862,7 @@ export class KafkaConsumeProxy {
     this.v2ConsumerId = null;
     this.v2SubscribedTopic = null;
     this.v2FromBeginning = null;
+    this.v2InitialPollRecords = null;
   }
 
   /**

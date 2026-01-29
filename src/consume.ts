@@ -24,7 +24,6 @@ import {
   type ConsumeRecord,
   type ConsumeRequest,
   type ConsumeResponse,
-  type KafkaConsumeProxy,
   type PartitionOffset,
 } from "./proxy/kafkaRestProxy";
 import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
@@ -39,15 +38,92 @@ import messageViewerTemplate from "./webview/message-viewer.html";
 
 import { getCCloudAuthSession } from "./authn/utils";
 import { ConnectionType } from "./connections";
+import { isDesktopEnvironment } from "./kafka/environment";
+import { createNativeKafkaConsumer, type NativeKafkaConsumer } from "./kafka/nativeConsumer";
 import type { KafkaRestProxyConfig } from "./proxy/kafkaRestProxy";
 import { getResourceManager } from "./storage/resourceManager";
 
 const logger = new Logger("consume");
 
 /**
- * Creates a KafkaConsumeProxy for the given topic based on its connection type.
+ * Interface for message consumers.
+ * Both KafkaConsumeProxy (REST) and NativeConsumerProxy (kafkajs) implement this.
  */
-async function createConsumeProxyForTopic(topic: KafkaTopic): Promise<KafkaConsumeProxy> {
+interface MessageConsumer {
+  consume(
+    topicName: string,
+    request: ConsumeRequest,
+    signal?: AbortSignal,
+  ): Promise<ConsumeResponse>;
+  listPartitions(topicName: string): Promise<{ data: PartitionData[] }>;
+  dispose(): Promise<void>;
+}
+
+// Import PartitionData for the interface
+import type { PartitionData } from "./clients/kafkaRest";
+
+/**
+ * Wraps NativeKafkaConsumer to match the KafkaConsumeProxy interface.
+ */
+class NativeConsumerProxy implements MessageConsumer {
+  private readonly consumer: NativeKafkaConsumer;
+  private readonly topicName: string;
+
+  constructor(consumer: NativeKafkaConsumer, topicName: string) {
+    this.consumer = consumer;
+    this.topicName = topicName;
+  }
+
+  async consume(
+    topicName: string,
+    request: ConsumeRequest,
+    signal?: AbortSignal,
+  ): Promise<ConsumeResponse> {
+    return this.consumer.consume(request, signal);
+  }
+
+  async listPartitions(topicName: string): Promise<{ data: PartitionData[] }> {
+    // Get partition info from the native consumer
+    const partitions = await this.consumer.listPartitions();
+    // Convert to PartitionData format (only partition_id is actually used by the UI)
+    const data: PartitionData[] = partitions.map((p) => ({
+      kind: "KafkaPartition",
+      metadata: { self: "", resource_name: "" },
+      cluster_id: "",
+      topic_name: topicName,
+      partition_id: p.partitionId,
+      replicas: { related: "" },
+      reassignment: { related: "" },
+    }));
+    return { data };
+  }
+
+  async dispose(): Promise<void> {
+    await this.consumer.dispose();
+  }
+}
+
+/**
+ * Creates a message consumer for the given topic based on its connection type and environment.
+ *
+ * - Desktop + LOCAL/DIRECT: Uses native kafkajs consumer (full metadata including timestamps)
+ * - Web + LOCAL/DIRECT: Uses v2 REST proxy (limited metadata, no timestamps)
+ * - CCloud: Always uses REST proxy with OAuth
+ */
+async function createConsumeProxyForTopic(topic: KafkaTopic): Promise<MessageConsumer> {
+  // For LOCAL and DIRECT connections in desktop environment, use native kafkajs consumer
+  // This provides full message metadata including timestamps
+  if (
+    isDesktopEnvironment() &&
+    (topic.connectionType === ConnectionType.Local ||
+      topic.connectionType === ConnectionType.Direct)
+  ) {
+    logger.debug(`using native kafkajs consumer for ${topic.connectionType} topic ${topic.name}`);
+    const nativeConsumer = createNativeKafkaConsumer(topic);
+    return new NativeConsumerProxy(nativeConsumer, topic.name);
+  }
+
+  // For CCloud or web environments, use REST proxy
   let config: KafkaRestProxyConfig;
 
   switch (topic.connectionType) {
@@ -65,8 +141,8 @@ async function createConsumeProxyForTopic(topic: KafkaTopic): Promise<KafkaConsu
       break;
     }
     case ConnectionType.Local: {
-      // Local connections use the v2 consumer group API since confluent-local
-      // REST proxy doesn't support the simple consume endpoint
+      // Web environment fallback: use v2 REST proxy (no timestamps available)
+      logger.debug(`using v2 REST proxy for LOCAL topic ${topic.name} (web environment)`);
       config = {
         baseUrl: "http://localhost:8082",
         clusterId: topic.clusterId,
@@ -75,15 +151,13 @@ async function createConsumeProxyForTopic(topic: KafkaTopic): Promise<KafkaConsu
       break;
     }
     case ConnectionType.Direct: {
-      // Direct connections use the configured REST proxy URL
+      // Web environment fallback: use REST proxy
+      logger.debug(`using REST proxy for DIRECT topic ${topic.name} (web environment)`);
       const connectionSpec = await getResourceManager().getDirectConnection(topic.connectionId);
       if (!connectionSpec?.kafkaCluster) {
         throw new Error("Direct connection not found or missing Kafka configuration");
       }
-      // For direct connections, we need the REST proxy URL which may be derived
-      // from the bootstrap servers or configured separately
       const bootstrapServers = connectionSpec.kafkaCluster.bootstrapServers;
-      // Assume REST proxy is on port 8082 of the first bootstrap server
       const host = bootstrapServers?.split(",")[0]?.split(":")[0] ?? "localhost";
       config = {
         baseUrl: `http://${host}:8082`,
@@ -291,7 +365,7 @@ function messageViewerStartPollingCommand(
   config: MessageViewerConfig,
   onConfigChange: (config: MessageViewerConfig) => void,
   topic: KafkaTopic,
-  consumeProxy: KafkaConsumeProxy,
+  consumeProxy: MessageConsumer,
   schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
 ) {
   const consume = async (
