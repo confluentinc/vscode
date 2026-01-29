@@ -445,7 +445,17 @@ export class HttpClient {
   private async parseResponse<T>(response: Response): Promise<T> {
     const contentType = response.headers.get("content-type") ?? "";
 
-    if (contentType.includes("application/json")) {
+    // Check for JSON content types:
+    // - application/json
+    // - application/vnd.kafka.v2+json (Kafka REST Proxy v2)
+    // - application/vnd.kafka.json.v2+json (Kafka REST Proxy v2 records)
+    // - any other +json suffix
+    const isJson =
+      contentType.includes("application/json") ||
+      contentType.includes("+json") ||
+      contentType.includes("json");
+
+    if (isJson) {
       try {
         return (await response.json()) as T;
       } catch {

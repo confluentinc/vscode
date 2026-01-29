@@ -65,10 +65,12 @@ async function createConsumeProxyForTopic(topic: KafkaTopic): Promise<KafkaConsu
       break;
     }
     case ConnectionType.Local: {
-      // Local connections use local REST proxy
+      // Local connections use the v2 consumer group API since confluent-local
+      // REST proxy doesn't support the simple consume endpoint
       config = {
         baseUrl: "http://localhost:8082",
         clusterId: topic.clusterId,
+        apiVersion: "v2",
       };
       break;
     }
@@ -860,6 +862,8 @@ function messageViewerStartPollingCommand(
   panel.onDidDispose(() => {
     handler.dispose();
     os.dispose();
+    // Clean up v2 consumer if present
+    void consumeProxy.dispose();
   });
 
   type TrackAction = {

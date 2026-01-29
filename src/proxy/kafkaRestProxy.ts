@@ -9,7 +9,10 @@
  * - Cluster information
  */
 
+import { Logger } from "../logging";
 import { createHttpClient, HttpError, type AuthConfig, type HttpClient } from "./httpClient";
+
+const logger = new Logger("kafkaRestProxy");
 
 // Re-export types from generated clients for convenience
 export type {
@@ -553,22 +556,46 @@ export interface ConsumeResponse {
 /**
  * Kafka message consumer proxy.
  *
- * Provides a consume API similar to the sidecar's simple consume API.
+ * Provides a consume API that adapts to different API versions:
+ * - v3 (CCloud): Uses the simple `/partitions/-/consume` endpoint
+ * - v3-local: Uses the same endpoint but without `/kafka` prefix
+ * - v2: Uses the REST Proxy v2 consumer group workflow (create, subscribe, poll, delete)
  */
 export class KafkaConsumeProxy {
   private readonly client: HttpClient;
   private readonly clusterId: string;
   private readonly customHeaders: Record<string, string>;
+  private readonly apiVersion: KafkaRestApiVersion;
+
+  // V2 consumer state management
+  private v2ConsumerBaseUri: string | null = null;
+  private v2ConsumerGroup: string | null = null;
+  private v2ConsumerId: string | null = null;
+  private v2SubscribedTopic: string | null = null;
+  private v2FromBeginning: boolean | null = null;
 
   constructor(config: KafkaRestProxyConfig) {
     this.clusterId = config.clusterId;
     this.customHeaders = config.headers ?? {};
+    this.apiVersion = config.apiVersion ?? "v3";
+
+    // V2 API requires specific content types and does NOT accept
+    // Content-Type headers on GET requests (causes 415 Unsupported Media Type).
+    // We set Content-Type to empty to override httpClient's default.
+    const defaultHeaders: Record<string, string> =
+      this.apiVersion === "v2"
+        ? {
+            Accept: "application/vnd.kafka.json.v2+json",
+            "Content-Type": "",
+          }
+        : {};
 
     this.client = createHttpClient({
       baseUrl: config.baseUrl,
       timeout: config.timeout ?? 30000,
       auth: config.auth,
       defaultHeaders: {
+        ...defaultHeaders,
         ...this.customHeaders,
       },
     });
@@ -577,8 +604,8 @@ export class KafkaConsumeProxy {
   /**
    * Consumes messages from a topic.
    *
-   * This method provides a simplified consume API that handles consumer
-   * group management internally.
+   * For v3/v3-local APIs, uses the simple consume endpoint.
+   * For v2 API, manages a consumer instance with create/subscribe/poll workflow.
    *
    * @param topicName Topic to consume from.
    * @param request Consume request parameters.
@@ -590,12 +617,227 @@ export class KafkaConsumeProxy {
     request: ConsumeRequest,
     signal?: AbortSignal,
   ): Promise<ConsumeResponse> {
-    // Use the /records endpoint which is available in Confluent's Kafka REST
-    // This is a simplified consume that doesn't require consumer group setup
-    const path = `/kafka/v3/clusters/${encodeURIComponent(this.clusterId)}/topics/${encodeURIComponent(topicName)}/partitions/-/consume`;
+    if (this.apiVersion === "v2") {
+      return this.consumeV2(topicName, request, signal);
+    }
+
+    // v3 or v3-local API: use simple consume endpoint
+    const prefix = this.apiVersion === "v3-local" ? "" : "/kafka";
+    const path = `${prefix}/v3/clusters/${encodeURIComponent(this.clusterId)}/topics/${encodeURIComponent(topicName)}/partitions/-/consume`;
 
     const response = await this.client.post<ConsumeResponse>(path, request, { signal });
     return response.data;
+  }
+
+  /**
+   * V2 consumer workflow: create consumer, subscribe, poll records.
+   */
+  private async consumeV2(
+    topicName: string,
+    request: ConsumeRequest,
+    signal?: AbortSignal,
+  ): Promise<ConsumeResponse> {
+    logger.debug(`consumeV2: starting for topic=${topicName}`);
+
+    // Ensure consumer exists and is subscribed to the topic
+    await this.ensureV2Consumer(topicName, request, signal);
+
+    // Build query params for the records request
+    const params = new URLSearchParams();
+    if (request.max_poll_records) {
+      params.set("max_bytes", String(request.fetch_max_bytes ?? 40 * 1024 * 1024));
+    }
+    // Use a shorter timeout for polling to avoid blocking too long
+    params.set("timeout", "3000");
+
+    const queryString = params.toString();
+    const recordsPath = `${this.v2ConsumerBaseUri}/records${queryString ? `?${queryString}` : ""}`;
+    logger.debug(`consumeV2: polling records from ${recordsPath}`);
+
+    const response = await this.client.get<V2ConsumeRecord[]>(recordsPath, { signal });
+    logger.debug(`consumeV2: received ${response.data?.length ?? 0} records`);
+
+    // Transform v2 response to ConsumeResponse format
+    return this.transformV2Response(topicName, response.data);
+  }
+
+  /**
+   * Ensures a v2 consumer exists and is subscribed to the topic.
+   * Creates a new consumer if needed, or reuses existing one if subscribed to same topic.
+   * Recreates consumer if consume mode changes (from_beginning setting).
+   */
+  private async ensureV2Consumer(
+    topicName: string,
+    request: ConsumeRequest,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const fromBeginning = request.from_beginning ?? false;
+    const needsRecreation =
+      // Topic changed
+      this.v2SubscribedTopic !== topicName ||
+      // Consume mode changed (from_beginning setting)
+      this.v2FromBeginning !== fromBeginning ||
+      // Fresh request without offsets indicates mode reset
+      (!request.offsets && this.v2ConsumerBaseUri !== null);
+
+    logger.debug(
+      `ensureV2Consumer: topic=${topicName}, fromBeginning=${fromBeginning}, ` +
+        `existingUri=${this.v2ConsumerBaseUri}, needsRecreation=${needsRecreation}`,
+    );
+
+    // If we have an existing consumer with matching settings, reuse it
+    if (this.v2ConsumerBaseUri && !needsRecreation) {
+      logger.debug("ensureV2Consumer: reusing existing consumer");
+      return;
+    }
+
+    // Clean up any existing consumer before creating a new one
+    await this.cleanupV2Consumer();
+
+    // Create a unique consumer group and instance for this session
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    this.v2ConsumerGroup = `vscode-consumer-${timestamp}-${random}`;
+    this.v2ConsumerId = `instance-${random}`;
+
+    // Create consumer
+    const createPath = `/consumers/${encodeURIComponent(this.v2ConsumerGroup)}`;
+    const createBody: V2CreateConsumerRequest = {
+      name: this.v2ConsumerId,
+      format: "json",
+      "auto.offset.reset": request.from_beginning ? "earliest" : "latest",
+    };
+
+    logger.debug(`ensureV2Consumer: creating consumer at ${createPath}`);
+    const createResponse = await this.client.post<V2CreateConsumerResponse>(
+      createPath,
+      createBody,
+      {
+        signal,
+        headers: { "Content-Type": "application/vnd.kafka.v2+json" },
+      },
+    );
+
+    logger.debug(
+      `ensureV2Consumer: consumer created, response=${JSON.stringify(createResponse.data)}`,
+    );
+
+    if (!createResponse.data?.base_uri) {
+      throw new Error(
+        `V2 consumer create response missing base_uri: ${JSON.stringify(createResponse.data)}`,
+      );
+    }
+
+    // Extract base URI from response (handles different hostnames)
+    this.v2ConsumerBaseUri = this.normalizeV2ConsumerUri(createResponse.data.base_uri);
+    logger.debug(`ensureV2Consumer: normalized URI=${this.v2ConsumerBaseUri}`);
+
+    // Subscribe to topic
+    const subscribePath = `${this.v2ConsumerBaseUri}/subscription`;
+    logger.debug(`ensureV2Consumer: subscribing at ${subscribePath}`);
+    await this.client.post(
+      subscribePath,
+      { topics: [topicName] },
+      { signal, headers: { "Content-Type": "application/vnd.kafka.v2+json" } },
+    );
+
+    this.v2SubscribedTopic = topicName;
+    this.v2FromBeginning = fromBeginning;
+
+    // Do an initial poll to trigger partition assignment (may return empty)
+    try {
+      const initialPollPath = `${this.v2ConsumerBaseUri}/records?timeout=1000`;
+      logger.debug(`ensureV2Consumer: initial poll at ${initialPollPath}`);
+      await this.client.get(initialPollPath, { signal });
+    } catch (err) {
+      // Ignore errors on initial poll - it's just to trigger assignment
+      logger.debug(`ensureV2Consumer: initial poll error (expected): ${err}`);
+    }
+
+    logger.debug("ensureV2Consumer: consumer setup complete");
+  }
+
+  /**
+   * Normalizes the base URI returned by the v2 consumer create response.
+   * The response may contain internal hostnames (e.g., "rest-proxy:8082")
+   * that need to be replaced with the client's base URL.
+   */
+  private normalizeV2ConsumerUri(baseUri: string): string {
+    logger.debug(`normalizeV2ConsumerUri: input=${baseUri}`);
+    try {
+      // Extract the path portion after the host
+      const url = new URL(baseUri);
+      const pathname = url.pathname;
+      logger.debug(`normalizeV2ConsumerUri: extracted pathname=${pathname}`);
+      return pathname;
+    } catch (err) {
+      logger.error(`normalizeV2ConsumerUri: failed to parse URL: ${err}`);
+      // If the URI is already a path (starts with /), use it directly
+      if (baseUri.startsWith("/")) {
+        return baseUri;
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Transforms v2 consumer records to the ConsumeResponse format.
+   */
+  private transformV2Response(topicName: string, records: V2ConsumeRecord[]): ConsumeResponse {
+    // Group records by partition
+    const partitionMap = new Map<number, ConsumeRecord[]>();
+
+    for (const record of records) {
+      const partitionId = record.partition ?? 0;
+      if (!partitionMap.has(partitionId)) {
+        partitionMap.set(partitionId, []);
+      }
+      partitionMap.get(partitionId)!.push({
+        partition_id: partitionId,
+        offset: record.offset,
+        timestamp: record.timestamp,
+        key: record.key,
+        value: record.value,
+        headers: record.headers?.map((h) => ({ name: h.key, value: h.value })),
+      });
+    }
+
+    // Build partition data list
+    const partitionDataList: ConsumePartitionData[] = [];
+    for (const [partitionId, partitionRecords] of partitionMap) {
+      const maxOffset = Math.max(...partitionRecords.map((r) => r.offset ?? 0));
+      partitionDataList.push({
+        partition_id: partitionId,
+        records: partitionRecords,
+        next_offset: maxOffset + 1,
+      });
+    }
+
+    return {
+      cluster_id: this.clusterId,
+      topic_name: topicName,
+      partition_data_list: partitionDataList,
+    };
+  }
+
+  /**
+   * Cleans up the v2 consumer instance.
+   */
+  private async cleanupV2Consumer(): Promise<void> {
+    if (this.v2ConsumerBaseUri) {
+      try {
+        await this.client.delete(this.v2ConsumerBaseUri, {
+          headers: { "Content-Type": "application/vnd.kafka.v2+json" },
+        });
+      } catch {
+        // Ignore cleanup errors - consumer may have already expired
+      }
+    }
+    this.v2ConsumerBaseUri = null;
+    this.v2ConsumerGroup = null;
+    this.v2ConsumerId = null;
+    this.v2SubscribedTopic = null;
+    this.v2FromBeginning = null;
   }
 
   /**
@@ -604,11 +846,76 @@ export class KafkaConsumeProxy {
    * @returns Partition data.
    */
   async listPartitions(topicName: string): Promise<{ data: PartitionData[] }> {
+    if (this.apiVersion === "v2") {
+      // V2 API doesn't have a direct partitions endpoint with full data
+      // Use the topics/{topic}/partitions endpoint
+      const response = await this.client.get<V2PartitionInfo[]>(
+        `/topics/${encodeURIComponent(topicName)}/partitions`,
+        { headers: { Accept: "application/vnd.kafka.v2+json" } },
+      );
+      return {
+        data: response.data.map((p) => ({
+          partition_id: p.partition,
+          // V2 doesn't provide all the same fields as v3
+        })) as PartitionData[],
+      };
+    }
+
+    const prefix = this.apiVersion === "v3-local" ? "" : "/kafka";
     const response = await this.client.get<ListResponse<PartitionData>>(
-      `/kafka/v3/clusters/${encodeURIComponent(this.clusterId)}/topics/${encodeURIComponent(topicName)}/partitions`,
+      `${prefix}/v3/clusters/${encodeURIComponent(this.clusterId)}/topics/${encodeURIComponent(topicName)}/partitions`,
     );
     return { data: response.data.data };
   }
+
+  /**
+   * Disposes of the consumer proxy, cleaning up any v2 consumer instances.
+   */
+  async dispose(): Promise<void> {
+    await this.cleanupV2Consumer();
+  }
+}
+
+/**
+ * V2 consumer create request.
+ */
+interface V2CreateConsumerRequest {
+  name: string;
+  format: "json" | "binary" | "avro";
+  "auto.offset.reset"?: "earliest" | "latest";
+  "auto.commit.enable"?: string;
+  "fetch.min.bytes"?: string;
+  "consumer.request.timeout.ms"?: string;
+}
+
+/**
+ * V2 consumer create response.
+ */
+interface V2CreateConsumerResponse {
+  instance_id: string;
+  base_uri: string;
+}
+
+/**
+ * V2 consume record format.
+ */
+interface V2ConsumeRecord {
+  topic?: string;
+  key?: unknown;
+  value?: unknown;
+  partition?: number;
+  offset?: number;
+  timestamp?: number;
+  headers?: Array<{ key: string; value: string }>;
+}
+
+/**
+ * V2 partition info.
+ */
+interface V2PartitionInfo {
+  partition: number;
+  leader: number;
+  replicas: Array<{ broker: number; leader: boolean; in_sync: boolean }>;
 }
 
 /**
