@@ -200,6 +200,7 @@ async function _activateExtension(
 
   // Initialize the internal connection manager
   const connectionManager = ConnectionManager.getInstance();
+  await connectionManager.initialize();
   context.subscriptions.push(connectionManager);
   logger.info("Connection manager initialized");
 
