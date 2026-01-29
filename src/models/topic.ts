@@ -47,6 +47,13 @@ export class KafkaTopic implements IResourceBase, ISearchable, IdItem {
   /** Operations the user is authzd to perform on the topic */
   operations: KafkaTopicOperation[] = [];
 
+  /**
+   * Whether authorized operations info was successfully fetched.
+   * - true: auth info was fetched (operations may be empty if user has none)
+   * - false: auth info could not be fetched (don't show "missing auth" warning)
+   */
+  operationsKnown: boolean = false;
+
   constructor(
     props: Pick<
       KafkaTopic,
@@ -61,6 +68,7 @@ export class KafkaTopic implements IResourceBase, ISearchable, IdItem {
       | "configs"
       | "is_internal"
       | "operations"
+      | "operationsKnown"
       | "isFlinkable"
       | "children"
     >,
@@ -78,6 +86,7 @@ export class KafkaTopic implements IResourceBase, ISearchable, IdItem {
     this.is_internal = props.is_internal;
 
     this.operations = props.operations ?? [];
+    this.operationsKnown = props.operationsKnown ?? false;
     this.isFlinkable = props.isFlinkable ?? false;
     this.children = props.children ?? [];
   }
@@ -165,8 +174,10 @@ function createKafkaTopicTooltip(
     tooltip.addWarning("No schema(s) found for topic.");
   }
 
-  // list any missing authorized operations
-  if (missingAuthz.length > 0) {
+  // Only show missing authorization warning if we actually fetched auth info.
+  // If operationsKnown is false, we couldn't fetch auth info (e.g., kafkajs doesn't support it)
+  // and showing "missing all operations" would be misleading.
+  if (resource.operationsKnown && missingAuthz.length > 0) {
     tooltip.addWarning("Missing authorization for the following actions:");
     missingAuthz.forEach((op) => tooltip.appendMarkdown(` - ${op}\n`));
   }

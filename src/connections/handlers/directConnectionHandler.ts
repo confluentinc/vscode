@@ -9,7 +9,6 @@ import { CredentialType, type Credentials } from "../credentials";
 import type { ConnectionSpec } from "../spec";
 import { ConnectedState, type ConnectionStatus, type KafkaClusterStatus } from "../types";
 import { ConnectionHandler, type ConnectionTestResult } from "./connectionHandler";
-import { createKafkaRestProxy } from "../../proxy/kafkaRestProxy";
 import { createSchemaRegistryProxy } from "../../proxy/schemaRegistryProxy";
 import { HttpError, type AuthConfig } from "../../proxy/httpClient";
 
@@ -250,7 +249,7 @@ export class DirectConnectionHandler extends ConnectionHandler {
 
   /**
    * Tests connectivity to the Kafka cluster.
-   * Uses REST API to verify cluster access.
+   * Validates the configuration; actual connectivity is verified when connecting.
    */
   private async testKafkaConnection(): Promise<EndpointTestResult> {
     const config = this._spec.kafkaCluster;
@@ -258,7 +257,9 @@ export class DirectConnectionHandler extends ConnectionHandler {
       return { success: false, error: "No bootstrap servers configured" };
     }
 
-    // First validate the configuration
+    // Validate the configuration
+    // Actual connectivity to Kafka brokers is verified via the native protocol
+    // when the connection is established (using kafkajs AdminClient)
     const validationResult = await this.validateKafkaConfig(
       config.bootstrapServers,
       config.credentials,
@@ -267,34 +268,7 @@ export class DirectConnectionHandler extends ConnectionHandler {
       return validationResult;
     }
 
-    // If no REST URI is configured, we can only validate configuration
-    // Direct connections to Kafka REST proxy require a configured URI
-    if (!config.restUri) {
-      // Return validation success - actual connectivity test requires REST proxy
-      return { success: true, clusterId: "pending-cluster-id" };
-    }
-
-    try {
-      const auth = this.getAuthConfigFromCredentials(config.credentials);
-      const proxy = createKafkaRestProxy({
-        baseUrl: config.restUri,
-        clusterId: "", // We'll discover the cluster ID
-        auth,
-      });
-
-      // Call getCluster() to test connectivity and get the cluster ID
-      const cluster = await proxy.getCluster();
-      return { success: true, clusterId: cluster.cluster_id };
-    } catch (error) {
-      if (error instanceof HttpError) {
-        return {
-          success: false,
-          error: `Kafka REST API error (${error.status}): ${error.message}`,
-        };
-      }
-      const message = error instanceof Error ? error.message : String(error);
-      return { success: false, error: `Connection failed: ${message}` };
-    }
+    return { success: true, clusterId: "pending-cluster-id" };
   }
 
   /**

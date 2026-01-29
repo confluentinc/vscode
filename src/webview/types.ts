@@ -121,7 +121,6 @@ export interface KafkaClusterConfig {
   credentials?: Credentials;
   ssl?: TLSConfig;
   clientIdSuffix?: string;
-  restUri?: string;
 }
 
 /** Schema Registry configuration. */

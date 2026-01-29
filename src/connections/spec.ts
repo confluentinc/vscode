@@ -64,8 +64,6 @@ export interface KafkaClusterConfig {
   ssl?: TLSConfig;
   /** Custom client ID suffix (useful for WarpStream or port-forwarding). */
   clientIdSuffix?: string;
-  /** Optional Kafka REST proxy URI for connectivity testing. */
-  restUri?: string;
 }
 
 /** Schema Registry configuration. */

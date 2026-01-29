@@ -76,6 +76,7 @@ describe("kafka/topicServiceFactory", function () {
     });
 
     it("should return KafkaAdminTopicService for DIRECT clusters on desktop", function () {
+      // DIRECT clusters on desktop use kafkajs Admin with ACL-based authorized_operations
       isDesktopStub.returns(true);
 
       const cluster = DirectKafkaCluster.create({
@@ -83,7 +84,6 @@ describe("kafka/topicServiceFactory", function () {
         name: "direct-kafka",
         id: "direct-cluster-id",
         bootstrapServers: "kafka.example.com:9092",
-        uri: "http://kafka.example.com:8082",
       });
 
       const service = getTopicService(cluster);
@@ -92,6 +92,7 @@ describe("kafka/topicServiceFactory", function () {
     });
 
     it("should return RestApiTopicService v3 for DIRECT clusters on web", function () {
+      // Web environment uses REST API for all clusters (no native Kafka client)
       isDesktopStub.returns(false);
 
       const cluster = DirectKafkaCluster.create({
@@ -99,7 +100,6 @@ describe("kafka/topicServiceFactory", function () {
         name: "direct-kafka",
         id: "direct-cluster-id",
         bootstrapServers: "kafka.example.com:9092",
-        uri: "http://kafka.example.com:8082",
       });
 
       const service = getTopicService(cluster);

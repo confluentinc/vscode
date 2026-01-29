@@ -6,8 +6,10 @@
  */
 
 import type { Admin, ITopicMetadata } from "kafkajs";
+import { ConnectionType } from "../connections";
 import { Logger } from "../logging";
 import type { KafkaCluster } from "../models/kafkaCluster";
+import { getAclService } from "./aclService";
 import { getAdminClientManager } from "./adminClientManager";
 import { KafkaAdminError, KafkaAdminErrorCategory } from "./errors";
 import type {
@@ -80,7 +82,15 @@ export class KafkaAdminTopicService implements TopicService {
       const metadata = await admin.fetchTopicMetadata({ topics: filteredNames });
 
       // Convert to TopicInfo array
-      const topics = metadata.topics.map((topic) => this.toTopicInfo(topic));
+      let topics = metadata.topics.map((topic) => this.toTopicInfo(topic));
+
+      // Fetch authorized operations via ACL service if requested (Direct connections only)
+      if (
+        options?.includeAuthorizedOperations &&
+        cluster.connectionType === ConnectionType.Direct
+      ) {
+        topics = await this.enrichWithAuthorizedOperations(cluster, topics);
+      }
 
       // Sort by name
       topics.sort((a, b) => a.name.localeCompare(b.name));
@@ -94,8 +104,16 @@ export class KafkaAdminTopicService implements TopicService {
 
   /**
    * Gets detailed information about a specific topic.
+   *
+   * @param cluster The Kafka cluster.
+   * @param topicName The topic name.
+   * @param options Optional options for the request.
    */
-  async describeTopic(cluster: KafkaCluster, topicName: string): Promise<TopicInfo> {
+  async describeTopic(
+    cluster: KafkaCluster,
+    topicName: string,
+    options?: { includeAuthorizedOperations?: boolean },
+  ): Promise<TopicInfo> {
     logger.debug(`describing topic ${topicName} in cluster ${cluster.id}`);
 
     const admin = await this.getAdmin(cluster);
@@ -122,7 +140,18 @@ export class KafkaAdminTopicService implements TopicService {
         );
       }
 
-      return this.toTopicInfo(topic);
+      let topicInfo = this.toTopicInfo(topic);
+
+      // Fetch authorized operations via ACL service if requested (Direct connections only)
+      if (
+        options?.includeAuthorizedOperations &&
+        cluster.connectionType === ConnectionType.Direct
+      ) {
+        const enriched = await this.enrichWithAuthorizedOperations(cluster, [topicInfo]);
+        topicInfo = enriched[0];
+      }
+
+      return topicInfo;
     } catch (error) {
       if (error instanceof KafkaAdminError) {
         throw error;
@@ -204,6 +233,64 @@ export class KafkaAdminTopicService implements TopicService {
       logger.debug(`deleted topic ${topicName} from cluster ${cluster.id}`);
     } catch (error) {
       throw this.wrapError(error, `Failed to delete topic '${topicName}'`);
+    }
+  }
+
+  /**
+   * Enriches topics with authorized operations from ACL service.
+   *
+   * @param cluster The Kafka cluster.
+   * @param topics Topics to enrich.
+   * @returns Topics with authorizedOperations populated.
+   */
+  private async enrichWithAuthorizedOperations(
+    cluster: KafkaCluster,
+    topics: TopicInfo[],
+  ): Promise<TopicInfo[]> {
+    if (topics.length === 0) {
+      return topics;
+    }
+
+    logger.debug(`enriching ${topics.length} topic(s) with ACL-based authorized operations`);
+
+    try {
+      const manager = getAdminClientManager();
+      const credentials = await manager.getCredentialsForCluster(cluster);
+      logger.debug(
+        `credentials type for ACL enrichment: ${credentials?.type ?? "none"} (has credentials: ${!!credentials})`,
+      );
+
+      const aclService = getAclService();
+      const topicNames = topics.map((t) => t.name);
+      const aclResults = await aclService.getTopicsAuthorizedOperations(
+        cluster,
+        topicNames,
+        credentials,
+      );
+
+      // Log sample ACL result for debugging
+      const sampleResult = aclResults.get(topicNames[0]);
+      logger.debug(
+        `sample ACL result for "${topicNames[0]}": aclsAvailable=${sampleResult?.aclsAvailable}, ` +
+          `operations=${JSON.stringify(sampleResult?.authorizedOperations)}, error=${sampleResult?.error}`,
+      );
+
+      return topics.map((topic) => {
+        const aclResult = aclResults.get(topic.name);
+        if (aclResult?.aclsAvailable) {
+          return {
+            ...topic,
+            authorizedOperations: aclResult.authorizedOperations,
+          };
+        }
+        // If ACLs aren't available, leave authorizedOperations undefined
+        // This prevents the "Missing authorization" warning in the UI
+        return topic;
+      });
+    } catch (error) {
+      logger.debug(`failed to enrich topics with ACLs: ${error}`);
+      // On error, return topics without modification
+      return topics;
     }
   }
 

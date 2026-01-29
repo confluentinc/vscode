@@ -42,3 +42,9 @@ export {
 
 // SASL configuration
 export { toSaslOptions } from "./saslConfig";
+
+// Principal derivation for ACL evaluation
+export { derivePrincipal, type PrincipalResult } from "./principalDerivation";
+
+// ACL service for authorized operations
+export { AclService, getAclService, TOPIC_OPERATIONS, type TopicAclResult } from "./aclService";

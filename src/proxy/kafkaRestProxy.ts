@@ -214,8 +214,13 @@ export class KafkaRestProxy {
   async listTopics(options?: ListTopicsOptions): Promise<TopicData[]> {
     const params: Record<string, string | boolean | undefined> = {};
     if (options?.includeAuthorizedOperations) {
-      params.includeAuthorizedOperations = true;
+      // Use snake_case parameter name as per Kafka REST v3 API spec
+      params.include_authorized_operations = true;
     }
+
+    logger.debug(
+      `listing topics with params: ${JSON.stringify(params)}, apiVersion: ${this.apiVersion}`,
+    );
 
     if (this.apiVersion === "v2") {
       // v2 REST Proxy returns a plain string array: ["topic1", "topic2"]
@@ -231,6 +236,9 @@ export class KafkaRestProxy {
 
     // v3 API returns wrapped response: { kind: "...", metadata: {...}, data: [...] }
     const response = await this.client.get<ListResponse<TopicData>>(this.topicsPath(), { params });
+    logger.debug(
+      `listTopics response: ${response.data.data.length} topics, first topic authorized_operations: ${JSON.stringify(response.data.data[0]?.authorized_operations)}`,
+    );
     return response.data.data;
   }
 
@@ -243,10 +251,14 @@ export class KafkaRestProxy {
   async getTopic(topicName: string, options?: ListTopicsOptions): Promise<TopicData> {
     const params: Record<string, string | boolean | undefined> = {};
     if (options?.includeAuthorizedOperations) {
-      params.includeAuthorizedOperations = true;
+      // Use snake_case parameter name as per Kafka REST v3 API spec
+      params.include_authorized_operations = true;
     }
 
     const response = await this.client.get<TopicData>(this.topicPath(topicName), { params });
+    logger.debug(
+      `getTopic ${topicName} authorized_operations: ${JSON.stringify(response.data.authorized_operations)}`,
+    );
     return response.data;
   }
 

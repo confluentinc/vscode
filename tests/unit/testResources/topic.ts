@@ -32,6 +32,7 @@ export function createKafkaTopic(
     configs: args.configs ?? {},
     is_internal: args.is_internal ?? false,
     operations: args.operations ?? [...KAFKA_TOPIC_OPERATIONS],
+    operationsKnown: args.operationsKnown ?? true,
     isFlinkable: args.isFlinkable ?? false,
     children: args.children ?? [],
   });

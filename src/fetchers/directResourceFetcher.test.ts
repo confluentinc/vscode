@@ -9,7 +9,7 @@ describe("fetchers/directResourceFetcher", function () {
   function createMockSpec(options: {
     id: string;
     name?: string;
-    kafka?: { bootstrapServers: string; uri?: string };
+    kafka?: { bootstrapServers: string };
     schemaRegistry?: { uri: string };
     formConnectionType?: string;
   }): CustomConnectionSpec {
@@ -57,7 +57,7 @@ describe("fetchers/directResourceFetcher", function () {
       const spec = createMockSpec({
         id: "conn-123",
         name: "My Connection",
-        kafka: { bootstrapServers: "localhost:9092", uri: "http://localhost:8082" },
+        kafka: { bootstrapServers: "localhost:9092" },
       });
 
       const fetcher = createDirectResourceFetcher({
@@ -125,7 +125,7 @@ describe("fetchers/directResourceFetcher", function () {
       const spec = createMockSpec({
         id: "conn-both",
         name: "Full Connection",
-        kafka: { bootstrapServers: "kafka:9092", uri: "http://kafka:8082" },
+        kafka: { bootstrapServers: "kafka:9092" },
         schemaRegistry: { uri: "http://sr:8081" },
       });
 
@@ -255,6 +255,24 @@ describe("fetchers/directResourceFetcher", function () {
       const environment = fetcher.buildEnvironmentFromSpec(spec);
 
       assert.strictEqual(environment.kafkaClusters[0].name, "Production Cluster");
+    });
+
+    it("should have undefined uri for Direct Kafka clusters", function () {
+      // Direct connections don't have REST proxy URIs configured
+      // They use native Kafka protocol via kafkajs AdminClient
+      const spec = createMockSpec({
+        id: "conn-direct",
+        name: "Direct Cluster",
+        kafka: { bootstrapServers: "kafka:9092" },
+      });
+
+      const fetcher = createDirectResourceFetcher({
+        getConnectionSpec: async () => null,
+      });
+
+      const environment = fetcher.buildEnvironmentFromSpec(spec);
+
+      assert.strictEqual(environment.kafkaClusters[0].uri, undefined);
     });
   });
 });

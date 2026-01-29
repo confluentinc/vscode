@@ -277,8 +277,11 @@ export class AdminClientManager implements Disposable {
 
   /**
    * Gets credentials for a cluster based on connection type.
+   *
+   * This method is public to allow other services (e.g., AclService) to
+   * access credentials for principal derivation.
    */
-  private async getCredentialsForCluster(cluster: KafkaCluster): Promise<Credentials | undefined> {
+  async getCredentialsForCluster(cluster: KafkaCluster): Promise<Credentials | undefined> {
     switch (cluster.connectionType) {
       case ConnectionType.Local:
         // Local connections don't require authentication

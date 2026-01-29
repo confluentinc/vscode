@@ -96,6 +96,12 @@ class DirectResourceFetcherImpl implements DirectResourceFetcher {
       // Generate a cluster ID from the bootstrap servers if not provided
       const clusterId = this.generateClusterId(spec.kafkaCluster.bootstrapServers);
 
+      logger.debug("building DirectKafkaCluster from spec", {
+        connectionId,
+        clusterId,
+        bootstrapServers: spec.kafkaCluster.bootstrapServers,
+      });
+
       kafkaCluster = DirectKafkaCluster.create({
         id: clusterId,
         name: spec.name || "Kafka Cluster",

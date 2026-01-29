@@ -6,18 +6,21 @@
  *
  * Decision tree:
  * 1. CCloud → Always use REST API (v3 with OAuth)
- * 2. LOCAL → Always use REST API (v3) - confluent-local containers support v3
+ * 2. LOCAL → Always use REST API (v3-local) - confluent-local containers support v3
  *            and this allows fetching authorized_operations
- * 3. DIRECT on Desktop → Use kafkajs Admin (REST API may not be available)
+ * 3. DIRECT on Desktop → Use kafkajs Admin with ACL-based authorized_operations
  * 4. DIRECT on Web → Use REST API (v3)
  */
 
 import { ConnectionType } from "../connections";
+import { Logger } from "../logging";
 import type { KafkaCluster } from "../models/kafkaCluster";
 import { isDesktopEnvironment } from "./environment";
 import { getKafkaAdminTopicService } from "./kafkaAdminTopicService";
 import { getRestApiTopicService } from "./restApiTopicService";
 import type { PartitionInfo, TopicInfo, TopicService } from "./topicService";
+
+const logger = new Logger("kafka.topicServiceFactory");
 
 /**
  * Simplified TopicData interface for internal use.
@@ -44,6 +47,7 @@ export interface SimpleTopicData {
 export function getTopicService(cluster: KafkaCluster): TopicService {
   // CCloud always uses REST API with OAuth
   if (cluster.connectionType === ConnectionType.Ccloud) {
+    logger.debug(`using RestApiTopicService(v3) for CCloud cluster ${cluster.id}`);
     return getRestApiTopicService("v3");
   }
 
@@ -51,17 +55,18 @@ export function getTopicService(cluster: KafkaCluster): TopicService {
   // but with different path prefix (/v3/ instead of /kafka/v3/)
   // This allows fetching authorized_operations
   if (cluster.connectionType === ConnectionType.Local) {
+    logger.debug(`using RestApiTopicService(v3-local) for LOCAL cluster ${cluster.id}`);
     return getRestApiTopicService("v3-local");
   }
 
-  // DIRECT connections
+  // DIRECT connections on desktop use kafkajs Admin with ACL-based authorized operations
   if (isDesktopEnvironment()) {
-    // Desktop: use kafkajs Admin for better performance
-    // Note: DIRECT connections may not have REST API available
+    logger.debug(`using KafkaAdminTopicService for DIRECT cluster ${cluster.id}`);
     return getKafkaAdminTopicService();
   }
 
   // Web fallback for DIRECT: use REST API v3
+  logger.debug(`using RestApiTopicService(v3) for DIRECT cluster ${cluster.id} (web environment)`);
   return getRestApiTopicService("v3");
 }
 

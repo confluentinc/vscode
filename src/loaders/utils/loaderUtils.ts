@@ -62,6 +62,18 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<SimpleTopicDat
       `fetched ${topics.length} topic(s) for ${cluster.connectionType} Kafka cluster ${cluster.id}`,
     );
 
+    // Log authorized operations for debugging
+    const firstTopicWithOps = topics.find((t) => t.authorizedOperations?.length);
+    if (firstTopicWithOps) {
+      logger.debug(
+        `sample authorized_operations from topic "${firstTopicWithOps.name}": ${JSON.stringify(firstTopicWithOps.authorizedOperations)}`,
+      );
+    } else if (topics.length > 0) {
+      logger.debug(
+        `no authorized_operations returned for any topic (first topic: ${topics[0].name}, ops: ${JSON.stringify(topics[0].authorizedOperations)})`,
+      );
+    }
+
     // Convert to TopicData format for compatibility with existing code
     let topicData = topics.map(topicInfoToTopicData);
 
@@ -73,10 +85,13 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<SimpleTopicDat
     // Handle KafkaAdminError (from kafkajs or wrapped HTTP errors)
     if (error instanceof KafkaAdminError) {
       // Check for private networking issues (typically shows as transient errors)
-      if (cluster.uri && containsPrivateNetworkPattern(cluster.uri)) {
+      // For REST API connections (Local/CCloud), check the URI
+      // For Direct connections (native protocol), check the bootstrap servers
+      const networkUrl = cluster.uri ?? cluster.bootstrapServers;
+      if (containsPrivateNetworkPattern(networkUrl)) {
         showPrivateNetworkingHelpNotification({
           resourceName: cluster.name,
-          resourceUrl: cluster.uri,
+          resourceUrl: networkUrl,
           resourceType: "Kafka cluster",
         });
         return [];
@@ -126,6 +141,8 @@ export function correlateTopicsWithSchemaSubjects(
       environmentId: cluster.environmentId,
       isFlinkable: isFlinkable,
       operations: toKafkaTopicOperations(topic.authorized_operations ?? []),
+      // Only set operationsKnown if auth info was actually returned (not undefined)
+      operationsKnown: topic.authorized_operations !== undefined,
       children: matchingSubjects,
     });
   });
