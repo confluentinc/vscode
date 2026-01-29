@@ -6,8 +6,10 @@
  *
  * Decision tree:
  * 1. CCloud → Always use REST API (v3 with OAuth)
- * 2. LOCAL/DIRECT on Desktop → Use kafkajs Admin
- * 3. LOCAL/DIRECT on Web → Use REST API (v2 for LOCAL, v3 for DIRECT)
+ * 2. LOCAL → Always use REST API (v3) - confluent-local containers support v3
+ *            and this allows fetching authorized_operations
+ * 3. DIRECT on Desktop → Use kafkajs Admin (REST API may not be available)
+ * 4. DIRECT on Web → Use REST API (v3)
  */
 
 import { ConnectionType } from "../connections";
@@ -45,17 +47,22 @@ export function getTopicService(cluster: KafkaCluster): TopicService {
     return getRestApiTopicService("v3");
   }
 
-  // LOCAL and DIRECT connections
+  // LOCAL always uses REST API v3-local - confluent-local containers support v3
+  // but with different path prefix (/v3/ instead of /kafka/v3/)
+  // This allows fetching authorized_operations
+  if (cluster.connectionType === ConnectionType.Local) {
+    return getRestApiTopicService("v3-local");
+  }
+
+  // DIRECT connections
   if (isDesktopEnvironment()) {
     // Desktop: use kafkajs Admin for better performance
+    // Note: DIRECT connections may not have REST API available
     return getKafkaAdminTopicService();
   }
 
-  // Web fallback: use REST API
-  // LOCAL uses v2 API (REST Proxy format)
-  // DIRECT uses v3 API (Confluent format)
-  const apiVersion = cluster.connectionType === ConnectionType.Local ? "v2" : "v3";
-  return getRestApiTopicService(apiVersion);
+  // Web fallback for DIRECT: use REST API v3
+  return getRestApiTopicService("v3");
 }
 
 /**

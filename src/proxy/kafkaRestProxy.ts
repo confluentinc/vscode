@@ -31,10 +31,12 @@ export type {
  *
  * - "v3": Confluent Kafka REST v3 API (e.g., /kafka/v3/clusters/{cluster_id}/topics)
  *         Used by Confluent Cloud and some Confluent Platform deployments.
+ * - "v3-local": Kafka REST v3 API without /kafka prefix (e.g., /v3/clusters/{cluster_id}/topics)
+ *               Used by confluent-local Docker containers which support v3 but with different paths.
  * - "v2": Kafka REST Proxy v2 API (e.g., /topics)
- *         Used by confluent-local Docker containers and standalone REST Proxy.
+ *         Deprecated for LOCAL connections - prefer v3-local.
  */
-export type KafkaRestApiVersion = "v2" | "v3";
+export type KafkaRestApiVersion = "v2" | "v3" | "v3-local";
 
 /**
  * Kafka REST proxy configuration.
@@ -53,7 +55,8 @@ export interface KafkaRestProxyConfig {
   /**
    * API version to use. Defaults to "v3".
    * - "v3": Uses /kafka/v3/clusters/{cluster_id}/... paths (Confluent Cloud)
-   * - "v2": Uses /topics, /topics/{name}/... paths (confluent-local, REST Proxy)
+   * - "v3-local": Uses /v3/clusters/{cluster_id}/... paths (confluent-local)
+   * - "v2": Uses /topics, /topics/{name}/... paths (standalone REST Proxy)
    */
   apiVersion?: KafkaRestApiVersion;
 }
@@ -395,11 +398,15 @@ export class KafkaRestProxy {
   /**
    * Builds the base path for cluster operations.
    * - v3 API: /kafka/v3/clusters/{cluster_id}
+   * - v3-local API: /v3/clusters/{cluster_id}
    * - v2 API: (empty string, operations use root-level paths)
    */
   private clusterPath(): string {
     if (this.apiVersion === "v2") {
       return "";
+    }
+    if (this.apiVersion === "v3-local") {
+      return `/v3/clusters/${encodeURIComponent(this.clusterId)}`;
     }
     return `/kafka/v3/clusters/${encodeURIComponent(this.clusterId)}`;
   }
@@ -407,6 +414,7 @@ export class KafkaRestProxy {
   /**
    * Builds the path for topic operations.
    * - v3 API: /kafka/v3/clusters/{cluster_id}/topics
+   * - v3-local API: /v3/clusters/{cluster_id}/topics
    * - v2 API: /topics
    */
   private topicsPath(): string {
@@ -419,6 +427,7 @@ export class KafkaRestProxy {
   /**
    * Builds the path for a specific topic.
    * - v3 API: /kafka/v3/clusters/{cluster_id}/topics/{topic_name}
+   * - v3-local API: /v3/clusters/{cluster_id}/topics/{topic_name}
    * - v2 API: /topics/{topic_name}
    */
   private topicPath(topicName: string): string {

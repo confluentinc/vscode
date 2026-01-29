@@ -43,7 +43,8 @@ describe("kafka/topicServiceFactory", function () {
       assert.ok(service instanceof RestApiTopicService);
     });
 
-    it("should return KafkaAdminTopicService for LOCAL clusters on desktop", function () {
+    it("should return RestApiTopicService v3-local for LOCAL clusters on desktop", function () {
+      // LOCAL clusters always use REST API v3-local to get authorized_operations
       isDesktopStub.returns(true);
 
       const cluster = LocalKafkaCluster.create({
@@ -55,10 +56,11 @@ describe("kafka/topicServiceFactory", function () {
 
       const service = getTopicService(cluster);
 
-      assert.ok(service instanceof KafkaAdminTopicService);
+      assert.ok(service instanceof RestApiTopicService);
     });
 
-    it("should return RestApiTopicService v2 for LOCAL clusters on web", function () {
+    it("should return RestApiTopicService v3-local for LOCAL clusters on web", function () {
+      // LOCAL clusters always use REST API v3-local to get authorized_operations
       isDesktopStub.returns(false);
 
       const cluster = LocalKafkaCluster.create({

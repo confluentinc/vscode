@@ -65,7 +65,7 @@ const instances: Map<KafkaRestApiVersion, RestApiTopicService> = new Map();
 /**
  * TopicService implementation using Kafka REST API.
  *
- * Supports both v2 (REST Proxy) and v3 (Confluent Cloud) API versions.
+ * Supports v2 (REST Proxy), v3 (Confluent Cloud), and v3-local (confluent-local) API versions.
  */
 export class RestApiTopicService implements TopicService {
   private readonly apiVersion: KafkaRestApiVersion;
