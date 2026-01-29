@@ -68,7 +68,6 @@ import type * as sidecar from "../sidecar";
 import type { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 
-import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { createFlinkAIAgent } from "../../tests/unit/testResources/flinkAIAgent";
 import { createFlinkAIConnection } from "../../tests/unit/testResources/flinkAIConnection";
 import { createFlinkAITool } from "../../tests/unit/testResources/flinkAITool";
@@ -2058,7 +2057,7 @@ describe("CCloudResourceLoader", () => {
     let getCCloudAuthSessionStub: sinon.SinonStub;
     let getCurrentOrganizationStub: sinon.SinonStub;
     let tryToUpdateConnectionStub: sinon.SinonStub;
-    let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+    let resetStub: sinon.SinonStub;
     let getCCloudResourcesStub: sinon.SinonStub;
     let ccloudOrganizationChangedFireStub: sinon.SinonStub;
     let showErrorNotificationStub: sinon.SinonStub;
@@ -2096,7 +2095,7 @@ describe("CCloudResourceLoader", () => {
       getCCloudAuthSessionStub = sandbox.stub(authnUtils, "getCCloudAuthSession");
       getCurrentOrganizationStub = sandbox.stub(graphqlOrgs, "getCurrentOrganization");
       tryToUpdateConnectionStub = sandbox.stub(connections, "tryToUpdateConnection");
-      stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
+      resetStub = sandbox.stub(loader, "reset").resolves();
       getCCloudResourcesStub = sandbox.stub(graphqlCCloud, "getCCloudResources");
       ccloudOrganizationChangedFireStub = sandbox.stub(emitters.ccloudOrganizationChanged, "fire");
       showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
@@ -2190,7 +2189,7 @@ describe("CCloudResourceLoader", () => {
       assert.deepStrictEqual(result, mockWorkspaceResponse);
       sinon.assert.calledOnce(getCurrentOrganizationStub);
       sinon.assert.notCalled(tryToUpdateConnectionStub);
-      sinon.assert.notCalled(stubbedLoader.reset);
+      sinon.assert.notCalled(resetStub);
       sinon.assert.notCalled(ccloudOrganizationChangedFireStub);
     });
 
@@ -2218,7 +2217,7 @@ describe("CCloudResourceLoader", () => {
           ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
         },
       });
-      sinon.assert.calledOnce(stubbedLoader.reset);
+      sinon.assert.calledOnce(resetStub);
       sinon.assert.calledOnce(ccloudOrganizationChangedFireStub);
       sinon.assert.calledOnce(getCCloudResourcesStub);
     });
@@ -2232,7 +2231,7 @@ describe("CCloudResourceLoader", () => {
       assert.deepStrictEqual(result, mockWorkspaceResponse);
       sinon.assert.calledOnce(getCurrentOrganizationStub);
       sinon.assert.notCalled(tryToUpdateConnectionStub);
-      sinon.assert.notCalled(stubbedLoader.reset);
+      sinon.assert.notCalled(resetStub);
       sinon.assert.notCalled(ccloudOrganizationChangedFireStub);
     });
 
@@ -2252,7 +2251,7 @@ describe("CCloudResourceLoader", () => {
       // Verify the order: org switch happens before workspace fetch
       sinon.assert.callOrder(
         tryToUpdateConnectionStub,
-        stubbedLoader.reset,
+        resetStub,
         ccloudOrganizationChangedFireStub,
         getCCloudResourcesStub,
         workspacesApiStub.getWsV1Workspace,
@@ -2277,7 +2276,7 @@ describe("CCloudResourceLoader", () => {
         showErrorNotificationStub,
         sinon.match.string.and(sinon.match(/unable to switch to organization/)),
       );
-      sinon.assert.notCalled(stubbedLoader.reset);
+      sinon.assert.notCalled(resetStub);
       sinon.assert.notCalled(ccloudOrganizationChangedFireStub);
       sinon.assert.notCalled(workspacesApiStub.getWsV1Workspace);
     });
