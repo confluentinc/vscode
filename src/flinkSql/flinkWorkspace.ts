@@ -130,7 +130,7 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
   try {
     await openSqlStatementsAsDocuments(selectedStatements, metadataContext);
     logUsage(UserEvent.FlinkWorkspaceUriAction, {
-      action: "open deeplink",
+      action: "select deeplinked statements",
       status: "documents opened",
       totalStatements: sqlStatements.length,
       selectedStatements: selectedStatements.length,
@@ -138,7 +138,7 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
   } catch (error) {
     logError(error, "Failed to open Flink SQL statements as documents");
     logUsage(UserEvent.FlinkWorkspaceUriAction, {
-      action: "open deeplink",
+      action: "open deeplinked statements",
       status: "open documents failed",
       error: error instanceof Error ? error.message : String(error),
     });
