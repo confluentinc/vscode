@@ -12,12 +12,11 @@ import type {
 } from "vscode";
 import { LanguageModelTextPart, LanguageModelToolResult, MarkdownString } from "vscode";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../../authn/constants";
-import type { Connection, ConnectionsList, ConnectionsResourceApi } from "../../clients/sidecar";
-import { ConnectionType } from "../../clients/sidecar";
+import type { Connection } from "../../connections";
+import { ConnectionManager, ConnectionType } from "../../connections";
 import { ContextValues, getContextValue } from "../../context/values";
 import { Logger } from "../../logging";
 import { getConnectionLabel } from "../../models/resource";
-import { getSidecar } from "../../sidecar";
 import { titleCase } from "../../utils";
 import { summarizeConnection } from "../summarizers/connections";
 import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
@@ -79,10 +78,17 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
     this.foundConnectionTypes = [];
     this.missingConnectionTypes = [];
 
-    // use the Connections API to get the list of connections
-    const sidecar = await getSidecar();
-    const client: ConnectionsResourceApi = sidecar.getConnectionsResourceApi();
-    const connectionsList: ConnectionsList = await client.gatewayV1ConnectionsGet();
+    // use the ConnectionManager to get the list of connections
+    const connectionManager = ConnectionManager.getInstance();
+    const handlers = connectionManager.getAllConnections();
+    // Convert handlers to Connection objects
+    const allConnections: Connection[] = await Promise.all(
+      handlers.map(async (handler) => ({
+        spec: handler.spec,
+        status: await handler.getStatus(),
+        metadata: {},
+      })),
+    );
 
     // keep track of how many connections of each type there are in case we need to add hints to the
     // model to help the user connect to other resources
@@ -96,7 +102,7 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
     // provide hints to the user
     const connectionStrings: LanguageModelTextPart[] = [];
     for (const connectionType of connectionCounts.keys()) {
-      const connections: Connection[] = connectionsList.data.filter(
+      const connections: Connection[] = allConnections.filter(
         (connection: Connection) => connection.spec.type === connectionType,
       );
       // keep general awareness of how many connections there are per type, even when filtering

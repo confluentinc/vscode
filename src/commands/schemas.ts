@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { ResponseError } from "../clients/sidecar";
+import { ResponseError } from "../connections";
 import {
   fetchSchemaBody,
   openReadOnlySchemaDocument,

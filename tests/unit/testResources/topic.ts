@@ -1,5 +1,5 @@
 import { KAFKA_TOPIC_OPERATIONS } from "../../../src/authz/constants";
-import { ConnectionType } from "../../../src/clients/sidecar";
+import { ConnectionType } from "../../../src/connections";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../../../src/constants";
 import { KafkaTopic } from "../../../src/models/topic";
 import { TEST_DIRECT_CONNECTION_ID } from "./connection";

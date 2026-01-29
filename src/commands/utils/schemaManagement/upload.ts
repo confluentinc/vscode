@@ -7,6 +7,8 @@ import {
   type SubjectsV1Api,
   type SubjectVersion,
 } from "../../../clients/schemaRegistryRest";
+import { TokenManager } from "../../../auth/oauth2/tokenManager";
+import { ConnectionType, CredentialType } from "../../../connections";
 import { schemaSubjectChanged, schemaVersionsChanged } from "../../../emitters";
 import { ResourceLoader } from "../../../loaders";
 import { Logger } from "../../../logging";
@@ -15,8 +17,12 @@ import { Schema, SchemaType } from "../../../models/schema";
 import { type SchemaRegistry } from "../../../models/schemaRegistry";
 import { type KafkaTopic } from "../../../models/topic";
 import { showErrorNotificationWithButtons } from "../../../notifications";
+import type { AuthConfig } from "../../../proxy/httpClient";
+import { HttpError } from "../../../proxy/httpClient";
+import type { SchemaType as ProxySchemaType } from "../../../proxy/schemaRegistryProxy";
+import * as schemaRegistryProxy from "../../../proxy/schemaRegistryProxy";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../../../quickpicks/schemas";
-import { getSidecar } from "../../../sidecar";
+import { getResourceManager } from "../../../storage/resourceManager";
 import { hashed, logUsage, UserEvent } from "../../../telemetry/events";
 import { fileUriExists } from "../../../utils/file";
 import { getSchemasViewProvider } from "../../../viewProviders/schemas";
@@ -103,95 +109,241 @@ export class CannotLoadSchemasError extends Error {
   }
 }
 
+/**
+ * Upload a schema to the Schema Registry.
+ * @param registry The Schema Registry to upload to.
+ * @param subject The subject to bind the schema to.
+ * @param schemaType The type of the schema (Avro, Protobuf, JSON).
+ * @param content The schema content/definition.
+ */
 export async function uploadSchema(
   registry: SchemaRegistry,
   subject: string,
   schemaType: SchemaType,
   content: string,
-) {
-  const sidecar = await getSidecar();
-  // Has the route for registering a schema under a subject.
-  const schemaSubjectsApi = sidecar.getSubjectsV1Api(registry.id, registry.connectionId);
-  // Can be used to look up subject + version pairs given a schema id.
-  const schemasApi = sidecar.getSchemasV1Api(registry.id, registry.connectionId);
-
-  // Learn the highest existing verion number of the schemas bound to this subject, if any.
-  // (This way we can determine if we're creating a new subject or a binding new version of an existing schema.
-  // (Alas, the return result from binding the schema to the subject doesn't include the binding's version number, so
-  //  we have to look it up separately.)
-  const existingVersion = await getHighestRegisteredVersion(schemaSubjectsApi, subject);
-
-  logger.info(
-    `Uploading schema to subject "${subject}" in registry "${registry.id}". Existing version: ${existingVersion}`,
-  );
-
-  /** ID given to the uploaded schema. May have been a preexisting id if this schema body had been registered previously. */
-  let maybeNewId: number | undefined;
-
-  let success: boolean;
-  try {
-    // todo ask if want to normalize schema? They ... probably do?
-    const normalize = true;
-
-    maybeNewId = await registerSchema(schemaSubjectsApi, subject, schemaType, content, normalize);
-
-    success = true;
-
-    logger.info(
-      `Schema registered successfully as subject "${subject}" in registry "${registry.id}" as schema id ${maybeNewId}`,
-    );
-  } catch {
-    success = false;
-  }
-
-  // Telemetry log the schema upload event + overall success or failure.
-  logUsage(UserEvent.SchemaAction, {
-    action: "upload",
-    status: success ? "succeeded" : "failed",
-
-    connection_id: registry.connectionId,
-    connection_type: registry.connectionType,
-    environment_id: registry.environmentId,
-
-    schema_registry_id: registry.id,
-    schema_type: schemaType,
-    subject_hash: hashed(subject),
-    schema_hash: hashed(content),
+): Promise<void> {
+  const auth = await getAuthConfigForSchemaRegistry(registry);
+  const proxy = schemaRegistryProxy.createSchemaRegistryProxy({
+    baseUrl: registry.uri,
+    auth,
   });
 
-  if (!success) {
-    // Error message already shown by registerSchema()
-    return;
-  }
-
-  let registeredVersion: number | undefined;
   try {
-    // Try to read back the schema we just registered to get the version number bound to the subject we just bound it to.
-    registeredVersion = await getNewlyRegisteredVersion(schemasApi, subject, maybeNewId!);
-  } catch {
-    // Error message already shown in getNewlyRegisteredVersion()
-    return;
+    // Get the highest existing version (if any) before registering
+    const maxExistingVersion = await getHighestVersionFromProxy(proxy, subject);
+
+    // Register the schema (with normalize=true to allow normalization)
+    const schemaId = await registerSchemaWithProxy(
+      proxy,
+      subject,
+      schemaType as ProxySchemaType,
+      content,
+      true, // normalize
+    );
+
+    // Get the newly registered version number
+    const newlyRegisteredVersion = await getNewlyRegisteredVersionFromProxy(
+      proxy,
+      subject,
+      schemaId,
+    );
+
+    // Update the cache and fire events for schema changes
+    await updateRegistryCacheAndFindNewSchema(registry, schemaId, subject);
+
+    // Show success message
+    const message = schemaRegistrationMessage(subject, maxExistingVersion, newlyRegisteredVersion);
+    vscode.window.showInformationMessage(message);
+
+    // Log telemetry
+    logUsage(UserEvent.SchemaAction, {
+      action: "uploaded",
+      schemaType: schemaType,
+      hashedSubject: hashed(subject),
+    });
+
+    // Refresh the schemas view
+    const schemasView = getSchemasViewProvider();
+    if (schemasView) {
+      schemasView.refresh();
+    }
+  } catch (error) {
+    if (error instanceof HttpError) {
+      const message = handleSchemaRegistrationError(error, schemaType);
+      vscode.window.showErrorMessage(message);
+    } else {
+      logger.error("Error uploading schema", error);
+      vscode.window.showErrorMessage(
+        `Error uploading schema: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+}
+
+/**
+ * Get authentication configuration for a Schema Registry based on connection type.
+ */
+async function getAuthConfigForSchemaRegistry(
+  schemaRegistry: SchemaRegistry,
+): Promise<AuthConfig | undefined> {
+  switch (schemaRegistry.connectionType) {
+    case ConnectionType.Ccloud: {
+      // CCloud uses bearer token authentication
+      const token = (await TokenManager.getInstance().getDataPlaneToken()) || "";
+      return {
+        type: "bearer",
+        token,
+      };
+    }
+    case ConnectionType.Direct: {
+      // Direct connections may have credentials stored
+      const resourceManager = getResourceManager();
+      const spec = await resourceManager.getDirectConnection(schemaRegistry.connectionId);
+      if (spec?.schemaRegistry?.credentials) {
+        const creds = spec.schemaRegistry.credentials;
+        if (creds.type === CredentialType.BASIC) {
+          return {
+            type: "basic",
+            username: creds.username,
+            password: creds.password,
+          };
+        }
+        if (creds.type === CredentialType.API_KEY) {
+          return {
+            type: "basic",
+            username: creds.apiKey,
+            password: creds.apiSecret,
+          };
+        }
+      }
+      return undefined;
+    }
+    case ConnectionType.Local:
+    default:
+      // Local connections typically don't require authentication
+      return undefined;
+  }
+}
+
+/**
+ * Get the highest version of a subject using the proxy.
+ */
+async function getHighestVersionFromProxy(
+  proxy: ReturnType<typeof schemaRegistryProxy.createSchemaRegistryProxy>,
+  subject: string,
+): Promise<number | undefined> {
+  try {
+    const versions = await proxy.listVersions(subject);
+    if (versions.length > 0) {
+      versions.sort((a, b) => a - b);
+      return versions[versions.length - 1];
+    }
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) {
+      // Subject doesn't exist yet, this is fine
+      return undefined;
+    }
+    throw error;
+  }
+  return undefined;
+}
+
+/**
+ * Register a schema using the proxy.
+ */
+async function registerSchemaWithProxy(
+  proxy: ReturnType<typeof schemaRegistryProxy.createSchemaRegistryProxy>,
+  subject: string,
+  schemaType: ProxySchemaType,
+  schema: string,
+  normalize: boolean,
+): Promise<number> {
+  try {
+    const response = await proxy.registerSchema({
+      subject,
+      schemaType,
+      schema,
+      normalize,
+    });
+    if (response.id === undefined) {
+      throw new Error("Schema registration succeeded but no ID was returned");
+    }
+    return response.id;
+  } catch (error) {
+    if (error instanceof HttpError) {
+      throw error;
+    }
+    throw new Error(
+      `Failed to register schema: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+/**
+ * Get the newly registered version number for a schema.
+ */
+async function getNewlyRegisteredVersionFromProxy(
+  proxy: ReturnType<typeof schemaRegistryProxy.createSchemaRegistryProxy>,
+  subject: string,
+  schemaId: number,
+): Promise<number> {
+  // Try to read back the schema we just registered to get the version number
+  // (may take a few attempts if served by a read replica)
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const versions = await proxy.listVersions(subject);
+      if (versions.length > 0) {
+        // Get the schema for the latest version and check if its id matches
+        const latestVersion = Math.max(...versions);
+        const schema = await proxy.getSchemaByVersion(subject, latestVersion);
+        if (schema.id === schemaId) {
+          return latestVersion;
+        }
+        // The id doesn't match - the schema might be normalized to an older version
+        // Try to find the version with the matching id
+        for (const version of versions) {
+          const versionSchema = await proxy.getSchemaByVersion(subject, version);
+          if (versionSchema.id === schemaId) {
+            return version;
+          }
+        }
+      }
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 404) {
+        // Wait a moment before trying again
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        continue;
+      }
+      throw error;
+    }
   }
 
-  // Log + inform user of the successful schema registration, give them the option to view the schema in the schema registry.
-  const successMessage = schemaRegistrationMessage(subject, existingVersion, registeredVersion);
+  // If we couldn't find the version, throw an error
+  throw new Error(
+    `Could not find subject "${subject}" in the list of bindings for schema id ${schemaId}`,
+  );
+}
 
-  logger.info(successMessage);
+/**
+ * Handle schema registration errors and return a user-friendly message.
+ */
+function handleSchemaRegistrationError(error: HttpError, schemaType: SchemaType): string {
+  const status = error.status;
+  const message = error.message;
 
-  // Refresh the schema registry cache while offering the user the option to view
-  // the schema in the Schemas view.
-  const [viewchoice, newSchema]: [string | undefined, Schema] = await Promise.all([
-    vscode.window.showInformationMessage(successMessage, "View in Schema Registry"),
-    updateRegistryCacheAndFindNewSchema(registry, maybeNewId!, subject),
-  ]);
-
-  if (viewchoice) {
-    // User chose to view the schema in the schema registry.
-
-    // Unfurl the subject and highlight the new schema.
-    // (Will reset the SR being viewed if necessary)
-    await getSchemasViewProvider().revealSchema(newSchema);
+  switch (status) {
+    case 415:
+      return "Unsupported Media Type. Try again?";
+    case 409:
+      return `Conflict with prior schema version: ${parseConflictMessage(schemaType, message)}`;
+    case 422:
+      if (message.includes("42201")) {
+        return `Invalid schema: ${extractDetail(message)}`;
+      }
+      break;
   }
+
+  return `Error ${status} uploading schema: ${message}`;
 }
 
 /** Does the given URI have any self-contained errors? If so, don't proceed with upload. */

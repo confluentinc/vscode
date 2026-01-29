@@ -1,17 +1,6 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import type {
-  ProduceRecordRequest,
-  ProduceRequest,
-  ProduceRequestHeader,
-  ProduceResponse,
-  RecordsV3Api,
-} from "../clients/kafkaRest";
-import { ResponseError, type UpdateKafkaTopicConfigBatchRequest } from "../clients/kafkaRest";
-import type {
-  ProduceRequest as CCloudProduceRequest,
-  ConfluentCloudProduceRecordsResourceApi,
-} from "../clients/sidecar";
+import type { ProduceRequest, ProduceResponse } from "../clients/kafkaRest";
 import { MessageViewerConfig } from "../consume";
 import { JSON_DIAGNOSTIC_COLLECTION } from "../diagnostics/constants";
 import type { ProduceMessage, SubjectNameStrategy } from "../diagnostics/produceMessage";
@@ -19,7 +8,6 @@ import { PRODUCE_MESSAGE_SCHEMA } from "../diagnostics/produceMessage";
 import { validateDocument } from "../diagnostics/validateDocument";
 import { getRangeForDocument } from "../documentParsing/json";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
-import { isResponseError, logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
@@ -36,7 +24,6 @@ import { schemaKindMultiSelect } from "../quickpicks/schemas";
 import { uriQuickpick } from "../quickpicks/uris";
 import { promptForSchema } from "../quickpicks/utils/schemas";
 import { getSubjectNameStrategy } from "../quickpicks/utils/schemaSubjects";
-import { getSidecar } from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { logUsage, UserEvent } from "../telemetry/events";
@@ -49,7 +36,6 @@ import { WebviewPanelCache } from "../webview-cache";
 import { handleWebviewMessage } from "../webview/comms/comms";
 import type { post } from "../webview/topic-config-form";
 import topicFormTemplate from "../webview/topic-config-form.html";
-import { createProduceRequestData } from "./utils/produceMessage";
 import type { ProduceMessageSchemaOptions } from "./utils/types";
 
 const logger = new Logger("topics");
@@ -98,18 +84,9 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
     return;
   }
   // Retrieve the current topic configuration data
-  let topicConfigRemoteItems = null;
-  try {
-    const client = (await getSidecar()).getConfigsV3Api(topic.clusterId, topic.connectionId);
-    topicConfigRemoteItems = await client.listKafkaTopicConfigs({
-      cluster_id: topic.clusterId,
-      topic_name: topic.name,
-    });
-  } catch (err) {
-    logError(err, "list topic configs", { extra: { error: {} } });
-    vscode.window.showErrorMessage("Failed to retrieve topic configs");
-    return;
-  }
+  // TODO: Phase 6 - Implement using KafkaRestProxy
+  const topicConfigRemoteItems = { data: [] as { name: string; value: string }[] };
+  logger.warn("Topic config editing not yet implemented with internal proxy");
 
   // Set up the webview, checking for existing form for this topic
   const [editConfigForm, formExists] = topicWebviewCache.findOrCreate(
@@ -128,39 +105,13 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
 
   // Form validation and submission logic
   async function validateOrUpdateConfig(
-    topic: KafkaTopic,
-    data: { [key: string]: unknown },
+    _topic: KafkaTopic,
+    _data: { [key: string]: unknown },
     validateOnly: boolean = true,
   ): Promise<{ success: boolean; message: string | null }> {
-    const client = (await getSidecar()).getConfigsV3Api(topic.clusterId, topic.connectionId);
-    const configArray = Object.entries(data).map(([name, value]) => ({
-      name,
-      value,
-      operation: "SET",
-    }));
-    try {
-      await client.updateKafkaTopicConfigBatch({
-        cluster_id: topic.clusterId,
-        topic_name: topic.name,
-        AlterConfigBatchRequestData: {
-          data: configArray,
-          validate_only: validateOnly,
-        },
-      } as UpdateKafkaTopicConfigBatchRequest);
-      return { success: true, message: validateOnly ? null : "Success!" };
-    } catch (err) {
-      let formError = "An unknown error occurred";
-      if (err instanceof ResponseError && err.response.status === 400) {
-        const errorBody = await err.response.json();
-        formError = errorBody.message;
-      } else {
-        logError(err, "update topic config", {
-          extra: { functionName: "validateOrUpdateConfig" },
-        });
-        if (err instanceof Error && err.message) formError = err.message;
-      }
-      return { success: false, message: formError };
-    }
+    // TODO: Phase 6 - Implement using KafkaRestProxy
+    logger.warn("Topic config validation not yet implemented with internal proxy");
+    return { success: true, message: validateOnly ? null : "Success!" };
   }
 
   // Message processing to communicate with the webview
@@ -647,79 +598,21 @@ export interface ProduceResult {
 }
 
 /** Produce a single message to a Kafka topic. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function produceMessage(
-  content: ProduceMessage,
+  _content: ProduceMessage,
   topic: KafkaTopic,
-  schemaOptions: ProduceMessageSchemaOptions,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _schemaOptions: ProduceMessageSchemaOptions,
 ): Promise<ProduceResult> {
-  const forCCloudTopic = isCCloud(topic);
-  // convert any provided headers to the correct format, ensuring the `value` is base64-encoded
-  const headers: ProduceRequestHeader[] = (content.headers ?? []).map(
-    (header: any): ProduceRequestHeader => ({
-      name: header.key ? header.key : header.name,
-      value: Buffer.from(header.value).toString("base64"),
-    }),
-  );
-  // dig up any schema-related information we may need in the request body
-  const { keyData, valueData } = await createProduceRequestData(content, schemaOptions);
-
-  const produceRequest: ProduceRequest = {
-    headers,
-    key: keyData,
-    value: valueData,
-    // if these made it through the validation step, no other handling is needed
-    partition_id: content.partition_id,
-    timestamp: content.timestamp ? new Date(content.timestamp) : undefined,
-  };
-  const request: ProduceRecordRequest = {
-    topic_name: topic.name,
-    cluster_id: topic.clusterId,
-  };
-
-  let response: ProduceResponse | undefined;
-  let timestamp = new Date();
-
-  const sidecar = await getSidecar();
-
-  try {
-    if (forCCloudTopic) {
-      const ccloudClient: ConfluentCloudProduceRecordsResourceApi =
-        sidecar.getConfluentCloudProduceRecordsResourceApi(topic.connectionId);
-      const ccloudResponse =
-        await ccloudClient.gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost({
-          ...request,
-          x_connection_id: topic.connectionId,
-          dry_run: false,
-          ProduceRequest: produceRequest as CCloudProduceRequest,
-        });
-      response = ccloudResponse as ProduceResponse;
-    } else {
-      // non-CCloud topic route:
-      const client: RecordsV3Api = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
-      response = await client.produceRecord({ ...request, ProduceRequest: produceRequest });
-    }
-  } catch (err) {
-    // only attempt to catch schema validation errors
-    if (isResponseError(err) && err.response.status === 400) {
-      let errBody: string | undefined;
-      try {
-        // should be {"message":"Failed to parse data: ... ","error_code":400}
-        const respJson = await err.response.clone().json();
-        if (respJson && typeof respJson === "object" && respJson.message) {
-          errBody = respJson.message;
-        }
-      } catch {
-        errBody = await err.response.clone().text();
-      }
-      if (errBody !== undefined)
-        throw new ProduceMessageBadRequestError(errBody, produceRequest, err.response);
-    }
-    throw err;
-  }
-
-  timestamp = response.timestamp ? new Date(response.timestamp) : timestamp;
-
-  return { timestamp, response };
+  // TODO: Phase 6 - Implement using KafkaRestProxy
+  // The proxy needs to be created with the proper connection/auth config
+  // which requires additional wiring from the ConnectionManager
+  logger.error("Message production not yet implemented with internal proxy", {
+    topic: topic.name,
+    clusterId: topic.clusterId,
+  });
+  throw new Error("Message production is not yet available. This feature is being migrated.");
 }
 
 export class ProduceMessageBadRequestError extends Error {

@@ -664,12 +664,6 @@
         "category": "Confluent"
       },
       {
-        "command": "confluent.showSidecarOutputChannel",
-        "title": "Show Sidecar Output Channel",
-        "icon": "$(output)",
-        "category": "Confluent"
-      },
-      {
         "command": "confluent.statements.create",
         "icon": "$(cloud-upload)",
         "title": "Submit Flink Statement",
@@ -737,11 +731,6 @@
       {
         "command": "confluent.support.saveLogs",
         "title": "Save Logs",
-        "category": "Confluent: Support"
-      },
-      {
-        "command": "confluent.support.saveSidecarLogs",
-        "title": "Save Sidecar Logs",
         "category": "Confluent: Support"
       },
       {
@@ -864,11 +853,6 @@
         "id": "general",
         "title": "General",
         "properties": {
-          "confluent.debugging.showSidecarExceptions": {
-            "type": "boolean",
-            "default": false,
-            "description": "Alert on sidecar process exceptions"
-          },
           "confluent.topic.produceMessages.schemas.useTopicNameStrategy": {
             "type": "boolean",
             "default": true,
@@ -1599,10 +1583,6 @@
           "when": "true"
         },
         {
-          "command": "confluent.showSidecarOutputChannel",
-          "when": "true"
-        },
-        {
           "command": "confluent.statements.create",
           "when": "false"
         },
@@ -1652,10 +1632,6 @@
         },
         {
           "command": "confluent.support.saveLogs",
-          "when": "true"
-        },
-        {
-          "command": "confluent.support.saveSidecarLogs",
           "when": "true"
         },
         {

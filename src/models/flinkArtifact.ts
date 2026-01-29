@@ -1,6 +1,6 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import type { ArtifactV1FlinkArtifactMetadata } from "../clients/flinkArtifacts";
-import type { ConnectionType } from "../clients/sidecar";
+import type { ConnectionType } from "../connections";
 import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
 import { IconNames } from "../icons";
 import type { IdItem } from "./main";

@@ -10,7 +10,7 @@ import type {
   ProviderResult,
 } from "vscode";
 import { LanguageModelTextPart, LanguageModelToolResult, MarkdownString } from "vscode";
-import type { ContainerInspectResponse, ContainerSummary } from "../../clients/docker";
+import type { ContainerInspectResponse } from "../../clients/docker";
 import { SystemApi } from "../../clients/docker";
 import { defaultRequestInit } from "../../docker/configs";
 import { LocalResourceKind } from "../../docker/constants";
@@ -25,7 +25,8 @@ import { Logger } from "../../logging";
 import {
   getLocalKafkaContainers,
   getLocalSchemaRegistryContainers,
-} from "../../sidecar/connections/local";
+  type LocalResourceContainer,
+} from "../../docker/local";
 import { summarizeLocalDockerContainer } from "../summarizers/dockerContainers";
 import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 
@@ -65,22 +66,18 @@ export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerCon
       ]);
     }
 
-    // get the array of ContainerSummary objects first -- not filtering by container status so the
+    // get the array of LocalResourceContainer objects first -- not filtering by container status so the
     // model can see all Kafka/SR containers (running, stopped, etc.)
-    let summaries: ContainerSummary[] = [];
+    let containers: LocalResourceContainer[] = [];
     switch (params.resourceKind) {
       case LocalResourceKind.Kafka:
-        summaries = await getLocalKafkaContainers({
-          statuses: [],
-        });
+        containers = await getLocalKafkaContainers();
         break;
       case LocalResourceKind.SchemaRegistry:
-        summaries = await getLocalSchemaRegistryContainers({
-          statuses: [],
-        });
+        containers = await getLocalSchemaRegistryContainers();
         break;
     }
-    if (!summaries.length) {
+    if (!containers.length) {
       return new LanguageModelToolResult([
         new LanguageModelTextPart(
           `No Docker containers found for resource kind "${params.resourceKind}".`,
@@ -88,16 +85,16 @@ export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerCon
       ]);
     }
 
-    // if we have at least one ContainerSummary, inspect to get config.env details
+    // if we have at least one container, inspect to get config.env details
     const inspectPromises: Promise<ContainerInspectResponse>[] = [];
-    summaries.forEach((summary) => {
-      if (summary.Id) {
-        inspectPromises.push(getContainer(summary.Id));
+    containers.forEach((container) => {
+      if (container.id) {
+        inspectPromises.push(getContainer(container.id));
       }
     });
-    const containers: ContainerInspectResponse[] = await Promise.all(inspectPromises);
-    if (!containers.length) {
-      // shouldn't happen since we just got summaries
+    const inspectedContainers: ContainerInspectResponse[] = await Promise.all(inspectPromises);
+    if (!inspectedContainers.length) {
+      // shouldn't happen since we just got containers
       return new LanguageModelToolResult([
         new LanguageModelTextPart(
           `No Docker containers found for resource kind "${params.resourceKind}".`,
@@ -107,8 +104,8 @@ export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerCon
 
     // ...finally, summarize the containers
     const containerStrings: LanguageModelTextPart[] = [];
-    let summary = new MarkdownString(`# Docker Containers (${containers.length})`);
-    containers.forEach((container: ContainerInspectResponse) => {
+    let summary = new MarkdownString(`# Docker Containers (${inspectedContainers.length})`);
+    inspectedContainers.forEach((container: ContainerInspectResponse) => {
       const containerSummary: string = summarizeLocalDockerContainer(container);
       summary = summary.appendMarkdown(`\n${containerSummary}`);
     });

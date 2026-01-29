@@ -1,19 +1,15 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { ContainerSummary, Port, PortTypeEnum } from "../clients/docker";
-import {
-  DatasetDTO,
-  EventDTO,
-  FieldDTO,
-  GenerationDTO,
-  GenerationDTOGeneratorEnum,
-  ResponseError,
-  SchemaManagementApi,
-} from "../clients/medusa";
+import type { Port } from "../clients/docker";
+import { PortTypeEnum } from "../clients/docker";
+import type { DatasetDTO, EventDTO, FieldDTO, GenerationDTO } from "../clients/medusa";
+import { GenerationDTOGeneratorEnum, ResponseError, SchemaManagementApi } from "../clients/medusa";
+import { LOCAL_MEDUSA_INTERNAL_PORT } from "../constants";
 import { LocalResourceKind } from "../docker/constants";
+import * as localConnections from "../docker/local";
+import type { LocalResourceContainer } from "../docker/local";
 import * as medusaApi from "../medusa/api";
-import * as localConnections from "../sidecar/connections/local";
 import * as fileUtils from "../utils/file";
 import * as fsWrappers from "../utils/fsWrappers";
 import * as dockerCommands from "./docker";
@@ -124,16 +120,19 @@ describe("medusaCodeLens", () => {
         PublicPort: 8082,
         Type: PortTypeEnum.Tcp,
       };
-      const mockContainer: ContainerSummary = {
-        Id: "mock-container",
-        Ports: [mockPort],
+      const mockContainer: LocalResourceContainer = {
+        id: "mock-container",
+        name: "medusa",
+        image: "confluentinc/medusa:latest",
+        status: "running",
+        ports: [mockPort],
       };
       getMedusaContainerStub = sandbox
         .stub(localConnections, "getMedusaContainer")
         .resolves(mockContainer);
       getContainerPublicPortStub = sandbox
         .stub(localConnections, "getContainerPublicPort")
-        .withArgs(mockContainer)
+        .withArgs(mockContainer, LOCAL_MEDUSA_INTERNAL_PORT)
         .returns(8082);
     });
 
@@ -327,12 +326,17 @@ describe("medusaCodeLens", () => {
     });
 
     it("should handle missing container port error", async () => {
-      const containerWithoutPorts: ContainerSummary = {
-        Id: "mock-container",
-        Ports: [], // No ports
+      const containerWithoutPorts: LocalResourceContainer = {
+        id: "mock-container",
+        name: "medusa",
+        image: "confluentinc/medusa:latest",
+        status: "running",
+        ports: [], // No ports
       };
       getMedusaContainerStub.resolves(containerWithoutPorts);
-      getContainerPublicPortStub.withArgs(containerWithoutPorts).returns(undefined);
+      getContainerPublicPortStub
+        .withArgs(containerWithoutPorts, LOCAL_MEDUSA_INTERNAL_PORT)
+        .returns(undefined);
       withProgressStub.callsFake(async (options, callback) => await callback());
 
       await generateMedusaDatasetCommand(mockUri);

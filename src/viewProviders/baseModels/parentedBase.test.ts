@@ -26,7 +26,7 @@ import {
   TEST_CCLOUD_FLINK_STATEMENT,
 } from "../../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
-import { ConnectionType } from "../../clients/sidecar";
+import { ConnectionType } from "../../connections";
 import * as contextValues from "../../context/values";
 import { ContextValues } from "../../context/values";
 import type { Environment } from "../../models/environment";

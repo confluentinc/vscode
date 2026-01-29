@@ -1,7 +1,7 @@
 import { Data, type Require as Enforced } from "dataclass";
 import type { MarkdownString } from "vscode";
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import { LOCAL_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
 import { CustomMarkdownString } from "./main";

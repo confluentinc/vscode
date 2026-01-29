@@ -21,7 +21,6 @@ import {
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
   SCHEMA_RBAC_WARNINGS_ENABLED,
   SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS,
-  SHOW_SIDECAR_EXCEPTIONS,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
   STATEMENT_POLLING_CONCURRENCY,
@@ -89,19 +88,6 @@ describe("extensionSettings/constants.ts", function () {
       assert.ok(SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS.defaultValue !== undefined);
       assert.strictEqual(SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS.defaultValue, expectedDefault);
       assert.ok(SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS.value !== undefined);
-    });
-
-    it("should set the correct section and default value for SHOW_SIDECAR_EXCEPTIONS", () => {
-      const section: ExtensionConfiguration | undefined = getSectionForSetting(
-        SHOW_SIDECAR_EXCEPTIONS.id,
-      );
-      assert.ok(section);
-      assert.strictEqual(SHOW_SIDECAR_EXCEPTIONS.sectionTitle, section.title);
-
-      const expectedDefault = section.properties[SHOW_SIDECAR_EXCEPTIONS.id].default;
-      assert.ok(SHOW_SIDECAR_EXCEPTIONS.defaultValue !== undefined);
-      assert.strictEqual(SHOW_SIDECAR_EXCEPTIONS.defaultValue, expectedDefault);
-      assert.ok(SHOW_SIDECAR_EXCEPTIONS.value !== undefined);
     });
 
     it("should set the correct section and default value for KRB5_CONFIG_PATH", () => {

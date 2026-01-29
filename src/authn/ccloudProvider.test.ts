@@ -13,20 +13,17 @@ import {
   TEST_CCLOUD_CONNECTION,
 } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import type { Connection } from "../clients/sidecar";
-import { ConnectedState, ConnectionFromJSON } from "../clients/sidecar";
-import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
+import type { Connection } from "../connections";
+import { ConnectedState, ConnectionFromJSON } from "../connections";
+import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_BASE_PATH } from "../constants";
 import { ccloudAuthCallback, ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
 import * as errors from "../errors";
 import * as notifications from "../notifications";
-import { getSidecar } from "../sidecar";
-import * as ccloud from "../sidecar/connections/ccloud";
-import * as watcher from "../sidecar/connections/watcher";
-import * as sidecarLogging from "../sidecar/logging";
 import { SecretStorageKeys } from "../storage/constants";
 import type { ResourceManager } from "../storage/resourceManager";
 import { clearWorkspaceState } from "../storage/utils";
 import { ConfluentCloudAuthProvider } from "./ccloudProvider";
+import * as ccloud from "./ccloudSession";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
 import { CCloudConnectionError } from "./errors";
 import type { AuthCallbackEvent } from "./types";
@@ -98,7 +95,7 @@ describe("authn/ccloudProvider.ts", () => {
 
         // assume the connection is immediately usable for most tests
         waitForConnectionToBeStableStub = sandbox
-          .stub(watcher, "waitForConnectionToBeStable")
+          .stub(ccloud, "waitForConnectionToBeStable")
           .resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
 
         showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
@@ -148,7 +145,7 @@ describe("authn/ccloudProvider.ts", () => {
       it("should throw a CCloudConnectionError if no sign-in URI is available", async () => {
         const missingSignInUriConnection = ConnectionFromJSON({
           ...TEST_CCLOUD_CONNECTION,
-          metadata: { ...TEST_CCLOUD_CONNECTION.metadata, sign_in_uri: undefined },
+          metadata: { ...TEST_CCLOUD_CONNECTION.metadata, signInUri: undefined },
         } satisfies Connection);
         getCCloudConnectionStub.resolves(missingSignInUriConnection);
         const noSignInUriError = new CCloudConnectionError(
@@ -324,7 +321,7 @@ describe("authn/ccloudProvider.ts", () => {
           .returns(TEST_CCLOUD_AUTH_SESSION);
       });
 
-      it(`should treat connections with a ${ConnectedState.None}/${ConnectedState.Failed} state as nonexistent`, async () => {
+      it(`should treat connections with a ${ConnectedState.NONE}/${ConnectedState.FAILED} state as nonexistent`, async () => {
         getCCloudConnectionStub.resolves(TEST_CCLOUD_CONNECTION);
 
         const sessions = await authProvider.getSessions();
@@ -376,6 +373,8 @@ describe("authn/ccloudProvider.ts", () => {
       });
 
       it("should handle missing user ID/username when trying to convert an authenticated Connection to a VS Code AuthenticationSession", async () => {
+        // Use type assertion to simulate a malformed connection that bypasses type checking
+        // (This can happen at runtime if the data comes from an external source)
         const badConnection = ConnectionFromJSON({
           ...TEST_AUTHENTICATED_CCLOUD_CONNECTION,
           status: {
@@ -383,8 +382,8 @@ describe("authn/ccloudProvider.ts", () => {
             ccloud: {
               ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!,
               user: {
-                id: undefined,
-                username: undefined,
+                id: "",
+                username: "",
               },
             },
           },
@@ -617,7 +616,6 @@ describe("authn/ccloudProvider.ts", () => {
     });
 
     describe("createAndLogConnectionError()", () => {
-      let gatherSidecarOutputsStub: sinon.SinonStub;
       let logErrorStub: sinon.SinonStub;
 
       const fakeErrorMsg = "uh oh, something went wrong";
@@ -625,34 +623,20 @@ describe("authn/ccloudProvider.ts", () => {
       beforeEach(() => {
         // revert to the original method for these tests
         createAndLogConnectionErrorStub.restore();
-
-        gatherSidecarOutputsStub = sandbox.stub(sidecarLogging, "gatherSidecarOutputs").resolves({
-          logLines: [],
-          parsedLogLines: [],
-          stderrLines: [],
-        });
         logErrorStub = sandbox.stub(errors, "logError").resolves();
       });
 
-      it("should return a CCloudConnectionError", async () => {
+      it("should return a CCloudConnectionError", () => {
         const signInError: CCloudConnectionError =
-          await authProvider.createAndLogConnectionError(fakeErrorMsg);
+          authProvider.createAndLogConnectionError(fakeErrorMsg);
 
         assert.ok(signInError instanceof CCloudConnectionError);
         assert.strictEqual(signInError.message, fakeErrorMsg);
       });
 
-      it("should call logError() with the provided message and recent sidecar logs", async () => {
-        const sidecarLogs = ["log line 1", "log line 2"];
-        gatherSidecarOutputsStub.resolves({
-          logLines: sidecarLogs,
-          parsedLogLines: [],
-          stderrLines: [],
-        });
+      it("should call logError() with the provided message and connection context", () => {
+        authProvider.createAndLogConnectionError(fakeErrorMsg);
 
-        await authProvider.createAndLogConnectionError(fakeErrorMsg);
-
-        sinon.assert.calledOnce(gatherSidecarOutputsStub);
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledOnceWithExactly(
           logErrorStub,
@@ -661,7 +645,7 @@ describe("authn/ccloudProvider.ts", () => {
               error.name === "CCloudConnectionError" && error.message === fakeErrorMsg,
           ),
           fakeErrorMsg,
-          { extra: { sidecarLogs, connection: undefined } },
+          { extra: { connection: undefined } },
         );
       });
     });
@@ -742,17 +726,16 @@ describe("CCloud auth flow", () => {
     this.retries(2); // retry this test up to 2 times if it fails
 
     const newConnection: Connection = await ccloud.createCCloudConnection();
-    await testAuthFlow(newConnection.metadata.sign_in_uri!, testUsername!, testPassword!);
+    await testAuthFlow(newConnection.metadata.signInUri!, testUsername!, testPassword!);
 
-    // make sure the newly-created connection is available via the sidecar
-    const client = (await getSidecar()).getConnectionsResourceApi();
-    const connection = await client.gatewayV1ConnectionsIdGet({ id: CCLOUD_CONNECTION_ID });
+    // make sure the newly-created connection is available
+    const connection = await ccloud.getCCloudConnection();
     assert.ok(
       connection,
       "No connections found; make sure to manually log in with the test username/password, because the 'Authorize App: Confluent VS Code Extension is requesting access to your Confluent account' (https://login.confluent.io/u/consent?...) page may be blocking the auth flow for this test. If that doesn't work, try running the test with `{ headless: false }` (in testAuthFlow()) to see what's happening.",
     );
     assert.ok(connection);
-    assert.notEqual(connection.status.ccloud?.state, ConnectedState.None);
+    assert.notEqual(connection.status.ccloud?.state, ConnectedState.NONE);
     assert.equal(connection.status.ccloud?.user?.username, testUsername);
   });
 });

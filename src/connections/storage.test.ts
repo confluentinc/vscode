@@ -48,7 +48,7 @@ describe("connections/storage", function () {
   const createTestSpec = (id: string, name: string): ConnectionSpec => ({
     id: id as ConnectionId,
     name,
-    type: ConnectionType.DIRECT,
+    type: ConnectionType.Direct,
     kafkaCluster: {
       bootstrapServers: "localhost:9092",
     },
@@ -283,7 +283,7 @@ describe("connections/storage", function () {
   describe("getConnectionIdsByType()", function () {
     it("should return empty array when no connections of type", async function () {
       const storage = ConnectionStorage.getInstance();
-      const ids = await storage.getConnectionIdsByType(ConnectionType.CCLOUD);
+      const ids = await storage.getConnectionIdsByType(ConnectionType.Ccloud);
 
       assert.strictEqual(ids.length, 0);
     });
@@ -293,15 +293,15 @@ describe("connections/storage", function () {
       const ccloudSpec: ConnectionSpec = {
         id: "ccloud-1" as ConnectionId,
         name: "CCloud Connection",
-        type: ConnectionType.CCLOUD,
+        type: ConnectionType.Ccloud,
       };
 
       const storage = ConnectionStorage.getInstance();
       await storage.saveConnection(directSpec);
       await storage.saveConnection(ccloudSpec);
 
-      const directIds = await storage.getConnectionIdsByType(ConnectionType.DIRECT);
-      const ccloudIds = await storage.getConnectionIdsByType(ConnectionType.CCLOUD);
+      const directIds = await storage.getConnectionIdsByType(ConnectionType.Direct);
+      const ccloudIds = await storage.getConnectionIdsByType(ConnectionType.Ccloud);
 
       assert.strictEqual(directIds.length, 1);
       assert.strictEqual(directIds[0], "direct-1");

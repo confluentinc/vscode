@@ -2,8 +2,8 @@ import { randomUUID } from "crypto";
 import { platform } from "os";
 import type { Disposable, Uri, WebviewPanel } from "vscode";
 import { ViewColumn, commands, env, window } from "vscode";
-import type { AuthErrors, Connection } from "./clients/sidecar";
-import { ConnectedState, ConnectionType } from "./clients/sidecar";
+import type { Connection, ConnectionError } from "./connections";
+import { ConnectedState, ConnectionType } from "./connections";
 import { DirectConnectionManager } from "./directConnectManager";
 import { getCredentialsType } from "./directConnections/credentials";
 import type { SupportedAuthTypes } from "./directConnections/types";
@@ -132,8 +132,8 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
       success: true,
       message: "Connection test successful.",
       testResults: {
-        kafkaState: testSpec.kafka_cluster ? ConnectedState.Success : undefined,
-        schemaState: testSpec.schema_registry ? ConnectedState.Success : undefined,
+        kafkaState: testSpec.kafkaCluster ? ConnectedState.SUCCESS : undefined,
+        schemaState: testSpec.schemaRegistry ? ConnectedState.SUCCESS : undefined,
       },
     };
   }
@@ -170,8 +170,8 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     setValueAtPath(specUpdatedValues, inputName, value);
   }
   // Initialize auth type to whatever matches incoming connection
-  let kafkaClusterAuthType = getCredentialsType(connection?.kafka_cluster?.credentials);
-  let schemaRegistryAuthType = getCredentialsType(connection?.schema_registry?.credentials);
+  let kafkaClusterAuthType = getCredentialsType(connection?.kafkaCluster?.credentials);
+  let schemaRegistryAuthType = getCredentialsType(connection?.schemaRegistry?.credentials);
   // Update auth types when the user changes it in the form
   function updateAuthType(inputName: string, value: SupportedAuthTypes) {
     const namespace = inputName.split(".")[0];
@@ -228,49 +228,37 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
 }
 
 export function parseTestResult(connection: Connection): TestResponse {
-  const kafkaState: ConnectedState | undefined = connection.status.kafka_cluster?.state;
-  const kafkaErrors: AuthErrors | undefined = connection.status.kafka_cluster?.errors;
-  const schemaState: ConnectedState | undefined = connection.status.schema_registry?.state;
-  const schemaErrors: AuthErrors | undefined = connection.status.schema_registry?.errors;
+  const kafkaState: ConnectedState | undefined = connection.status.kafkaCluster?.state;
+  const kafkaErrors: ConnectionError[] | undefined = connection.status.kafkaCluster?.errors;
+  const schemaState: ConnectedState | undefined = connection.status.schemaRegistry?.state;
+  const schemaErrors: ConnectionError[] | undefined = connection.status.schemaRegistry?.errors;
   let result: TestResponse = {
     success: true,
     message: null,
     testResults: { kafkaState, schemaState },
   };
 
-  if (kafkaState === "FAILED" || schemaState === "FAILED") {
+  if (kafkaState === ConnectedState.FAILED || schemaState === ConnectedState.FAILED) {
     result.success = false;
     result.message = "One or more connections failed.";
   } else {
     result.message = "All connection tests successful.";
   }
 
-  if (kafkaState === "FAILED") {
-    if (kafkaErrors) {
-      const errorMessages = [
-        kafkaErrors.auth_status_check?.message,
-        kafkaErrors.sign_in?.message,
-        kafkaErrors.token_refresh?.message,
-      ].filter((message) => message !== undefined);
-      result.testResults.kafkaErrorMessage = `${errorMessages.join(" ")}`;
-    }
+  if (kafkaState === ConnectedState.FAILED && kafkaErrors && kafkaErrors.length > 0) {
+    const errorMessages = kafkaErrors.map((e) => e.message).filter(Boolean);
+    result.testResults.kafkaErrorMessage = errorMessages.join(" ");
   }
-  if (schemaState === "FAILED") {
-    if (schemaErrors) {
-      const errorMessages = [
-        schemaErrors.auth_status_check?.message,
-        schemaErrors.sign_in?.message,
-        schemaErrors.token_refresh?.message,
-      ].filter((message) => message !== undefined);
-      result.testResults.schemaErrorMessage = `${errorMessages.join(" ")}`;
-    }
+  if (schemaState === ConnectedState.FAILED && schemaErrors && schemaErrors.length > 0) {
+    const errorMessages = schemaErrors.map((e) => e.message).filter(Boolean);
+    result.testResults.schemaErrorMessage = errorMessages.join(" ");
   }
   return result;
 }
 
 /** This function takes the form data as submitted and builds a CustomConnectionSpec object
  * In the form, input names match a path in CustomConnectionSpec interface, so the form data aligns to spec paths
- * For example, a form data key/value pair might be: "kafka_cluster.bootstrap_servers" : "localhost:9092"
+ * For example, a form data key/value pair might be: "kafka_cluster.bootstrapServers" : "localhost:9092"
  * It will throw out empty, undefined, or invalid values (such as missing required fields, creds not matching auth type)
  */
 export function getConnectionSpecFromFormData(
@@ -301,7 +289,7 @@ export function getConnectionSpecFromFormData(
   for (const namespace of ["kafka_cluster", "schema_registry"]) {
     if (!resources[namespace]) continue;
     // We only want to create the objects in spec if required fields exist
-    const kafkaValid = formData["kafka_cluster.bootstrap_servers"];
+    const kafkaValid = formData["kafka_cluster.bootstrapServers"];
     const schemaValid = formData["schema_registry.uri"];
     if (
       (namespace === "kafka_cluster" && kafkaValid) ||
@@ -423,8 +411,14 @@ function isObject(item: any): boolean {
   return item && typeof item === "object" && !Array.isArray(item);
 }
 
+/** Convert snake_case to camelCase */
+function snakeToCamel(str: string): string {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
 export function setValueAtPath(obj: any, path: string, value: any): void {
-  const keys = path.split(".");
+  // Convert each path segment from snake_case to camelCase to match our type definitions
+  const keys = path.split(".").map(snakeToCamel);
   let current = obj;
 
   for (let i = 0; i < keys.length - 1; i++) {

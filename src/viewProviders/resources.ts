@@ -8,7 +8,7 @@ import {
   Uri,
   workspace,
 } from "vscode";
-import type { ConnectionType } from "../clients/sidecar";
+import type { ConnectionType } from "../connections";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { ContextValues, getContextValue, setContextValue } from "../context/values";
 import {

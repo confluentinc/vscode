@@ -18,7 +18,7 @@ import type { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { showInfoNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
-import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
+import { hasCCloudAuthSession } from "../authn/ccloudSession";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 

@@ -22,7 +22,7 @@ export const ccloudAuthCallback = new vscode.EventEmitter<vscode.Uri>();
  * (via extension startup calling setupAuthProvider())
  */
 export const ccloudConnected = new vscode.EventEmitter<boolean>();
-/** Fires whenever we see a non-`ATTEMPTING` connected state from the sidecar for the current CCloud
+/** Fires whenever we see a non-`ATTEMPTING` connected state for the current CCloud
  * connection, and is only used to resolve any open progress notification(s). */
 export const stableCCloudConnectedState = new vscode.EventEmitter<void>();
 /** Signal to the auth provider that we no longer have a valid CCloud connection. */

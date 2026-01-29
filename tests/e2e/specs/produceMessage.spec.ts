@@ -43,9 +43,9 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
 
   // test dimensions:
   const connectionTypes: Array<[ConnectionType, Tag]> = [
-    [ConnectionType.Ccloud, Tag.CCloud],
-    [ConnectionType.Direct, Tag.Direct],
-    [ConnectionType.Local, Tag.Local],
+    [ConnectionType.CCLOUD, Tag.CCloud],
+    [ConnectionType.DIRECT, Tag.Direct],
+    [ConnectionType.LOCAL, Tag.Local],
   ];
   const schemaTypes: Array<[SchemaType | null, string | null]> = [
     [null, null],

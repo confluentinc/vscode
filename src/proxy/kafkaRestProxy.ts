@@ -13,18 +13,28 @@ import { createHttpClient, HttpError, type AuthConfig, type HttpClient } from ".
 
 // Re-export types from generated clients for convenience
 export type {
-  TopicData,
-  TopicDataList,
+  AlterConfigBatchRequestData,
+  ClusterData,
+  CreateTopicRequestData,
   PartitionData,
   PartitionDataList,
-  TopicConfigData,
-  TopicConfigDataList,
-  ClusterData,
   ProduceRequest,
   ProduceResponse,
-  CreateTopicRequestData,
-  AlterConfigBatchRequestData,
+  TopicConfigData,
+  TopicConfigDataList,
+  TopicData,
+  TopicDataList,
 } from "../clients/kafkaRest/models";
+
+/**
+ * API version/format for the Kafka REST API.
+ *
+ * - "v3": Confluent Kafka REST v3 API (e.g., /kafka/v3/clusters/{cluster_id}/topics)
+ *         Used by Confluent Cloud and some Confluent Platform deployments.
+ * - "v2": Kafka REST Proxy v2 API (e.g., /topics)
+ *         Used by confluent-local Docker containers and standalone REST Proxy.
+ */
+export type KafkaRestApiVersion = "v2" | "v3";
 
 /**
  * Kafka REST proxy configuration.
@@ -32,7 +42,7 @@ export type {
 export interface KafkaRestProxyConfig {
   /** Base URL for the Kafka REST API. */
   baseUrl: string;
-  /** Kafka cluster ID. */
+  /** Kafka cluster ID (required for v3 API, optional for v2). */
   clusterId: string;
   /** Authentication configuration. */
   auth?: AuthConfig;
@@ -40,6 +50,12 @@ export interface KafkaRestProxyConfig {
   timeout?: number;
   /** Custom headers to include in all requests. */
   headers?: Record<string, string>;
+  /**
+   * API version to use. Defaults to "v3".
+   * - "v3": Uses /kafka/v3/clusters/{cluster_id}/... paths (Confluent Cloud)
+   * - "v2": Uses /topics, /topics/{name}/... paths (confluent-local, REST Proxy)
+   */
+  apiVersion?: KafkaRestApiVersion;
 }
 
 /**
@@ -133,6 +149,7 @@ export class KafkaRestProxy {
   private readonly client: HttpClient;
   private readonly clusterId: string;
   private readonly customHeaders: Record<string, string>;
+  private readonly apiVersion: KafkaRestApiVersion;
 
   /**
    * Creates a new Kafka REST proxy.
@@ -141,12 +158,27 @@ export class KafkaRestProxy {
   constructor(config: KafkaRestProxyConfig) {
     this.clusterId = config.clusterId;
     this.customHeaders = config.headers ?? {};
+    this.apiVersion = config.apiVersion ?? "v3";
+
+    // v2 API (REST Proxy) requires specific content types and does NOT accept
+    // Content-Type headers on GET requests (causes 415 Unsupported Media Type).
+    // v3 API (Confluent Cloud) uses standard application/json.
+    // For v2, we only set Accept header here; Content-Type is added per-request for POST/PUT.
+    const defaultHeaders: Record<string, string> =
+      this.apiVersion === "v2"
+        ? {
+            Accept: "application/vnd.kafka.v2+json",
+            // Override the httpClient default to prevent Content-Type on GET requests
+            "Content-Type": "",
+          }
+        : {};
 
     this.client = createHttpClient({
       baseUrl: config.baseUrl,
       timeout: config.timeout ?? 30000,
       auth: config.auth,
       defaultHeaders: {
+        ...defaultHeaders,
         ...this.customHeaders,
       },
     });
@@ -179,10 +211,7 @@ export class KafkaRestProxy {
       params.includeAuthorizedOperations = true;
     }
 
-    const response = await this.client.get<ListResponse<TopicData>>(
-      `${this.clusterPath()}/topics`,
-      { params },
-    );
+    const response = await this.client.get<ListResponse<TopicData>>(this.topicsPath(), { params });
     return response.data.data;
   }
 
@@ -198,10 +227,7 @@ export class KafkaRestProxy {
       params.includeAuthorizedOperations = true;
     }
 
-    const response = await this.client.get<TopicData>(
-      `${this.clusterPath()}/topics/${encodeURIComponent(topicName)}`,
-      { params },
-    );
+    const response = await this.client.get<TopicData>(this.topicPath(topicName), { params });
     return response.data;
   }
 
@@ -218,7 +244,7 @@ export class KafkaRestProxy {
       configs: options.configs?.map((c) => ({ name: c.name, value: c.value })),
     };
 
-    const response = await this.client.post<TopicData>(`${this.clusterPath()}/topics`, body);
+    const response = await this.client.post<TopicData>(this.topicsPath(), body);
     return response.data;
   }
 
@@ -227,7 +253,7 @@ export class KafkaRestProxy {
    * @param topicName Topic name to delete.
    */
   async deleteTopic(topicName: string): Promise<void> {
-    await this.client.delete(`${this.clusterPath()}/topics/${encodeURIComponent(topicName)}`);
+    await this.client.delete(this.topicPath(topicName));
   }
 
   /**
@@ -237,7 +263,7 @@ export class KafkaRestProxy {
    */
   async listPartitions(topicName: string): Promise<PartitionData[]> {
     const response = await this.client.get<ListResponse<PartitionData>>(
-      `${this.clusterPath()}/topics/${encodeURIComponent(topicName)}/partitions`,
+      `${this.topicPath(topicName)}/partitions`,
     );
     return response.data.data;
   }
@@ -250,7 +276,7 @@ export class KafkaRestProxy {
    */
   async getPartition(topicName: string, partitionId: number): Promise<PartitionData> {
     const response = await this.client.get<PartitionData>(
-      `${this.clusterPath()}/topics/${encodeURIComponent(topicName)}/partitions/${partitionId}`,
+      `${this.topicPath(topicName)}/partitions/${partitionId}`,
     );
     return response.data;
   }
@@ -262,7 +288,7 @@ export class KafkaRestProxy {
    */
   async listTopicConfigs(topicName: string): Promise<TopicConfigData[]> {
     const response = await this.client.get<ListResponse<TopicConfigData>>(
-      `${this.clusterPath()}/topics/${encodeURIComponent(topicName)}/configs`,
+      `${this.topicPath(topicName)}/configs`,
     );
     return response.data.data;
   }
@@ -275,7 +301,7 @@ export class KafkaRestProxy {
    */
   async getTopicConfig(topicName: string, configName: string): Promise<TopicConfigData> {
     const response = await this.client.get<TopicConfigData>(
-      `${this.clusterPath()}/topics/${encodeURIComponent(topicName)}/configs/${encodeURIComponent(configName)}`,
+      `${this.topicPath(topicName)}/configs/${encodeURIComponent(configName)}`,
     );
     return response.data;
   }
@@ -293,10 +319,7 @@ export class KafkaRestProxy {
       })),
     };
 
-    await this.client.post(
-      `${this.clusterPath()}/topics/${encodeURIComponent(options.topicName)}/configs:alter`,
-      body,
-    );
+    await this.client.post(`${this.topicPath(options.topicName)}/configs:alter`, body);
   }
 
   /**
@@ -333,7 +356,7 @@ export class KafkaRestProxy {
     };
 
     const response = await this.client.post<ProduceResponse>(
-      `${this.clusterPath()}/topics/${encodeURIComponent(options.topicName)}/records`,
+      `${this.topicPath(options.topicName)}/records`,
       body,
     );
     return response.data;
@@ -358,9 +381,35 @@ export class KafkaRestProxy {
 
   /**
    * Builds the base path for cluster operations.
+   * - v3 API: /kafka/v3/clusters/{cluster_id}
+   * - v2 API: (empty string, operations use root-level paths)
    */
   private clusterPath(): string {
+    if (this.apiVersion === "v2") {
+      return "";
+    }
     return `/kafka/v3/clusters/${encodeURIComponent(this.clusterId)}`;
+  }
+
+  /**
+   * Builds the path for topic operations.
+   * - v3 API: /kafka/v3/clusters/{cluster_id}/topics
+   * - v2 API: /topics
+   */
+  private topicsPath(): string {
+    if (this.apiVersion === "v2") {
+      return "/topics";
+    }
+    return `${this.clusterPath()}/topics`;
+  }
+
+  /**
+   * Builds the path for a specific topic.
+   * - v3 API: /kafka/v3/clusters/{cluster_id}/topics/{topic_name}
+   * - v2 API: /topics/{topic_name}
+   */
+  private topicPath(topicName: string): string {
+    return `${this.topicsPath()}/${encodeURIComponent(topicName)}`;
   }
 }
 
@@ -551,13 +600,13 @@ export function createKafkaConsumeProxy(config: KafkaRestProxyConfig): KafkaCons
 
 // Import types from generated clients
 import type {
-  TopicData,
-  PartitionData,
-  TopicConfigData,
+  AlterConfigBatchRequestData,
   ClusterData,
+  CreateTopicRequestData,
+  PartitionData,
   ProduceRequest,
   ProduceRequestData,
   ProduceResponse,
-  CreateTopicRequestData,
-  AlterConfigBatchRequestData,
+  TopicConfigData,
+  TopicData,
 } from "../clients/kafkaRest/models";

@@ -7,7 +7,7 @@
  */
 
 import * as http from "http";
-import * as vscode from "vscode";
+import type * as vscode from "vscode";
 import type { OAuthCallbackResult, OAuthError } from "./types";
 import { OAUTH_CONSTANTS } from "./config";
 

@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { CodeLens, Position, Range, TextDocument, Uri } from "vscode";
+import type { CodeLens, TextDocument } from "vscode";
+import { Position, Range, Uri } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { COMMANDS } from "../commands/medusaCodeLens";

@@ -1,4 +1,4 @@
-import { type PartitionConsumeRecord } from "../clients/sidecar";
+import { type PartitionConsumeRecord } from "../connections";
 
 export class Stream {
   capacity: number;

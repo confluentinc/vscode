@@ -61,7 +61,6 @@ describe("eventProcessors.ts includeObservabilityContext()", () => {
     const fakeObservabilityContext = {
       extensionVersion: "1.0.0",
       extensionActivated: true,
-      sidecarVersion: "1.0.0",
     };
     sandbox.stub(observabilityContext, "toRecord").returns(fakeObservabilityContext);
 
@@ -71,6 +70,5 @@ describe("eventProcessors.ts includeObservabilityContext()", () => {
     assert.ok(result.extra);
     assert.equal(result.extra.extensionVersion, fakeObservabilityContext.extensionVersion);
     assert.equal(result.extra.extensionActivated, fakeObservabilityContext.extensionActivated);
-    assert.equal(result.extra.sidecarVersion, fakeObservabilityContext.sidecarVersion);
   });
 });

@@ -28,7 +28,6 @@ export enum UserEvent {
   FlinkStatementViewStatistics = "Flink Statement View Statistics",
   CopilotInteraction = "Copilot Interaction",
   FlinkSqlClientInteraction = "Flink SQL Language Client Interaction",
-  SidecarStartupFailure = "Sidecar Startup Failure",
   FlinkArtifactAction = "Flink Artifact Action",
   FlinkUDFAction = "Flink UDF Action",
   /**

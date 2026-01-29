@@ -17,7 +17,7 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { EnvironmentId } from "../models/resource";
-import * as ccloud from "../sidecar/connections/ccloud";
+import * as ccloud from "../authn/ccloudSession";
 import { UriMetadataKeys } from "../storage/constants";
 import type { ResourceManager } from "../storage/resourceManager";
 import { getResourceManager } from "../storage/resourceManager";

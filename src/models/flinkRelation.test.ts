@@ -4,7 +4,7 @@ import {
   TEST_FLINK_RELATION,
   TEST_VARCHAR_COLUMN,
 } from "../../tests/unit/testResources/flinkRelation";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
 import {

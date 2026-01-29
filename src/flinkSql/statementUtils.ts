@@ -1,15 +1,7 @@
 import * as vscode from "vscode";
-import type {
-  CreateSqlv1StatementOperationRequest,
-  CreateSqlv1StatementRequest,
-  SqlV1StatementResultResults,
-} from "../clients/flinkSql";
-import {
-  CreateSqlv1StatementRequestApiVersionEnum,
-  CreateSqlv1StatementRequestKindEnum,
-} from "../clients/flinkSql";
+import { TokenManager } from "../auth/oauth2/tokenManager";
+import type { GetSqlv1Statement200Response } from "../clients/flinkSql";
 import { uriMetadataSet } from "../emitters";
-import { isResponseErrorWithStatus } from "../errors";
 import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
@@ -17,17 +9,76 @@ import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
 import { restFlinkStatementToModel, TERMINAL_PHASES } from "../models/flinkStatement";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
-import { getSidecar } from "../sidecar";
+import {
+  CCloudDataPlaneProxy,
+  type FlinkStatementResult,
+  type FlinkStatement as FlinkStatementApi,
+} from "../proxy/ccloudDataPlaneProxy";
+import { buildFlinkDataPlaneBaseUrl } from "../proxy/flinkDataPlaneUrlBuilder";
+import { HttpError } from "../proxy/httpClient";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import type { UriMetadata } from "../storage/types";
-import { raceWithTimeout } from "../utils/timing";
 import { WebviewPanelCache } from "../webview-cache";
 import flinkStatementResults from "../webview/flink-statement-results.html";
-import { parseResults } from "./flinkStatementResults";
 import { extractPageToken } from "./utils";
 
 const logger = new Logger("flinksql/statements");
+
+/**
+ * Converts a FlinkStatement from the proxy to the client type format.
+ * This ensures type compatibility with restFlinkStatementToModel.
+ *
+ * Note: We use type assertions here because the proxy types have optional
+ * values where the client types expect required values. The actual data
+ * from the API is structurally compatible.
+ */
+function proxyStatementToClientFormat(stmt: FlinkStatementApi): GetSqlv1Statement200Response {
+  // Convert metadata with proper date handling
+  const metadata: GetSqlv1Statement200Response["metadata"] = stmt.metadata
+    ? {
+        self: stmt.metadata.self ?? "",
+        created_at: stmt.metadata.created_at ? new Date(stmt.metadata.created_at) : undefined,
+        updated_at: stmt.metadata.updated_at ? new Date(stmt.metadata.updated_at) : undefined,
+        resource_version: stmt.metadata.resource_version,
+      }
+    : { self: "" };
+
+  // Convert status with proper date handling for scaling_status
+  const status: GetSqlv1Statement200Response["status"] = stmt.status
+    ? {
+        phase: stmt.status.phase ?? "PENDING",
+        detail: stmt.status.detail,
+        // Use type assertion for traits since the structure is compatible
+        traits: stmt.status.traits as GetSqlv1Statement200Response["status"]["traits"],
+        network_kind: stmt.status.network_kind,
+        latest_offsets: stmt.status.latest_offsets,
+        latest_offsets_timestamp: stmt.status.latest_offsets_timestamp
+          ? new Date(stmt.status.latest_offsets_timestamp)
+          : undefined,
+        scaling_status: stmt.status.scaling_status
+          ? {
+              scaling_state: stmt.status.scaling_status.scaling_state,
+              last_updated: stmt.status.scaling_status.last_updated
+                ? new Date(stmt.status.scaling_status.last_updated)
+                : undefined,
+            }
+          : undefined,
+      }
+    : { phase: "PENDING" };
+
+  // Use type assertion to bypass readonly properties that can't be set
+  return {
+    api_version: "sql/v1",
+    kind: "Statement",
+    name: stmt.name,
+    organization_id: stmt.organization_id,
+    environment_id: stmt.environment_id,
+    metadata,
+    spec: stmt.spec ?? {},
+    status,
+  } as GetSqlv1Statement200Response;
+}
 
 export interface IFlinkStatementSubmitParameters {
   /** The SQL statement to submit */
@@ -58,45 +109,66 @@ export interface IFlinkStatementSubmitParameters {
 export async function submitFlinkStatement(
   params: IFlinkStatementSubmitParameters,
 ): Promise<FlinkStatement> {
-  const handle = await getSidecar();
+  const { computePool, organizationId, statementName, statement, properties, hidden } = params;
 
-  const requestInner: CreateSqlv1StatementRequest = {
-    api_version: CreateSqlv1StatementRequestApiVersionEnum.SqlV1,
-    kind: CreateSqlv1StatementRequestKindEnum.Statement,
-    name: params.statementName,
-    organization_id: params.organizationId,
-    environment_id: params.computePool.environmentId,
-    spec: {
-      statement: params.statement,
-      compute_pool_id: params.computePool.id,
-      properties: params.properties.toProperties(),
-    },
-  };
-
-  if (params.hidden) {
-    // If this is a hidden statement, we set the metadata to indicate that.
-    requestInner.metadata = {
-      self: null,
-      labels: {
-        "user.confluent.io/hidden": "true",
-      },
-    };
+  // Get auth token
+  const tokenManager = TokenManager.getInstance();
+  const dataPlaneToken = await tokenManager.getDataPlaneToken();
+  if (!dataPlaneToken) {
+    throw new Error("Failed to get data plane token for Flink SQL API");
   }
 
-  const request: CreateSqlv1StatementOperationRequest = {
-    organization_id: params.organizationId,
-    environment_id: params.computePool.environmentId,
-    CreateSqlv1StatementRequest: requestInner,
-  };
+  // Build the Flink Data Plane API base URL
+  const baseUrl = buildFlinkDataPlaneBaseUrl(
+    computePool.provider,
+    computePool.region,
+    computePool.environmentId,
+  );
 
-  // Get at the statements client for the compute pool.
-  const statementsClient = handle.getFlinkSqlStatementsApi(params.computePool);
-  // Make the request to create the statement.
-  const response = await statementsClient.createSqlv1Statement(request);
-  // Promote from REST response to model.
-  const statementModel = restFlinkStatementToModel(response, params.computePool);
+  // Create the proxy instance
+  const proxy = new CCloudDataPlaneProxy({
+    baseUrl,
+    organizationId,
+    environmentId: computePool.environmentId,
+    auth: {
+      type: "bearer",
+      token: dataPlaneToken,
+    },
+  });
 
-  return statementModel;
+  logger.debug("Submitting Flink statement", {
+    name: statementName,
+    computePool: computePool.id,
+    region: `${computePool.provider}-${computePool.region}`,
+    hidden,
+  });
+
+  // Build statement properties, filtering out undefined values
+  const rawProperties = properties.toProperties ? properties.toProperties() : properties;
+  const statementProperties: Record<string, string> = {};
+  for (const [key, value] of Object.entries(rawProperties)) {
+    if (value !== undefined) {
+      statementProperties[key] = value;
+    }
+  }
+  // Add hidden label if applicable
+  if (hidden) {
+    statementProperties["user.confluent.io/hidden"] = "true";
+  }
+
+  // Create the statement
+  const createdStatement = await proxy.createStatement({
+    name: statementName,
+    statement,
+    computePoolId: computePool.id,
+    properties: statementProperties,
+  });
+
+  // Convert API response to our model
+  return restFlinkStatementToModel(proxyStatementToClientFormat(createdStatement), {
+    provider: computePool.provider,
+    region: computePool.region,
+  });
 }
 
 /** Poll period in millis to check whether statement has reached results-viewable state */
@@ -245,30 +317,47 @@ export const REFRESH_STATEMENT_MAX_WAIT_MS = 2_000;
 export async function refreshFlinkStatement(
   statement: FlinkStatement,
 ): Promise<FlinkStatement | null> {
-  const handle = await getSidecar();
+  // Get auth token
+  const tokenManager = TokenManager.getInstance();
+  const dataPlaneToken = await tokenManager.getDataPlaneToken();
+  if (!dataPlaneToken) {
+    throw new Error("Failed to get data plane token for Flink SQL API");
+  }
 
-  const statementsClient = handle.getFlinkSqlStatementsApi(statement);
+  // Build the Flink Data Plane API base URL
+  const baseUrl = buildFlinkDataPlaneBaseUrl(
+    statement.provider,
+    statement.region,
+    statement.environmentId,
+  );
+
+  // Create the proxy instance
+  const proxy = new CCloudDataPlaneProxy({
+    baseUrl,
+    organizationId: statement.organizationId,
+    environmentId: statement.environmentId,
+    auth: {
+      type: "bearer",
+      token: dataPlaneToken,
+    },
+    timeout: REFRESH_STATEMENT_MAX_WAIT_MS,
+  });
 
   try {
-    const routeResponse = await raceWithTimeout(
-      statementsClient.getSqlv1Statement({
-        environment_id: statement.environmentId,
-        organization_id: statement.organizationId,
-        statement_name: statement.name,
-      }),
-      REFRESH_STATEMENT_MAX_WAIT_MS,
-    );
-    return restFlinkStatementToModel(routeResponse, statement);
+    const apiStatement = await proxy.getStatement(statement.name);
+
+    // Convert API response to our model
+    return restFlinkStatementToModel(proxyStatementToClientFormat(apiStatement), {
+      provider: statement.provider,
+      region: statement.region,
+    });
   } catch (error) {
-    if (isResponseErrorWithStatus(error, 404)) {
-      logger.info(`Flink statement ${statement.name} no longer exists`);
+    // Return null if statement not found (404)
+    if (error instanceof HttpError && error.status === 404) {
+      logger.debug(`Statement "${statement.name}" not found (404)`);
       return null;
-    } else {
-      logger.error(`Error while refreshing Flink statement ${statement.name} (${statement.id})`, {
-        error,
-      });
-      throw error;
     }
+    throw error;
   }
 }
 
@@ -283,34 +372,66 @@ export async function refreshFlinkStatement(
 export async function parseAllFlinkStatementResults<RT>(
   statement: FlinkStatement,
 ): Promise<Array<RT>> {
-  const sidecar = await getSidecar();
-  const flinkSqlStatementResultsApi = sidecar.getFlinkSqlStatementResultsApi(statement);
+  // Get auth token
+  const tokenManager = TokenManager.getInstance();
+  const dataPlaneToken = await tokenManager.getDataPlaneToken();
+  if (!dataPlaneToken) {
+    throw new Error("Failed to get data plane token for Flink SQL API");
+  }
 
-  const resultsMap: Map<string, Map<string, any>> = new Map();
-  let pageToken: string | undefined = undefined;
+  // Build the Flink Data Plane API base URL
+  const baseUrl = buildFlinkDataPlaneBaseUrl(
+    statement.provider,
+    statement.region,
+    statement.environmentId,
+  );
+
+  // Create the proxy instance
+  const proxy = new CCloudDataPlaneProxy({
+    baseUrl,
+    organizationId: statement.organizationId,
+    environmentId: statement.environmentId,
+    auth: {
+      type: "bearer",
+      token: dataPlaneToken,
+    },
+  });
+
+  // Get the schema columns for parsing results
+  const columns = statement.status?.traits?.schema?.columns ?? [];
+
+  // Fetch all result pages
+  const allResults: RT[] = [];
+  let pageToken: string | undefined;
+
   do {
-    const response = await flinkSqlStatementResultsApi.getSqlv1StatementResult({
-      environment_id: statement.environmentId,
-      organization_id: statement.organizationId,
-      name: statement.name,
-      page_token: pageToken,
-    });
+    const response: FlinkStatementResult = await proxy.getStatementResults(
+      statement.name,
+      pageToken,
+    );
 
-    const payload: SqlV1StatementResultResults = response.results;
-    parseResults({
-      columns: statement.status?.traits?.schema?.columns ?? [],
-      isAppendOnly: statement.status?.traits?.is_append_only ?? true,
-      upsertColumns: statement.status?.traits?.upsert_columns,
-      map: resultsMap,
-      rows: payload.data ?? [],
-    });
-    pageToken = extractPageToken(response?.metadata?.next);
-  } while (pageToken !== undefined);
+    // Parse the results from this page
+    const rows = response.results?.data ?? [];
+    for (const row of rows) {
+      if (row.row) {
+        // Convert row array to object using column names
+        const resultObj: Record<string, unknown> = {};
+        for (let i = 0; i < columns.length && i < row.row.length; i++) {
+          const columnName = columns[i]?.name;
+          if (columnName) {
+            resultObj[columnName] = row.row[i];
+          }
+        }
+        allResults.push(resultObj as RT);
+      }
+    }
 
-  // convert the maps in the values to objects, hopefully conforming to RT.
-  const results = Array.from(resultsMap.values()).map(Object.fromEntries);
+    // Get next page token
+    pageToken = extractPageToken(response.metadata?.next);
+  } while (pageToken);
 
-  return results as Array<RT>;
+  logger.debug(`Parsed ${allResults.length} results from statement "${statement.name}"`);
+  return allResults;
 }
 
 /**

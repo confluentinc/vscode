@@ -2,7 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { createFakeFlinkDatabaseResource } from "../../tests/unit/testResources/flinkDatabaseResource";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
 import type { FlinkDatabaseResource } from "./flinkDatabaseResource";

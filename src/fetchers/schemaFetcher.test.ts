@@ -1,11 +1,11 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import { ConnectionType } from "../connections";
+import { CCLOUD_CONNECTION_ID } from "../constants";
+import { SchemaType } from "../models/schema";
+import type { SchemaRegistry } from "../models/schemaRegistry";
 import { createSchemaFetcher } from "./schemaFetcher";
 import { SchemaFetchError } from "./types";
-import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
-import type { SchemaRegistry } from "../models/schemaRegistry";
-import { SchemaType } from "../models/schema";
 
 describe("fetchers/schemaFetcher", function () {
   let fetchStub: sinon.SinonStub;

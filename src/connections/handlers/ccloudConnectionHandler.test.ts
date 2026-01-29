@@ -1,8 +1,10 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { ConnectedState, ConnectionType, type ConnectionId } from "../types";
 import type { ConnectionSpec } from "../spec";
+import { ConnectedState, ConnectionType, type ConnectionId } from "../types";
 import { CCloudConnectionHandler } from "./ccloudConnectionHandler";
+import { AuthService, AuthState } from "../../auth/oauth2/authService";
+import { TokenManager } from "../../auth/oauth2/tokenManager";
 
 describe("connections/handlers/ccloudConnectionHandler", function () {
   let sandbox: sinon.SinonSandbox;
@@ -11,7 +13,7 @@ describe("connections/handlers/ccloudConnectionHandler", function () {
   const ccloudSpec: ConnectionSpec = {
     id: "vscode-confluent-cloud-connection" as ConnectionId,
     name: "Confluent Cloud",
-    type: ConnectionType.CCLOUD,
+    type: ConnectionType.Ccloud,
     ccloudConfig: {
       organizationId: "org-12345",
     },
@@ -21,11 +23,65 @@ describe("connections/handlers/ccloudConnectionHandler", function () {
   const minimalSpec: ConnectionSpec = {
     id: "vscode-confluent-cloud-connection" as ConnectionId,
     name: "Confluent Cloud",
-    type: ConnectionType.CCLOUD,
+    type: ConnectionType.Ccloud,
+  };
+
+  // Mock tokens with user info encoded in JWT format
+  const mockIdToken =
+    "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
+    Buffer.from(
+      JSON.stringify({
+        sub: "test-user-id",
+        email: "test@example.com",
+        given_name: "Test",
+        family_name: "User",
+      }),
+    ).toString("base64") +
+    ".signature";
+
+  const mockTokens = {
+    idToken: mockIdToken,
+    controlPlaneToken: "mock-cp-token",
+    dataPlaneToken: "mock-dp-token",
+    refreshToken: "mock-refresh-token",
+    idTokenExpiresAt: new Date(Date.now() + 3600000),
+    controlPlaneTokenExpiresAt: new Date(Date.now() + 3600000),
+    dataPlaneTokenExpiresAt: new Date(Date.now() + 3600000),
+    refreshTokenExpiresAt: new Date(Date.now() + 28800000), // 8 hours
   };
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
+
+    // Stub AuthService singleton
+    const mockAuthService = {
+      isAuthenticated: sandbox.stub().returns(false),
+      authenticate: sandbox.stub().resolves({ success: true, tokens: mockTokens }),
+      refreshTokens: sandbox.stub().resolves({ success: true, tokens: mockTokens }),
+      signOut: sandbox.stub().resolves(),
+      getState: sandbox.stub().returns(AuthState.UNAUTHENTICATED),
+    };
+    sandbox.stub(AuthService, "getInstance").returns(mockAuthService as unknown as AuthService);
+
+    // Stub TokenManager singleton
+    const mockTokenManager = {
+      getTokens: sandbox.stub().resolves(mockTokens),
+      getTokenStatus: sandbox.stub().resolves({
+        idToken: { exists: true, expiring: false, timeUntilExpiry: 3600000 },
+        controlPlaneToken: { exists: true, expiring: false, timeUntilExpiry: 3600000 },
+        refreshToken: {
+          exists: true,
+          expiring: false,
+          timeUntilExpiry: 28800000,
+          expiresAt: new Date(Date.now() + 28800000),
+        },
+        sessionValid: true,
+        needsRefresh: false,
+      }),
+      isSessionValid: sandbox.stub().resolves(true),
+      hasExceededMaxRefreshAttempts: sandbox.stub().returns(false),
+    };
+    sandbox.stub(TokenManager, "getInstance").returns(mockTokenManager as unknown as TokenManager);
   });
 
   afterEach(function () {
@@ -37,7 +93,7 @@ describe("connections/handlers/ccloudConnectionHandler", function () {
       const handler = new CCloudConnectionHandler(ccloudSpec);
 
       assert.strictEqual(handler.connectionId, ccloudSpec.id);
-      assert.strictEqual(handler.spec.type, ConnectionType.CCLOUD);
+      assert.strictEqual(handler.spec.type, ConnectionType.Ccloud);
       assert.strictEqual(handler.isConnected(), false);
     });
 
@@ -146,7 +202,7 @@ describe("connections/handlers/ccloudConnectionHandler", function () {
     it("should fail for non-CCloud connection type", async function () {
       const directSpec: ConnectionSpec = {
         ...ccloudSpec,
-        type: ConnectionType.DIRECT,
+        type: ConnectionType.Direct,
       };
       const handler = new CCloudConnectionHandler(directSpec);
 

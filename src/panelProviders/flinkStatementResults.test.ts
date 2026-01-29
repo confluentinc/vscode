@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { commands } from "vscode";
-import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { StubbedWebviewView } from "../../tests/stubs/webviews";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
@@ -27,7 +26,6 @@ describe("panelProviders/flinkStatementResults.ts", () => {
   describe("FlinkStatementResultsPanelProvider", () => {
     let provider: FlinkStatementResultsPanelProvider;
     let stubbedWebviewView: StubbedWebviewView;
-    let getStatementResultsHtmlStub: sinon.SinonStub;
     const testStatement = createFlinkStatement({
       name: "test-statement",
       phase: Phase.RUNNING,
@@ -36,9 +34,6 @@ describe("panelProviders/flinkStatementResults.ts", () => {
     beforeEach(() => {
       provider = FlinkStatementResultsPanelProvider.getInstance();
       provider.currentStatement = testStatement;
-      // don't actually generate HTML from the template in these tests
-      getStatementResultsHtmlStub = sandbox.stub();
-      provider["getStatementResultsHtml"] = getStatementResultsHtmlStub;
 
       stubbedWebviewView = new StubbedWebviewView(sandbox);
     });
@@ -104,8 +99,6 @@ describe("panelProviders/flinkStatementResults.ts", () => {
       let setContextValueStub: sinon.SinonStub;
 
       beforeEach(async () => {
-        getSidecarStub(sandbox); // no assertions needed here, just prevent actual sidecar calls
-
         executeCommandStub = sandbox.stub(commands, "executeCommand");
         setContextValueStub = sandbox.stub(contextValues, "setContextValue");
 

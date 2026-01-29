@@ -1,5 +1,5 @@
-import type { KafkaClusterConfig, SchemaRegistryConfig } from "../clients/sidecar";
-import { instanceOfKafkaClusterConfig, instanceOfSchemaRegistryConfig } from "../clients/sidecar";
+import type { KafkaClusterConfig, SchemaRegistryConfig } from "../connections";
+import { instanceOfKafkaClusterConfig, instanceOfSchemaRegistryConfig } from "../connections";
 import { CCLOUD_BASE_PATH } from "../constants";
 
 /**
@@ -15,7 +15,7 @@ export function hasCCloudDomain(
 
   let hasCCloud = false;
   if (instanceOfKafkaClusterConfig(config)) {
-    hasCCloud = config.bootstrap_servers.includes(CCLOUD_BASE_PATH);
+    hasCCloud = config.bootstrapServers.includes(CCLOUD_BASE_PATH);
   } else if (instanceOfSchemaRegistryConfig(config)) {
     hasCCloud = config.uri.includes(CCLOUD_BASE_PATH);
   }

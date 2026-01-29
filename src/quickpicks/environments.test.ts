@@ -7,7 +7,7 @@ import { IconNames } from "../icons";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import type { EnvironmentId } from "../models/resource";
-import * as connections from "../sidecar/connections/ccloud";
+import * as connections from "../authn/ccloudSession";
 import { ccloudEnvironmentQuickPick, flinkCcloudEnvironmentQuickPick } from "./environments";
 
 describe("quickpicks/environments.ts ccloudEnvironmentQuickPick() / flinkCcloudEnvironmentQuickPick()", function () {

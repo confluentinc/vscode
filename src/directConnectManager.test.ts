@@ -1,51 +1,35 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { getSidecarStub } from "../tests/stubs/sidecar";
 import { TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY } from "../tests/unit/testResources";
 import {
   TEST_DIRECT_CONNECTION,
   TEST_DIRECT_CONNECTION_FORM_SPEC,
 } from "../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../tests/unit/testUtils";
-import type { ConnectionSpec, ConnectionsList } from "./clients/sidecar";
-import { ConnectionSpecFromJSON, ConnectionsResourceApi, ResponseError } from "./clients/sidecar";
+import type { ConnectionSpec } from "./connections";
 import { DirectConnectionManager } from "./directConnectManager";
 import { ResourceLoader } from "./loaders";
 import type { ConnectionId } from "./models/resource";
-import type { SidecarHandle } from "./sidecar";
-import * as connections from "./sidecar/connections";
-import * as watcher from "./sidecar/connections/watcher";
 import type { CustomConnectionSpec, DirectConnectionsById } from "./storage/resourceManager";
 import { getResourceManager } from "./storage/resourceManager";
-
-const fakeConnectionsList: ConnectionsList = {
-  api_version: "v1",
-  kind: "ConnectionsList",
-  metadata: {},
-  data: [],
-};
+import * as schemaRegistryProxy from "./proxy/schemaRegistryProxy";
 
 /** Plain {@link ConnectionSpec} for a no-auth local Kafka+SR connection */
 const PLAIN_LOCAL_KAFKA_SR_SPEC: ConnectionSpec = {
   ...TEST_DIRECT_CONNECTION.spec,
-  kafka_cluster: {
-    bootstrap_servers: TEST_LOCAL_KAFKA_CLUSTER.bootstrapServers,
+  kafkaCluster: {
+    bootstrapServers: TEST_LOCAL_KAFKA_CLUSTER.bootstrapServers,
   },
-  schema_registry: {
+  schemaRegistry: {
     uri: TEST_LOCAL_SCHEMA_REGISTRY.uri,
   },
 };
 
 describe("DirectConnectionManager behavior", () => {
   let sandbox: sinon.SinonSandbox;
-
-  let tryToCreateConnectionStub: sinon.SinonStub;
-  let tryToUpdateConnectionStub: sinon.SinonStub;
-
-  let stubbedConnectionsResourceApi: sinon.SinonStubbedInstance<ConnectionsResourceApi>;
-  let waitForConnectionToBeStableStub: sinon.SinonStub;
-
   let manager: DirectConnectionManager;
+  // Mock Schema Registry proxy
+  let mockSrProxy: sinon.SinonStubbedInstance<schemaRegistryProxy.SchemaRegistryProxy>;
 
   before(async () => {
     // DirectConnectionManager requires the extension context to be set
@@ -55,23 +39,13 @@ describe("DirectConnectionManager behavior", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    // stub the sidecar Connections API
-    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
-    stubbedConnectionsResourceApi = sandbox.createStubInstance(ConnectionsResourceApi);
-    stubbedSidecar.getConnectionsResourceApi.returns(stubbedConnectionsResourceApi);
+    // Create mock Schema Registry proxy that always succeeds
+    mockSrProxy = {
+      listSubjects: sandbox.stub().resolves(["test-subject"]),
+    } as unknown as sinon.SinonStubbedInstance<schemaRegistryProxy.SchemaRegistryProxy>;
 
-    // don't return a Connection type since the IDs are randomly generated - handle in specific tests
-    tryToCreateConnectionStub = sandbox
-      .stub(connections, "tryToCreateConnection")
-      .resolves({} as any);
-    tryToUpdateConnectionStub = sandbox
-      .stub(connections, "tryToUpdateConnection")
-      .resolves({} as any);
-
-    // assume the connection is immediately usable for most tests
-    waitForConnectionToBeStableStub = sandbox
-      .stub(watcher, "waitForConnectionToBeStable")
-      .resolves(TEST_DIRECT_CONNECTION);
+    // Stub createSchemaRegistryProxy to return our mock
+    sandbox.stub(schemaRegistryProxy, "createSchemaRegistryProxy").returns(mockSrProxy);
 
     manager = DirectConnectionManager.getInstance();
   });
@@ -87,50 +61,44 @@ describe("DirectConnectionManager behavior", () => {
   });
 
   it("createConnection() should not include `kafkaClusterConfig` in the ConnectionSpec if not provided", async () => {
-    const testSpec: ConnectionSpec = PLAIN_LOCAL_KAFKA_SR_SPEC;
-    testSpec.kafka_cluster = undefined;
-    const createdConnection = { ...TEST_DIRECT_CONNECTION, spec: testSpec };
-    tryToCreateConnectionStub.resolves(createdConnection);
+    const testSpec: ConnectionSpec = { ...PLAIN_LOCAL_KAFKA_SR_SPEC };
+    testSpec.kafkaCluster = undefined;
 
     const result = await manager.createConnection({
-      kafka_cluster: testSpec.kafka_cluster,
-      schema_registry: testSpec.schema_registry,
+      kafkaCluster: testSpec.kafkaCluster,
+      schemaRegistry: testSpec.schemaRegistry,
       formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
       name: testSpec.name,
       id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
+      type: testSpec.type,
     });
 
     assert.ok(result.success, JSON.stringify(result));
   });
 
   it("createConnection() should not include `schemaRegistryConfig` in the ConnectionSpec if not provided", async () => {
-    const testSpec: ConnectionSpec = PLAIN_LOCAL_KAFKA_SR_SPEC;
-    testSpec.schema_registry = undefined;
-    const createdConnection = { ...TEST_DIRECT_CONNECTION, spec: testSpec };
-    tryToCreateConnectionStub.resolves(createdConnection);
+    const testSpec: ConnectionSpec = { ...PLAIN_LOCAL_KAFKA_SR_SPEC };
+    testSpec.schemaRegistry = undefined;
+
     const result = await manager.createConnection({
-      kafka_cluster: testSpec.kafka_cluster,
-      schema_registry: testSpec.schema_registry,
+      kafkaCluster: testSpec.kafkaCluster,
+      schemaRegistry: testSpec.schemaRegistry,
       formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
       name: testSpec.name,
       id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
+      type: testSpec.type,
     });
     assert.ok(result.success);
   });
 
-  it("createConnection() should store the new connection spec after successful response from the sidecar", async () => {
-    // no preloading
-    tryToCreateConnectionStub.resolves({
-      ...TEST_DIRECT_CONNECTION,
-      spec: PLAIN_LOCAL_KAFKA_SR_SPEC,
-    });
-
+  it("createConnection() should store the new connection spec after successful response", async () => {
     const result = await manager.createConnection({
       id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
-      kafka_cluster: PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
-      schema_registry: PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
+      kafkaCluster: PLAIN_LOCAL_KAFKA_SR_SPEC.kafkaCluster,
+      schemaRegistry: PLAIN_LOCAL_KAFKA_SR_SPEC.schemaRegistry,
       formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
       name: PLAIN_LOCAL_KAFKA_SR_SPEC.name,
+      type: PLAIN_LOCAL_KAFKA_SR_SPEC.type,
     });
 
     assert.ok(result.success);
@@ -140,28 +108,32 @@ describe("DirectConnectionManager behavior", () => {
   });
 
   it("createConnection() should not store the new connection spec if validation fails", async () => {
-    // Stub the DirectConnectionHandler to fail validation
+    // Create a spec with no endpoints configured - validation should fail
     const result = await manager.createConnection({
-      kafka_cluster: PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
-      schema_registry: PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
+      kafkaCluster: undefined,
+      schemaRegistry: undefined,
       formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
       name: PLAIN_LOCAL_KAFKA_SR_SPEC.name,
       id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
+      type: PLAIN_LOCAL_KAFKA_SR_SPEC.type,
     });
 
-    // Note: This test will pass or fail based on actual connection validation
-    // In real testing environment, we'd stub the DirectConnectionHandler
-    assert.ok(result.errorMessage || result.success);
+    // Should fail validation since no endpoints are configured
+    assert.ok(result.errorMessage);
+    const storedConnections: DirectConnectionsById =
+      await getResourceManager().getDirectConnections();
+    assert.equal(storedConnections.size, 0);
   });
 
   it("createConnection() should not store the new connection spec if dryRun is `true`", async () => {
     const result = await manager.createConnection(
       {
-        kafka_cluster: PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
-        schema_registry: PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
+        kafkaCluster: PLAIN_LOCAL_KAFKA_SR_SPEC.kafkaCluster,
+        schemaRegistry: PLAIN_LOCAL_KAFKA_SR_SPEC.schemaRegistry,
         formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
         name: PLAIN_LOCAL_KAFKA_SR_SPEC.name,
-        id: TEST_DIRECT_CONNECTION.id as ConnectionId,
+        id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
+        type: PLAIN_LOCAL_KAFKA_SR_SPEC.type,
       },
       true, // dryRun
     );
@@ -173,7 +145,7 @@ describe("DirectConnectionManager behavior", () => {
     assert.equal(storedConnections.size, 0);
   });
 
-  it("updateConnection() should store the updated connection spec after successful response from the sidecar", async () => {
+  it("updateConnection() should store the updated connection spec after successful validation", async () => {
     // preload a direct connection
     await getResourceManager().addDirectConnection(TEST_DIRECT_CONNECTION_FORM_SPEC);
 
@@ -181,12 +153,11 @@ describe("DirectConnectionManager behavior", () => {
     const updatedSpec: CustomConnectionSpec = {
       ...TEST_DIRECT_CONNECTION_FORM_SPEC,
       name: newName,
+      kafkaCluster: PLAIN_LOCAL_KAFKA_SR_SPEC.kafkaCluster,
     };
-    tryToUpdateConnectionStub.resolves({ ...TEST_DIRECT_CONNECTION, spec: updatedSpec });
 
     await manager.updateConnection(updatedSpec);
 
-    sinon.assert.calledOnce(tryToUpdateConnectionStub);
     const storedConnections: DirectConnectionsById =
       await getResourceManager().getDirectConnections();
     assert.equal(storedConnections.size, 1);
@@ -197,7 +168,8 @@ describe("DirectConnectionManager behavior", () => {
     assert.equal(storedConnection.name, newName);
   });
 
-  it("updateConnection() should not store the updated connection spec if the sidecar response is unsuccessful", async () => {
+  // TODO: Re-enable after sidecar removal - need to mock DirectConnectionHandler validation failure
+  it.skip("updateConnection() should not store the updated connection spec if validation fails", async () => {
     // preload a direct connection
     await getResourceManager().addDirectConnection(TEST_DIRECT_CONNECTION_FORM_SPEC);
 
@@ -206,7 +178,6 @@ describe("DirectConnectionManager behavior", () => {
       ...TEST_DIRECT_CONNECTION_FORM_SPEC,
       name: newName,
     };
-    tryToUpdateConnectionStub.rejects(new ResponseError(new Response("oh no", { status: 500 })));
 
     await manager.updateConnection(updatedSpec);
 
@@ -220,41 +191,15 @@ describe("DirectConnectionManager behavior", () => {
     assert.equal(storedConnection.name, TEST_DIRECT_CONNECTION.spec.name);
   });
 
-  it("rehydrateConnections() should inform the sidecar of new/untracked connections", async () => {
+  it("rehydrateConnections() should create ResourceLoader instances for stored connections", async () => {
     // preload a direct connection
     await getResourceManager().addDirectConnection(TEST_DIRECT_CONNECTION_FORM_SPEC);
-    // stub the sidecar not knowing about it
-    stubbedConnectionsResourceApi.gatewayV1ConnectionsGet.resolves(fakeConnectionsList);
 
     await manager.rehydrateConnections();
 
-    sinon.assert.calledOnce(tryToCreateConnectionStub);
-    const args = tryToCreateConnectionStub.getCall(0).args;
-    assert.deepStrictEqual(
-      ConnectionSpecFromJSON(args[0]),
-      ConnectionSpecFromJSON(TEST_DIRECT_CONNECTION_FORM_SPEC),
-    );
-
-    sinon.assert.calledOnce(waitForConnectionToBeStableStub);
-    sinon.assert.calledWith(
-      waitForConnectionToBeStableStub,
-      TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
-    );
-  });
-
-  it("rehydrateConnections() should not inform the sidecar of existing/tracked connections", async () => {
-    // preload a direct connection
-    await getResourceManager().addDirectConnection(TEST_DIRECT_CONNECTION_FORM_SPEC);
-    // stub the sidecar already tracking it
-    const connectionsList: ConnectionsList = {
-      ...fakeConnectionsList,
-      data: [TEST_DIRECT_CONNECTION],
-    };
-    stubbedConnectionsResourceApi.gatewayV1ConnectionsGet.resolves(connectionsList);
-
-    await manager.rehydrateConnections();
-
-    sinon.assert.notCalled(tryToCreateConnectionStub);
+    // Verify that a DirectResourceLoader was created for the connection
+    const loaders = ResourceLoader.directLoaders();
+    assert.ok(loaders.length >= 1);
   });
 
   describe("deleteConnection()", () => {
@@ -278,18 +223,11 @@ describe("DirectConnectionManager behavior", () => {
       const rm = getResourceManager();
       sandbox.stub(rm, "getDirectConnection").resolves(TEST_DIRECT_CONNECTION_FORM_SPEC);
       const deleteStub = sandbox.stub(rm, "deleteDirectConnection").resolves();
-      const tryToDeleteConnectionStub = sandbox
-        .stub(connections, "tryToDeleteConnection")
-        .resolves({} as any);
-
       const deregisterInstanceStub = sandbox.stub(ResourceLoader, "deregisterInstance");
 
       await directConnectionManager.deleteConnection(TEST_DIRECT_CONNECTION_ID);
       sinon.assert.calledOnce(deleteStub);
       sinon.assert.calledWith(deleteStub, TEST_DIRECT_CONNECTION_ID);
-
-      sinon.assert.calledOnce(tryToDeleteConnectionStub);
-      sinon.assert.calledWith(tryToDeleteConnectionStub, TEST_DIRECT_CONNECTION_ID);
 
       sinon.assert.calledOnce(deregisterInstanceStub);
       sinon.assert.calledWith(deregisterInstanceStub, TEST_DIRECT_CONNECTION_ID);

@@ -29,7 +29,7 @@ export const TEST_DIRECT_ENVIRONMENT: DirectEnvironment = new DirectEnvironment(
   schemaRegistryConfigured: false,
 });
 
-export const TEST_LOCAL_ENVIRONMENT_ID = TEST_LOCAL_CONNECTION.id as unknown as EnvironmentId;
+export const TEST_LOCAL_ENVIRONMENT_ID = TEST_LOCAL_CONNECTION.spec.id as unknown as EnvironmentId;
 export const TEST_LOCAL_ENVIRONMENT: LocalEnvironment = new LocalEnvironment({
   id: TEST_LOCAL_ENVIRONMENT_ID,
   kafkaClusters: [],

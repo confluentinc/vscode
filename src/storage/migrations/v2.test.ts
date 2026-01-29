@@ -9,9 +9,29 @@ import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../../tests/unit/testResour
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import type { FormConnectionType } from "../../directConnections/types";
 import type { ConnectionId } from "../../models/resource";
-import type { CustomConnectionSpec, DirectConnectionsById } from "../resourceManager";
 import { mapToString } from "../resourceManager";
 import { MigrationV2 } from "./v2";
+
+/**
+ * Test-only type representing the OLD (v1) snake_case format that the migration
+ * is supposed to read and convert. This matches the raw JSON structure stored
+ * in SecretStorage before the camelCase migration.
+ */
+interface LegacyConnectionSpec {
+  id: ConnectionId;
+  name: string;
+  type: string;
+  formConnectionType?: FormConnectionType;
+  kafka_cluster?: {
+    bootstrap_servers: string;
+    ssl?: { enabled: boolean };
+  };
+  schema_registry?: {
+    uri: string;
+    ssl?: { enabled: boolean };
+  };
+}
+type LegacyConnectionsById = Map<ConnectionId, LegacyConnectionSpec>;
 
 describe("storage/migrations/v2", () => {
   let sandbox: sinon.SinonSandbox;
@@ -47,9 +67,12 @@ describe("storage/migrations/v2", () => {
   for (const [formConnectionType, expectedSsl] of testConfigs) {
     it(`upgradeSecretStorage() should set ssl.enabled=${expectedSsl} for form connection type "${formConnectionType}"`, async () => {
       // if v1 test connections are returned, they should be updated to v2
-      const testSpecs: CustomConnectionSpec[] = [
+      // NOTE: Using legacy snake_case format that the migration is supposed to handle
+      const testSpecs: LegacyConnectionSpec[] = [
         {
-          ...TEST_DIRECT_CONNECTION_FORM_SPEC,
+          id: TEST_DIRECT_CONNECTION_FORM_SPEC.id,
+          name: TEST_DIRECT_CONNECTION_FORM_SPEC.name,
+          type: TEST_DIRECT_CONNECTION_FORM_SPEC.type,
           kafka_cluster: {
             bootstrap_servers: TEST_LOCAL_KAFKA_CLUSTER.bootstrapServers,
             ssl: undefined,
@@ -58,8 +81,8 @@ describe("storage/migrations/v2", () => {
           formConnectionType,
         },
       ];
-      const testV1Map: DirectConnectionsById = new Map(
-        testSpecs.map((spec): [ConnectionId, CustomConnectionSpec] => [spec.id, spec]),
+      const testV1Map: LegacyConnectionsById = new Map(
+        testSpecs.map((spec): [ConnectionId, LegacyConnectionSpec] => [spec.id, spec]),
       );
       secretsGetStub.resolves(mapToString(testV1Map));
 
@@ -75,9 +98,12 @@ describe("storage/migrations/v2", () => {
     });
 
     it(`upgradeSecretStorage() should not change specs with 'ssl' already set (formConnectionType=${formConnectionType})`, async () => {
-      const testSpecs: CustomConnectionSpec[] = [
+      // NOTE: Using legacy snake_case format that the migration is supposed to handle
+      const testSpecs: LegacyConnectionSpec[] = [
         {
-          ...TEST_DIRECT_CONNECTION_FORM_SPEC,
+          id: TEST_DIRECT_CONNECTION_FORM_SPEC.id,
+          name: TEST_DIRECT_CONNECTION_FORM_SPEC.name,
+          type: TEST_DIRECT_CONNECTION_FORM_SPEC.type,
           kafka_cluster: {
             bootstrap_servers: TEST_LOCAL_KAFKA_CLUSTER.bootstrapServers,
             ssl: { enabled: expectedSsl },
@@ -89,8 +115,8 @@ describe("storage/migrations/v2", () => {
           formConnectionType,
         },
       ];
-      const testV1Map: DirectConnectionsById = new Map(
-        testSpecs.map((spec): [ConnectionId, CustomConnectionSpec] => [spec.id, spec]),
+      const testV1Map: LegacyConnectionsById = new Map(
+        testSpecs.map((spec): [ConnectionId, LegacyConnectionSpec] => [spec.id, spec]),
       );
       secretsGetStub.resolves(mapToString(testV1Map));
 
@@ -101,15 +127,15 @@ describe("storage/migrations/v2", () => {
       // and now we have to pull out the stringified Map that was used for the call
       const mapStringArg = JSON.parse(secretsStoreStub.args[0][1]);
       const secretsStoreCallArgs: any = Object.values(mapStringArg)[0];
-      assert.strictEqual(secretsStoreCallArgs.kafka_cluster!.ssl!.enabled, expectedSsl);
+      assert.strictEqual(secretsStoreCallArgs.kafka_cluster?.ssl?.enabled, expectedSsl);
       assert.strictEqual(
-        secretsStoreCallArgs.kafka_cluster!.ssl!.enabled,
-        testSpecs[0].kafka_cluster!.ssl!.enabled,
+        secretsStoreCallArgs.kafka_cluster?.ssl?.enabled,
+        testSpecs[0].kafka_cluster?.ssl?.enabled,
       );
-      assert.strictEqual(secretsStoreCallArgs.schema_registry!.ssl!.enabled, expectedSsl);
+      assert.strictEqual(secretsStoreCallArgs.schema_registry?.ssl?.enabled, expectedSsl);
       assert.strictEqual(
-        secretsStoreCallArgs.schema_registry!.ssl!.enabled,
-        testSpecs[0].schema_registry!.ssl!.enabled,
+        secretsStoreCallArgs.schema_registry?.ssl?.enabled,
+        testSpecs[0].schema_registry?.ssl?.enabled,
       );
     });
   }
@@ -124,9 +150,12 @@ describe("storage/migrations/v2", () => {
   });
 
   it("downgradeSecretStorage() should remove 'ssl' configs from connection specs", async () => {
-    const testSpecs: CustomConnectionSpec[] = [
+    // NOTE: Using legacy snake_case format that the migration is supposed to handle
+    const testSpecs: LegacyConnectionSpec[] = [
       {
-        ...TEST_DIRECT_CONNECTION_FORM_SPEC,
+        id: TEST_DIRECT_CONNECTION_FORM_SPEC.id,
+        name: TEST_DIRECT_CONNECTION_FORM_SPEC.name,
+        type: TEST_DIRECT_CONNECTION_FORM_SPEC.type,
         kafka_cluster: {
           bootstrap_servers: TEST_LOCAL_KAFKA_CLUSTER.bootstrapServers,
           ssl: { enabled: true },
@@ -137,8 +166,8 @@ describe("storage/migrations/v2", () => {
         },
       },
     ];
-    const testV2Map: DirectConnectionsById = new Map(
-      testSpecs.map((spec): [ConnectionId, CustomConnectionSpec] => [spec.id, spec]),
+    const testV2Map: LegacyConnectionsById = new Map(
+      testSpecs.map((spec): [ConnectionId, LegacyConnectionSpec] => [spec.id, spec]),
     );
     secretsGetStub.resolves(mapToString(testV2Map));
 
@@ -154,9 +183,12 @@ describe("storage/migrations/v2", () => {
   });
 
   it("downgradeSecretStorage() should not change specs that don't have 'ssl' configs set", async () => {
-    const testSpecs: CustomConnectionSpec[] = [
+    // NOTE: Using legacy snake_case format that the migration is supposed to handle
+    const testSpecs: LegacyConnectionSpec[] = [
       {
-        ...TEST_DIRECT_CONNECTION_FORM_SPEC,
+        id: TEST_DIRECT_CONNECTION_FORM_SPEC.id,
+        name: TEST_DIRECT_CONNECTION_FORM_SPEC.name,
+        type: TEST_DIRECT_CONNECTION_FORM_SPEC.type,
         kafka_cluster: {
           bootstrap_servers: TEST_LOCAL_KAFKA_CLUSTER.bootstrapServers,
           ssl: undefined,
@@ -167,8 +199,8 @@ describe("storage/migrations/v2", () => {
         },
       },
     ];
-    const testV2Map: DirectConnectionsById = new Map(
-      testSpecs.map((spec): [ConnectionId, CustomConnectionSpec] => [spec.id, spec]),
+    const testV2Map: LegacyConnectionsById = new Map(
+      testSpecs.map((spec): [ConnectionId, LegacyConnectionSpec] => [spec.id, spec]),
     );
     secretsGetStub.resolves(mapToString(testV2Map));
 
@@ -179,12 +211,12 @@ describe("storage/migrations/v2", () => {
     // and now we have to pull out the stringified Map that was used for the call
     const mapStringArg = JSON.parse(secretsStoreStub.args[0][1]);
     const secretsStoreCallArgs: any = Object.values(mapStringArg)[0];
-    assert.strictEqual(secretsStoreCallArgs.kafka_cluster!.ssl, undefined);
-    assert.strictEqual(secretsStoreCallArgs.kafka_cluster!.ssl, testSpecs[0].kafka_cluster!.ssl);
-    assert.strictEqual(secretsStoreCallArgs.schema_registry!.ssl, undefined);
+    assert.strictEqual(secretsStoreCallArgs.kafka_cluster?.ssl, undefined);
+    assert.strictEqual(secretsStoreCallArgs.kafka_cluster?.ssl, testSpecs[0].kafka_cluster?.ssl);
+    assert.strictEqual(secretsStoreCallArgs.schema_registry?.ssl, undefined);
     assert.strictEqual(
-      secretsStoreCallArgs.schema_registry!.ssl,
-      testSpecs[0].schema_registry!.ssl,
+      secretsStoreCallArgs.schema_registry?.ssl,
+      testSpecs[0].schema_registry?.ssl,
     );
   });
 

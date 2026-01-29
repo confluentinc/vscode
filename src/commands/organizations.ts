@@ -1,12 +1,10 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_CONNECTION_SPEC } from "../constants";
 import { ccloudOrganizationChanged } from "../emitters";
-import { getCurrentOrganization } from "../graphql/organizations";
+import { getCurrentOrganization, setCurrentOrganizationId } from "../fetchers/organizationFetcher";
 import type { CCloudOrganization } from "../models/organization";
 import { organizationQuickPick } from "../quickpicks/organizations";
-import { tryToUpdateConnection } from "../sidecar/connections";
-import { clearCurrentCCloudResources, hasCCloudAuthSession } from "../sidecar/connections/ccloud";
+import { clearCurrentCCloudResources, hasCCloudAuthSession } from "../authn/ccloudSession";
 
 async function useOrganizationCommand() {
   if (!hasCCloudAuthSession()) {
@@ -29,13 +27,8 @@ async function useOrganizationCommand() {
       cancellable: true,
     },
     async () => {
-      await tryToUpdateConnection({
-        ...CCLOUD_CONNECTION_SPEC,
-        ccloud_config: {
-          organization_id: organization.id,
-          ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
-        },
-      });
+      // Update the current organization ID in the fetcher cache
+      setCurrentOrganizationId(organization.id);
 
       await clearCurrentCCloudResources();
 

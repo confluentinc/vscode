@@ -1,14 +1,5 @@
-import {
-  CodeLens,
-  CodeLensProvider,
-  Command,
-  Disposable,
-  Event,
-  EventEmitter,
-  Position,
-  Range,
-  TextDocument,
-} from "vscode";
+import type { CodeLensProvider, Command, Disposable, Event, TextDocument } from "vscode";
+import { CodeLens, EventEmitter, Position, Range } from "vscode";
 import { COMMANDS } from "../commands/medusaCodeLens";
 import { localMedusaConnected } from "../emitters";
 import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";

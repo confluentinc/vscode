@@ -20,7 +20,7 @@ import {
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../../extensionSettings/constants";
 import * as notifications from "../../notifications";
-import * as local from "../../sidecar/connections/local";
+import * as local from "../../docker/local";
 import { DEFAULT_DOCKER_NETWORK, LocalResourceKind } from "../constants";
 import * as dockerContainers from "../containers";
 import * as ports from "../ports";

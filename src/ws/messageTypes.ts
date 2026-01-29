@@ -1,8 +1,8 @@
 /** Module describing workspace<-->sidecar websocket messages. */
 
 import { randomUUID } from "crypto";
-import type { Connection } from "../clients/sidecar";
-import { ConnectionFromJSON, instanceOfConnection } from "../clients/sidecar";
+import type { Connection } from "../connections";
+import { ConnectionFromJSON, instanceOfConnection } from "../connections";
 
 /**
  * All websocket message types, message.header_type values.
@@ -144,7 +144,7 @@ export const MessageBodyDecoders: { [K in MessageType]: MessageBodyDecoder<K> | 
     body.connection = ConnectionFromJSON(body.connection);
 
     // explicitly check and raise if date coversion fails, because JS can't be bothered to throw an error on invalid date strings
-    const dateField = body.connection.status?.ccloud?.requires_authentication_at;
+    const dateField = body.connection.status?.ccloud?.requiresAuthenticationAt;
     if (dateField && isNaN(dateField.valueOf())) {
       throw new Error(
         "MessageBodyDeserializers[MessageType.CONNECTION_EVENT]: Invalid requires_authentication_at date",

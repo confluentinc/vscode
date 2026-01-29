@@ -1,5 +1,5 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { IconNames } from "../icons";

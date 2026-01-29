@@ -1,4 +1,4 @@
-import type { ProduceRequestData } from "../../clients/sidecar";
+import type { ProduceRequestData } from "../../clients/kafkaRest";
 import type {
   ProduceMessage,
   SchemaInfo,

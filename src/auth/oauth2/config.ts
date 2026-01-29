@@ -197,7 +197,7 @@ export function calculateTokenExpiry(lifetimeSeconds: number, fromDate = new Dat
  */
 export function isTokenExpiring(
   expiresAt: Date,
-  bufferMs = OAUTH_CONSTANTS.TOKEN_REFRESH_BUFFER_MS,
+  bufferMs: number = OAUTH_CONSTANTS.TOKEN_REFRESH_BUFFER_MS,
 ): boolean {
   const now = new Date();
   const bufferDate = new Date(now.getTime() + bufferMs);

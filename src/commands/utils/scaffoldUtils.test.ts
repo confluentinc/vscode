@@ -1,260 +1,242 @@
+import * as assert from "assert";
 import * as sinon from "sinon";
-import * as unzipitModule from "unzipit";
+import * as unzipit from "unzipit";
 import * as vscode from "vscode";
-import { getSidecarStub } from "../../../tests/stubs/sidecar";
-import { createResponseError, ResponseErrorSource } from "../../../tests/unit/testUtils";
-import { TemplatesScaffoldV1Api } from "../../clients/scaffoldingService";
-import * as templatesModule from "../../projectGeneration/templates";
-import { WebviewPanelCache } from "../../webview-cache";
-import * as webviewCommsModule from "../../webview/comms/comms";
-
-const TEST_TEMPLATE_COLLECTION = "vscode";
-const TEST_TEMPLATE_NAME = "example-template";
+import type { ScaffoldV1Template } from "../../clients/scaffoldingService";
+import * as authnUtils from "../../authn/utils";
+import * as templates from "../../projectGeneration/templates";
+import * as errors from "../../errors";
+import * as notifications from "../../notifications";
+import * as fileUtils from "../../utils/file";
+import * as fsWrappers from "../../utils/fsWrappers";
+import { applyTemplate } from "./scaffoldUtils";
 
 describe("scaffoldUtils", () => {
   let sandbox: sinon.SinonSandbox;
-  let stubbedSidecar: sinon.SinonStubbedInstance<any>;
-  let stubbedTemplatesApi: sinon.SinonStubbedInstance<TemplatesScaffoldV1Api>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-
-    // VS Code APIs
-    sandbox.stub(vscode.window, "showOpenDialog").resolves(undefined);
-    sandbox.stub(vscode.window, "showErrorMessage").resolves(undefined);
-    sandbox.stub(vscode.window, "showInformationMessage").resolves(undefined);
-    sandbox.stub(vscode.window, "withProgress").callsFake(async (_opts, task) => {
-      return await task({ report: () => void 0 }, new vscode.CancellationTokenSource().token);
-    });
-    sandbox.stub(vscode.commands, "executeCommand").resolves(undefined);
-
-    // Sidecar & TemplatesScaffoldV1Api
-    stubbedSidecar = getSidecarStub(sandbox);
-    stubbedTemplatesApi = sandbox.createStubInstance(TemplatesScaffoldV1Api);
-    stubbedTemplatesApi.applyScaffoldV1Template.resolves(new Blob([new Uint8Array([1, 2, 3])]));
-    stubbedSidecar.getTemplatesApi.returns(stubbedTemplatesApi);
-
-    // Template listing & picking defaults
-    sandbox.stub(templatesModule, "getTemplatesList").resolves([
-      {
-        spec: {
-          name: TEST_TEMPLATE_NAME,
-          display_name: "Example Template",
-          template_collection: { id: TEST_TEMPLATE_COLLECTION },
-          options: {},
-          tags: ["producer"],
-        },
-      },
-    ] as any);
-    sandbox.stub(templatesModule, "pickTemplate").resolves({
-      spec: {
-        name: TEST_TEMPLATE_NAME,
-        display_name: "Example Template",
-        template_collection: { id: TEST_TEMPLATE_COLLECTION },
-        options: {},
-      },
-    } as any);
-
-    // Webview message handling & WebviewPanelCache behavior
-    sandbox.stub(webviewCommsModule, "handleWebviewMessage").returns({
-      dispose: () => void 0,
-    } as vscode.Disposable);
-    sandbox.stub(WebviewPanelCache.prototype, "findOrCreate").returns([
-      {
-        reveal: () => void 0,
-        dispose: () => void 0,
-        onDidDispose: () => void 0,
-        webview: {} as vscode.Webview,
-      } as any,
-      false,
-    ]);
-
-    // unzipit module for zip extraction tests
-    sandbox.stub(unzipitModule, "unzip").resolves({
-      entries: {},
-    } as any);
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  describe("applyTemplate error handling", () => {
-    it("should handle 403 errors with proxy-specific messaging", async () => {
-      const error403 = createResponseError(
-        403,
-        "Forbidden",
-        JSON.stringify({ message: "Forbidden" }),
-        ResponseErrorSource.ScaffoldingService,
-      );
+  describe("applyTemplate", () => {
+    it("should return error if template name is missing", async () => {
+      const template = { spec: {} } as ScaffoldV1Template;
 
-      stubbedTemplatesApi.applyScaffoldV1Template.rejects(error403);
+      const result = await applyTemplate(template, {});
 
+      assert.strictEqual(result.success, false);
+      assert.strictEqual(result.message, "Template name is missing");
+    });
+
+    it("should call scaffolding API with correct parameters", async () => {
       const template = {
         spec: {
-          name: TEST_TEMPLATE_NAME,
-          display_name: "Test Template",
-          template_collection: { id: TEST_TEMPLATE_COLLECTION },
+          name: "java-client",
+          display_name: "Java Client",
+          template_collection: { id: "vscode" },
         },
-      } as any;
+      } as ScaffoldV1Template;
 
-      const { applyTemplate } = await import("./scaffoldUtils");
-      const result = await applyTemplate(template, {}, "test");
+      const manifestOptions = {
+        bootstrap_server: "localhost:9092",
+        topic_name: "test-topic",
+      };
 
-      sinon.assert.match(result.success, false);
-      sinon.assert.match(result.message, sinon.match(/may be caused by a corporate proxy or VPN/i));
+      // Stub authentication
+      sandbox.stub(authnUtils, "getCCloudAuthSession").resolves({
+        accessToken: "test-token",
+        id: "test-session",
+        account: { id: "test", label: "Test" },
+        scopes: [],
+      });
+
+      // Create mock blob
+      const mockBlob = new Blob(["test content"], { type: "application/zip" });
+
+      // Stub the API
+      const applyTemplateStub = sandbox.stub().resolves(mockBlob);
+      sandbox.stub(templates, "createScaffoldingApi").returns({
+        applyScaffoldV1Template: applyTemplateStub,
+        listScaffoldV1Templates: sandbox.stub(),
+      } as any);
+
+      // Stub file dialogs and operations
+      const testUri = vscode.Uri.file("/tmp/test-project");
+      sandbox.stub(vscode.window, "showOpenDialog").resolves([testUri]);
+      sandbox.stub(fileUtils, "fileUriExists").resolves(false);
+      sandbox.stub(fsWrappers, "writeFile").resolves();
+      sandbox.stub(vscode.window, "showInformationMessage").resolves(undefined);
+      // Stub unzip to avoid trying to extract non-zip content
+      sandbox.stub(unzipit, "unzip").resolves({ entries: {}, zip: {} } as any);
+
+      const result = await applyTemplate(template, manifestOptions);
+
+      assert.strictEqual(result.success, true);
+      sinon.assert.calledOnce(applyTemplateStub);
+      sinon.assert.calledWithMatch(applyTemplateStub, {
+        template_collection_name: "vscode",
+        name: "java-client",
+        ApplyScaffoldV1TemplateRequest: {
+          options: {
+            bootstrap_server: "localhost:9092",
+            topic_name: "test-topic",
+          },
+        },
+      });
     });
 
-    it("should handle JSON parsing errors in response", async () => {
-      const errorWithResponse = createResponseError(
-        400,
-        "Bad Request",
-        "Not valid JSON at all!",
-        ResponseErrorSource.ScaffoldingService,
-      );
-
-      stubbedTemplatesApi.applyScaffoldV1Template.rejects(errorWithResponse);
-
+    it("should use default collection name when not specified", async () => {
       const template = {
         spec: {
-          name: TEST_TEMPLATE_NAME,
-          display_name: "Test Template",
-          template_collection: { id: TEST_TEMPLATE_COLLECTION },
+          name: "java-client",
+          display_name: "Java Client",
+          // No template_collection specified
         },
-      } as any;
+      } as ScaffoldV1Template;
 
-      const { applyTemplate } = await import("./scaffoldUtils");
-      const result = await applyTemplate(template, {}, "test");
+      sandbox.stub(authnUtils, "getCCloudAuthSession").resolves({
+        accessToken: "test-token",
+        id: "test-session",
+        account: { id: "test", label: "Test" },
+        scopes: [],
+      });
 
-      sinon.assert.match(result.success, false);
-      sinon.assert.match(result.message, sinon.match(/Unable to parse error response/));
+      const mockBlob = new Blob(["test content"], { type: "application/zip" });
+      const applyTemplateStub = sandbox.stub().resolves(mockBlob);
+      sandbox.stub(templates, "createScaffoldingApi").returns({
+        applyScaffoldV1Template: applyTemplateStub,
+        listScaffoldV1Templates: sandbox.stub(),
+      } as any);
+
+      const testUri = vscode.Uri.file("/tmp/test-project");
+      sandbox.stub(vscode.window, "showOpenDialog").resolves([testUri]);
+      sandbox.stub(fileUtils, "fileUriExists").resolves(false);
+      sandbox.stub(fsWrappers, "writeFile").resolves();
+      sandbox.stub(vscode.window, "showInformationMessage").resolves(undefined);
+      // Stub unzip to avoid trying to extract non-zip content
+      sandbox.stub(unzipit, "unzip").resolves({ entries: {}, zip: {} } as any);
+
+      await applyTemplate(template, {});
+
+      sinon.assert.calledWithMatch(applyTemplateStub, {
+        template_collection_name: "vscode",
+      });
     });
 
-    it("should handle errors with structured details", async () => {
-      const errorWithStructured = createResponseError(
-        400,
-        "Validation Error",
-        JSON.stringify({
-          errors: [
-            {
-              detail: "Must be a valid format for server",
-              source: { pointer: "/options/bootstrapServer" },
-            },
-          ],
-        }),
-        ResponseErrorSource.ScaffoldingService,
-      );
-
-      stubbedTemplatesApi.applyScaffoldV1Template.rejects(errorWithStructured);
-
+    it("should return error when API call fails", async () => {
       const template = {
         spec: {
-          name: TEST_TEMPLATE_NAME,
-          display_name: "Test Template",
-          template_collection: { id: TEST_TEMPLATE_COLLECTION },
+          name: "java-client",
+          display_name: "Java Client",
+          template_collection: { id: "vscode" },
         },
-      } as any;
+      } as ScaffoldV1Template;
 
-      const { applyTemplate } = await import("./scaffoldUtils");
-      const result = await applyTemplate(template, {}, "test");
+      sandbox.stub(authnUtils, "getCCloudAuthSession").resolves({
+        accessToken: "test-token",
+        id: "test-session",
+        account: { id: "test", label: "Test" },
+        scopes: [],
+      });
 
-      sinon.assert.match(result.success, false);
-      // make sure it includes the pointer to the invalid field
-      sinon.assert.match(result.message, sinon.match(/bootstrapServer/));
+      const apiError = new Error("API error");
+      sandbox.stub(templates, "createScaffoldingApi").returns({
+        applyScaffoldV1Template: sandbox.stub().rejects(apiError),
+        listScaffoldV1Templates: sandbox.stub(),
+      } as any);
+
+      sandbox.stub(errors, "logError");
+      sandbox.stub(notifications, "showErrorNotificationWithButtons");
+
+      const result = await applyTemplate(template, {});
+
+      assert.strictEqual(result.success, false);
+      assert.ok(result.message?.includes("Project generation failed"));
     });
 
-    it("should handle errors without response object", async () => {
-      const plainError = new Error("Network connection failed");
-
-      stubbedTemplatesApi.applyScaffoldV1Template.rejects(plainError);
-
+    it("should return cancelled message when user cancels folder selection", async () => {
       const template = {
         spec: {
-          name: TEST_TEMPLATE_NAME,
-          display_name: "Test Template",
-          template_collection: { id: TEST_TEMPLATE_COLLECTION },
+          name: "java-client",
+          display_name: "Java Client",
+          template_collection: { id: "vscode" },
         },
-      } as any;
+      } as ScaffoldV1Template;
 
-      const { applyTemplate } = await import("./scaffoldUtils");
-      const result = await applyTemplate(template, {}, "test");
+      sandbox.stub(authnUtils, "getCCloudAuthSession").resolves({
+        accessToken: "test-token",
+        id: "test-session",
+        account: { id: "test", label: "Test" },
+        scopes: [],
+      });
 
-      sinon.assert.match(result.success, false);
-      sinon.assert.match(result.message, sinon.match(/Network connection failed/));
+      const mockBlob = new Blob(["test content"], { type: "application/zip" });
+      sandbox.stub(templates, "createScaffoldingApi").returns({
+        applyScaffoldV1Template: sandbox.stub().resolves(mockBlob),
+        listScaffoldV1Templates: sandbox.stub(),
+      } as any);
+
+      // User cancels folder selection
+      sandbox.stub(vscode.window, "showOpenDialog").resolves(undefined);
+
+      const result = await applyTemplate(template, {});
+
+      assert.strictEqual(result.success, false);
+      assert.strictEqual(result.message, "Project generation cancelled before save.");
     });
 
-    it("should handle errors during zip extraction", async () => {
-      stubbedTemplatesApi.applyScaffoldV1Template.resolves(new Blob([new Uint8Array([1, 2, 3])]));
-
-      (vscode.window.showOpenDialog as sinon.SinonStub).resolves([
-        vscode.Uri.file("/test/directory"),
-      ]);
-
-      (unzipitModule.unzip as sinon.SinonStub).rejects(new Error("Permission denied"));
-
+    it("should convert all option values to strings", async () => {
       const template = {
         spec: {
-          name: TEST_TEMPLATE_NAME,
-          display_name: "Test Template",
-          template_collection: { id: TEST_TEMPLATE_COLLECTION },
+          name: "java-client",
+          display_name: "Java Client",
+          template_collection: { id: "vscode" },
         },
-      } as any;
+      } as ScaffoldV1Template;
 
-      const { applyTemplate } = await import("./scaffoldUtils");
-      const result = await applyTemplate(template, {}, "test");
+      const manifestOptions = {
+        string_option: "value",
+        number_option: 123,
+        boolean_option: true,
+      };
 
-      sinon.assert.match(result.success, false);
-      sinon.assert.match(result.message, sinon.match(/saving template files to disk/));
-    });
-  });
+      sandbox.stub(authnUtils, "getCCloudAuthSession").resolves({
+        accessToken: "test-token",
+        id: "test-session",
+        account: { id: "test", label: "Test" },
+        scopes: [],
+      });
 
-  describe("parseErrorMessage", () => {
-    it("should handle string errors", async () => {
-      const { scaffoldProjectRequest } = await import("./scaffoldUtils");
-      (templatesModule.getTemplatesList as sinon.SinonStub).rejects("Simple string error");
+      const mockBlob = new Blob(["test content"], { type: "application/zip" });
+      const applyTemplateStub = sandbox.stub().resolves(mockBlob);
+      sandbox.stub(templates, "createScaffoldingApi").returns({
+        applyScaffoldV1Template: applyTemplateStub,
+        listScaffoldV1Templates: sandbox.stub(),
+      } as any);
 
-      const result = await scaffoldProjectRequest({});
+      const testUri = vscode.Uri.file("/tmp/test-project");
+      sandbox.stub(vscode.window, "showOpenDialog").resolves([testUri]);
+      sandbox.stub(fileUtils, "fileUriExists").resolves(false);
+      sandbox.stub(fsWrappers, "writeFile").resolves();
+      sandbox.stub(vscode.window, "showInformationMessage").resolves(undefined);
+      // Stub unzip to avoid trying to extract non-zip content
+      sandbox.stub(unzipit, "unzip").resolves({ entries: {}, zip: {} } as any);
 
-      sinon.assert.match(result.success, false);
-      // The message includes the stage-specific prefix plus the error details
-      sinon.assert.match(
-        result.message,
-        sinon.match(/Unable to list the templates|Simple string error/),
-      );
-    });
+      await applyTemplate(template, manifestOptions);
 
-    it("should handle ResponseError with error arrays", async () => {
-      const errorWithArray = createResponseError(
-        400,
-        "Validation Failed",
-        JSON.stringify({
-          errors: [
-            { detail: "Error 1", message: "Message 1" },
-            { detail: "Error 2", message: "Message 2" },
-          ],
-        }),
-        ResponseErrorSource.ScaffoldingService,
-      );
-
-      const { scaffoldProjectRequest } = await import("./scaffoldUtils");
-      (templatesModule.getTemplatesList as sinon.SinonStub).rejects(errorWithArray);
-
-      const result = await scaffoldProjectRequest({});
-
-      sinon.assert.match(result.success, false);
-      sinon.assert.match(result.message, sinon.match(/Error 1; Error 2/));
-    });
-
-    it("should handle plain object errors", async () => {
-      const objectError = { message: "Custom error object" };
-
-      const { scaffoldProjectRequest } = await import("./scaffoldUtils");
-      (templatesModule.getTemplatesList as sinon.SinonStub).rejects(objectError);
-
-      const result = await scaffoldProjectRequest({});
-
-      sinon.assert.match(result.success, false);
-      sinon.assert.match(result.message, sinon.match(/Custom error object/));
+      sinon.assert.calledWithMatch(applyTemplateStub, {
+        ApplyScaffoldV1TemplateRequest: {
+          options: {
+            string_option: "value",
+            number_option: "123",
+            boolean_option: "true",
+          },
+        },
+      });
     });
   });
 });

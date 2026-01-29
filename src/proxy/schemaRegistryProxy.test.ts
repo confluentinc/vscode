@@ -344,21 +344,21 @@ describe("proxy/schemaRegistryProxy", function () {
 
   describe("getGlobalConfig()", function () {
     it("should get global compatibility config", async function () {
-      fetchStub.resolves(mockResponse({ compatibility: "BACKWARD" }));
+      fetchStub.resolves(mockResponse({ compatibilityLevel: "BACKWARD" }));
 
       const result = await proxy.getGlobalConfig();
 
-      assert.strictEqual(result.compatibility, "BACKWARD");
+      assert.strictEqual(result.compatibilityLevel, "BACKWARD");
     });
   });
 
   describe("setGlobalConfig()", function () {
     it("should set global compatibility", async function () {
-      fetchStub.resolves(mockResponse({ compatibility: "FULL" }));
+      fetchStub.resolves(mockResponse({ compatibilityLevel: "FULL" }));
 
       const result = await proxy.setGlobalConfig("FULL");
 
-      assert.strictEqual(result.compatibility, "FULL");
+      assert.strictEqual(result.compatibilityLevel, "FULL");
       const [, options] = fetchStub.firstCall.args;
       assert.strictEqual(options.method, "PUT");
     });
@@ -366,21 +366,21 @@ describe("proxy/schemaRegistryProxy", function () {
 
   describe("getSubjectConfig()", function () {
     it("should get subject-level config", async function () {
-      fetchStub.resolves(mockResponse({ compatibility: "NONE" }));
+      fetchStub.resolves(mockResponse({ compatibilityLevel: "NONE" }));
 
       const result = await proxy.getSubjectConfig("my-subject");
 
-      assert.strictEqual(result.compatibility, "NONE");
+      assert.strictEqual(result.compatibilityLevel, "NONE");
     });
   });
 
   describe("setSubjectConfig()", function () {
     it("should set subject-level config", async function () {
-      fetchStub.resolves(mockResponse({ compatibility: "FORWARD" }));
+      fetchStub.resolves(mockResponse({ compatibilityLevel: "FORWARD" }));
 
       const result = await proxy.setSubjectConfig("my-subject", "FORWARD");
 
-      assert.strictEqual(result.compatibility, "FORWARD");
+      assert.strictEqual(result.compatibilityLevel, "FORWARD");
     });
   });
 

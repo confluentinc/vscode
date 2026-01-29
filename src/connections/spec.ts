@@ -64,6 +64,8 @@ export interface KafkaClusterConfig {
   ssl?: TLSConfig;
   /** Custom client ID suffix (useful for WarpStream or port-forwarding). */
   clientIdSuffix?: string;
+  /** Optional Kafka REST proxy URI for connectivity testing. */
+  restUri?: string;
 }
 
 /** Schema Registry configuration. */
@@ -200,4 +202,26 @@ export function hasKafkaCluster(spec: ConnectionSpec): boolean {
  */
 export function hasSchemaRegistry(spec: ConnectionSpec): boolean {
   return !!spec.schemaRegistry?.uri;
+}
+
+/**
+ * Type guard to check if an object is a KafkaClusterConfig.
+ * @param obj The object to check.
+ * @returns true if the object is a KafkaClusterConfig.
+ */
+export function instanceOfKafkaClusterConfig(obj: unknown): obj is KafkaClusterConfig {
+  if (!obj || typeof obj !== "object") return false;
+  const config = obj as KafkaClusterConfig;
+  return typeof config.bootstrapServers === "string";
+}
+
+/**
+ * Type guard to check if an object is a SchemaRegistryConfig.
+ * @param obj The object to check.
+ * @returns true if the object is a SchemaRegistryConfig.
+ */
+export function instanceOfSchemaRegistryConfig(obj: unknown): obj is SchemaRegistryConfig {
+  if (!obj || typeof obj !== "object") return false;
+  const config = obj as SchemaRegistryConfig;
+  return typeof config.uri === "string";
 }

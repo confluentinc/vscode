@@ -4,7 +4,7 @@ import {
   TEST_DIRECT_KAFKA_TOPIC,
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import type { ConnectionId } from "./resource";
 import {

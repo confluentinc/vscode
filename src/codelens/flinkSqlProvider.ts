@@ -7,7 +7,7 @@ import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { CCloudKafkaCluster } from "../models/kafkaCluster";
-import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
+import { hasCCloudAuthSession } from "../authn/ccloudSession";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import type { UriMetadata } from "../storage/types";

@@ -18,7 +18,7 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources/schemaRegistry";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import * as contextValues from "../context/values";
 import { IconNames } from "../icons";
 import type { CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader } from "../loaders";

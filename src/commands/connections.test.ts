@@ -17,7 +17,7 @@ import { ccloudAuthSessionInvalidated } from "../emitters";
 import { KRB5_CONFIG_PATH, SSL_PEM_PATHS } from "../extensionSettings/constants";
 import type { ConnectionId } from "../models/resource";
 import * as notifications from "../notifications";
-import * as ccloudConnections from "../sidecar/connections/ccloud";
+import * as ccloudConnections from "../authn/ccloudSession";
 import { SecretStorageKeys } from "../storage/constants";
 import type { CustomConnectionSpec } from "../storage/resourceManager";
 import { ResourceManager } from "../storage/resourceManager";
@@ -307,9 +307,10 @@ Sign out from this extension?`,
 
     it("should handle file import when the user selects 'Import from file'", async function () {
       const fakeFileUri = { fsPath: "/path/to/connection.json" } as Uri;
+      // Simulate a saved connection file - it has an id from the original export
       const fakeSavedConnection = {
         ...TEST_DIRECT_CONNECTION_FORM_SPEC,
-        id: undefined,
+        // The file has the original id, but it will be overwritten to FILE_UPLOAD
         extVersion: EXTENSION_VERSION,
       };
 
@@ -326,8 +327,8 @@ Sign out from this extension?`,
 
       const expectedSpec = {
         ...fakeSavedConnection,
-        id: "FILE_UPLOAD" as ConnectionId,
-        extVersion: undefined, // don't pass the extension version from the file
+        id: "FILE_UPLOAD" as ConnectionId, // Overwrites the original id
+        // extVersion is passed through from the file as-is
       };
       sinon.assert.calledWithMatch(openDirectConnectionFormStub, expectedSpec);
     });
@@ -550,11 +551,11 @@ Sign out from this extension?`,
       );
     });
 
-    it("should export a connection successfully even if it doesn't have a name", async function () {
+    it("should export a connection successfully even if the name is empty", async function () {
       const item = TEST_DIRECT_ENVIRONMENT;
       const mockSpec: CustomConnectionSpec = {
         ...TEST_DIRECT_CONNECTION_FORM_SPEC,
-        name: undefined,
+        name: "",
       };
       stubbedResourceManager.getDirectConnection.resolves(mockSpec);
       showWarningMessageStub.resolves({ title: "Export" });
@@ -565,7 +566,7 @@ Sign out from this extension?`,
       await connections.exportDirectConnectionCommand(item);
 
       sinon.assert.calledOnce(writeFileStub);
-      // "connection" is the default when no `name` is present
+      // "connection" is the default when `name` is empty
       const expectedFileUri = Uri.joinPath(fakeFolderUri, "connection.json");
       sinon.assert.calledWithMatch(
         writeFileStub,

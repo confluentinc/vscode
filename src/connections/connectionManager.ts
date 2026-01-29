@@ -7,17 +7,17 @@
 
 import { EventEmitter } from "vscode";
 import { DisposableCollection } from "../utils/disposables";
-import { ConnectionType, type ConnectionId, type ConnectionStatus } from "./types";
-import type { ConnectionSpec } from "./spec";
-import { ConnectionStorage } from "./storage";
 import {
-  type ConnectionHandler,
-  type ConnectionStatusChangeEvent,
-  type ConnectionTestResult,
   CCloudConnectionHandler,
   DirectConnectionHandler,
   LocalConnectionHandler,
+  type ConnectionHandler,
+  type ConnectionStatusChangeEvent,
+  type ConnectionTestResult,
 } from "./handlers";
+import type { ConnectionSpec } from "./spec";
+import { ConnectionStorage } from "./storage";
+import { ConnectionType, type ConnectionId, type ConnectionStatus } from "./types";
 
 // Re-export types for use by consumers
 export type { ConnectionStatusChangeEvent };
@@ -330,11 +330,11 @@ export class ConnectionManager extends DisposableCollection {
    */
   private createHandler(spec: ConnectionSpec): ConnectionHandler {
     switch (spec.type) {
-      case ConnectionType.CCLOUD:
+      case ConnectionType.Ccloud:
         return new CCloudConnectionHandler(spec);
-      case ConnectionType.LOCAL:
+      case ConnectionType.Local:
         return new LocalConnectionHandler(spec);
-      case ConnectionType.DIRECT:
+      case ConnectionType.Direct:
         return new DirectConnectionHandler(spec);
       default:
         throw new Error(`Unknown connection type: ${spec.type}`);

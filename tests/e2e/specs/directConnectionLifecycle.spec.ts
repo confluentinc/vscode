@@ -235,7 +235,7 @@ test.describe("Direct Connection CRUD Lifecycle", { tag: [Tag.DirectConnectionCR
 
         // require the local connection to be available with Kafka+SR before starting
         test.use({
-          connectionType: ConnectionType.Local,
+          connectionType: ConnectionType.LOCAL,
           localConnectionConfig: {
             schemaRegistry:
               configType === ConfigType.KafkaAndSchemaRegistry ||
@@ -255,7 +255,7 @@ test.describe("Direct Connection CRUD Lifecycle", { tag: [Tag.DirectConnectionCR
 
           if (configType === ConfigType.Kafka || configType === ConfigType.KafkaAndSchemaRegistry) {
             // copy the local Kafka bootstrap server string
-            const localKafka = await resourcesView.getKafkaCluster(ConnectionType.Local);
+            const localKafka = await resourcesView.getKafkaCluster(ConnectionType.LOCAL);
             await expect(localKafka).not.toHaveCount(0);
             const localKafkaItem = new KafkaClusterItem(page, localKafka.first());
             const bootstrapServers = await localKafkaItem.copyBootstrapServers();
@@ -271,7 +271,7 @@ test.describe("Direct Connection CRUD Lifecycle", { tag: [Tag.DirectConnectionCR
             configType === ConfigType.KafkaAndSchemaRegistry
           ) {
             // copy the local Schema Registry URL string
-            const localSchemaRegistry = await resourcesView.getSchemaRegistry(ConnectionType.Local);
+            const localSchemaRegistry = await resourcesView.getSchemaRegistry(ConnectionType.LOCAL);
             await expect(localSchemaRegistry).not.toHaveCount(0);
             const localSchemaRegistryItem = new SchemaRegistryItem(
               page,
@@ -415,14 +415,14 @@ async function expectConnectionResources(
   configType: ConfigType,
 ): Promise<void> {
   if (configType === ConfigType.Kafka || configType === ConfigType.KafkaAndSchemaRegistry) {
-    const kafkaCluster = await resourcesView.getKafkaCluster(ConnectionType.Direct);
+    const kafkaCluster = await resourcesView.getKafkaCluster(ConnectionType.DIRECT);
     await expect(kafkaCluster).toHaveCount(1);
   }
   if (
     configType === ConfigType.SchemaRegistry ||
     configType === ConfigType.KafkaAndSchemaRegistry
   ) {
-    const schemaRegistry = await resourcesView.getSchemaRegistry(ConnectionType.Direct);
+    const schemaRegistry = await resourcesView.getSchemaRegistry(ConnectionType.DIRECT);
     await expect(schemaRegistry).toHaveCount(1);
   }
 }
@@ -434,14 +434,14 @@ async function focusConnectionResources(
   configType: ConfigType,
 ): Promise<void> {
   if (configType === ConfigType.Kafka || configType === ConfigType.KafkaAndSchemaRegistry) {
-    await topicsView.loadTopics(ConnectionType.Direct, SelectKafkaCluster.FromResourcesView);
+    await topicsView.loadTopics(ConnectionType.DIRECT, SelectKafkaCluster.FromResourcesView);
   }
   if (
     configType === ConfigType.SchemaRegistry ||
     configType === ConfigType.KafkaAndSchemaRegistry
   ) {
     await schemasView.loadSchemaSubjects(
-      ConnectionType.Direct,
+      ConnectionType.DIRECT,
       SelectSchemaRegistry.FromResourcesView,
     );
   }

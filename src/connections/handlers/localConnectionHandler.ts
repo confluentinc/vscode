@@ -6,9 +6,11 @@
  * for connectivity testing.
  */
 
-import { ConnectedState, type ConnectionStatus, type KafkaClusterStatus } from "../types";
 import type { ConnectionSpec } from "../spec";
+import { ConnectedState, type ConnectionStatus, type KafkaClusterStatus } from "../types";
 import { ConnectionHandler, type ConnectionTestResult } from "./connectionHandler";
+import { createHttpClient, HttpError } from "../../proxy/httpClient";
+import { createSchemaRegistryProxy } from "../../proxy/schemaRegistryProxy";
 
 /** Default Kafka REST proxy port for local connections. */
 const LOCAL_KAFKA_REST_PORT = 8082;
@@ -246,12 +248,39 @@ export class LocalConnectionHandler extends ConnectionHandler {
    * Uses the /clusters endpoint to verify cluster access.
    */
   private async testKafkaRestProxy(): Promise<EndpointTestResult> {
+    // First validate the URI format
+    const validationResult = await this.validateKafkaRestProxyConfig(this._kafkaRestUri);
+    if (!validationResult.success) {
+      return validationResult;
+    }
+
     try {
-      // TODO: Phase 3 will implement actual HTTP calls to Kafka REST proxy
-      // For now, we validate the URI and simulate the test
-      const result = await this.validateKafkaRestProxyConfig(this._kafkaRestUri);
-      return result;
+      // Create HTTP client to call the Kafka REST proxy
+      const client = createHttpClient({
+        baseUrl: this._kafkaRestUri,
+        timeout: 10000, // 10 second timeout for local connections
+      });
+
+      // Call GET /kafka/v3/clusters to discover the cluster
+      interface ClustersResponse {
+        data: Array<{ cluster_id: string }>;
+      }
+      const response = await client.get<ClustersResponse>("/kafka/v3/clusters");
+
+      // Extract the cluster ID from the first cluster
+      const clusters = response.data.data;
+      if (clusters && clusters.length > 0) {
+        return { success: true, clusterId: clusters[0].cluster_id };
+      }
+
+      return { success: true, clusterId: "local-cluster" };
     } catch (error) {
+      if (error instanceof HttpError) {
+        return {
+          success: false,
+          error: `Kafka REST proxy error (${error.status}): ${error.message}`,
+        };
+      }
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: `Connection failed: ${message}` };
     }
@@ -262,12 +291,29 @@ export class LocalConnectionHandler extends ConnectionHandler {
    * Uses REST API to verify cluster access.
    */
   private async testSchemaRegistryConnection(uri: string): Promise<EndpointTestResult> {
+    // First validate the URI format
+    const validationResult = await this.validateSchemaRegistryConfig(uri);
+    if (!validationResult.success) {
+      return validationResult;
+    }
+
     try {
-      // TODO: Phase 3 will implement actual Schema Registry API calls
-      // For now, we validate the URI and simulate the test
-      const result = await this.validateSchemaRegistryConfig(uri);
-      return result;
+      // Create Schema Registry proxy (no auth needed for local)
+      const proxy = createSchemaRegistryProxy({
+        baseUrl: uri,
+        timeout: 10000, // 10 second timeout for local connections
+      });
+
+      // Call listSubjects() to verify connectivity
+      await proxy.listSubjects();
+      return { success: true, clusterId: "local-schema-registry" };
     } catch (error) {
+      if (error instanceof HttpError) {
+        return {
+          success: false,
+          error: `Schema Registry error (${error.status}): ${error.message}`,
+        };
+      }
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: `Connection failed: ${message}` };
     }

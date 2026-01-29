@@ -53,14 +53,9 @@ export enum UriMetadataKeys {
 
 export enum SecretStorageKeys {
   /**
-   * Key holding the auth token to communicate with ide-sidecar.
-   */
-  SIDECAR_AUTH_TOKEN = "sidecarAuthToken",
-
-  /**
    * Indicate the outcome of the last CCloud authentication attempt.
    * Used by the `ConfluentCloudAuthProvider` to resolve promises that are waiting for the user's
-   * browser-based authentication flow to complete after handling a URI callback from the sidecar.
+   * browser-based authentication flow to complete after handling a URI callback.
    */
   AUTH_COMPLETED = "authCompleted",
 
@@ -71,7 +66,7 @@ export enum SecretStorageKeys {
    * ever set to "true" or deleted. */
   AUTH_SESSION_EXISTS = "authSessionExists",
 
-  /** Store the latest CCloud connected state received from the sidecar. */
+  /** Store the latest CCloud connected state. */
   CCLOUD_STATE = "ccloudState",
 
   /** A map of connection id:ConnectionSpec */

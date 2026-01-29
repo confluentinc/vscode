@@ -45,9 +45,9 @@ test.describe("Schema Management", { tag: [Tag.EvolveSchema] }, () => {
 
   // test dimensions:
   const connectionTypes: Array<[ConnectionType, Tag]> = [
-    [ConnectionType.Ccloud, Tag.CCloud],
-    [ConnectionType.Direct, Tag.Direct],
-    [ConnectionType.Local, Tag.Local],
+    [ConnectionType.CCLOUD, Tag.CCloud],
+    [ConnectionType.DIRECT, Tag.Direct],
+    [ConnectionType.LOCAL, Tag.Local],
   ];
   const schemaTypes: Array<[SchemaType, string]> = [
     [SchemaType.Avro, "avsc"],

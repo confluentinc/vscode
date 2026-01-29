@@ -1,8 +1,8 @@
 import { Mutex } from "async-mutex";
 import type { SecretStorage, Uri } from "vscode";
 import type { AuthCallbackEvent } from "../authn/types";
-import type { ConnectionSpec } from "../clients/sidecar";
-import { ConnectedState, ConnectionSpecFromJSON, ConnectionSpecToJSON } from "../clients/sidecar";
+import type { ConnectionSpec } from "../connections";
+import { ConnectedState, connectionSpecFromJSON, connectionSpecToJSON } from "../connections";
 import { getExtensionContext } from "../context/extension";
 import type { FormConnectionType } from "../directConnections/types";
 import { ExtensionContextNotSetError } from "../errors";
@@ -730,23 +730,23 @@ export class ResourceManager {
     return reset === "true";
   }
 
-  /** Store the latest CCloud {@link ConnectedState} received from the sidecar. */
+  /** Store the latest CCloud {@link ConnectedState}. */
   async setCCloudState(state: ConnectedState): Promise<void> {
     await this.secrets.store(SecretStorageKeys.CCLOUD_STATE, String(state));
   }
 
-  /** Get the last stored CCloud {@link ConnectedState} received from the sidecar. */
+  /** Get the last stored CCloud {@link ConnectedState}. */
   async getCCloudState(): Promise<ConnectedState> {
     const storedState: string | undefined = await this.secrets.get(SecretStorageKeys.CCLOUD_STATE);
     if (!storedState) {
-      return ConnectedState.None;
+      return ConnectedState.NONE;
     }
 
     if (!Object.values(ConnectedState).includes(storedState as ConnectedState)) {
       logger.warn(
-        `Invalid CCloud state found in storage: ${storedState}. Defaulting to ${ConnectedState.None}.`,
+        `Invalid CCloud state found in storage: ${storedState}. Defaulting to ${ConnectedState.NONE}.`,
       );
-      return ConnectedState.None;
+      return ConnectedState.NONE;
     }
     return storedState as ConnectedState;
   }
@@ -905,23 +905,60 @@ export function getResourceManager(): ResourceManager {
   return ResourceManager.getInstance();
 }
 
+/**
+ * Converts a snake_case string to camelCase.
+ * @example "bootstrap_servers" -> "bootstrapServers"
+ */
+function snakeToCamelCase(str: string): string {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+/**
+ * Recursively converts all object keys from snake_case to camelCase.
+ * Handles nested objects and arrays.
+ */
+function convertKeysToCamelCase(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => convertKeysToCamelCase(item));
+  }
+
+  if (typeof obj === "object") {
+    const converted: Record<string, any> = {};
+    for (const key of Object.keys(obj)) {
+      const camelKey = snakeToCamelCase(key);
+      converted[camelKey] = convertKeysToCamelCase(obj[key]);
+    }
+    return converted;
+  }
+
+  return obj;
+}
+
 /** Convert an object to a typed {@link CustomConnectionSpec}. */
 export function CustomConnectionSpecFromJSON(obj: any): CustomConnectionSpec {
   if (obj == null) {
     return obj;
   }
+
+  // Convert snake_case keys to camelCase (for imported JSON files)
+  const converted = convertKeysToCamelCase(obj);
+
   return {
-    ...ConnectionSpecFromJSON(obj),
-    id: obj["id"] as ConnectionId,
-    formConnectionType: obj["formConnectionType"],
-    specifiedConnectionType: obj["specifiedConnectionType"],
+    ...connectionSpecFromJSON(converted),
+    id: converted["id"] as ConnectionId,
+    formConnectionType: converted["formConnectionType"],
+    specifiedConnectionType: converted["specifiedConnectionType"],
   };
 }
 
 /** Convert a typed {@link CustomConnectionSpec} to an object. */
 export function CustomConnectionSpecToJSON(spec: CustomConnectionSpec): any {
   return {
-    ...ConnectionSpecToJSON(spec),
+    ...connectionSpecToJSON(spec),
     formConnectionType: spec.formConnectionType,
     specifiedConnectionType: spec.specifiedConnectionType,
   };

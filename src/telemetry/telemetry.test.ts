@@ -28,7 +28,7 @@ describe("sendTelemetryIdentifyEvent", () => {
     const userInfo = {
       id: "user123",
       username: "user@mycooldomain.com",
-      social_connection: "github",
+      socialConnection: "github",
     };
     const session = undefined;
 
@@ -76,11 +76,9 @@ describe("sendTelemetryIdentifyEvent", () => {
     });
   });
   it("should not send to logUsage if user id is not available", () => {
-    const userInfo = {
-      id: undefined,
-      username: "user@example.com",
-      social_connection: "github",
-    };
+    // Pass undefined for userInfo entirely to test the no-id case
+    // since UserInfo.id is required
+    const userInfo = undefined;
     const session = undefined;
 
     sendTelemetryIdentifyEvent({
@@ -95,7 +93,7 @@ describe("sendTelemetryIdentifyEvent", () => {
     const userInfo = {
       id: "user1",
       username: "glitchintheusername",
-      social_connection: "github",
+      socialConnection: "github",
     };
     const session = undefined;
 

@@ -1,30 +1,25 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { fetchTopicAuthorizedOperations } from "../authz/topics";
-import type { TopicV3Api } from "../clients/kafkaRest";
-import { ResponseError } from "../clients/kafkaRest";
-import {
-  flinkDatabaseViewResourceChanged,
-  topicChanged,
-  topicsViewResourceChanged,
-} from "../emitters";
+import { flinkDatabaseViewResourceChanged, topicsViewResourceChanged } from "../emitters";
 import { ClusterSelectSyncOption, SYNC_ON_KAFKA_SELECT } from "../extensionSettings/constants";
 import { ResourceLoader } from "../loaders/resourceLoader";
 import { Logger } from "../logging";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
-import { isCCloud, isLocal } from "../models/resource";
+import { isCCloud } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import {
   flinkDatabaseQuickpick,
   kafkaClusterQuickPick,
   kafkaClusterQuickPickWithViewProgress,
 } from "../quickpicks/kafkaClusters";
-import { getSidecar } from "../sidecar";
+// TODO: Phase 6 - Import KafkaRestProxy or use direct API calls
 import { removeProtocolPrefix } from "../utils/bootstrapServers";
 import { TopicViewProvider } from "../viewProviders/topics";
 import { selectSchemaRegistryCommand } from "./schemaRegistry";
-import { waitForTopicToBeDeleted, waitForTopicToExist } from "./utils/topics";
+// Removing unused imports: waitForTopicToBeDeleted, waitForTopicToExist
+// These were used with the sidecar's topic management API
 
 const logger = new Logger("commands.kafkaClusters");
 
@@ -127,42 +122,13 @@ export async function deleteTopicCommand(topic: KafkaTopic) {
     return;
   }
 
-  const client: TopicV3Api = (await getSidecar()).getTopicV3Api(
-    topic.clusterId,
-    topic.connectionId,
-  );
-
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Deleting topic "${topic.name}"...`,
-    },
-    async (progress) => {
-      try {
-        await client.deleteKafkaTopic({
-          cluster_id: topic.clusterId,
-          topic_name: topic.name,
-        });
-        // indicate progress done 33 % now.
-        progress.report({ increment: 33 });
-
-        await waitForTopicToBeDeleted(client, topic.clusterId, topic.name, isLocal(topic));
-        // Another 1/3 way done now.
-        progress.report({ increment: 33 });
-
-        // look up the parent Kafka cluster in order to fire the topicChanged event
-        const loader = ResourceLoader.getInstance(topic.connectionId);
-        const clusters = await loader.getKafkaClustersForEnvironmentId(topic.environmentId);
-        const cluster = clusters.find((c) => c.id === topic.clusterId);
-        if (cluster) {
-          topicChanged.fire({ change: "deleted", cluster });
-        }
-      } catch (error) {
-        const errorMessage = `Failed to delete topic: ${error}`;
-        logger.error(errorMessage);
-        vscode.window.showErrorMessage(errorMessage);
-      }
-    },
+  // TODO: Phase 6 - Implement topic deletion using KafkaRestProxy
+  logger.error("Topic deletion not yet implemented with internal proxy", {
+    topic: topic.name,
+    clusterId: topic.clusterId,
+  });
+  vscode.window.showErrorMessage(
+    "Topic deletion is not yet available. This feature is being migrated.",
   );
 }
 
@@ -224,64 +190,17 @@ export async function createTopicCommand(item?: KafkaCluster): Promise<boolean> 
     value: defaultReplicationFactor,
   });
 
-  const client: TopicV3Api = (await getSidecar()).getTopicV3Api(cluster.id, cluster.connectionId);
-  return await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Creating topic "${topicName}"...`,
-    },
-    async (progress): Promise<boolean> => {
-      try {
-        await client.createKafkaTopic({
-          cluster_id: cluster.id,
-          CreateTopicRequestData: {
-            topic_name: topicName,
-            partitions_count: partitionsCount ? parseInt(partitionsCount, 10) : undefined,
-            replication_factor: replicationFactor ? parseInt(replicationFactor, 10) : undefined,
-            // TODO: add support for `configs` & `validate_only`?
-          },
-        });
-        progress.report({ increment: 33 });
-
-        await waitForTopicToExist(client, cluster.id, topicName, isLocal(cluster));
-        progress.report({ increment: 33 });
-
-        // notify subscribers of the new topic (mainly the Topics and Flink Database views so they
-        // can refresh if focused on the same cluster/database)
-        topicChanged.fire({ change: "added", cluster });
-
-        return true; // indicate the user actually created a topic.
-      } catch (error) {
-        if (!(error instanceof ResponseError)) {
-          // generic error handling
-          const errorMessage = `Error creating topic in "${cluster.name}": ${error}`;
-          logger.error(errorMessage);
-          vscode.window.showErrorMessage(errorMessage);
-          return false;
-        }
-
-        // try to parse the error response to provide a more specific error message to the user,
-        // whether it was a 403/permissions error, some flavor of network error, or something else
-        try {
-          const body = await error.response.json();
-          logger.error("error response while trying to create cluster:", body);
-          // {"error_code":40301,"message":"Authorization failed."}
-          if (body.error_code === 40301) {
-            vscode.window.showErrorMessage(
-              `You do not have permission to create topics in "${cluster.name}".`,
-            );
-          } else {
-            vscode.window.showErrorMessage(
-              `Error creating topic in "${cluster.name}": ${JSON.stringify(body)}`,
-            );
-          }
-        } catch (parseError) {
-          logger.error("error parsing response from createKafkaTopic():", { error, parseError });
-        }
-        return false;
-      }
-    },
+  // TODO: Phase 6 - Implement topic creation using KafkaRestProxy
+  logger.error("Topic creation not yet implemented with internal proxy", {
+    topicName,
+    clusterId: cluster.id,
+    partitionsCount,
+    replicationFactor,
+  });
+  vscode.window.showErrorMessage(
+    "Topic creation is not yet available. This feature is being migrated.",
   );
+  return false;
 }
 
 export async function copyBootstrapServers(item: KafkaCluster) {

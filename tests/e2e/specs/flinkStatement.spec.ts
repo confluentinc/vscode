@@ -14,7 +14,7 @@ test.describe("Flink Statements", { tag: [Tag.CCloud, Tag.FlinkStatements] }, ()
   let webview: FrameLocator;
 
   // tell the `connectionItem` fixture to set up a CCloud connection
-  test.use({ connectionType: ConnectionType.Ccloud });
+  test.use({ connectionType: ConnectionType.CCLOUD });
 
   test.beforeEach(async ({ connectionItem }) => {
     // ensure connection tree item has resources available to work with

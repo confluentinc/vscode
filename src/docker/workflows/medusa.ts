@@ -1,18 +1,18 @@
-import { CancellationToken, Progress } from "vscode";
-import {
+import type { CancellationToken, Progress } from "vscode";
+import type {
   ContainerCreateRequest,
   ContainerCreateResponse,
   ContainerInspectResponse,
-  ContainerStateStatusEnum,
   ContainerSummary,
   HostConfig,
 } from "../../clients/docker";
+import { ContainerStateStatusEnum } from "../../clients/docker";
 import { LOCAL_MEDUSA_INTERNAL_PORT } from "../../constants";
 import { localMedusaConnected } from "../../emitters";
 import { LOCAL_MEDUSA_IMAGE_TAG } from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
-import { getLocalResourceContainers } from "../../sidecar/connections/local";
+import { getContainersForImageAndTag } from "../../docker/local";
 import { UserEvent } from "../../telemetry/events";
 import {
   createContainer,
@@ -22,7 +22,8 @@ import {
 } from "../containers";
 import { createNetwork } from "../networks";
 import { findFreePort } from "../ports";
-import { LocalResourceContainer, LocalResourceWorkflow } from "./base";
+import type { LocalResourceContainer } from "./base";
+import { LocalResourceWorkflow } from "./base";
 
 export const CONTAINER_NAME = "vscode-medusa";
 const HEALTHCHECK_ENDPOINT = "/v1/generators/categories";
@@ -69,7 +70,7 @@ export class MedusaWorkflow extends LocalResourceWorkflow {
     await this.checkForImage(this.imageRepo, this.imageTag);
     if (token.isCancellationRequested) return;
 
-    const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
+    const existingContainers: ContainerSummary[] = await getContainersForImageAndTag(
       this.imageRepo,
       this.imageTag,
       { onlyExtensionManaged: true, statuses: [] },
@@ -119,7 +120,7 @@ export class MedusaWorkflow extends LocalResourceWorkflow {
     this.imageTag = LOCAL_MEDUSA_IMAGE_TAG.value;
 
     this.logAndUpdateProgress(`Checking existing ${this.resourceKind} containers...`);
-    const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
+    const existingContainers: ContainerSummary[] = await getContainersForImageAndTag(
       this.imageRepo,
       this.imageTag,
       { onlyExtensionManaged: false, statuses: [ContainerStateStatusEnum.Running] },

@@ -1,6 +1,5 @@
 import assert from "assert";
 import * as sinon from "sinon";
-import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
@@ -9,18 +8,14 @@ import {
 } from "../../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION_ID } from "../../../tests/unit/testResources/organization";
-import { createResponseError, createTestTopicData } from "../../../tests/unit/testUtils";
-import { TopicV3Api } from "../../clients/kafkaRest";
+import { createTestTopicData } from "../../../tests/unit/testUtils";
 import type { TopicData } from "../../clients/kafkaRest/models";
-import type {
-  GetSchemaByVersionRequest,
-  Schema as ResponseSchema,
-} from "../../clients/schemaRegistryRest";
-import { SubjectsV1Api } from "../../clients/schemaRegistryRest";
 import type { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";
 import type { Schema } from "../../models/schema";
 import { SchemaType, Subject } from "../../models/schema";
-import type * as sidecar from "../../sidecar";
+import * as schemaRegistryProxy from "../../proxy/schemaRegistryProxy";
+import * as kafkaRestProxy from "../../proxy/kafkaRestProxy";
+import { HttpError } from "../../proxy/httpClient";
 import * as privateNetworking from "../../utils/privateNetworking";
 import * as loaderUtils from "./loaderUtils";
 
@@ -111,19 +106,28 @@ describe("loaderUtils.ts", () => {
   });
 
   describe("fetchSubjects() and fetchSchemasForSubject() tests", () => {
-    // Common suite and setup for loaderUtils functions that interact with SubjectsV1Api.
-    let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
+    let mockProxy: {
+      listSubjects: sinon.SinonStub;
+      listVersions: sinon.SinonStub;
+      getSchemaByVersion: sinon.SinonStub;
+    };
 
     beforeEach(() => {
-      const stubbedSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-        getSidecarStub(sandbox);
-      stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
-      stubbedSidecar.getSubjectsV1Api.returns(stubbedSubjectsV1Api);
+      mockProxy = {
+        listSubjects: sandbox.stub(),
+        listVersions: sandbox.stub(),
+        getSchemaByVersion: sandbox.stub(),
+      };
+      sandbox
+        .stub(schemaRegistryProxy, "createSchemaRegistryProxy")
+        .returns(
+          mockProxy as unknown as ReturnType<typeof schemaRegistryProxy.createSchemaRegistryProxy>,
+        );
     });
 
     it("fetchSubjects() should return subjects sorted", async () => {
       const subjectsRaw = ["Subject2", "subject3", "subject1"];
-      stubbedSubjectsV1Api.list.resolves(subjectsRaw);
+      mockProxy.listSubjects.resolves(subjectsRaw);
 
       const subjects = await loaderUtils.fetchSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
       const subjectStrings = subjects.map((s) => s.name);
@@ -134,7 +138,7 @@ describe("loaderUtils.ts", () => {
     });
 
     it("fetchSubjects() should work with empty string subjects", async () => {
-      stubbedSubjectsV1Api.list.resolves(["subject1", "", "subject2"]);
+      mockProxy.listSubjects.resolves(["subject1", "", "subject2"]);
       const subjects = await loaderUtils.fetchSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
       const subjectStrings = subjects.map((s) => s.name);
       // Should include the empty string subject.
@@ -147,21 +151,18 @@ describe("loaderUtils.ts", () => {
       // When fetchSchemasForSubject() starts out and determines the versions of the subject, will
       // learn that there are 3 versions. And as if version 1 was soft deleted.
       const versions = [2, 3, 4];
-      stubbedSubjectsV1Api.listVersions.resolves(versions);
+      mockProxy.listVersions.resolves(versions);
 
-      // Then will ultimately drive the getSchemaByVersion() API client call for each version.
-      async function fakeGetSchemaByVersion(
-        request: GetSchemaByVersionRequest,
-      ): Promise<ResponseSchema> {
+      // Then will ultimately drive the getSchemaByVersion() API call for each version.
+      mockProxy.getSchemaByVersion.callsFake(async (subj: string, version: number) => {
         return {
-          id: Number.parseInt(request.version) + 10000,
-          subject: request.subject,
-          version: parseInt(request.version),
+          id: version + 10000,
+          subject: subj,
+          version: version,
           schema: "insert schema document here",
           schemaType: "AVRO",
         };
-      }
-      stubbedSubjectsV1Api.getSchemaByVersion.callsFake(fakeGetSchemaByVersion);
+      });
 
       // Make the function call. Should drive the above stubs using executeInWorkerPool()
       // and demultiplex its results properly.
@@ -178,11 +179,11 @@ describe("loaderUtils.ts", () => {
         versions.sort((a, b) => b - a),
       );
 
-      // And each schema should have the right properties as from fakeGetSchemaByVersion().
+      // And each schema should have the right properties as from the mock.
       for (const schema of schemas) {
         assert.equal(schema.subject, subject);
         assert.equal(schema.type, SchemaType.Avro);
-        assert.equal(schema.id, schema.version + 10000);
+        assert.equal(schema.id, `${schema.version + 10000}`);
       }
     });
 
@@ -192,24 +193,21 @@ describe("loaderUtils.ts", () => {
       // When fetchSchemasForSubject() starts out and determines the versions of the subject, will
       // learn that there are 3 versions. And as if version 1 was soft deleted.
       const versions = [2, 3, 4];
-      stubbedSubjectsV1Api.listVersions.resolves(versions);
+      mockProxy.listVersions.resolves(versions);
 
-      // Then will ultimately drive the getSchemaByVersion() API client call for each version.
-      async function fakeGetSchemaByVersion(
-        request: GetSchemaByVersionRequest,
-      ): Promise<ResponseSchema> {
-        if (request.version === "3") {
+      // Then will ultimately drive the getSchemaByVersion() API call for each version.
+      mockProxy.getSchemaByVersion.callsFake(async (subj: string, version: number) => {
+        if (version === 3) {
           throw new Error("Failed to fetch schema");
         }
         return {
-          id: Number.parseInt(request.version) + 10000,
-          subject: request.subject,
-          version: parseInt(request.version),
+          id: version + 10000,
+          subject: subj,
+          version: version,
           schema: "insert schema document here",
           schemaType: "AVRO",
         };
-      }
-      stubbedSubjectsV1Api.getSchemaByVersion.callsFake(fakeGetSchemaByVersion);
+      });
 
       // Make the function call. Should drive the above stubs using executeInWorkerPool()
       // and demultiplex its results properly, which in this case means noticing the
@@ -222,29 +220,31 @@ describe("loaderUtils.ts", () => {
   });
 
   describe("fetchTopics()", () => {
-    let mockSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
-    let mockClient: sinon.SinonStubbedInstance<TopicV3Api>;
+    let mockKafkaProxy: {
+      listTopics: sinon.SinonStub;
+    };
 
     beforeEach(() => {
-      mockSidecar = getSidecarStub(sandbox);
-      mockClient = sandbox.createStubInstance(TopicV3Api);
-      mockSidecar.getTopicV3Api.returns(mockClient);
+      mockKafkaProxy = {
+        listTopics: sandbox.stub(),
+      };
+      sandbox
+        .stub(kafkaRestProxy, "createKafkaRestProxy")
+        .returns(
+          mockKafkaProxy as unknown as ReturnType<typeof kafkaRestProxy.createKafkaRestProxy>,
+        );
     });
 
     it("fetchTopics should return sorted topics", async () => {
       // Not sorted route result.
-      const topicsResponseData: TopicData[] = [
+      const unsortedTopicsData: TopicData[] = [
         createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic3", ["READ", "WRITE"]),
         createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic4", ["READ", "WRITE"]),
         createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic1", ["READ", "WRITE"]),
         createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic2", ["READ", "WRITE"]),
       ];
 
-      mockClient.listKafkaTopics.resolves({
-        kind: "kind",
-        metadata: {} as any,
-        data: topicsResponseData,
-      });
+      mockKafkaProxy.listTopics.resolves(unsortedTopicsData);
 
       const topics = await loaderUtils.fetchTopics(TEST_LOCAL_KAFKA_CLUSTER);
 
@@ -254,18 +254,14 @@ describe("loaderUtils.ts", () => {
     });
 
     it("fetchTopics should exclude virtual topics with 0 replication factor", async () => {
-      const topicsResponseData: TopicData[] = [
+      const topicsWithVirtual: TopicData[] = [
         createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic1", ["READ", "WRITE"], 1),
         createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic2", ["READ", "WRITE"], 0), // virtual topic
         createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic3", ["READ", "WRITE"], 3),
         createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic4", ["READ", "WRITE"], 0), // virtual topic
       ];
 
-      mockClient.listKafkaTopics.resolves({
-        kind: "kind",
-        metadata: {} as any,
-        data: topicsResponseData,
-      });
+      mockKafkaProxy.listTopics.resolves(topicsWithVirtual);
 
       const topics = await loaderUtils.fetchTopics(TEST_LOCAL_KAFKA_CLUSTER);
 
@@ -289,8 +285,8 @@ describe("loaderUtils.ts", () => {
           "showPrivateNetworkingHelpNotification",
         );
 
-        const errorResponse = createResponseError(500, "error message", "{}");
-        mockClient.listKafkaTopics.rejects(errorResponse);
+        const httpError = new HttpError("error message", 500, "Internal Server Error");
+        mockKafkaProxy.listTopics.rejects(httpError);
       });
 
       it("fetchTopics should show private networking help notification when notices private networking symptom", async () => {
@@ -302,7 +298,7 @@ describe("loaderUtils.ts", () => {
         sinon.assert.calledOnce(showPrivateNetworkingHelpNotificationStub);
       });
 
-      it("fetchTopics should throw TopicFetchError when not private networking symptom ResponseError", async () => {
+      it("fetchTopics should throw TopicFetchError when not private networking symptom HttpError", async () => {
         containsPrivateNetworkPatternStub.returns(false);
 
         await assert.rejects(
@@ -313,8 +309,8 @@ describe("loaderUtils.ts", () => {
         sinon.assert.notCalled(showPrivateNetworkingHelpNotificationStub);
       });
 
-      it("fetchTopics should throw TopicFetchError when not a ResponseError", async () => {
-        mockClient.listKafkaTopics.rejects(new Error("Some other error"));
+      it("fetchTopics should throw TopicFetchError when not an HttpError", async () => {
+        mockKafkaProxy.listTopics.rejects(new Error("Some other error"));
 
         await assert.rejects(
           loaderUtils.fetchTopics(TEST_CCLOUD_KAFKA_CLUSTER),

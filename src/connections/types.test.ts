@@ -10,15 +10,15 @@ import {
 describe("connections/types", function () {
   describe("ConnectionType enum", function () {
     it("should have CCLOUD value", function () {
-      assert.strictEqual(ConnectionType.CCLOUD, "CCLOUD");
+      assert.strictEqual(ConnectionType.Ccloud, "CCLOUD");
     });
 
     it("should have LOCAL value", function () {
-      assert.strictEqual(ConnectionType.LOCAL, "LOCAL");
+      assert.strictEqual(ConnectionType.Local, "LOCAL");
     });
 
     it("should have DIRECT value", function () {
-      assert.strictEqual(ConnectionType.DIRECT, "DIRECT");
+      assert.strictEqual(ConnectionType.Direct, "DIRECT");
     });
   });
 

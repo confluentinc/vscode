@@ -8,13 +8,14 @@ import esbuild from "rollup-plugin-esbuild";
 import sanitize from "sanitize-html";
 import type { SinonStub } from "sinon";
 import type {
+  ConnectionId,
   ConnectionSpec,
   ConnectionType,
   KerberosCredentials,
   OAuthCredentials,
   ScramCredentials,
-} from "../clients/sidecar";
-import { HashAlgorithm } from "../clients/sidecar";
+} from "../connections";
+import { CredentialType, ScramHashAlgorithm } from "../connections";
 import { test } from "./baseTest";
 
 const template = readFileSync(new URL("direct-connect-form.html", import.meta.url), "utf8");
@@ -88,7 +89,7 @@ test("renders form html correctly", async ({ page }) => {
   const connectionNameInput = page.locator("input[name='name']");
   await expect(connectionNameInput).toBeVisible();
 
-  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
+  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrapServers']");
   await expect(bootstrapServersInput).toBeVisible();
 
   const sslCheckbox = page.locator("input[type='checkbox'][name='kafka_cluster.ssl.enabled']");
@@ -147,38 +148,36 @@ test("renders form with existing connection spec values (for edit/import)", asyn
   const nameInput = page.locator("input[name='name']");
   await expect(nameInput).toHaveValue(SPEC_SAMPLE.name);
 
-  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
-  await expect(bootstrapServersInput).toHaveValue(SPEC_SAMPLE.kafka_cluster.bootstrap_servers);
+  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrapServers']");
+  await expect(bootstrapServersInput).toHaveValue(SPEC_SAMPLE.kafkaCluster.bootstrapServers);
 
   const uriInput = page.locator("input[name='schema_registry.uri']");
-  await expect(uriInput).toHaveValue(SPEC_SAMPLE.schema_registry.uri);
+  await expect(uriInput).toHaveValue(SPEC_SAMPLE.schemaRegistry.uri);
 
   const kafkaSslCheckbox = page.locator("input[type='checkbox'][name='kafka_cluster.ssl.enabled']");
   await expect(await kafkaSslCheckbox?.isChecked()).toBe(true);
 
   const keystorePathInput = page.locator("input[name='kafka_cluster.ssl.keystore.path']");
-  await expect(keystorePathInput).toHaveValue(SPEC_SAMPLE.kafka_cluster.ssl.keystore.path);
+  await expect(keystorePathInput).toHaveValue(SPEC_SAMPLE.kafkaCluster.ssl.keystore.path);
 
   const keystorePasswordInput = page.locator("input[name='kafka_cluster.ssl.keystore.password']");
-  await expect(keystorePasswordInput).toHaveValue(SPEC_SAMPLE.kafka_cluster.ssl.keystore.password);
+  await expect(keystorePasswordInput).toHaveValue(SPEC_SAMPLE.kafkaCluster.ssl.keystore.password);
 
   const keystoreKeyPasswordInput = page.locator(
     "input[name='kafka_cluster.ssl.keystore.key_password']",
   );
   await expect(keystoreKeyPasswordInput).toHaveValue(
-    SPEC_SAMPLE.kafka_cluster.ssl.keystore.key_password,
+    SPEC_SAMPLE.kafkaCluster.ssl.keystore.keyPassword,
   );
 
   const truststorePathInput = page.locator("input[name='kafka_cluster.ssl.truststore.path']");
-  await expect(await truststorePathInput).toHaveValue(
-    SPEC_SAMPLE.kafka_cluster.ssl.truststore.path,
-  );
+  await expect(await truststorePathInput).toHaveValue(SPEC_SAMPLE.kafkaCluster.ssl.truststore.path);
 
   const truststorePasswordInput = page.locator(
     "input[name='kafka_cluster.ssl.truststore.password']",
   );
   await expect(await truststorePasswordInput).toHaveValue(
-    SPEC_SAMPLE.kafka_cluster.ssl.truststore.password,
+    SPEC_SAMPLE.kafkaCluster.ssl.truststore.password,
   );
 });
 test("submits the form with defaults & dummy data", async ({ execute, page }) => {
@@ -201,7 +200,7 @@ test("submits the form with defaults & dummy data", async ({ execute, page }) =>
 
   // Fill out the form with dummy data & submit
   await page.fill("input[name=name]", "Test Connection");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "fakehost:9092");
   await page.fill("input[name='schema_registry.uri']", "https://fakehost:8081");
   await page.click("input[type=submit][value='Save']");
 
@@ -215,7 +214,7 @@ test("submits the form with defaults & dummy data", async ({ execute, page }) =>
   expect(submitCallName).toBe("Submit");
   const submitCallData = submitCall?.[1];
   expect(submitCallData).toEqual({
-    "kafka_cluster.bootstrap_servers": "fakehost:9092",
+    "kafka_cluster.bootstrapServers": "fakehost:9092",
     "kafka_cluster.auth_type": "None",
     "kafka_cluster.client_id_suffix": "",
     "kafka_cluster.ssl.enabled": "true",
@@ -246,7 +245,7 @@ test("changes the checkbox for ssl to false if localhost", async ({ execute, pag
 
   // Fill out the form with dummy data & submit
   await page.fill("input[name=name]", "Test Connection");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "localhost:9092");
   await page.fill("input[name='schema_registry.uri']", "http://localhost:8081");
   // Click to make sure URI blurs
   await page.click("p:has-text('TLS Configuration')");
@@ -269,7 +268,7 @@ test("changes the checkbox for ssl to false if localhost", async ({ execute, pag
   expect(submitCallName).toBe("Submit");
   const submitCallData = submitCall?.[1];
   expect(submitCallData).toEqual({
-    "kafka_cluster.bootstrap_servers": "localhost:9092",
+    "kafka_cluster.bootstrapServers": "localhost:9092",
     "kafka_cluster.auth_type": "None",
     "kafka_cluster.ssl.enabled": "false",
     "kafka_cluster.client_id_suffix": "",
@@ -300,7 +299,7 @@ test("changes schema registry ssl checkbox based on uri scheme", async ({ execut
 
   // Fill out basic form data
   await page.fill("input[name=name]", "Test Connection");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "fakehost:9092");
 
   // Test http:// URL - should disable SSL
   await page.fill("input[name='schema_registry.uri']", "http://example.com:8081");
@@ -349,7 +348,7 @@ test("submits the form with empty trust/key stores as defaults when ssl enabled"
 
   // Fill out the form with dummy data
   await page.fill("input[name=name]", "Test Connection");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "fakehost:9092");
   await page.fill("input[name='schema_registry.uri']", "https://fakehost:8081");
   await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
 
@@ -364,7 +363,7 @@ test("submits the form with empty trust/key stores as defaults when ssl enabled"
   expect(submitCallName).toBe("Submit");
   const submitCallData = submitCall?.[1];
   expect(submitCallData).toEqual({
-    "kafka_cluster.bootstrap_servers": "fakehost:9092",
+    "kafka_cluster.bootstrapServers": "fakehost:9092",
     "kafka_cluster.auth_type": "None",
     "kafka_cluster.client_id_suffix": "",
     "kafka_cluster.ssl.enabled": "true",
@@ -398,7 +397,7 @@ test("submits the form with namespaced TLS config fields when filled", async ({
 
   // Fill in our kafka + kafka ssl config settings
   await page.fill("input[name=name]", "Test Connection");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "fakehost:9092");
   await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
   // Click to show the advanced settings, then fill them in
   await page.click("p:has-text('TLS Configuration')");
@@ -421,7 +420,7 @@ test("submits the form with namespaced TLS config fields when filled", async ({
   expect(submitCall?.[0]).toBe("Submit");
   // Verify correct form data
   expect(submitCall?.[1]).toEqual({
-    "kafka_cluster.bootstrap_servers": "fakehost:9092",
+    "kafka_cluster.bootstrapServers": "fakehost:9092",
     "kafka_cluster.auth_type": "None",
     "kafka_cluster.client_id_suffix": "",
     name: "Test Connection",
@@ -468,39 +467,35 @@ test("adds TLS fields to form data for existing spec (edit/import)", async ({ ex
   const nameInput = page.locator("input[name='name']");
   await expect(await nameInput).toHaveValue(SPEC_SAMPLE.name);
 
-  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
-  await expect(await bootstrapServersInput).toHaveValue(
-    SPEC_SAMPLE.kafka_cluster.bootstrap_servers,
-  );
+  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrapServers']");
+  await expect(await bootstrapServersInput).toHaveValue(SPEC_SAMPLE.kafkaCluster.bootstrapServers);
 
   const kafkaSslCheckbox = page.locator("input[type='checkbox'][name='kafka_cluster.ssl.enabled']");
   await expect(await kafkaSslCheckbox?.isChecked()).toBe(true);
 
   const keystorePathInput = page.locator("input[name='kafka_cluster.ssl.keystore.path']");
-  await expect(await keystorePathInput).toHaveValue(SPEC_SAMPLE.kafka_cluster.ssl.keystore.path);
+  await expect(await keystorePathInput).toHaveValue(SPEC_SAMPLE.kafkaCluster.ssl.keystore.path);
 
   const keystorePasswordInput = page.locator("input[name='kafka_cluster.ssl.keystore.password']");
   await expect(await keystorePasswordInput).toHaveValue(
-    SPEC_SAMPLE.kafka_cluster.ssl.keystore.password,
+    SPEC_SAMPLE.kafkaCluster.ssl.keystore.password,
   );
 
   const keystoreKeyPasswordInput = page.locator(
     "input[name='kafka_cluster.ssl.keystore.key_password']",
   );
   await expect(await keystoreKeyPasswordInput).toHaveValue(
-    SPEC_SAMPLE.kafka_cluster.ssl.keystore.key_password,
+    SPEC_SAMPLE.kafkaCluster.ssl.keystore.keyPassword,
   );
 
   const truststorePathInput = page.locator("input[name='kafka_cluster.ssl.truststore.path']");
-  await expect(await truststorePathInput).toHaveValue(
-    SPEC_SAMPLE.kafka_cluster.ssl.truststore.path,
-  );
+  await expect(await truststorePathInput).toHaveValue(SPEC_SAMPLE.kafkaCluster.ssl.truststore.path);
 
   const truststorePasswordInput = page.locator(
     "input[name='kafka_cluster.ssl.truststore.password']",
   );
   await expect(await truststorePasswordInput).toHaveValue(
-    SPEC_SAMPLE.kafka_cluster.ssl.truststore.password,
+    SPEC_SAMPLE.kafkaCluster.ssl.truststore.password,
   );
 });
 test("adds advanced ssl fields even if section is collapsed", async ({ execute, page }) => {
@@ -523,7 +518,7 @@ test("adds advanced ssl fields even if section is collapsed", async ({ execute, 
 
   // Fill in our kafka + kafka ssl config settings
   await page.fill("input[name=name]", "Test Connection");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "fakehost:9092");
   await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
   // Click to show the advanced settings, then fill them in
   await page.click("p:has-text('TLS Configuration')");
@@ -545,7 +540,7 @@ test("adds advanced ssl fields even if section is collapsed", async ({ execute, 
   expect(submitCall?.[1]).toEqual({
     name: "Test Connection",
     formConnectionType: "Apache Kafka",
-    "kafka_cluster.bootstrap_servers": "fakehost:9092",
+    "kafka_cluster.bootstrapServers": "fakehost:9092",
     "kafka_cluster.auth_type": "None",
     "kafka_cluster.client_id_suffix": "",
     "kafka_cluster.ssl.enabled": "true",
@@ -578,7 +573,7 @@ test("submits values for SASL/SCRAM auth type when filled in", async ({ execute,
 
   // Fill in the form with SASL/SCRAM auth type
   await page.fill("input[name=name]", "Test Connection");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "fakehost:9092");
   await page.selectOption("select[name='kafka_cluster.auth_type']", "SCRAM");
   // Don't update hash_algorithm, so we can verify it is sent with default value
   // Wait a few milliseconds to ensure the default value is set to form (test is much faster than human)
@@ -603,7 +598,7 @@ test("submits values for SASL/SCRAM auth type when filled in", async ({ execute,
   expect(submitCall?.[1]).toEqual({
     name: "Test Connection",
     formConnectionType: "Apache Kafka",
-    "kafka_cluster.bootstrap_servers": "fakehost:9092",
+    "kafka_cluster.bootstrapServers": "fakehost:9092",
     "kafka_cluster.auth_type": "SCRAM",
     "kafka_cluster.client_id_suffix": "",
     "kafka_cluster.ssl.enabled": "true",
@@ -647,10 +642,8 @@ test("populates values for SASL/SCRAM auth type when they're in the spec", async
   const nameInput = page.locator("input[name='name']");
   await expect(nameInput).toHaveValue(SPEC_SAMPLE_SCRAM.name!);
 
-  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
-  await expect(bootstrapServersInput).toHaveValue(
-    SPEC_SAMPLE_SCRAM.kafka_cluster!.bootstrap_servers,
-  );
+  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrapServers']");
+  await expect(bootstrapServersInput).toHaveValue(SPEC_SAMPLE_SCRAM.kafkaCluster!.bootstrapServers);
 
   const kafkaSslCheckbox = page.locator("input[type='checkbox'][name='kafka_cluster.ssl.enabled']");
   await expect(kafkaSslCheckbox).toBeChecked();
@@ -658,12 +651,12 @@ test("populates values for SASL/SCRAM auth type when they're in the spec", async
   const scramHashAlgoSelect = page.locator(
     "select[name='kafka_cluster.credentials.hash_algorithm']",
   );
-  await expect(scramHashAlgoSelect).toHaveValue(SCRAM.hash_algorithm);
+  await expect(scramHashAlgoSelect).toHaveValue(SCRAM.hashAlgorithm);
 
   const scramUsernameInput = page.locator("input[name='kafka_cluster.credentials.scram_username']");
   await expect(scramUsernameInput).toHaveValue(
     // @ts-expect-error another example of the type not knowing which creds are present
-    SPEC_SAMPLE_SCRAM.kafka_cluster!.credentials!.scram_username,
+    SPEC_SAMPLE_SCRAM.kafkaCluster!.credentials!.username,
   );
 
   const scramPasswordInput = page.locator("input[name='kafka_cluster.credentials.scram_password']");
@@ -688,7 +681,7 @@ test("submits values for SASL/OAUTHBEARER auth type when filled in", async ({ ex
 
   // Fill in the form with SASL/OAUTHBEARER auth type
   await page.fill("input[name=name]", "Test Connection");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "fakehost:9092");
   await page.selectOption("select[name='formConnectionType']", "Confluent Cloud");
   await page.selectOption("select[name='kafka_cluster.auth_type']", "OAuth");
   await page.fill(
@@ -737,7 +730,7 @@ test("submits values for SASL/OAUTHBEARER auth type when filled in", async ({ ex
   expect(submitCall?.[1]).toEqual({
     name: "Test Connection",
     formConnectionType: "Confluent Cloud",
-    "kafka_cluster.bootstrap_servers": "fakehost:9092",
+    "kafka_cluster.bootstrapServers": "fakehost:9092",
     "kafka_cluster.auth_type": "OAuth",
     "kafka_cluster.client_id_suffix": "",
     "kafka_cluster.credentials.ccloud_identity_pool_id": "pool-xyz789",
@@ -791,10 +784,8 @@ test("populates values for SASL/OAUTHBEARER auth type when they exist in the spe
   const nameInput = page.locator("input[name='name']");
   await expect(nameInput).toHaveValue(SPEC_SAMPLE_OAUTH.name!);
 
-  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
-  await expect(bootstrapServersInput).toHaveValue(
-    SPEC_SAMPLE_OAUTH.kafka_cluster!.bootstrap_servers,
-  );
+  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrapServers']");
+  await expect(bootstrapServersInput).toHaveValue(SPEC_SAMPLE_OAUTH.kafkaCluster!.bootstrapServers);
 
   // Check Kafka OAuth credentials
   const kafkaAuthTypeSelect = page.locator("select[name='kafka_cluster.auth_type']");
@@ -803,13 +794,13 @@ test("populates values for SASL/OAUTHBEARER auth type when they exist in the spe
   const kafkaTokensUrlInput = page.locator("input[name='kafka_cluster.credentials.tokens_url']");
   await expect(kafkaTokensUrlInput).toHaveValue(
     // @ts-expect-error credentials could be of different types
-    SPEC_SAMPLE_OAUTH.kafka_cluster.credentials.tokens_url,
+    SPEC_SAMPLE_OAUTH.kafkaCluster.credentials.tokens_url,
   );
 
   const kafkaClientIdInput = page.locator("input[name='kafka_cluster.credentials.client_id']");
   await expect(kafkaClientIdInput).toHaveValue(
     // @ts-expect-error credentials could be of different types
-    SPEC_SAMPLE_OAUTH.kafka_cluster.credentials.client_id,
+    SPEC_SAMPLE_OAUTH.kafkaCluster.credentials.client_id,
   );
 
   const kafkaClientSecretInput = page.locator(
@@ -817,7 +808,7 @@ test("populates values for SASL/OAUTHBEARER auth type when they exist in the spe
   );
   await expect(kafkaClientSecretInput).toHaveValue(
     // @ts-expect-error credentials could be of different types
-    SPEC_SAMPLE_OAUTH.kafka_cluster.credentials.client_secret,
+    SPEC_SAMPLE_OAUTH.kafkaCluster.credentials.client_secret,
   );
 
   const kafkaClusterIdInput = page.locator(
@@ -825,7 +816,7 @@ test("populates values for SASL/OAUTHBEARER auth type when they exist in the spe
   );
   await expect(kafkaClusterIdInput).toHaveValue(
     // @ts-expect-error credentials could be of different types
-    SPEC_SAMPLE_OAUTH.kafka_cluster.credentials.ccloud_logical_cluster_id,
+    SPEC_SAMPLE_OAUTH.kafkaCluster.credentials.ccloud_logical_cluster_id,
   );
 
   // Check Schema Registry OAuth credentials
@@ -835,13 +826,13 @@ test("populates values for SASL/OAUTHBEARER auth type when they exist in the spe
   const schemaTokensUrlInput = page.locator("input[name='schema_registry.credentials.tokens_url']");
   await expect(schemaTokensUrlInput).toHaveValue(
     // @ts-expect-error credentials could be of different types
-    SPEC_SAMPLE_OAUTH.schema_registry.credentials.tokens_url,
+    SPEC_SAMPLE_OAUTH.schemaRegistry.credentials.tokens_url,
   );
 
   const schemaClientIdInput = page.locator("input[name='schema_registry.credentials.client_id']");
   await expect(schemaClientIdInput).toHaveValue(
     // @ts-expect-error credentials could be of different types
-    SPEC_SAMPLE_OAUTH.schema_registry.credentials.client_id,
+    SPEC_SAMPLE_OAUTH.schemaRegistry.credentials.client_id,
   );
 
   const schemaClientSecretInput = page.locator(
@@ -849,7 +840,7 @@ test("populates values for SASL/OAUTHBEARER auth type when they exist in the spe
   );
   await expect(schemaClientSecretInput).toHaveValue(
     // @ts-expect-error credentials could be of different types
-    SPEC_SAMPLE_OAUTH.schema_registry.credentials.client_secret,
+    SPEC_SAMPLE_OAUTH.schemaRegistry.credentials.client_secret,
   );
 });
 test("submits values for Kerberos auth type when filled in", async ({ execute, page }) => {
@@ -871,7 +862,7 @@ test("submits values for Kerberos auth type when filled in", async ({ execute, p
 
   // Fill in the form with Kerberos auth type
   await page.fill("input[name=name]", "Test Connection");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "fakehost:9092");
   await page.selectOption("select[name='kafka_cluster.auth_type']", "Kerberos");
   await page.fill("input[name='kafka_cluster.credentials.principal']", "user@EXAMPLE.COM");
   await page.fill("input[name='kafka_cluster.credentials.keytab_path']", "/path/to/keytab");
@@ -892,7 +883,7 @@ test("submits values for Kerberos auth type when filled in", async ({ execute, p
   expect(submitCall?.[1]).toEqual({
     name: "Test Connection",
     formConnectionType: "Apache Kafka",
-    "kafka_cluster.bootstrap_servers": "fakehost:9092",
+    "kafka_cluster.bootstrapServers": "fakehost:9092",
     "kafka_cluster.auth_type": "Kerberos",
     "kafka_cluster.client_id_suffix": "",
     "kafka_cluster.credentials.principal": "user@EXAMPLE.COM",
@@ -935,9 +926,9 @@ test("populates values for Kerberos auth type when they exist in the spec (edit/
   const nameInput = page.locator("input[name='name']");
   await expect(nameInput).toHaveValue(SPEC_SAMPLE_KERBEROS.name!);
 
-  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
+  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrapServers']");
   await expect(bootstrapServersInput).toHaveValue(
-    SPEC_SAMPLE_KERBEROS.kafka_cluster!.bootstrap_servers,
+    SPEC_SAMPLE_KERBEROS.kafkaCluster!.bootstrapServers,
   );
 
   // Check Kafka Kerberos credentials
@@ -947,13 +938,13 @@ test("populates values for Kerberos auth type when they exist in the spec (edit/
   const kafkaPrincipalInput = page.locator("input[name='kafka_cluster.credentials.principal']");
   await expect(kafkaPrincipalInput).toHaveValue(
     // @ts-expect-error credentials could be of different types
-    SPEC_SAMPLE_KERBEROS.kafka_cluster.credentials.principal,
+    SPEC_SAMPLE_KERBEROS.kafkaCluster.credentials.principal,
   );
 
   const kafkaKeytabInput = page.locator("input[name='kafka_cluster.credentials.keytab_path']");
   await expect(kafkaKeytabInput).toHaveValue(
     // @ts-expect-error credentials could be of different types
-    SPEC_SAMPLE_KERBEROS.kafka_cluster.credentials.keytab_path,
+    SPEC_SAMPLE_KERBEROS.kafkaCluster.credentials.keytab_path,
   );
 
   const kafkaServiceNameInput = page.locator(
@@ -961,7 +952,7 @@ test("populates values for Kerberos auth type when they exist in the spec (edit/
   );
   await expect(kafkaServiceNameInput).toHaveValue(
     // @ts-expect-error credentials could be of different types
-    SPEC_SAMPLE_KERBEROS.kafka_cluster.credentials.service_name,
+    SPEC_SAMPLE_KERBEROS.kafkaCluster.credentials.service_name,
   );
 });
 test("submits ssl verify_hostname as false when unchecked", async ({ execute, page }) => {
@@ -981,7 +972,7 @@ test("submits ssl verify_hostname as false when unchecked", async ({ execute, pa
   });
 
   await page.fill("input[name=name]", "SSL Verify Test");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "fakehost:9092");
   await page.fill("input[name='schema_registry.uri']", "https://fakehost:8081");
 
   await page.click("p:has-text('TLS Configuration')");
@@ -1018,7 +1009,7 @@ test("submits ssl.enabled as false when unchecked", async ({ execute, page }) =>
 
   // Fill in basic form data
   await page.fill("input[name=name]", "SSL Disabled Test");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "fakehost:9092");
   await page.fill("input[name='schema_registry.uri']", "https://fakehost:8081");
 
   // Ensure SSL is unchecked for both Kafka and Schema Registry
@@ -1055,7 +1046,7 @@ test("submits default types for keystore and truststore", async ({ execute, page
 
   // Fill in basic form data
   await page.fill("input[name=name]", "SSL Disabled Test");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "fakehost:9092");
   await page.fill("input[name='schema_registry.uri']", "https://fakehost:8081");
   await page.click("p:has-text('TLS Configuration')");
   await page.fill("input[name='kafka_cluster.ssl.keystore.path']", "/path/to/keystore");
@@ -1092,7 +1083,7 @@ test("enforces SCRAM_SHA_512 for WarpStream platform", async ({ execute, page })
 
   // Fill in the form with WarpStream and SCRAM auth
   await page.fill("input[name=name]", "WarpStream Test");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "localhost:9092");
   await page.selectOption("select[name='formConnectionType']", "WarpStream");
   await page.selectOption("select[name='kafka_cluster.auth_type']", "SCRAM");
 
@@ -1115,7 +1106,7 @@ test("enforces SCRAM_SHA_512 for WarpStream platform", async ({ execute, page })
     expect.objectContaining({
       name: "WarpStream Test",
       formConnectionType: "WarpStream",
-      "kafka_cluster.bootstrap_servers": "localhost:9092",
+      "kafka_cluster.bootstrapServers": "localhost:9092",
       "kafka_cluster.auth_type": "SCRAM",
       "kafka_cluster.credentials.hash_algorithm": "SCRAM_SHA_512",
       "kafka_cluster.credentials.scram_username": "user",
@@ -1147,7 +1138,7 @@ test("sets the client ID suffix correctly when using K8s port-forwarding for War
 
   // Fill in the form with WarpStream and SCRAM auth
   await page.fill("input[name=name]", "WarpStream Test");
-  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.fill("input[name='kafka_cluster.bootstrapServers']", "localhost:9092");
   await page.selectOption("select[name='kafka_cluster.auth_type']", "None");
   await page.selectOption("select[name='formConnectionType']", "WarpStream");
   // Connect to WarpStream agents via Kubernetes port-forwarding
@@ -1168,7 +1159,7 @@ test("sets the client ID suffix correctly when using K8s port-forwarding for War
     expect.objectContaining({
       name: "WarpStream Test",
       formConnectionType: "WarpStream",
-      "kafka_cluster.bootstrap_servers": "localhost:9092",
+      "kafka_cluster.bootstrapServers": "localhost:9092",
       "kafka_cluster.auth_type": "None",
       "kafka_cluster.client_id_suffix": ",ws_host_override=localhost",
       "kafka_cluster.ssl.enabled": "false",
@@ -1253,15 +1244,15 @@ const SPEC_SAMPLE = {
   id: "123",
   name: "Sample",
   type: "DIRECT",
-  kafka_cluster: {
-    bootstrap_servers: "fakehost:9092",
+  kafkaCluster: {
+    bootstrapServers: "fakehost:9092",
     ssl: {
       enabled: true,
       keystore: {
         path: "/path/to/keystore.jks",
         type: "JKS",
         password: "keystore-password",
-        key_password: "key-password",
+        keyPassword: "key-password",
       },
       truststore: {
         path: "/path/to/truststore.jks",
@@ -1270,7 +1261,7 @@ const SPEC_SAMPLE = {
       },
     },
   },
-  schema_registry: {
+  schemaRegistry: {
     uri: "https://fakehost:8081",
     ssl: {
       enabled: true,
@@ -1278,70 +1269,65 @@ const SPEC_SAMPLE = {
   },
 };
 const MINIMAL_KAFKA_SAMPLE = {
-  id: "123",
+  id: "123" as ConnectionId,
   name: "Sample",
   type: "DIRECT" as ConnectionType,
-  kafka_cluster: {
-    bootstrap_servers: "fakehost:9092",
+  kafkaCluster: {
+    bootstrapServers: "fakehost:9092",
     ssl: {
       enabled: true,
     },
   },
 };
 const SCRAM: ScramCredentials = {
-  hash_algorithm: HashAlgorithm._256,
-  scram_username: "user",
-  scram_password: "password",
+  type: CredentialType.SCRAM,
+  hashAlgorithm: ScramHashAlgorithm.SHA_256,
+  username: "user",
+  password: "password",
 };
 const SPEC_SAMPLE_SCRAM: ConnectionSpec = {
   ...MINIMAL_KAFKA_SAMPLE,
-  kafka_cluster: {
-    ...MINIMAL_KAFKA_SAMPLE.kafka_cluster,
-    credentials: {
-      ...SCRAM,
-    },
+  kafkaCluster: {
+    ...MINIMAL_KAFKA_SAMPLE.kafkaCluster,
+    credentials: SCRAM,
   },
 };
 const OAUTH: OAuthCredentials = {
-  tokens_url: "https://auth-provider.example/oauth2/token",
-  client_id: "client123",
-  client_secret: "secret456",
+  type: CredentialType.OAUTH,
+  tokensUrl: "https://auth-provider.example/oauth2/token",
+  clientId: "client123",
+  clientSecret: "secret456",
   scope: "kafka-cluster",
-  connect_timeout_millis: 5000,
-  ccloud_logical_cluster_id: "lkc-abc123",
-  ccloud_identity_pool_id: "pool-xyz789",
+  connectTimeoutMillis: 5000,
+  ccloudLogicalClusterId: "lkc-abc123",
+  ccloudIdentityPoolId: "pool-xyz789",
 };
 const SPEC_SAMPLE_OAUTH: ConnectionSpec = {
   ...MINIMAL_KAFKA_SAMPLE,
-  kafka_cluster: {
-    ...MINIMAL_KAFKA_SAMPLE.kafka_cluster,
-    credentials: {
-      ...OAUTH,
-    },
+  kafkaCluster: {
+    ...MINIMAL_KAFKA_SAMPLE.kafkaCluster,
+    credentials: OAUTH,
   },
-  schema_registry: {
-    ...SPEC_SAMPLE.schema_registry,
+  schemaRegistry: {
+    ...SPEC_SAMPLE.schemaRegistry,
     ssl: {
       enabled: true,
     },
-    credentials: {
-      ...OAUTH,
-    },
+    credentials: OAUTH,
   },
 };
 
 const KERBEROS: KerberosCredentials = {
+  type: CredentialType.KERBEROS,
   principal: "user@EXAMPLE.COM",
-  keytab_path: "/path/to/keytab",
-  service_name: "kafka",
+  keytabPath: "/path/to/keytab",
+  serviceName: "kafka",
 };
 
 const SPEC_SAMPLE_KERBEROS: ConnectionSpec = {
   ...MINIMAL_KAFKA_SAMPLE,
-  kafka_cluster: {
-    ...MINIMAL_KAFKA_SAMPLE.kafka_cluster,
-    credentials: {
-      ...KERBEROS,
-    },
+  kafkaCluster: {
+    ...MINIMAL_KAFKA_SAMPLE.kafkaCluster,
+    credentials: KERBEROS,
   },
 };

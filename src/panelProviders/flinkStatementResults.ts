@@ -1,26 +1,27 @@
 import { randomBytes } from "crypto";
-import { ObservableScope } from "inertial";
+import { ObservableScope, type Scope } from "inertial";
 import {
   commands,
   type Disposable,
   type ExtensionContext,
   Uri,
-  type Webview,
   type WebviewView,
   type WebviewViewProvider,
   window,
 } from "vscode";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
-import { ExtensionContextNotSetError } from "../errors";
-import { DEFAULT_RESULT_LIMIT } from "../flinkSql/constants";
-import { FlinkStatementResultsManager } from "../flinkSql/flinkStatementResultsManager";
+import { ExtensionContextNotSetError, logError } from "../errors";
+import { DEFAULT_RESULTS_LIMIT } from "../flinkSql/flinkStatementResults";
+import { getFlinkSqlApiProvider } from "../flinkSql/flinkSqlApiProvider";
+import {
+  FlinkStatementResultsManager,
+  type MessageType,
+} from "../flinkSql/flinkStatementResultsManager";
 import { Logger } from "../logging";
 import { type FlinkStatement } from "../models/flinkStatement";
-import { getSidecar } from "../sidecar";
 import { DisposableCollection } from "../utils/disposables";
-import { handleWebviewMessage } from "../webview/comms/comms";
-import statementResultsHtmlTemplate from "../webview/flink-statement-results.html";
+import flinkStatementResultsHtml from "../webview/flink-statement-results.html";
 
 const logger = new Logger("panelProviders.flinkStatementResults");
 
@@ -38,8 +39,10 @@ export class FlinkStatementResultsPanelProvider
   // for webview handling:
   private extensionUri: Uri;
   private view?: WebviewView;
+
+  // for results management:
   private resultsManager?: FlinkStatementResultsManager;
-  private observableScope?: ReturnType<typeof ObservableScope>;
+  private resultsManagerScope?: Scope;
 
   constructor() {
     super();
@@ -122,42 +125,76 @@ export class FlinkStatementResultsPanelProvider
       }
     }
 
-    // TODO: refactor the block below to be more generally usable since it's currently lifted from
-    // a similar implementation in commands/utils/statements.ts
-    const os = ObservableScope();
-    this.observableScope = os;
-    const panelActive = os.produce(true, (value, signal) => {
-      const changedState = this.view!.onDidChangeVisibility(() => value(this.view!.visible));
-      signal.onabort = () => changedState.dispose();
-    });
-    const notifyUI = () => {
-      queueMicrotask(() => {
-        if (panelActive() && this.view) {
-          this.view.webview.postMessage(["Timestamp", "Success", Date.now()]);
-        }
-      });
-    };
-    const sidecar = await getSidecar();
+    // Create a new results manager with the CCloud Flink SQL API provider
+    const flinkApiProvider = getFlinkSqlApiProvider();
+    this.resultsManagerScope = ObservableScope();
     this.resultsManager = new FlinkStatementResultsManager(
-      os,
+      this.resultsManagerScope,
       statement,
-      sidecar,
-      notifyUI,
-      DEFAULT_RESULT_LIMIT,
+      flinkApiProvider,
+      () => this.notifyUI(),
+      DEFAULT_RESULTS_LIMIT,
     );
-    // Handle messages from the webview and delegate to the results manager
-    const handler = handleWebviewMessage(this.view.webview, (...args) => {
-      let result;
-      // handleMessage() may end up reassigning many signals, so do
-      // so in a batch.
-      os.batch(() => (result = this.resultsManager!.handleMessage(...args)));
-      return result;
-    });
-    this.disposables.push(handler);
 
-    this.view.webview.html = this.getStatementResultsHtml(this.view.webview);
-    // reveal the panel and preserve focus
+    // Set up webview HTML and message handling
+    this.view.webview.html = this.getStatementResultsHtml();
+    this.setupMessageHandler();
     this.view.show(true);
+  }
+
+  /** Notify the webview UI of state changes. */
+  private notifyUI(): void {
+    if (this.view) {
+      this.view.webview.postMessage({ type: "StateChanged" });
+    }
+  }
+
+  /** Get the HTML content for the statement results webview. */
+  private getStatementResultsHtml(): string {
+    if (!this.view) {
+      return "";
+    }
+
+    const webview = this.view.webview;
+    const staticRoot = Uri.joinPath(this.extensionUri, "webview");
+
+    // Use the HTML template with the same pattern as WebviewPanelCache
+    return flinkStatementResultsHtml({
+      cspSource: webview.cspSource,
+      nonce: randomBytes(16).toString("base64"),
+      path: (src: string) => webview.asWebviewUri(Uri.joinPath(staticRoot, src)),
+    });
+  }
+
+  /** Set up message handler for webview communication. */
+  private setupMessageHandler(): void {
+    if (!this.view) {
+      return;
+    }
+
+    const messageHandler = this.view.webview.onDidReceiveMessage(
+      async (message: { type: MessageType; body: Record<string, unknown> }) => {
+        if (!this.resultsManager) {
+          logger.warn("No results manager available to handle message", { type: message.type });
+          return;
+        }
+
+        try {
+          const result = await this.resultsManager.handleMessage(message.type, message.body);
+          // Post the result back to the webview
+          if (this.view) {
+            this.view.webview.postMessage({
+              type: `${message.type}Response`,
+              body: result,
+              timestamp: message.body?.timestamp,
+            });
+          }
+        } catch (error) {
+          logError(error, "Error handling webview message", { extra: { type: message.type } });
+        }
+      },
+    );
+    this.disposables.push(messageHandler);
   }
 
   /** Cleanup the current results manager and dispose of related resources. */
@@ -166,25 +203,9 @@ export class FlinkStatementResultsPanelProvider
       this.resultsManager.dispose();
       this.resultsManager = undefined;
     }
-    if (this.observableScope) {
-      this.observableScope.dispose();
-      this.observableScope = undefined;
+    if (this.resultsManagerScope) {
+      this.resultsManagerScope.dispose();
+      this.resultsManagerScope = undefined;
     }
-    // not handling view-related disposables here since they're managed via this.disposables
-  }
-
-  /**
-   * Generate the HTML content for displaying statement results, using the same template as the
-   * editor-based webviews.
-   */
-  private getStatementResultsHtml(webview: Webview): string {
-    const staticRoot = Uri.joinPath(this.extensionUri, "webview");
-    const nonce = randomBytes(16).toString("base64");
-
-    return statementResultsHtmlTemplate({
-      cspSource: webview.cspSource,
-      nonce,
-      path: (src: string) => webview.asWebviewUri(Uri.joinPath(staticRoot, src)),
-    });
   }
 }

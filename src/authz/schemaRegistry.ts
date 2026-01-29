@@ -1,12 +1,12 @@
-import type { SubjectsV1Api } from "../clients/schemaRegistryRest";
-import { ResponseError } from "../clients/schemaRegistryRest";
+import { getCCloudAuthSession } from "../authn/utils";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { isCCloud } from "../models/resource";
 import type { KafkaTopic } from "../models/topic";
 import { showWarningNotificationWithButtons } from "../notifications";
-import { getSidecar } from "../sidecar";
+import { HttpError } from "../proxy/httpClient";
+import { SchemaRegistryProxy } from "../proxy/schemaRegistryProxy";
 
 const logger = new Logger("authz.schemaRegistry");
 
@@ -48,35 +48,90 @@ export async function canAccessSchemaTypeForTopic(
     return true;
   }
 
-  const sidecar = await getSidecar();
-  // we don't use the SchemasV1Api because it's either going to list all schemas or require a schema
-  // ID, which we don't have
-  const client: SubjectsV1Api = sidecar.getSubjectsV1Api(
-    schemaRegistry.id,
-    schemaRegistry.connectionId,
-  );
-
-  // this will either raise ResponseErrors or pass
-  try {
-    const schemaResp = await client.lookUpSchemaUnderSubject({
-      subject: `${topic.name}-${type}`,
-      RegisterSchemaRequest: {},
-    });
-    logger.debug("successfully looked up schema for topic", {
-      schemaResp: schemaResp,
-      topic: topic,
-    });
-    return true;
-  } catch (error) {
-    if (error instanceof ResponseError) {
-      const decision = await determineAccessFromResponseError(error.response);
-      logger.debug("determined access from response error:", { canAccessSchemas: decision, type });
-      return decision;
-    } else {
-      logger.error("error making lookupSchemaUnderSubject request:", error);
-    }
+  // Get the CCloud auth session for the bearer token
+  const session = await getCCloudAuthSession();
+  if (!session) {
+    logger.warn("No CCloud auth session available for schema access check; assuming no access");
     return false;
   }
+
+  // Build the subject name using TopicNameStrategy
+  const subjectName = `${topic.name}-${type}`;
+
+  // Create a Schema Registry proxy to check subject access
+  const proxy = new SchemaRegistryProxy({
+    baseUrl: schemaRegistry.uri,
+    auth: {
+      type: "bearer",
+      token: session.accessToken,
+    },
+  });
+
+  try {
+    // Try to list versions for the subject
+    // If successful, user has access
+    // If 404, subject doesn't exist (access granted, just no schema)
+    // If 401/403, user doesn't have access
+    await proxy.listVersions(subjectName);
+    logger.debug("User has access to schema subject", { subject: subjectName });
+    return true;
+  } catch (error) {
+    if (error instanceof HttpError) {
+      // Determine access based on error response
+      return determineAccessFromHttpError(error, subjectName);
+    }
+
+    // Unexpected error - log and assume no access for safety
+    logger.warn("Unexpected error checking schema access", { subject: subjectName, error });
+    return false;
+  }
+}
+
+/**
+ * Determines schema access based on an HttpError response.
+ * @param error The HttpError from the Schema Registry API.
+ * @param subjectName The subject name being checked.
+ * @returns true if access is granted (including when subject doesn't exist), false otherwise.
+ */
+function determineAccessFromHttpError(error: HttpError, subjectName: string): boolean {
+  // Parse the error response body if available
+  const errorData = error.data as { error_code?: number; message?: string } | undefined;
+  const errorCode = errorData?.error_code;
+
+  logger.debug("Schema Registry error response", {
+    subject: subjectName,
+    status: error.status,
+    errorCode,
+  });
+
+  // 40401 = Subject not found (access granted, just no schema for this topic)
+  // 40403 = Schema not found (similar to above)
+  if (errorCode === 40401 || errorCode === 40403) {
+    logger.debug("Subject not found - user has access but no schema exists", {
+      subject: subjectName,
+    });
+    return true;
+  }
+
+  // 404 without specific error code - treat as subject not found
+  if (error.status === 404) {
+    logger.debug("404 response - subject likely does not exist", { subject: subjectName });
+    return true;
+  }
+
+  // 401/403 or error code 40301 = User is denied access
+  if (error.status === 401 || error.status === 403 || errorCode === 40301) {
+    logger.debug("User is denied access to schema subject", { subject: subjectName });
+    return false;
+  }
+
+  // Other errors - assume no access for safety
+  logger.warn("Unexpected Schema Registry error; assuming no access", {
+    subject: subjectName,
+    status: error.status,
+    errorCode,
+  });
+  return false;
 }
 
 export async function determineAccessFromResponseError(response: Response): Promise<boolean> {

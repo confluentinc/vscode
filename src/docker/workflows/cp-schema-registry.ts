@@ -17,7 +17,7 @@ import {
 } from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
-import { getLocalResourceContainers, updateLocalConnection } from "../../sidecar/connections/local";
+import { getContainersForImageAndTag, updateLocalConnection } from "../../docker/local";
 import { UserEvent } from "../../telemetry/events";
 import { LocalResourceKind } from "../constants";
 import {
@@ -78,7 +78,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     await this.checkForImage(this.imageRepo, this.imageTag);
     if (token.isCancellationRequested) return;
 
-    const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
+    const existingContainers: ContainerSummary[] = await getContainersForImageAndTag(
       this.imageRepo,
       this.imageTag,
       { onlyExtensionManaged: true, statuses: [] },
@@ -167,7 +167,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     this.progress = progress;
     this.imageTag = LOCAL_SCHEMA_REGISTRY_IMAGE_TAG.value;
 
-    const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
+    const existingContainers: ContainerSummary[] = await getContainersForImageAndTag(
       this.imageRepo,
       this.imageTag,
       { onlyExtensionManaged: true, statuses: [ContainerStateStatusEnum.Running] },

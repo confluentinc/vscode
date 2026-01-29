@@ -24,7 +24,7 @@ import { Phase } from "../models/flinkStatement";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import * as notifications from "../notifications";
 import * as poolQuickpicks from "../quickpicks/flinkComputePools";
-import * as ccloudConnection from "../sidecar/connections/ccloud";
+import * as ccloudConnection from "../authn/ccloudSession";
 import { UriMetadataKeys } from "../storage/constants";
 import type { ResourceManager } from "../storage/resourceManager";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";

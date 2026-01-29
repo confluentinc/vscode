@@ -1,10 +1,13 @@
 /**
  * CCloud Session Utilities.
  *
- * Provides functions for checking CCloud authentication state.
- * These functions were previously in src/sidecar/connections/ccloud.ts.
+ * Provides functions for checking CCloud authentication state and managing
+ * CCloud connections. These functions were previously in src/sidecar/connections/ccloud.ts.
  */
 
+import { ConnectionManager } from "../connections/connectionManager";
+import { ConnectedState, type Connection, type ConnectionId } from "../connections/types";
+import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import {
   flinkDatabaseViewResourceChanged,
@@ -19,6 +22,12 @@ import { TopicViewProvider } from "../viewProviders/topics";
 
 const logger = new Logger("authn.ccloudSession");
 
+/** How long to wait for a connection to stabilize (ms). */
+const CONNECTION_STABLE_TIMEOUT_MS = 60_000;
+
+/** Polling interval when waiting for connection stability (ms). */
+const CONNECTION_STABLE_POLL_INTERVAL_MS = 500;
+
 /**
  * Do we currently have a CCloud connection (authenticated session)?
  *
@@ -31,6 +40,28 @@ export function hasCCloudAuthSession(): boolean {
     ContextValues.ccloudConnectionAvailable,
   );
   return !!isCcloudConnected;
+}
+
+/**
+ * Gets the current CCloud connection if one exists.
+ * @returns The Connection object or null if no connection exists.
+ */
+export async function getCCloudConnection(): Promise<Connection | null> {
+  const manager = ConnectionManager.getInstance();
+  const handler = manager.getConnection(CCLOUD_CONNECTION_ID);
+
+  if (!handler) {
+    return null;
+  }
+
+  const status = await handler.getStatus();
+  return {
+    spec: handler.spec,
+    status,
+    metadata: {
+      signInUri: undefined, // TODO: Populate from OAuth flow when implemented
+    },
+  };
 }
 
 /**
@@ -61,4 +92,97 @@ export async function clearCurrentCCloudResources(): Promise<void> {
   if (flinkDatabaseViewProvider.resource != null) {
     flinkDatabaseViewResourceChanged.fire(null);
   }
+}
+
+/**
+ * Creates the CCloud connection if it doesn't already exist.
+ * @returns The created Connection object with current status.
+ */
+export async function createCCloudConnection(): Promise<Connection> {
+  const manager = ConnectionManager.getInstance();
+  let handler = manager.getConnection(CCLOUD_CONNECTION_ID);
+
+  if (!handler) {
+    handler = await manager.createConnection(CCLOUD_CONNECTION_SPEC);
+  }
+
+  const status = await handler.getStatus();
+  return {
+    spec: handler.spec,
+    status,
+    metadata: {
+      signInUri: undefined, // TODO: Populate from OAuth flow when implemented
+    },
+  };
+}
+
+/**
+ * Deletes the CCloud connection.
+ * If the connection doesn't exist, this is a no-op.
+ */
+export async function deleteCCloudConnection(): Promise<void> {
+  const manager = ConnectionManager.getInstance();
+  const handler = manager.getConnection(CCLOUD_CONNECTION_ID);
+
+  if (handler) {
+    await manager.deleteConnection(CCLOUD_CONNECTION_ID);
+    logger.info("CCloud connection deleted");
+  }
+}
+
+/**
+ * Waits for a connection to reach a stable state.
+ *
+ * A connection is considered stable when it's either successfully connected
+ * or has failed. This function polls the connection status until it stabilizes
+ * or the timeout is reached.
+ *
+ * @param connectionId The ID of the connection to wait for.
+ * @param timeoutMs Maximum time to wait (defaults to 60 seconds).
+ * @returns The Connection object once stable, or null if timeout/not found.
+ */
+export async function waitForConnectionToBeStable(
+  connectionId: ConnectionId,
+  timeoutMs: number = CONNECTION_STABLE_TIMEOUT_MS,
+): Promise<Connection | null> {
+  const manager = ConnectionManager.getInstance();
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < timeoutMs) {
+    const handler = manager.getConnection(connectionId);
+    if (!handler) {
+      logger.warn(`Connection ${connectionId} not found`);
+      return null;
+    }
+
+    const status = await handler.getStatus();
+    const ccloudState = status.ccloud?.state;
+    const kafkaState = status.kafkaCluster?.state;
+    const srState = status.schemaRegistry?.state;
+
+    // Check if any state is stable (SUCCESS or FAILED)
+    const isStable =
+      ccloudState === ConnectedState.SUCCESS ||
+      ccloudState === ConnectedState.FAILED ||
+      kafkaState === ConnectedState.SUCCESS ||
+      kafkaState === ConnectedState.FAILED ||
+      srState === ConnectedState.SUCCESS ||
+      srState === ConnectedState.FAILED;
+
+    if (isStable) {
+      return {
+        spec: handler.spec,
+        status,
+        metadata: {
+          signInUri: undefined, // TODO: Populate from OAuth flow
+        },
+      };
+    }
+
+    // Wait before polling again
+    await new Promise((resolve) => setTimeout(resolve, CONNECTION_STABLE_POLL_INTERVAL_MS));
+  }
+
+  logger.warn(`Timeout waiting for connection ${connectionId} to stabilize`);
+  return null;
 }

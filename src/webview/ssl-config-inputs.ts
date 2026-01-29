@@ -1,6 +1,6 @@
 import { ObservableScope } from "inertial";
 import { applyBindings, html } from "./bindings/bindings";
-import { StoreType, type TLSConfig } from "../clients/sidecar";
+import { StoreType, type TLSConfig } from "./types";
 
 /** Reusable Custom HTML Element (Web Component) for SSL Advanced Config
  * This component is used in the Direct Connection form to configure SSL settings
@@ -26,7 +26,7 @@ export class SslConfig extends HTMLElement {
   });
 
   verifyHostname = this.os.derive(() => {
-    if (this.configObj()?.verify_hostname?.toString() === "false") return false;
+    if (this.configObj()?.verifyHostname?.toString() === "false") return false;
     else return true;
   });
   truststorePath = this.os.derive(() => {
@@ -48,7 +48,7 @@ export class SslConfig extends HTMLElement {
     return this.configObj()?.keystore?.type ?? "JKS";
   });
   keystoreKeyPassword = this.os.derive(() => {
-    return this.configObj()?.keystore?.key_password ?? null;
+    return this.configObj()?.keystore?.keyPassword ?? null;
   });
   getInputId(name: string) {
     return this.identifier() + ".ssl." + name;
@@ -127,7 +127,7 @@ export class SslConfig extends HTMLElement {
           this.keystoreType(input.value as StoreType);
         }
         break;
-      case this.getInputId("keystore.key_password"):
+      case this.getInputId("keystore.keyPassword"):
         this.keystoreKeyPassword(input.value);
         break;
     }
@@ -229,14 +229,14 @@ export class SslConfig extends HTMLElement {
               />
             </div>
             <div class="input-container">
-              <label data-attr-for="this.getInputId('keystore.key_password')" class="info"
+              <label data-attr-for="this.getInputId('keystore.keyPassword')" class="info"
                 >Key Password</label
               >
               <input
                 class="input"
                 title="Private key password (if any)"
-                data-attr-id="this.getInputId('keystore.key_password')"
-                data-attr-name="this.getInputId('keystore.key_password')"
+                data-attr-id="this.getInputId('keystore.keyPassword')"
+                data-attr-name="this.getInputId('keystore.keyPassword')"
                 type="password"
                 data-value="this.keystoreKeyPassword()"
                 data-on-change="this.updateValue(event)"

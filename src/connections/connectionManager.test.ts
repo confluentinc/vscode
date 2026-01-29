@@ -1,15 +1,15 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { ExtensionContext } from "vscode";
-import { ConnectionType, type ConnectionId } from "./types";
-import type { ConnectionSpec } from "./spec";
-import { ConnectionStorage } from "./storage";
+import type { ExtensionContext } from "vscode";
+import { clearExtensionContext, setExtensionContext } from "../context/extension";
 import {
   ConnectionManager,
   type ConnectionCreatedEvent,
   type ConnectionDeletedEvent,
 } from "./connectionManager";
-import { clearExtensionContext, setExtensionContext } from "../context/extension";
+import type { ConnectionSpec } from "./spec";
+import { ConnectionStorage } from "./storage";
+import { ConnectionType, type ConnectionId } from "./types";
 
 describe("connections/connectionManager", function () {
   let sandbox: sinon.SinonSandbox;
@@ -20,7 +20,7 @@ describe("connections/connectionManager", function () {
   const directSpec: ConnectionSpec = {
     id: "test-direct" as ConnectionId,
     name: "Test Direct Connection",
-    type: ConnectionType.DIRECT,
+    type: ConnectionType.Direct,
     kafkaCluster: {
       bootstrapServers: "localhost:9092",
     },
@@ -29,13 +29,13 @@ describe("connections/connectionManager", function () {
   const localSpec: ConnectionSpec = {
     id: "test-local" as ConnectionId,
     name: "Test Local Connection",
-    type: ConnectionType.LOCAL,
+    type: ConnectionType.Local,
   };
 
   const ccloudSpec: ConnectionSpec = {
     id: "test-ccloud" as ConnectionId,
     name: "Test CCloud Connection",
-    type: ConnectionType.CCLOUD,
+    type: ConnectionType.Ccloud,
   };
 
   beforeEach(async function () {
@@ -139,7 +139,7 @@ describe("connections/connectionManager", function () {
       const handler = await manager.createConnection(directSpec);
 
       assert.strictEqual(handler.connectionId, directSpec.id);
-      assert.strictEqual(handler.spec.type, ConnectionType.DIRECT);
+      assert.strictEqual(handler.spec.type, ConnectionType.Direct);
     });
 
     it("should create a Local connection", async function () {
@@ -149,7 +149,7 @@ describe("connections/connectionManager", function () {
       const handler = await manager.createConnection(localSpec);
 
       assert.strictEqual(handler.connectionId, localSpec.id);
-      assert.strictEqual(handler.spec.type, ConnectionType.LOCAL);
+      assert.strictEqual(handler.spec.type, ConnectionType.Local);
     });
 
     it("should create a CCloud connection", async function () {
@@ -159,7 +159,7 @@ describe("connections/connectionManager", function () {
       const handler = await manager.createConnection(ccloudSpec);
 
       assert.strictEqual(handler.connectionId, ccloudSpec.id);
-      assert.strictEqual(handler.spec.type, ConnectionType.CCLOUD);
+      assert.strictEqual(handler.spec.type, ConnectionType.Ccloud);
     });
 
     it("should persist connection to storage", async function () {

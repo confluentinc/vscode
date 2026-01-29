@@ -2,32 +2,30 @@ import { writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 import * as vscode from "vscode";
-import type { CCloudStatus, Connection, UserInfo } from "../clients/sidecar";
-import { ConnectedState } from "../clients/sidecar";
+import type { CCloudStatus, Connection, UserInfo } from "../connections";
+import { ConnectedState } from "../connections";
 import { AUTH_PROVIDER_ID, AUTH_SCOPES, CCLOUD_CONNECTION_ID } from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { observabilityContext } from "../context/observability";
 import { ContextValues, setContextValue } from "../context/values";
 import { ccloudAuthCallback, ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
 import { ExtensionContextNotSetError, logError } from "../errors";
-import { loadPreferencesFromWorkspaceConfig } from "../extensionSettings/sidecarSync";
 import { getLaunchDarklyClient } from "../featureFlags/client";
 import { Logger } from "../logging";
 import { showInfoNotificationWithButtons } from "../notifications";
-import {
-  clearCurrentCCloudResources,
-  createCCloudConnection,
-  deleteCCloudConnection,
-  getCCloudConnection,
-} from "../sidecar/connections/ccloud";
-import { waitForConnectionToBeStable } from "../sidecar/connections/watcher";
-import { gatherSidecarOutputs } from "../sidecar/logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { DisposableCollection } from "../utils/disposables";
+import {
+  clearCurrentCCloudResources,
+  createCCloudConnection,
+  deleteCCloudConnection,
+  getCCloudConnection,
+  waitForConnectionToBeStable,
+} from "./ccloudSession";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
 import { CCloudConnectionError } from "./errors";
 import type { AuthCallbackEvent } from "./types";
@@ -136,12 +134,12 @@ export class ConfluentCloudAuthProvider
     // throw an error but don't necessarily need to gather sidecar logs, so we can throw a
     // CCloudConnectionError directly if we don't want it to appear as an error notification.
 
-    const signInUri: string | undefined = connection.metadata?.sign_in_uri;
+    const signInUri: string | undefined = connection.metadata?.signInUri;
     if (!signInUri) {
       logger.error(
         "createSession() no sign-in URI found in connection metadata; this should not happen",
       );
-      throw await this.createAndLogConnectionError(
+      throw this.createAndLogConnectionError(
         "Failed to create new connection. Please try again.",
         connection,
       );
@@ -187,7 +185,7 @@ export class ConfluentCloudAuthProvider
       logUsage(UserEvent.CCloudAuthentication, {
         status: "authentication failed",
       });
-      throw await this.createAndLogConnectionError(
+      throw this.createAndLogConnectionError(
         authFailedMsg,
         // no need to include the connection here since it likely has no useful info for this scenario
       );
@@ -204,21 +202,21 @@ export class ConfluentCloudAuthProvider
     // these three are all odd edge-cases that shouldn't happen if authentication completed,
     // but if they do, we need to gather sidecar logs to help debug
     if (!authenticatedConnection) {
-      throw await this.createAndLogConnectionError(
+      throw this.createAndLogConnectionError(
         "CCloud connection failed to become usable after authentication.",
         // no connection, so nothing to include here
       );
     }
     const ccloudStatus: CCloudStatus | undefined = authenticatedConnection.status.ccloud;
     if (!ccloudStatus) {
-      throw await this.createAndLogConnectionError(
+      throw this.createAndLogConnectionError(
         "Authenticated connection has no status information.",
         authenticatedConnection,
       );
     }
     const userInfo: UserInfo | undefined = ccloudStatus.user;
     if (!userInfo) {
-      throw await this.createAndLogConnectionError(
+      throw this.createAndLogConnectionError(
         "Authenticated connection has no CCloud user.",
         authenticatedConnection,
       );
@@ -248,7 +246,7 @@ export class ConfluentCloudAuthProvider
     ccloudConnected.fire(true);
 
     observabilityContext.ccloudAuthCompleted = true;
-    observabilityContext.ccloudAuthExpiration = ccloudStatus.requires_authentication_at;
+    observabilityContext.ccloudAuthExpiration = ccloudStatus.requiresAuthenticationAt;
     observabilityContext.ccloudSignInCount++;
 
     return session;
@@ -279,7 +277,7 @@ export class ConfluentCloudAuthProvider
     if (
       connection &&
       connection.status.ccloud?.state &&
-      [ConnectedState.None, ConnectedState.Failed].includes(connection.status.ccloud.state)
+      [ConnectedState.NONE, ConnectedState.FAILED].includes(connection.status.ccloud.state)
     ) {
       // the connection is unusable, so the auth provider needs to act like there isn't actually a
       // connection and the user needs to sign in
@@ -359,7 +357,7 @@ export class ConfluentCloudAuthProvider
       // clear internal state. This means the user will be prompted to sign in to CCloud again and
       // (hopefully) get a valid auth state.
       await this.handleSessionRemoved(true);
-      await this.createAndLogConnectionError(
+      this.createAndLogConnectionError(
         `Failed to convert existing CCloud connection to auth session: ${error}`,
         connection,
       );
@@ -453,11 +451,8 @@ export class ConfluentCloudAuthProvider
             this._onAuthFlowCompletedSuccessfully.fire({ success, resetPassword });
 
             if (!success) {
-              // log current preferences to help debug any auth issues
-              const preferences = loadPreferencesFromWorkspaceConfig();
               logger.debug(
-                `authProvider: ${SecretStorageKeys.AUTH_COMPLETED} changed (success=${success}); current sidecar preferences:`,
-                { preferences },
+                `authProvider: ${SecretStorageKeys.AUTH_COMPLETED} changed (success=${success})`,
               );
             }
             break;
@@ -695,16 +690,12 @@ export class ConfluentCloudAuthProvider
    * @param connection Optional {@link Connection} to include in the error context.
    * @returns A {@link CCloudConnectionError} for the caller to throw and escape `createSession()`
    */
-  async createAndLogConnectionError(
-    message: string,
-    connection?: Connection,
-  ): Promise<CCloudConnectionError> {
+  createAndLogConnectionError(message: string, connection?: Connection): CCloudConnectionError {
     const error = new CCloudConnectionError(message);
-    const { logLines } = await gatherSidecarOutputs();
     // we're including the connection here because it's missing information that we would otherwise
     // expect to have after a successful sign-in, so we need a closer look at what the rest of the
     // state looks like for debugging purposes
-    logError(error, message, { extra: { sidecarLogs: logLines, connection } });
+    logError(error, message, { extra: { connection } });
     return error;
   }
 

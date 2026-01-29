@@ -1,17 +1,26 @@
-import { ObservableScope } from "inertial";
+import { ObservableScope, type Scope } from "inertial";
 import * as vscode from "vscode";
+import { logError } from "../../errors";
 import { STATEMENT_RESULTS_LOCATION } from "../../extensionSettings/constants";
-import { DEFAULT_RESULT_LIMIT } from "../../flinkSql/constants";
-import { FlinkStatementResultsManager } from "../../flinkSql/flinkStatementResultsManager";
+import { DEFAULT_RESULTS_LIMIT } from "../../flinkSql/flinkStatementResults";
+import { getFlinkSqlApiProvider } from "../../flinkSql/flinkSqlApiProvider";
+import {
+  FlinkStatementResultsManager,
+  type MessageType,
+} from "../../flinkSql/flinkStatementResultsManager";
 import { FlinkStatementWebviewPanelCache } from "../../flinkSql/statementUtils";
 import { Logger } from "../../logging";
 import { FlinkStatement } from "../../models/flinkStatement";
 import { FlinkStatementResultsPanelProvider } from "../../panelProviders/flinkStatementResults";
-import { getSidecar } from "../../sidecar";
-import { handleWebviewMessage } from "../../webview/comms/comms";
 
 /** Cache of statement result webviews by env/statement name. */
 export const statementResultsViewCache = new FlinkStatementWebviewPanelCache();
+
+/** Tracks active results managers for editor-based panels. */
+const editorResultsManagers = new Map<
+  string,
+  { manager: FlinkStatementResultsManager; scope: Scope }
+>();
 
 const logger = new Logger("commands.utils.statements");
 
@@ -41,55 +50,64 @@ export async function openFlinkStatementResultsView(statement: FlinkStatement | 
  * @param statement - The Flink statement to display results for
  */
 async function openFlinkStatementResultsInEditor(statement: FlinkStatement) {
-  const [panel, cached] = statementResultsViewCache.getPanelForStatement(statement);
-  if (cached) {
-    // Existing panel for this statement found, just reveal it.
-    panel.reveal();
-    return;
+  const [panel, isNew] = statementResultsViewCache.getPanelForStatement(statement);
+  const panelKey = `${statement.environmentId}/${statement.name}`;
+
+  // Clean up any existing manager for this panel
+  const existing = editorResultsManagers.get(panelKey);
+  if (existing) {
+    existing.manager.dispose();
+    existing.scope.dispose();
+    editorResultsManagers.delete(panelKey);
   }
 
-  const os = ObservableScope();
-
-  /** Wrapper for `panel.visible` that gracefully switches to `false` when panel is disposed. */
-  const panelActive = os.produce(true, (value, signal) => {
-    const disposed = panel.onDidDispose(() => value(false));
-    const changedState = panel.onDidChangeViewState(() => value(panel.visible));
-    signal.onabort = () => {
-      disposed.dispose();
-      changedState.dispose();
-    };
-  });
-
-  /** Notify an active webview only after flushing the rest of updates. */
-  const notifyUI = () => {
-    queueMicrotask(() => {
-      if (panelActive()) panel.webview.postMessage(["Timestamp", "Success", Date.now()]);
-    });
-  };
-
-  const sidecar = await getSidecar();
+  // Create a new results manager with the CCloud Flink SQL API provider
+  const flinkApiProvider = getFlinkSqlApiProvider();
+  const scope = ObservableScope();
   const resultsManager = new FlinkStatementResultsManager(
-    os,
+    scope,
     statement,
-    sidecar,
-    notifyUI,
-    DEFAULT_RESULT_LIMIT,
+    flinkApiProvider,
+    () => {
+      // Notify the webview of state changes
+      panel.webview.postMessage({ type: "StateChanged" });
+    },
+    DEFAULT_RESULTS_LIMIT,
   );
 
-  // Handle messages from the webview and delegate to the results manager
-  const handler = handleWebviewMessage(panel.webview, (...args) => {
-    let result;
-    // handleMessage() may end up reassigning many signals, so do
-    // so in a batch.
-    os.batch(() => (result = resultsManager.handleMessage(...args)));
-    return result;
+  // Store the manager for cleanup
+  editorResultsManagers.set(panelKey, { manager: resultsManager, scope });
+
+  // Set up message handling
+  const messageHandler = panel.webview.onDidReceiveMessage(
+    async (message: { type: MessageType; body: Record<string, unknown> }) => {
+      try {
+        const result = await resultsManager.handleMessage(message.type, message.body);
+        panel.webview.postMessage({
+          type: `${message.type}Response`,
+          body: result,
+          timestamp: message.body?.timestamp,
+        });
+      } catch (error) {
+        logError(error, "Error handling editor webview message", { extra: { type: message.type } });
+      }
+    },
+  );
+
+  // Clean up when panel is disposed
+  panel.onDidDispose(() => {
+    messageHandler.dispose();
+    const entry = editorResultsManagers.get(panelKey);
+    if (entry) {
+      entry.manager.dispose();
+      entry.scope.dispose();
+      editorResultsManagers.delete(panelKey);
+    }
   });
 
-  panel.onDidDispose(() => {
-    resultsManager.dispose();
-    handler.dispose();
-    os.dispose();
-  });
+  if (isNew) {
+    panel.reveal(vscode.ViewColumn.One);
+  }
 }
 
 /**

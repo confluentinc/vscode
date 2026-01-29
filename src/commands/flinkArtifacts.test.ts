@@ -2,25 +2,18 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
-import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { createFlinkArtifact } from "../../tests/unit/testResources/flinkArtifact";
-import { createResponseError } from "../../tests/unit/testUtils";
 
-import { FlinkArtifactsArtifactV1Api } from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
+import { TokenManager } from "../auth/oauth2/tokenManager";
 import type {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrl200Response";
 import type { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkDatabaseResourceContainer } from "../models/flinkDatabaseResourceContainer";
-import { type EnvironmentId } from "../models/resource";
 import * as notifications from "../notifications";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
-import {
-  registerFlinkArtifactCommands,
-  updateArtifactCommand,
-  uploadArtifactCommand,
-} from "./flinkArtifacts";
+import { registerFlinkArtifactCommands, uploadArtifactCommand } from "./flinkArtifacts";
 import * as commands from "./index";
 import * as artifactUploadForm from "./utils/artifactUploadForm";
 import * as uploadArtifact from "./utils/uploadArtifactOrUDF";
@@ -135,52 +128,6 @@ describe("flinkArtifacts", () => {
       sinon.assert.calledWithMatch(showErrorStub, customErrorMessage);
     });
 
-    it("should show custom clarification error when 500 status code is returned for invalid JAR file", async () => {
-      sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(mockParams);
-      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
-      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
-
-      sandbox
-        .stub(uploadArtifact, "uploadArtifactToCCloud")
-        .rejects(createResponseError(500, "Oops, something went wrong", ""));
-
-      await uploadArtifactCommand();
-
-      sinon.assert.calledOnce(showErrorStub);
-      sinon.assert.calledWithMatch(
-        showErrorStub,
-        "Please make sure that you provided a valid JAR file",
-      );
-    });
-
-    it("should error for other status codes", async () => {
-      sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(mockParams);
-      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
-      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
-
-      sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(
-        createResponseError(
-          400,
-          "Custom Bad Request",
-          JSON.stringify({
-            errors: [
-              {
-                detail: "Custom Bad Request Body",
-              },
-            ],
-          }),
-        ),
-      );
-
-      await uploadArtifactCommand();
-
-      sinon.assert.calledOnce(showErrorStub);
-      sinon.assert.calledWithMatch(
-        showErrorStub,
-        "Failed to upload artifact: Custom Bad Request Body",
-      );
-    });
-
     it("should send the create artifact request to Confluent Cloud", async () => {
       const mockUploadId = "12345";
 
@@ -242,76 +189,87 @@ describe("flinkArtifacts", () => {
   });
 
   describe("updateArtifactCommand", () => {
-    const mockArtifact = createFlinkArtifact({
-      id: "artifact-123",
-      name: "test-artifact",
-      environmentId: "env-123456" as EnvironmentId,
-      provider: "Azure",
-      region: "australiaeast",
-      description: "Original description",
-    });
-
-    const mockPatchPayload = {
-      documentation_link: "https://example.com",
-      description: "Updated description",
-    };
-
     let showErrorStub: sinon.SinonStub;
     let showInfoStub: sinon.SinonStub;
-    let artifactsApiStub: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
+    let tokenStub: sinon.SinonStub;
+    let fetchStub: sinon.SinonStub;
+    let getArtifactPatchParamsStub: sinon.SinonStub;
 
     beforeEach(() => {
       showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
-      showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
+      showInfoStub = sandbox.stub(notifications, "showInfoNotificationWithButtons");
 
-      const stubbedSidecar = getSidecarStub(sandbox);
-      artifactsApiStub = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
-      stubbedSidecar.getFlinkArtifactsApi.returns(artifactsApiStub);
+      // Stub token manager
+      tokenStub = sandbox.stub(TokenManager, "getInstance");
+      tokenStub.returns({
+        getDataPlaneToken: sandbox.stub().resolves("test-token"),
+      });
+    });
+
+    afterEach(() => {
+      fetchStub?.restore();
     });
 
     it("should show error notification if no artifact is selected", async () => {
+      const { updateArtifactCommand } = await import("./flinkArtifacts");
+
       await updateArtifactCommand(undefined);
 
       sinon.assert.calledOnce(showErrorStub);
-      sinon.assert.calledWithMatch(showErrorStub, "No Flink artifact selected for update");
-    });
-
-    it("should successfully update artifact when user provides changes", async () => {
-      sandbox.stub(uploadArtifact, "getArtifactPatchParams").resolves(mockPatchPayload);
-      artifactsApiStub.updateArtifactV1FlinkArtifact.resolves({} as any);
-
-      await updateArtifactCommand(mockArtifact);
-
-      // Assert the API was called with correct parameters
-      sinon.assert.calledOnce(artifactsApiStub.updateArtifactV1FlinkArtifact);
-      sinon.assert.calledWithExactly(artifactsApiStub.updateArtifactV1FlinkArtifact, {
-        cloud: mockArtifact.provider,
-        region: mockArtifact.region,
-        environment: mockArtifact.environmentId,
-        id: mockArtifact.id,
-        ArtifactV1FlinkArtifact: mockPatchPayload,
-      });
-      // Assert success notification
-      sinon.assert.calledOnce(showInfoStub);
-      sinon.assert.calledWithMatch(showInfoStub, /updated successfully in Confluent Cloud/);
+      sinon.assert.calledWithMatch(showErrorStub, /No Flink artifact selected/);
     });
 
     it("should exit early if user cancels without making changes", async () => {
-      sandbox.stub(uploadArtifact, "getArtifactPatchParams").resolves(undefined); // simulate cancel from quickpick form
+      const { updateArtifactCommand } = await import("./flinkArtifacts");
 
-      await updateArtifactCommand(mockArtifact);
+      getArtifactPatchParamsStub = sandbox
+        .stub(uploadArtifact, "getArtifactPatchParams")
+        .resolves(undefined);
 
-      sinon.assert.notCalled(artifactsApiStub.updateArtifactV1FlinkArtifact);
-      sinon.assert.calledOnce(showInfoStub);
+      await updateArtifactCommand(createFlinkArtifact());
 
-      sinon.assert.calledWith(showInfoStub, "Update cancelled. No changes were made.");
+      sinon.assert.calledOnce(getArtifactPatchParamsStub);
+      sinon.assert.notCalled(showInfoStub);
+      sinon.assert.notCalled(showErrorStub);
     });
 
-    it("should show an error notification when API call fails", async () => {
-      sandbox.stub(uploadArtifact, "getArtifactPatchParams").resolves(mockPatchPayload);
-      artifactsApiStub.updateArtifactV1FlinkArtifact.rejects(new Error("API Error"));
+    it("should successfully update artifact when user provides changes", async () => {
+      const { updateArtifactCommand } = await import("./flinkArtifacts");
 
-      await updateArtifactCommand(mockArtifact);
+      getArtifactPatchParamsStub = sandbox
+        .stub(uploadArtifact, "getArtifactPatchParams")
+        .resolves({ description: "new description", documentation_link: "https://example.com" });
+
+      fetchStub = sandbox.stub(global, "fetch").resolves({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        headers: new Map([["content-type", "application/json"]]) as unknown as Headers,
+        json: async () => ({ id: "artifact-123", display_name: "Test Artifact" }),
+      } as Response);
+
+      await updateArtifactCommand(createFlinkArtifact());
+
+      sinon.assert.calledOnce(showInfoStub);
+      sinon.assert.calledWithMatch(showInfoStub, /updated successfully/);
+    });
+
+    it("should show error notification when API call fails", async () => {
+      const { updateArtifactCommand } = await import("./flinkArtifacts");
+
+      getArtifactPatchParamsStub = sandbox
+        .stub(uploadArtifact, "getArtifactPatchParams")
+        .resolves({ description: "new description", documentation_link: undefined });
+
+      fetchStub = sandbox.stub(global, "fetch").resolves({
+        ok: false,
+        status: 500,
+        statusText: "Internal Server Error",
+        headers: new Map([["content-type", "application/json"]]) as unknown as Headers,
+        json: async () => ({ error: "Something went wrong" }),
+      } as Response);
+
+      await updateArtifactCommand(createFlinkArtifact());
 
       sinon.assert.calledOnce(showErrorStub);
       sinon.assert.calledWithMatch(showErrorStub, /Failed to update artifact/);

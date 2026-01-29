@@ -1,9 +1,11 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { ConnectedState, ConnectionType, type ConnectionId } from "../types";
-import { CredentialType } from "../credentials";
+import { CredentialType, ScramHashAlgorithm } from "../credentials";
 import type { ConnectionSpec } from "../spec";
+import { ConnectedState, ConnectionType, type ConnectionId } from "../types";
 import { DirectConnectionHandler } from "./directConnectionHandler";
+import * as kafkaRestProxy from "../../proxy/kafkaRestProxy";
+import * as schemaRegistryProxy from "../../proxy/schemaRegistryProxy";
 
 describe("connections/handlers/directConnectionHandler", function () {
   let sandbox: sinon.SinonSandbox;
@@ -12,7 +14,7 @@ describe("connections/handlers/directConnectionHandler", function () {
   const kafkaOnlySpec: ConnectionSpec = {
     id: "direct-kafka-only" as ConnectionId,
     name: "Kafka Only Connection",
-    type: ConnectionType.DIRECT,
+    type: ConnectionType.Direct,
     kafkaCluster: {
       bootstrapServers: "localhost:9092",
     },
@@ -22,7 +24,7 @@ describe("connections/handlers/directConnectionHandler", function () {
   const srOnlySpec: ConnectionSpec = {
     id: "direct-sr-only" as ConnectionId,
     name: "SR Only Connection",
-    type: ConnectionType.DIRECT,
+    type: ConnectionType.Direct,
     schemaRegistry: {
       uri: "http://localhost:8081",
     },
@@ -32,13 +34,13 @@ describe("connections/handlers/directConnectionHandler", function () {
   const fullSpec: ConnectionSpec = {
     id: "direct-full" as ConnectionId,
     name: "Full Connection",
-    type: ConnectionType.DIRECT,
+    type: ConnectionType.Direct,
     kafkaCluster: {
       bootstrapServers: "broker1:9092,broker2:9092",
       credentials: {
         type: CredentialType.API_KEY,
-        key: "my-api-key",
-        secret: "my-api-secret",
+        apiKey: "my-api-key",
+        apiSecret: "my-api-secret",
       },
     },
     schemaRegistry: {
@@ -55,11 +57,34 @@ describe("connections/handlers/directConnectionHandler", function () {
   const emptySpec: ConnectionSpec = {
     id: "direct-empty" as ConnectionId,
     name: "Empty Connection",
-    type: ConnectionType.DIRECT,
+    type: ConnectionType.Direct,
   };
+
+  // Mock Kafka REST proxy
+  let mockKafkaProxy: sinon.SinonStubbedInstance<kafkaRestProxy.KafkaRestProxy>;
+  // Mock Schema Registry proxy
+  let mockSrProxy: sinon.SinonStubbedInstance<schemaRegistryProxy.SchemaRegistryProxy>;
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
+
+    // Create mock Kafka REST proxy
+    mockKafkaProxy = {
+      getCluster: sandbox.stub().resolves({ cluster_id: "direct-cluster-id" }),
+      getClusterId: sandbox.stub().returns("direct-cluster-id"),
+      listTopics: sandbox.stub().resolves([]),
+    } as unknown as sinon.SinonStubbedInstance<kafkaRestProxy.KafkaRestProxy>;
+
+    // Stub createKafkaRestProxy to return our mock
+    sandbox.stub(kafkaRestProxy, "createKafkaRestProxy").returns(mockKafkaProxy);
+
+    // Create mock Schema Registry proxy
+    mockSrProxy = {
+      listSubjects: sandbox.stub().resolves(["test-subject"]),
+    } as unknown as sinon.SinonStubbedInstance<schemaRegistryProxy.SchemaRegistryProxy>;
+
+    // Stub createSchemaRegistryProxy to return our mock
+    sandbox.stub(schemaRegistryProxy, "createSchemaRegistryProxy").returns(mockSrProxy);
   });
 
   afterEach(function () {
@@ -71,7 +96,7 @@ describe("connections/handlers/directConnectionHandler", function () {
       const handler = new DirectConnectionHandler(kafkaOnlySpec);
 
       assert.strictEqual(handler.connectionId, kafkaOnlySpec.id);
-      assert.strictEqual(handler.spec.type, ConnectionType.DIRECT);
+      assert.strictEqual(handler.spec.type, ConnectionType.Direct);
       assert.strictEqual(handler.isConnected(), false);
     });
 
@@ -267,8 +292,8 @@ describe("connections/handlers/directConnectionHandler", function () {
           bootstrapServers: "localhost:9092",
           credentials: {
             type: CredentialType.API_KEY,
-            key: "my-key",
-            secret: "",
+            apiKey: "my-key",
+            apiSecret: "",
           },
         },
       };
@@ -320,7 +345,7 @@ describe("connections/handlers/directConnectionHandler", function () {
           bootstrapServers: "localhost:9092",
           credentials: {
             type: CredentialType.OAUTH,
-            tokenEndpoint: "https://auth.example.com/token",
+            tokensUrl: "https://auth.example.com/token",
             clientId: "my-client",
           },
         },
@@ -395,7 +420,7 @@ describe("connections/handlers/directConnectionHandler", function () {
           bootstrapServers: "localhost:9092",
           credentials: {
             type: CredentialType.SCRAM,
-            mechanism: "SHA-256",
+            hashAlgorithm: ScramHashAlgorithm.SHA_256,
             username: "scram-user",
             password: "scram-pass",
           },
@@ -416,7 +441,7 @@ describe("connections/handlers/directConnectionHandler", function () {
           bootstrapServers: "localhost:9092",
           credentials: {
             type: CredentialType.SCRAM,
-            mechanism: "SHA-256",
+            hashAlgorithm: ScramHashAlgorithm.SHA_256,
             username: "",
             password: "scram-pass",
           },
@@ -438,8 +463,10 @@ describe("connections/handlers/directConnectionHandler", function () {
           bootstrapServers: "localhost:9092",
           credentials: {
             type: CredentialType.MTLS,
-            certificatePath: "/path/to/cert.pem",
-            keyPath: "/path/to/key.pem",
+            keystore: {
+              path: "/path/to/keystore.p12",
+              password: "keystore-password",
+            },
           },
         },
       };
@@ -458,8 +485,9 @@ describe("connections/handlers/directConnectionHandler", function () {
           bootstrapServers: "localhost:9092",
           credentials: {
             type: CredentialType.MTLS,
-            certificatePath: "",
-            keyPath: "/path/to/key.pem",
+            keystore: {
+              path: "",
+            },
           },
         },
       };
@@ -480,6 +508,7 @@ describe("connections/handlers/directConnectionHandler", function () {
           credentials: {
             type: CredentialType.KERBEROS,
             principal: "kafka/host@REALM",
+            keytabPath: "/path/to/keytab",
           },
         },
       };
@@ -499,6 +528,7 @@ describe("connections/handlers/directConnectionHandler", function () {
           credentials: {
             type: CredentialType.KERBEROS,
             principal: "",
+            keytabPath: "/path/to/keytab",
           },
         },
       };

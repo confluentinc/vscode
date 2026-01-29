@@ -32,9 +32,6 @@ const logger = new Logger("localResourceFetcher");
 /** Default Kafka REST API port. */
 const DEFAULT_KAFKA_REST_PORT = 8082;
 
-/** Default Kafka bootstrap port. */
-const DEFAULT_KAFKA_BOOTSTRAP_PORT = 9092;
-
 /**
  * Configuration for creating a local resource fetcher.
  */
@@ -348,9 +345,12 @@ class LocalResourceFetcherImpl implements LocalResourceFetcher {
     // Get the container name (remove leading slash)
     const name = container.Names?.[0]?.replace(/^\//, "") ?? "Local Kafka";
 
-    // Find the REST API port (8082) and bootstrap port (9092)
+    // Find the REST API port (8082) for the URI
     const restPort = this.findPortMapping(container, DEFAULT_KAFKA_REST_PORT);
-    const bootstrapPort = this.findPortMapping(container, DEFAULT_KAFKA_BOOTSTRAP_PORT);
+
+    // Find the bootstrap port - confluent-local uses dynamic ports, so we look for
+    // any mapped port that isn't the REST API port (8082)
+    const bootstrapPort = this.findBootstrapPort(container);
 
     if (!bootstrapPort) {
       logger.debug("no bootstrap port found for Kafka container", { containerId: container.Id });
@@ -365,6 +365,21 @@ class LocalResourceFetcherImpl implements LocalResourceFetcher {
     };
 
     return cluster;
+  }
+
+  /**
+   * Find the bootstrap port for a Kafka container.
+   * Confluent-local containers use dynamic ports, so we look for any mapped port
+   * that isn't the REST API port (8082).
+   */
+  private findBootstrapPort(container: ContainerSummary): number | undefined {
+    const ports = container.Ports?.filter(
+      (p) => p.PublicPort && p.PrivatePort !== DEFAULT_KAFKA_REST_PORT,
+    );
+    if (!ports || ports.length === 0) {
+      return undefined;
+    }
+    return ports[0].PublicPort;
   }
 
   /**

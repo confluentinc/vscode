@@ -6,7 +6,7 @@ import {
   registerCommandWithLogging,
   RESOURCE_ID_FIELDS,
 } from ".";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import * as errors from "../errors";
 import * as featureFlags from "../featureFlags/evaluation";
 import type { ConnectionId, IResourceBase } from "../models/resource";

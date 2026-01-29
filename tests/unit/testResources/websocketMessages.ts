@@ -1,6 +1,6 @@
 /** Sample test suite spellings of complex websocket messages */
 
-import { ConnectedState, ConnectionType } from "../../../src/clients/sidecar";
+import { ConnectedState, ConnectionType } from "../../../src/connections";
 import { CCLOUD_AUTH_CALLBACK_URI } from "../../../src/constants";
 import type { Message } from "../../../src/ws/messageTypes";
 import { ConnectionEventAction, MessageType } from "../../../src/ws/messageTypes";
@@ -36,7 +36,7 @@ export const GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE: Message<MessageType.CONNECTIO
       },
       status: {
         ccloud: {
-          state: ConnectedState.Success,
+          state: ConnectedState.SUCCESS,
           user: {
             id: "u-n3234",
             username: "foo@bar.com",

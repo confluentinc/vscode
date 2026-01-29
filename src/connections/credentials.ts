@@ -197,3 +197,61 @@ export function requiresSecureStorage(credentials: Credentials | undefined): boo
       return false;
   }
 }
+
+/**
+ * Type guard to check if an object is BasicCredentials.
+ * @param obj The object to check.
+ * @returns true if the object is BasicCredentials.
+ */
+export function instanceOfBasicCredentials(obj: unknown): obj is BasicCredentials {
+  return isCredentialType(obj as Credentials, CredentialType.BASIC);
+}
+
+/**
+ * Type guard to check if an object is ApiKeyCredentials.
+ * Also matches the old "ApiKeyCredentials" type name.
+ * @param obj The object to check.
+ * @returns true if the object is ApiKeyCredentials.
+ */
+export function instanceOfApiKeyCredentials(obj: unknown): obj is ApiKeyCredentials {
+  return isCredentialType(obj as Credentials, CredentialType.API_KEY);
+}
+
+/** Alias for backwards compatibility with sidecar naming. */
+export const instanceOfApiKeyAndSecret = instanceOfApiKeyCredentials;
+
+/**
+ * Type guard to check if an object is OAuthCredentials.
+ * @param obj The object to check.
+ * @returns true if the object is OAuthCredentials.
+ */
+export function instanceOfOAuthCredentials(obj: unknown): obj is OAuthCredentials {
+  return isCredentialType(obj as Credentials, CredentialType.OAUTH);
+}
+
+/**
+ * Type guard to check if an object is ScramCredentials.
+ * @param obj The object to check.
+ * @returns true if the object is ScramCredentials.
+ */
+export function instanceOfScramCredentials(obj: unknown): obj is ScramCredentials {
+  return isCredentialType(obj as Credentials, CredentialType.SCRAM);
+}
+
+/**
+ * Type guard to check if an object is MtlsCredentials.
+ * @param obj The object to check.
+ * @returns true if the object is MtlsCredentials.
+ */
+export function instanceOfMtlsCredentials(obj: unknown): obj is MtlsCredentials {
+  return isCredentialType(obj as Credentials, CredentialType.MTLS);
+}
+
+/**
+ * Type guard to check if an object is KerberosCredentials.
+ * @param obj The object to check.
+ * @returns true if the object is KerberosCredentials.
+ */
+export function instanceOfKerberosCredentials(obj: unknown): obj is KerberosCredentials {
+  return isCredentialType(obj as Credentials, CredentialType.KERBEROS);
+}

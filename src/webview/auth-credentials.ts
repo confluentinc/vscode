@@ -1,17 +1,18 @@
 import { ObservableScope } from "inertial";
-import {
-  type ApiKeyAndSecret,
-  type BasicCredentials,
-  type KerberosCredentials,
-  type OAuthCredentials,
-  type ScramCredentials,
-} from "../clients/sidecar";
-import type { FormConnectionType, SupportedAuthTypes } from "../directConnections/types";
+import type {
+  ApiKeyCredentials,
+  BasicCredentials,
+  FormConnectionType,
+  KerberosCredentials,
+  OAuthCredentials,
+  ScramCredentials,
+  SupportedAuthTypes,
+} from "./types";
 import { applyBindings, html } from "./bindings/bindings";
 
 type SupportedCredentialTypes =
   | BasicCredentials
-  | ApiKeyAndSecret
+  | ApiKeyCredentials
   | ScramCredentials
   | OAuthCredentials
   | KerberosCredentials;

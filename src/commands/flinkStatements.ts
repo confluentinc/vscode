@@ -25,7 +25,7 @@ import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { uriQuickpick } from "../quickpicks/uris";
-import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
+import { hasCCloudAuthSession } from "../authn/ccloudSession";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import type { UriMetadata } from "../storage/types";

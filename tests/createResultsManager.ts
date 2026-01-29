@@ -2,17 +2,18 @@ import * as assert from "assert";
 import { ObservableScope } from "inertial";
 import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "../src/clients/flinkSql";
 import { DEFAULT_RESULTS_LIMIT } from "../src/flinkSql/flinkStatementResults";
-import type { MessageType } from "../src/flinkSql/flinkStatementResultsManager";
+import type {
+  FlinkSqlApiProvider,
+  MessageType,
+} from "../src/flinkSql/flinkStatementResultsManager";
 import { FlinkStatementResultsManager } from "../src/flinkSql/flinkStatementResultsManager";
 import { CCloudResourceLoader } from "../src/loaders/ccloudResourceLoader";
 import type { FlinkStatement } from "../src/models/flinkStatement";
-import type * as sidecar from "../src/sidecar";
 import type { WebviewStorage } from "../src/webview/comms/comms";
 import type { ResultsViewerStorageState } from "../src/webview/flink-statement-results";
 import { FlinkStatementResultsViewModel } from "../src/webview/flink-statement-results";
 import { eventually } from "./eventually";
 import { loadFixtureFromFile } from "./fixtures/utils";
-import { getSidecarStub } from "./stubs/sidecar";
 
 class FakeWebviewStorage<T> implements WebviewStorage<T> {
   private storage: T | undefined;
@@ -30,7 +31,7 @@ export interface FlinkStatementResultsManagerTestContext {
   manager: FlinkStatementResultsManager;
   flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
   flinkSqlStatementResultsApi: sinon.SinonStubbedInstance<StatementResultsSqlV1Api>;
-  sidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
+  flinkApiProvider: FlinkSqlApiProvider;
   statement: FlinkStatement;
   refreshFlinkStatementStub: sinon.SinonStub;
   notifyUIStub: sinon.SinonStub;
@@ -64,18 +65,23 @@ export async function createTestResultsManagerContext(
   storage: WebviewStorage<ResultsViewerStorageState>;
   vm: FlinkStatementResultsViewModel;
 }> {
-  // Create sidecar and API mocks
-  const mockSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle> = getSidecarStub(sandbox);
-
+  // Create API mocks and provider
   const flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
-  mockSidecar.getFlinkSqlStatementsApi.returns(flinkSqlStatementsApi);
-
   const flinkSqlStatementResultsApi = sandbox.createStubInstance(StatementResultsSqlV1Api);
-  mockSidecar.getFlinkSqlStatementResultsApi.returns(flinkSqlStatementResultsApi);
+
+  // Create a mock FlinkSqlApiProvider
+  const flinkApiProvider: FlinkSqlApiProvider = {
+    getFlinkSqlStatementResultsApi: () => flinkSqlStatementResultsApi,
+    getFlinkSqlStatementsApi: () => flinkSqlStatementsApi,
+  };
 
   // Create resource loader and statement mocks
   const resourceLoader = CCloudResourceLoader.getInstance();
   const refreshFlinkStatementStub = sandbox.stub(resourceLoader, "refreshFlinkStatement");
+  // Stub stopFlinkStatement to delegate to the statements API for testability
+  sandbox.stub(resourceLoader, "stopFlinkStatement").callsFake(async () => {
+    await flinkSqlStatementsApi.updateSqlv1Statement({} as any);
+  });
 
   const notifyUIStub = sandbox.stub();
 
@@ -105,7 +111,7 @@ export async function createTestResultsManagerContext(
   const manager = new FlinkStatementResultsManager(
     os,
     statement,
-    mockSidecar,
+    flinkApiProvider,
     notifyUIStub,
     DEFAULT_RESULTS_LIMIT,
     // Polling interval of 1ms
@@ -148,7 +154,7 @@ export async function createTestResultsManagerContext(
     ctx: {
       manager,
       statement,
-      sidecar: mockSidecar,
+      flinkApiProvider,
       refreshFlinkStatementStub,
       flinkSqlStatementsApi,
       flinkSqlStatementResultsApi,

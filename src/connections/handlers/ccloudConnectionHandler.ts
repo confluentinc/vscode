@@ -5,20 +5,19 @@
  * session management, token refresh, and organization/resource discovery.
  */
 
+import type { ConnectionSpec } from "../spec";
 import {
   ConnectedState,
   type CCloudStatus,
   type CCloudUser,
   type ConnectionStatus,
 } from "../types";
-import type { ConnectionSpec } from "../spec";
 import { ConnectionHandler, type ConnectionTestResult } from "./connectionHandler";
+import { AuthService, type AuthResult } from "../../auth/oauth2/authService";
+import { TokenManager } from "../../auth/oauth2/tokenManager";
 
 /** Maximum session lifetime in seconds (8 hours). */
 const MAX_SESSION_LIFETIME_SECONDS = 28800;
-
-/** Maximum number of token refresh attempts. */
-const MAX_REFRESH_ATTEMPTS = 50;
 
 /** Result of OAuth authentication flow. */
 interface OAuthFlowResult {
@@ -67,16 +66,17 @@ export class CCloudConnectionHandler extends ConnectionHandler {
     this.updateStatus({ ccloud: this._ccloudStatus });
 
     try {
-      // TODO: Phase 2 will implement actual OAuth flow
-      // For now, simulate successful authentication
       const authResult = await this.performOAuthFlow();
 
       if (authResult.success) {
+        // Get user info from tokens if available
+        const user = await this.getUserFromTokens();
+
         this._ccloudStatus = {
           state: ConnectedState.SUCCESS,
-          user: authResult.user,
+          user: user ?? authResult.user,
         };
-        this._requiresAuthenticationAt = this.calculateSessionExpiry();
+        this._requiresAuthenticationAt = await this.getSessionExpiryFromTokens();
         this._refreshAttempts = 0;
         this._connected = true;
       } else {
@@ -103,6 +103,14 @@ export class CCloudConnectionHandler extends ConnectionHandler {
    * Disconnects from Confluent Cloud and clears session.
    */
   async disconnect(): Promise<void> {
+    // Sign out from AuthService to clear tokens
+    try {
+      const authService = AuthService.getInstance();
+      await authService.signOut();
+    } catch {
+      // Continue with disconnect even if signOut fails
+    }
+
     this._connected = false;
     this._ccloudStatus = { state: ConnectedState.NONE };
     this._requiresAuthenticationAt = undefined;
@@ -157,8 +165,10 @@ export class CCloudConnectionHandler extends ConnectionHandler {
    * @returns true if tokens were refreshed, false otherwise.
    */
   async refreshCredentials(): Promise<boolean> {
+    const tokenManager = TokenManager.getInstance();
+
     // Check if we've exceeded max refresh attempts
-    if (this._refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
+    if (tokenManager.hasExceededMaxRefreshAttempts()) {
       this._ccloudStatus = {
         state: ConnectedState.EXPIRED,
         user: this._ccloudStatus.user,
@@ -175,14 +185,27 @@ export class CCloudConnectionHandler extends ConnectionHandler {
     }
 
     try {
-      // TODO: Phase 2 will implement actual token refresh
-      // For now, simulate refresh
-      this._refreshAttempts++;
+      const authService = AuthService.getInstance();
+      const result = await authService.refreshTokens();
 
-      // Simulate successful refresh
-      this._requiresAuthenticationAt = this.calculateSessionExpiry();
-
-      return true;
+      if (result.success) {
+        this._refreshAttempts++;
+        this._requiresAuthenticationAt = await this.getSessionExpiryFromTokens();
+        return true;
+      } else {
+        // If refresh fails, check if session has expired
+        const isValid = await tokenManager.isSessionValid();
+        if (!isValid) {
+          this._ccloudStatus = {
+            state: ConnectedState.EXPIRED,
+            user: this._ccloudStatus.user,
+            errors: [{ message: result.error ?? "Session expired" }],
+          };
+          this._connected = false;
+          this.updateStatus({ ccloud: this._ccloudStatus });
+        }
+        return false;
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this._ccloudStatus = {
@@ -239,29 +262,41 @@ export class CCloudConnectionHandler extends ConnectionHandler {
 
   /**
    * Performs the OAuth2 PKCE authentication flow.
-   * This is a placeholder until Phase 2 implementation.
+   * Uses the AuthService to handle the complete OAuth flow.
    */
   private async performOAuthFlow(): Promise<OAuthFlowResult> {
-    // TODO: Phase 2 will implement actual OAuth flow:
-    // 1. Generate PKCE code verifier and challenge
-    // 2. Open browser to CCloud authorize endpoint
-    // 3. Handle callback via URI handler or local server
-    // 4. Exchange code for tokens
-    // 5. Get user info
-
-    // For now, validate configuration and simulate success
+    // First validate the configuration
     const validationResult = await this.validateCCloudConfig();
     if (!validationResult.success) {
       return { success: false, error: validationResult.error };
     }
 
-    // Simulate successful authentication with mock user
+    // Get the AuthService and initiate authentication
+    const authService = AuthService.getInstance();
+
+    // Check if we're already authenticated
+    if (authService.isAuthenticated()) {
+      const user = await this.getUserFromTokens();
+      return {
+        success: true,
+        user: user ?? { id: "unknown", username: "authenticated-user" },
+      };
+    }
+
+    // Start the OAuth flow
+    const result: AuthResult = await authService.authenticate({
+      organizationId: this._spec.ccloudConfig?.organizationId,
+    });
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    // Get user info from the authenticated session
+    const user = await this.getUserFromTokens();
     return {
       success: true,
-      user: {
-        id: "placeholder-user-id",
-        username: "placeholder@example.com",
-      },
+      user: user ?? { id: "unknown", username: "authenticated-user" },
     };
   }
 
@@ -302,6 +337,58 @@ export class CCloudConnectionHandler extends ConnectionHandler {
     const fiveMinutesFromNow = new Date();
     fiveMinutesFromNow.setMinutes(fiveMinutesFromNow.getMinutes() + 5);
     return this._requiresAuthenticationAt <= fiveMinutesFromNow;
+  }
+
+  /**
+   * Gets user information from the stored tokens.
+   * Decodes the ID token to extract user claims.
+   */
+  private async getUserFromTokens(): Promise<CCloudUser | undefined> {
+    const tokenManager = TokenManager.getInstance();
+    const tokens = await tokenManager.getTokens();
+
+    if (!tokens?.idToken) {
+      return undefined;
+    }
+
+    try {
+      // Decode the JWT ID token to get user claims
+      const parts = tokens.idToken.split(".");
+      if (parts.length !== 3) {
+        return undefined;
+      }
+
+      // Decode the payload (middle part)
+      const payload = JSON.parse(atob(parts[1]));
+
+      return {
+        id: payload.sub ?? payload.user_id ?? "unknown",
+        username: payload.email ?? payload.preferred_username ?? "unknown",
+        firstName: payload.given_name,
+        lastName: payload.family_name,
+        socialConnection: payload.social_connection,
+        authType: payload.auth_type,
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Gets the session expiry time from the TokenManager.
+   * Returns the refresh token expiry as the session end time.
+   */
+  private async getSessionExpiryFromTokens(): Promise<Date> {
+    const tokenManager = TokenManager.getInstance();
+    const status = await tokenManager.getTokenStatus();
+
+    // Use refresh token expiry as the session expiry
+    if (status.refreshToken.expiresAt) {
+      return status.refreshToken.expiresAt;
+    }
+
+    // Fallback to calculated expiry
+    return this.calculateSessionExpiry();
   }
 
   /**

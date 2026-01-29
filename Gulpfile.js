@@ -2,7 +2,6 @@ import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
 import node from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
-import virtual from "@rollup/plugin-virtual";
 import { createFilter } from "@rollup/pluginutils";
 import { sentryRollupPlugin } from "@sentry/rollup-plugin";
 import { FontAssetType, OtherAssetType, generateFonts } from "@twbs/fantasticon";
@@ -17,7 +16,7 @@ import libReport from "istanbul-lib-report";
 import libSourceMaps from "istanbul-lib-source-maps";
 import reports from "istanbul-reports";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { appendFile, readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -77,9 +76,6 @@ export function build(done) {
   const incremental = process.argv.indexOf("-w", 2) > -1;
   const production = process.env.NODE_ENV === "production";
 
-  const result = downloadSidecar();
-  if (result.error) throw result.error;
-
   if (production) {
     process.env.SENTRY_ENV = "production";
     setupSegment();
@@ -91,10 +87,8 @@ export function build(done) {
   const extInput = {
     input: {
       extension: "src/extension.ts",
-      sidecar: "ide-sidecar",
     },
     plugins: [
-      sidecar(),
       pkgjson(),
       node({ preferBuiltins: true, exportConditions: ["node"] }),
       commonjs(),
@@ -118,13 +112,7 @@ export function build(done) {
         targets: [
           { src: ["resources"], dest: DESTINATION },
           {
-            src: [
-              "LICENSE.txt",
-              "NOTICE-vsix.txt",
-              "THIRD_PARTY_NOTICES.txt",
-              "THIRD_PARTY_NOTICES_IDE_SIDECAR.txt",
-              ".vscodeignore",
-            ],
+            src: ["LICENSE.txt", "NOTICE-vsix.txt", "THIRD_PARTY_NOTICES.txt", ".vscodeignore"],
             dest: DESTINATION,
           },
           { src: ["README.md"], dest: DESTINATION },
@@ -444,38 +432,6 @@ function pkgjson() {
 }
 
 /**
- * Bundles sidecar binary of appropriate version.
- * Provides `ide-sidecar` module for the source code to use.
- */
-function sidecar() {
-  const sidecarVersion = readFileSync(".versions/ide-sidecar.txt", "utf-8").replace(/[v\n\s]/g, "");
-
-  let sidecarFilename = `ide-sidecar-${sidecarVersion}-runner`;
-  // we may be building for Windows from a non-Windows machine, in which case we'll have the .exe
-  if (IS_WINDOWS || process.env.TARGET === "win32-x64") {
-    sidecarFilename = `${sidecarFilename}.exe`;
-  }
-  console.log(`Copying sidecar executable ${sidecarFilename} to ${DESTINATION}/bin/`, {
-    is_windows: IS_WINDOWS,
-    target: process.env.TARGET,
-  });
-  const sidecarPath = join("bin", sidecarFilename);
-  if (!existsSync(sidecarPath)) {
-    throw new Error(`Sidecar executable ${sidecarFilename} not found in bin/ directory.`);
-  }
-
-  return [
-    virtual({
-      "ide-sidecar": `export const version = "${sidecarVersion}"; export default decodeURIComponent(new URL("./${sidecarFilename}", import.meta.url).pathname);`,
-    }),
-    copy({
-      copyOnce: true,
-      targets: [{ src: `bin/${sidecarFilename}`, dest: DESTINATION }],
-    }),
-  ];
-}
-
-/**
  * Enable modules to import html files as template generating functions.
  *
  * @example
@@ -657,10 +613,6 @@ export async function lint() {
 testBuild.description =
   "Build test files for running tests via `gulp testRun` or through the VS Code test runner. Use --coverage to enable coverage reporting.";
 export async function testBuild() {
-  // make sure to download the appropriate sidecar executable before building for tests
-  const result = downloadSidecar();
-  if (result.error) throw result.error;
-
   const reportCoverage = IS_CI || process.argv.indexOf("--coverage", 2) >= 0;
   const testFiles = globSync(["src/**/*.test.ts", "src/testing.ts", "tests/**/*.ts"]);
   const entryMap = Object.fromEntries(
@@ -671,10 +623,8 @@ export async function testBuild() {
     input: {
       ...entryMap,
       extension: "src/extension.ts",
-      sidecar: "ide-sidecar",
     },
     plugins: [
-      sidecar(),
       pkgjson(),
       node({ preferBuiltins: true, exportConditions: ["node"] }),
       commonjs(),
@@ -1159,24 +1109,4 @@ export function install(done) {
     shell: IS_WINDOWS,
   });
   return done(result.status);
-}
-
-export function downloadSidecar() {
-  let result;
-  if (IS_WINDOWS) {
-    result = spawnSync(
-      "powershell.exe",
-      // Add "-ExecutionPolicy", "Bypass" if necessary
-      ["-ExecutionPolicy", "Bypass", "-File", "./scripts/windows/download-sidecar-executable.ps1"],
-      { stdio: "inherit", shell: IS_WINDOWS },
-    );
-  } else {
-    // Use the make target to download the sidecar executable
-    result = spawnSync("make", ["download-sidecar-executable"], {
-      stdio: "inherit",
-      shell: IS_WINDOWS,
-    });
-  }
-
-  return result;
 }

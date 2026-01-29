@@ -1,8 +1,5 @@
-import type {
-  DeleteSchemaVersionRequest,
-  DeleteSubjectRequest,
-} from "../clients/schemaRegistryRest";
-import { ConnectionType } from "../clients/sidecar";
+import { TokenManager } from "../auth/oauth2/tokenManager";
+import { ConnectionType, CredentialType } from "../connections";
 import { isResponseError, logError } from "../errors";
 import { Logger } from "../logging";
 import type { Environment } from "../models/environment";
@@ -13,7 +10,8 @@ import { Subject, subjectMatchesTopicName } from "../models/schema";
 import type { SchemaRegistry } from "../models/schemaRegistry";
 import type { KafkaTopic } from "../models/topic";
 import { showWarningNotificationWithButtons } from "../notifications";
-import { getSidecar } from "../sidecar";
+import type { AuthConfig } from "../proxy/httpClient";
+import * as schemaRegistryProxy from "../proxy/schemaRegistryProxy";
 import { getResourceManager } from "../storage/resourceManager";
 import { DisposableCollection } from "../utils/disposables";
 import type { DirectResourceLoader } from "./directResourceLoader";
@@ -329,100 +327,107 @@ export abstract class ResourceLoader extends DisposableCollection implements IRe
     hardDelete: boolean,
     shouldClearSubject: boolean,
   ): Promise<void> {
-    const subjectApi = (await getSidecar()).getSubjectsV1Api(
-      schema.schemaRegistryId,
-      schema.connectionId,
-    );
-
-    try {
-      if (hardDelete) {
-        // Must do a soft delete first, then hard delete.
-        const softDeleteRequest: DeleteSchemaVersionRequest = {
-          subject: schema.subject,
-          version: `${schema.version}`,
-          permanent: false,
-        };
-
-        // first the soft delete
-        await subjectApi.deleteSchemaVersion(softDeleteRequest);
-      }
-
-      // Now can perform either a hard or a soft delete.
-      const deleteRequest: DeleteSchemaVersionRequest = {
-        subject: schema.subject,
-        version: `${schema.version}`,
-        permanent: hardDelete,
-      };
-
-      await subjectApi.deleteSchemaVersion(deleteRequest);
-    } catch (error) {
-      logError(error, "Error deleting schema version", {
-        extra: {
-          connectionId: schema.connectionId,
-          environmentId: schema.environmentId ? schema.environmentId : "unknown",
-          schemaRegistryId: schema.schemaRegistryId,
-          hardDelete: hardDelete ? "true" : "false",
-        },
-      });
-      throw error;
+    if (!schema.environmentId) {
+      throw new Error("Schema is missing environmentId, cannot delete");
+    }
+    const schemaRegistry = await this.getSchemaRegistryForEnvironmentId(schema.environmentId);
+    if (!schemaRegistry) {
+      throw new Error(`No schema registry found for environment ${schema.environmentId}`);
     }
 
+    const auth = await this.getAuthConfigForSchemaRegistry(schemaRegistry);
+    const proxy = schemaRegistryProxy.createSchemaRegistryProxy({
+      baseUrl: schemaRegistry.uri,
+      auth,
+    });
+
+    logger.debug(
+      `Deleting schema version ${schema.version} for subject ${schema.subject} (permanent: ${hardDelete})`,
+    );
+
+    if (hardDelete) {
+      // Must do a soft delete first, then hard delete
+      await proxy.deleteSchemaVersion(schema.subject, schema.version, { permanent: false });
+    }
+    await proxy.deleteSchemaVersion(schema.subject, schema.version, { permanent: hardDelete });
+
+    // Clear the subject cache if needed
     if (shouldClearSubject) {
-      // Clear out the cache for the whole of the schema registry.
-      await this.clearCache(schema.subjectObject());
+      await this.clearCache(schemaRegistry);
     }
   }
 
   /**
-   *
+   * Delete a subject from the schema registry.
    * @param subject The subject to delete. Must carry all of the schema versions to delete within its `.schemas` property.
    * @param hardDelete Should each schema version be hard or soft deleted?
    */
   public async deleteSchemaSubject(subject: Subject, hardDelete: boolean): Promise<void> {
-    const subjectApi = (await getSidecar()).getSubjectsV1Api(
-      subject.schemaRegistryId,
-      subject.connectionId,
-    );
-
-    // Will have to do either one or two requests to delete the subject, based on hardness.
-    const requests: DeleteSubjectRequest[] = [];
-
-    if (hardDelete) {
-      // Must do a soft delete first, then hard delete.
-      requests.push({
-        subject: subject.name,
-        permanent: false,
-      });
+    const schemaRegistry = await this.getSchemaRegistryForEnvironmentId(subject.environmentId);
+    if (!schemaRegistry) {
+      throw new Error(`No schema registry found for environment ${subject.environmentId}`);
     }
 
-    // Now can perform either a hard or a soft delete.
-    requests.push({
-      subject: subject.name,
-      permanent: hardDelete,
+    const auth = await this.getAuthConfigForSchemaRegistry(schemaRegistry);
+    const proxy = schemaRegistryProxy.createSchemaRegistryProxy({
+      baseUrl: schemaRegistry.uri,
+      auth,
     });
 
-    try {
-      for (const request of requests) {
-        await subjectApi.deleteSubject(request);
+    logger.debug(`Deleting subject ${subject.name} (permanent: ${hardDelete})`);
+
+    if (hardDelete) {
+      // Must do a soft delete first, then hard delete
+      await proxy.deleteSubject(subject.name, { permanent: false });
+    }
+    await proxy.deleteSubject(subject.name, { permanent: hardDelete });
+
+    // Clear the subject cache
+    await this.clearCache(schemaRegistry);
+  }
+
+  /**
+   * Get authentication configuration for a Schema Registry based on connection type.
+   */
+  protected async getAuthConfigForSchemaRegistry(
+    schemaRegistry: SchemaRegistry,
+  ): Promise<AuthConfig | undefined> {
+    switch (this.connectionType) {
+      case ConnectionType.Ccloud: {
+        // CCloud uses bearer token authentication
+        const token = (await TokenManager.getInstance().getDataPlaneToken()) || "";
+        return {
+          type: "bearer",
+          token,
+        };
       }
-    } catch (error) {
-      logError(error, "Error deleting schema subject", {
-        extra: {
-          connectionId: subject.connectionId,
-          environmentId: subject.environmentId,
-          schemaRegistryId: subject.schemaRegistryId,
-          hardDelete: hardDelete ? "true" : "false",
-        },
-      });
-      throw error;
-    } finally {
-      // Always clear out the subject cache, regardless of whether the delete was successful.
-      // because a failure could have been encountered half way through deleting
-      // schema versions and the subject remains.
-      const schemaRegistry = await this.getSchemaRegistryForEnvironmentId(subject.environmentId);
-      if (schemaRegistry) {
-        await this.clearCache(schemaRegistry);
+      case ConnectionType.Direct: {
+        // Direct connections may have credentials stored
+        const resourceManager = getResourceManager();
+        const spec = await resourceManager.getDirectConnection(schemaRegistry.connectionId);
+        if (spec?.schemaRegistry?.credentials) {
+          const creds = spec.schemaRegistry.credentials;
+          if (creds.type === CredentialType.BASIC) {
+            return {
+              type: "basic",
+              username: creds.username,
+              password: creds.password,
+            };
+          }
+          if (creds.type === CredentialType.API_KEY) {
+            return {
+              type: "basic",
+              username: creds.apiKey,
+              password: creds.apiSecret,
+            };
+          }
+        }
+        return undefined;
       }
+      case ConnectionType.Local:
+      default:
+        // Local connections typically don't require authentication
+        return undefined;
     }
   }
 

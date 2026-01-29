@@ -402,6 +402,13 @@ export class HttpClient {
       }
     }
 
+    // Remove headers with empty values (allows overriding defaults with empty string to remove)
+    for (const [key, value] of Object.entries(headers)) {
+      if (value === "" || value === undefined) {
+        delete headers[key];
+      }
+    }
+
     return headers;
   }
 

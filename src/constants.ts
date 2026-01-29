@@ -1,7 +1,6 @@
 import { env, extensions } from "vscode";
-import type { ConnectionSpec } from "./clients/sidecar";
-import { ConnectionType } from "./clients/sidecar";
-import type { ConnectionId } from "./models/resource";
+import type { ConnectionSpec } from "./connections/spec";
+import { ConnectionType, type ConnectionId } from "./connections/types";
 
 export const EXTENSION_ID = "confluentinc.vscode-confluent";
 /** The version of the extension, as defined in package.json. */
@@ -41,30 +40,30 @@ export const AUTH_PROVIDER_LABEL = "Confluent Cloud";
  */
 export const AUTH_SCOPES = ["ccloud"];
 
-/** Single CCloud connection spec to be used with the sidecar Connections API. */
+/** Single CCloud connection spec to be used with the internal Connections API. */
 export const CCLOUD_CONNECTION_SPEC: ConnectionSpec = {
-  id: `${env.uriScheme}-confluent-cloud-connection`,
+  id: `${env.uriScheme}-confluent-cloud-connection` as ConnectionId,
   name: "Confluent Cloud",
   type: ConnectionType.Ccloud,
-  ccloud_config: {
-    ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
+  ccloudConfig: {
+    ideAuthCallbackUri: CCLOUD_AUTH_CALLBACK_URI,
   },
 };
-// these two avoid the need to use `CCLOUD_CONNECTION_SPEC.id!` or `CCLOUD_CONNECTION_SPEC.name!`
+// these two avoid the need to use `CCLOUD_CONNECTION_SPEC.id` or `CCLOUD_CONNECTION_SPEC.name`
 // everywhere in the codebase
-export const CCLOUD_CONNECTION_ID = CCLOUD_CONNECTION_SPEC.id! as ConnectionId;
-export const CCLOUD_CONNECTION_NAME = CCLOUD_CONNECTION_SPEC.name!;
+export const CCLOUD_CONNECTION_ID = CCLOUD_CONNECTION_SPEC.id;
+export const CCLOUD_CONNECTION_NAME = CCLOUD_CONNECTION_SPEC.name;
 
-/** Single local connection spec to be used with the sidecar Connections API. */
+/** Single local connection spec to be used with the internal Connections API. */
 export const LOCAL_CONNECTION_SPEC: ConnectionSpec = {
-  id: `${env.uriScheme}-local-connection`,
+  id: `${env.uriScheme}-local-connection` as ConnectionId,
   name: "Local",
   type: ConnectionType.Local,
 };
-// these two avoid the need to use `LOCAL_CONNECTION_SPEC.id!` or `LOCAL_CONNECTION_SPEC.name!`
+// these two avoid the need to use `LOCAL_CONNECTION_SPEC.id` or `LOCAL_CONNECTION_SPEC.name`
 // everywhere in the codebase
-export const LOCAL_CONNECTION_ID = LOCAL_CONNECTION_SPEC.id! as ConnectionId;
-export const LOCAL_CONNECTION_NAME = LOCAL_CONNECTION_SPEC.name!;
+export const LOCAL_CONNECTION_ID = LOCAL_CONNECTION_SPEC.id;
+export const LOCAL_CONNECTION_NAME = LOCAL_CONNECTION_SPEC.name;
 /** The port used for the local Kafka REST proxy. Used by the extension during container creation,
  * and by the sidecar for local Kafka discovery. */
 export const LOCAL_KAFKA_REST_PORT = 8082;

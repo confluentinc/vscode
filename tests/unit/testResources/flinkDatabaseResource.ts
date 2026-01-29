@@ -1,4 +1,4 @@
-import { ConnectionType } from "../../../src/clients/sidecar";
+import { ConnectionType } from "../../../src/connections";
 import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
 import { IconNames } from "../../../src/icons";
 import type { FlinkDatabaseResource } from "../../../src/models/flinkDatabaseResource";

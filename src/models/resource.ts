@@ -1,10 +1,13 @@
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType, type ConnectionId as InternalConnectionId } from "../connections/types";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import type { IconNames } from "../icons";
 import type { IdItem } from "./main";
 
-/** A uniquely-branded string-type for a connection ID. */
-export type ConnectionId = string & { readonly brand: unique symbol };
+/**
+ * A uniquely-branded string-type for a connection ID.
+ * Re-exported from connections/types for backwards compatibility.
+ */
+export type ConnectionId = InternalConnectionId;
 
 /** Likewise for environment ids. Note that Direct Connection ids also double as environment ids. */
 export type EnvironmentId = string & { readonly brand: unique symbol };

@@ -45,11 +45,11 @@ export async function produceMessages(
 
   let bootstrapServers: string;
   let saslConfig: KafkaJS.SASLOptions | undefined;
-  if (connectionType === ConnectionType.Local) {
+  if (connectionType === ConnectionType.LOCAL) {
     // copy the bootstrap server from the Resources view for LOCAL connections since we don't have
     // to set up any local credentials
     const resourcesView = new ResourcesView(page);
-    const localKafka = await resourcesView.getKafkaCluster(ConnectionType.Local);
+    const localKafka = await resourcesView.getKafkaCluster(ConnectionType.LOCAL);
     await expect(localKafka).not.toHaveCount(0);
     const localKafkaItem = new KafkaClusterItem(page, localKafka.first());
     bootstrapServers = await localKafkaItem.copyBootstrapServers();
@@ -73,7 +73,7 @@ export async function produceMessages(
   }
 
   const kafkaConfig: KafkaJS.KafkaConfig = {
-    ssl: connectionType !== ConnectionType.Local,
+    ssl: connectionType !== ConnectionType.LOCAL,
     brokers: bootstrapServers.split(","),
     logLevel: KafkaJS.logLevel.ERROR, // silence non-error logging
   };

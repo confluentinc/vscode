@@ -130,15 +130,15 @@
               id="kafka_cluster.auth_type"
               name="kafka_cluster.auth_type"
               data-on-input="this.updateValue(event)"
+              data-value="this.kafkaAuthType()"
               data-attr-disabled="this.editing() ? true : false"
             >
-              <template data-for="auth of this.getValidKafkaAuthTypes()">
-                <option
-                  data-attr-value="this.auth().value"
-                  data-text="this.auth().label"
-                  data-attr-selected="this.auth().value === this.kafkaAuthType()"
-                ></option>
-              </template>
+              <option value="None">None</option>
+              <option value="Basic">Username &amp; Password (SASL/PLAIN)</option>
+              <option value="API">API Credentials (SASL/PLAIN)</option>
+              <option value="SCRAM">SASL/SCRAM</option>
+              <option value="OAuth">SASL/OAUTHBEARER</option>
+              <option value="Kerberos">Kerberos (SASL/GSSAPI)</option>
             </select>
           </div>
           <div class="content-wrapper">

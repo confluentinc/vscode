@@ -1,6 +1,5 @@
 import { Analytics } from "@segment/analytics-node";
 import { randomUUID } from "crypto";
-import * as ideSidecar from "ide-sidecar";
 import * as vscode from "vscode";
 import { Logger } from "../logging";
 // TEMP keep this import here to make sure the production bundle doesn't split chunks
@@ -113,7 +112,6 @@ export function preparePropertiesForTrack(
   return {
     productName: vscode.env.uriScheme, // "vscode", "vscode-insiders", etc.
     productVersion: vscode.version,
-    currentSidecarVersion: ideSidecar.version,
     platform: platform(),
     arch: arch(),
     remoteName: vscode.env.remoteName ?? "", // "wsl", "ssh-remote", etc.

@@ -1,9 +1,9 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import { ConnectionType } from "../connections";
+import type { KafkaCluster } from "../models/kafkaCluster";
 import { createTopicFetcher } from "./topicFetcher";
 import { TopicFetchError } from "./types";
-import { ConnectionType } from "../clients/sidecar";
-import type { KafkaCluster } from "../models/kafkaCluster";
 
 describe("fetchers/topicFetcher", function () {
   let fetchStub: sinon.SinonStub;

@@ -7,8 +7,8 @@ import {
   canAccessSchemaForTopic,
   showNoSchemaAccessWarningNotification,
 } from "./authz/schemaRegistry";
-import { ResponseError, type PartitionConsumeRecord } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
+import { ResponseError, type PartitionConsumeRecord } from "./connections";
 import { LOCAL_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context/extension";
 import { showJsonPreview } from "./documentProviders/message";
@@ -38,9 +38,9 @@ import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
 
 import { getCCloudAuthSession } from "./authn/utils";
-import { getResourceManager } from "./storage/resourceManager";
-import { ConnectionType } from "./clients/sidecar";
+import { ConnectionType } from "./connections";
 import type { KafkaRestProxyConfig } from "./proxy/kafkaRestProxy";
+import { getResourceManager } from "./storage/resourceManager";
 
 const logger = new Logger("consume");
 
@@ -75,24 +75,24 @@ async function createConsumeProxyForTopic(topic: KafkaTopic): Promise<KafkaConsu
     case ConnectionType.Direct: {
       // Direct connections use the configured REST proxy URL
       const connectionSpec = await getResourceManager().getDirectConnection(topic.connectionId);
-      if (!connectionSpec?.kafka_cluster) {
+      if (!connectionSpec?.kafkaCluster) {
         throw new Error("Direct connection not found or missing Kafka configuration");
       }
       // For direct connections, we need the REST proxy URL which may be derived
       // from the bootstrap servers or configured separately
-      const bootstrapServers = connectionSpec.kafka_cluster.bootstrap_servers;
+      const bootstrapServers = connectionSpec.kafkaCluster.bootstrapServers;
       // Assume REST proxy is on port 8082 of the first bootstrap server
       const host = bootstrapServers?.split(",")[0]?.split(":")[0] ?? "localhost";
       config = {
         baseUrl: `http://${host}:8082`,
         clusterId: topic.clusterId,
-        auth: connectionSpec.kafka_cluster.credentials
+        auth: connectionSpec.kafkaCluster.credentials
           ? {
               type: "basic",
               username:
-                (connectionSpec.kafka_cluster.credentials as { username?: string }).username ?? "",
+                (connectionSpec.kafkaCluster.credentials as { username?: string }).username ?? "",
               password:
-                (connectionSpec.kafka_cluster.credentials as { password?: string }).password ?? "",
+                (connectionSpec.kafkaCluster.credentials as { password?: string }).password ?? "",
             }
           : undefined,
       };

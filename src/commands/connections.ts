@@ -1,6 +1,7 @@
 import type { Disposable } from "vscode";
 import { Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
+import { deleteCCloudConnection } from "../authn/ccloudSession";
 import { getCCloudAuthSession } from "../authn/utils";
 import { EXTENSION_VERSION } from "../constants";
 import { openDirectConnectionForm } from "../directConnect";
@@ -11,7 +12,6 @@ import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import type { ConnectionId } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
-import { deleteCCloudConnection } from "../sidecar/connections/ccloud";
 import { SecretStorageKeys } from "../storage/constants";
 import type { CustomConnectionSpec } from "../storage/resourceManager";
 import { CustomConnectionSpecFromJSON, getResourceManager } from "../storage/resourceManager";
@@ -143,12 +143,10 @@ export async function createNewDirectConnectionCommand() {
         // read the file and parse it as a JSON object
         const fileContent = await readFileString(Uri.file(newSpecPath));
         const jsonSpec = JSON.parse(fileContent.toString());
+        jsonSpec.id = "FILE_UPLOAD" as ConnectionId;
 
         // validate the JSON object against the ConnectionSpec schema
-        const newSpec = {
-          ...CustomConnectionSpecFromJSON(jsonSpec),
-          id: "FILE_UPLOAD" as ConnectionId,
-        };
+        const newSpec = CustomConnectionSpecFromJSON(jsonSpec);
         // use it to open the Direct Connection form (form will populate the fields with spec values)
         openDirectConnectionForm(newSpec);
       } catch (error) {

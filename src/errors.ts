@@ -7,7 +7,6 @@ import { ResponseError as KafkaResponseError } from "./clients/kafkaRest";
 import { ResponseError as MedusaResponseError } from "./clients/medusa";
 import { ResponseError as ScaffoldingServiceResponseError } from "./clients/scaffoldingService";
 import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRegistryRest";
-import { ResponseError as SidecarResponseError } from "./clients/sidecar";
 import { Logger } from "./logging";
 import { sentryCaptureException } from "./telemetry/sentryClient";
 
@@ -22,7 +21,6 @@ export class ExtensionContextNotSetError extends Error {
 
 /** Combined `ResponseError` type from our OpenAPI spec generated client code. */
 export type AnyResponseError =
-  | SidecarResponseError
   | KafkaResponseError
   | SchemaRegistryResponseError
   | FlinkArtifactsResponseError
@@ -35,7 +33,6 @@ export type AnyResponseError =
 /** Was this an error raised when any of our OpenAPI clients tried to digest a response? */
 export function isResponseError(error: unknown): error is AnyResponseError {
   return (
-    error instanceof SidecarResponseError ||
     error instanceof KafkaResponseError ||
     error instanceof SchemaRegistryResponseError ||
     error instanceof FlinkArtifactsResponseError ||

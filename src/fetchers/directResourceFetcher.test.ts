@@ -1,15 +1,15 @@
 import * as assert from "assert";
-import { createDirectResourceFetcher } from "./directResourceFetcher";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import { DirectEnvironment } from "../models/environment";
 import type { ConnectionId } from "../models/resource";
 import type { CustomConnectionSpec } from "../storage/resourceManager";
+import { createDirectResourceFetcher } from "./directResourceFetcher";
 
 describe("fetchers/directResourceFetcher", function () {
   function createMockSpec(options: {
     id: string;
     name?: string;
-    kafka?: { bootstrap_servers: string; uri?: string };
+    kafka?: { bootstrapServers: string; uri?: string };
     schemaRegistry?: { uri: string };
     formConnectionType?: string;
   }): CustomConnectionSpec {
@@ -18,13 +18,12 @@ describe("fetchers/directResourceFetcher", function () {
       name: options.name ?? "Test Connection",
       type: ConnectionType.Direct,
       formConnectionType: (options.formConnectionType ?? "Apache Kafka") as any,
-      kafka_cluster: options.kafka
+      kafkaCluster: options.kafka
         ? {
-            bootstrap_servers: options.kafka.bootstrap_servers,
-            uri: options.kafka.uri,
+            bootstrapServers: options.kafka.bootstrapServers,
           }
         : undefined,
-      schema_registry: options.schemaRegistry
+      schemaRegistry: options.schemaRegistry
         ? {
             uri: options.schemaRegistry.uri,
           }
@@ -58,7 +57,7 @@ describe("fetchers/directResourceFetcher", function () {
       const spec = createMockSpec({
         id: "conn-123",
         name: "My Connection",
-        kafka: { bootstrap_servers: "localhost:9092", uri: "http://localhost:8082" },
+        kafka: { bootstrapServers: "localhost:9092", uri: "http://localhost:8082" },
       });
 
       const fetcher = createDirectResourceFetcher({
@@ -79,7 +78,7 @@ describe("fetchers/directResourceFetcher", function () {
       const spec = createMockSpec({
         id: "conn-kafka-only",
         name: "Kafka Only",
-        kafka: { bootstrap_servers: "broker1:9092,broker2:9092" },
+        kafka: { bootstrapServers: "broker1:9092,broker2:9092" },
       });
 
       const fetcher = createDirectResourceFetcher({
@@ -126,7 +125,7 @@ describe("fetchers/directResourceFetcher", function () {
       const spec = createMockSpec({
         id: "conn-both",
         name: "Full Connection",
-        kafka: { bootstrap_servers: "kafka:9092", uri: "http://kafka:8082" },
+        kafka: { bootstrapServers: "kafka:9092", uri: "http://kafka:8082" },
         schemaRegistry: { uri: "http://sr:8081" },
       });
 
@@ -147,7 +146,7 @@ describe("fetchers/directResourceFetcher", function () {
     it("should set correct connection info on resources", function () {
       const spec = createMockSpec({
         id: "conn-info-test",
-        kafka: { bootstrap_servers: "localhost:9092" },
+        kafka: { bootstrapServers: "localhost:9092" },
         schemaRegistry: { uri: "http://localhost:8081" },
       });
 
@@ -169,11 +168,11 @@ describe("fetchers/directResourceFetcher", function () {
     it("should generate consistent cluster IDs from bootstrap servers", function () {
       const spec1 = createMockSpec({
         id: "conn-1",
-        kafka: { bootstrap_servers: "localhost:9092" },
+        kafka: { bootstrapServers: "localhost:9092" },
       });
       const spec2 = createMockSpec({
         id: "conn-2",
-        kafka: { bootstrap_servers: "localhost:9092" },
+        kafka: { bootstrapServers: "localhost:9092" },
       });
 
       const fetcher = createDirectResourceFetcher({
@@ -190,11 +189,11 @@ describe("fetchers/directResourceFetcher", function () {
     it("should generate different cluster IDs for different bootstrap servers", function () {
       const spec1 = createMockSpec({
         id: "conn-1",
-        kafka: { bootstrap_servers: "localhost:9092" },
+        kafka: { bootstrapServers: "localhost:9092" },
       });
       const spec2 = createMockSpec({
         id: "conn-2",
-        kafka: { bootstrap_servers: "remote:9092" },
+        kafka: { bootstrapServers: "remote:9092" },
       });
 
       const fetcher = createDirectResourceFetcher({
@@ -211,7 +210,7 @@ describe("fetchers/directResourceFetcher", function () {
     it("should preserve formConnectionType", function () {
       const spec = createMockSpec({
         id: "conn-type-test",
-        kafka: { bootstrap_servers: "localhost:9092" },
+        kafka: { bootstrapServers: "localhost:9092" },
         formConnectionType: "Confluent Platform",
       });
 
@@ -227,9 +226,10 @@ describe("fetchers/directResourceFetcher", function () {
     it("should use default name when spec name is missing", function () {
       const spec: CustomConnectionSpec = {
         id: "conn-no-name" as ConnectionId,
+        name: "",
         type: ConnectionType.Direct,
         formConnectionType: "Apache Kafka" as any,
-        kafka_cluster: { bootstrap_servers: "localhost:9092" },
+        kafkaCluster: { bootstrapServers: "localhost:9092" },
       };
 
       const fetcher = createDirectResourceFetcher({
@@ -245,7 +245,7 @@ describe("fetchers/directResourceFetcher", function () {
       const spec = createMockSpec({
         id: "conn-named",
         name: "Production Cluster",
-        kafka: { bootstrap_servers: "prod:9092" },
+        kafka: { bootstrapServers: "prod:9092" },
       });
 
       const fetcher = createDirectResourceFetcher({

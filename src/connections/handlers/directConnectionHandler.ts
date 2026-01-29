@@ -5,10 +5,13 @@
  * with support for various authentication methods (Basic, API Key, SCRAM, mTLS, Kerberos).
  */
 
-import { ConnectedState, type ConnectionStatus, type KafkaClusterStatus } from "../types";
 import { CredentialType, type Credentials } from "../credentials";
 import type { ConnectionSpec } from "../spec";
+import { ConnectedState, type ConnectionStatus, type KafkaClusterStatus } from "../types";
 import { ConnectionHandler, type ConnectionTestResult } from "./connectionHandler";
+import { createKafkaRestProxy } from "../../proxy/kafkaRestProxy";
+import { createSchemaRegistryProxy } from "../../proxy/schemaRegistryProxy";
+import { HttpError, type AuthConfig } from "../../proxy/httpClient";
 
 /** Result of testing a specific endpoint. */
 interface EndpointTestResult {
@@ -255,12 +258,40 @@ export class DirectConnectionHandler extends ConnectionHandler {
       return { success: false, error: "No bootstrap servers configured" };
     }
 
+    // First validate the configuration
+    const validationResult = await this.validateKafkaConfig(
+      config.bootstrapServers,
+      config.credentials,
+    );
+    if (!validationResult.success) {
+      return validationResult;
+    }
+
+    // If no REST URI is configured, we can only validate configuration
+    // Direct connections to Kafka REST proxy require a configured URI
+    if (!config.restUri) {
+      // Return validation success - actual connectivity test requires REST proxy
+      return { success: true, clusterId: "pending-cluster-id" };
+    }
+
     try {
-      // TODO: Phase 3 will implement actual Kafka REST proxy calls
-      // For now, we validate configuration and simulate the test
-      const result = await this.validateKafkaConfig(config.bootstrapServers, config.credentials);
-      return result;
+      const auth = this.getAuthConfigFromCredentials(config.credentials);
+      const proxy = createKafkaRestProxy({
+        baseUrl: config.restUri,
+        clusterId: "", // We'll discover the cluster ID
+        auth,
+      });
+
+      // Call getCluster() to test connectivity and get the cluster ID
+      const cluster = await proxy.getCluster();
+      return { success: true, clusterId: cluster.cluster_id };
     } catch (error) {
+      if (error instanceof HttpError) {
+        return {
+          success: false,
+          error: `Kafka REST API error (${error.status}): ${error.message}`,
+        };
+      }
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: `Connection failed: ${message}` };
     }
@@ -276,12 +307,32 @@ export class DirectConnectionHandler extends ConnectionHandler {
       return { success: false, error: "No Schema Registry URI configured" };
     }
 
+    // First validate the configuration
+    const validationResult = await this.validateSchemaRegistryConfig(
+      config.uri,
+      config.credentials,
+    );
+    if (!validationResult.success) {
+      return validationResult;
+    }
+
     try {
-      // TODO: Phase 3 will implement actual Schema Registry API calls
-      // For now, we validate configuration and simulate the test
-      const result = await this.validateSchemaRegistryConfig(config.uri, config.credentials);
-      return result;
+      const auth = this.getAuthConfigFromCredentials(config.credentials);
+      const proxy = createSchemaRegistryProxy({
+        baseUrl: config.uri,
+        auth,
+      });
+
+      // Call listSubjects() to test connectivity
+      await proxy.listSubjects();
+      return { success: true, clusterId: "schema-registry" };
     } catch (error) {
+      if (error instanceof HttpError) {
+        return {
+          success: false,
+          error: `Schema Registry API error (${error.status}): ${error.message}`,
+        };
+      }
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: `Connection failed: ${message}` };
     }
@@ -369,8 +420,8 @@ export class DirectConnectionHandler extends ConnectionHandler {
         return undefined;
 
       case CredentialType.API_KEY:
-        if (!credentials.key) return "API key auth requires key";
-        if (!credentials.secret) return "API key auth requires secret";
+        if (!credentials.apiKey) return "API key auth requires key";
+        if (!credentials.apiSecret) return "API key auth requires secret";
         return undefined;
 
       case CredentialType.SCRAM:
@@ -379,13 +430,12 @@ export class DirectConnectionHandler extends ConnectionHandler {
         return undefined;
 
       case CredentialType.OAUTH:
-        if (!credentials.tokenEndpoint) return "OAuth requires token endpoint";
+        if (!credentials.tokensUrl) return "OAuth requires token endpoint";
         if (!credentials.clientId) return "OAuth requires client ID";
         return undefined;
 
       case CredentialType.MTLS:
-        if (!credentials.certificatePath) return "mTLS requires certificate path";
-        if (!credentials.keyPath) return "mTLS requires key path";
+        if (!credentials.keystore?.path) return "mTLS requires certificate path";
         return undefined;
 
       case CredentialType.KERBEROS:
@@ -394,6 +444,55 @@ export class DirectConnectionHandler extends ConnectionHandler {
 
       default:
         return `Unknown credential type: ${(credentials as Credentials).type}`;
+    }
+  }
+
+  /**
+   * Converts credentials to AuthConfig for the HTTP client.
+   * @param credentials The credentials to convert.
+   * @returns AuthConfig for the HTTP client, or undefined for unsupported types.
+   */
+  private getAuthConfigFromCredentials(credentials?: Credentials): AuthConfig | undefined {
+    if (!credentials) {
+      return undefined;
+    }
+
+    switch (credentials.type) {
+      case CredentialType.NONE:
+        return undefined;
+
+      case CredentialType.BASIC:
+        return {
+          type: "basic",
+          username: credentials.username,
+          password: credentials.password,
+        };
+
+      case CredentialType.API_KEY:
+        // API keys are sent as basic auth with key:secret
+        return {
+          type: "basic",
+          username: credentials.apiKey,
+          password: credentials.apiSecret,
+        };
+
+      case CredentialType.SCRAM:
+        // SCRAM credentials are sent as basic auth
+        return {
+          type: "basic",
+          username: credentials.username,
+          password: credentials.password,
+        };
+
+      case CredentialType.OAUTH:
+      case CredentialType.MTLS:
+      case CredentialType.KERBEROS:
+        // These credential types require more complex handling
+        // and are not yet supported for direct HTTP requests
+        return undefined;
+
+      default:
+        return undefined;
     }
   }
 

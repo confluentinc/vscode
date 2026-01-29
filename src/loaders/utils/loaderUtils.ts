@@ -1,8 +1,8 @@
 import { createHash } from "crypto";
 import { toKafkaTopicOperations } from "../../authz/types";
-import type { TopicData, TopicDataList, TopicV3Api } from "../../clients/kafkaRest";
-import type { Schema as ResponseSchema, SubjectsV1Api } from "../../clients/schemaRegistryRest";
-import { isResponseError } from "../../errors";
+import type { TopicData } from "../../clients/kafkaRest";
+import { TokenManager } from "../../auth/oauth2/tokenManager";
+import { ConnectionType, CredentialType } from "../../connections";
 import type { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";
 import { Logger } from "../../logging";
 import type { CCloudKafkaCluster, KafkaCluster } from "../../models/kafkaCluster";
@@ -10,12 +10,16 @@ import { isCCloud } from "../../models/resource";
 import { Schema, SchemaType, Subject, subjectMatchesTopicName } from "../../models/schema";
 import type { SchemaRegistry } from "../../models/schemaRegistry";
 import { KafkaTopic } from "../../models/topic";
-import { getSidecar } from "../../sidecar";
+import type { AuthConfig } from "../../proxy/httpClient";
+import { HttpError } from "../../proxy/httpClient";
+import * as schemaRegistryProxy from "../../proxy/schemaRegistryProxy";
+import * as kafkaRestProxy from "../../proxy/kafkaRestProxy";
+import { getResourceManager } from "../../storage/resourceManager";
+import { executeInWorkerPool, extract } from "../../utils/workerPool";
 import {
   containsPrivateNetworkPattern,
   showPrivateNetworkingHelpNotification,
 } from "../../utils/privateNetworking";
-import { executeInWorkerPool, extract } from "../../utils/workerPool";
 
 const logger = new Logger("loaderUtils");
 
@@ -36,25 +40,45 @@ export class TopicFetchError extends Error {
 export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
   logger.debug(`fetching topics for ${cluster.connectionType} Kafka cluster ${cluster.id}`);
 
-  const sidecar = await getSidecar();
-  const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
-  let topicsResp: TopicDataList;
+  if (!cluster.uri) {
+    throw new TopicFetchError(`Kafka cluster ${cluster.id} has no REST URI configured`);
+  }
+
+  const auth = await getAuthConfigForCluster(cluster);
+
+  // LOCAL clusters use the v2 REST Proxy API (e.g., /topics)
+  // CCloud and Direct clusters use the v3 Kafka REST API (e.g., /kafka/v3/clusters/{id}/topics)
+  const apiVersion = cluster.connectionType === ConnectionType.Local ? "v2" : "v3";
+
+  const proxy = kafkaRestProxy.createKafkaRestProxy({
+    baseUrl: cluster.uri,
+    clusterId: cluster.id,
+    auth,
+    apiVersion,
+  });
 
   try {
-    topicsResp = await client.listKafkaTopics({
-      cluster_id: cluster.id,
+    let topics = await proxy.listTopics({
       includeAuthorizedOperations: true,
     });
+
     logger.debug(
-      `fetched ${topicsResp.data.length} topic(s) for ${cluster.connectionType} Kafka cluster ${cluster.id}`,
+      `fetched ${topics.length} topic(s) for ${cluster.connectionType} Kafka cluster ${cluster.id}`,
     );
+
+    // Sort by name
+    if (topics.length > 1) {
+      topics.sort((a, b) => a.topic_name.localeCompare(b.topic_name));
+    }
+
+    // Exclude "virtual" topics (e.g., Flink views) that have 0 replication factor
+    topics = topics.filter((topic) => topic.replication_factor > 0);
+
+    return topics;
   } catch (error) {
-    if (isResponseError(error)) {
-      if (
-        error.response.status === 500 &&
-        cluster.uri &&
-        containsPrivateNetworkPattern(cluster.uri)
-      ) {
+    if (error instanceof HttpError) {
+      // Check for private networking issues
+      if (error.status === 500 && cluster.uri && containsPrivateNetworkPattern(cluster.uri)) {
         showPrivateNetworkingHelpNotification({
           resourceName: cluster.name,
           resourceUrl: cluster.uri,
@@ -62,24 +86,16 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
         });
         return [];
       }
-      const body = await error.response.json();
 
-      throw new TopicFetchError(JSON.stringify(body));
-    } else {
-      throw new TopicFetchError(JSON.stringify(error));
+      throw new TopicFetchError(
+        `Failed to fetch topics from cluster ${cluster.id}: ${error.status} ${error.message}`,
+      );
     }
+
+    throw new TopicFetchError(
+      `Failed to fetch topics from cluster ${cluster.id}: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
-
-  // Sort multiple topics by name
-  if (topicsResp.data.length > 1) {
-    topicsResp.data.sort((a, b) => a.topic_name.localeCompare(b.topic_name));
-  }
-
-  // Exclude "virtual" topics (say, corresponding to Flink views) that have 0 replication factor per #2940.
-  // (These cannot be queried or used in any way.)
-  topicsResp.data = topicsResp.data.filter((topic) => topic.replication_factor! > 0);
-
-  return topicsResp.data;
 }
 
 /**
@@ -127,25 +143,33 @@ export function correlateTopicsWithSchemaSubjects(
  * Does not store into the resource manager.
  */
 export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<Subject[]> {
-  const sidecarHandle = await getSidecar();
-  const client: SubjectsV1Api = sidecarHandle.getSubjectsV1Api(
-    schemaRegistry.id,
-    schemaRegistry.connectionId,
+  logger.debug(`fetching subjects from Schema Registry ${schemaRegistry.id}`);
+
+  const auth = await getAuthConfigForSchemaRegistry(schemaRegistry);
+  const proxy = schemaRegistryProxy.createSchemaRegistryProxy({
+    baseUrl: schemaRegistry.uri,
+    auth,
+  });
+
+  const subjectStrings = await proxy.listSubjects();
+  subjectStrings.sort((a, b) => a.localeCompare(b));
+
+  logger.debug(
+    `fetched ${subjectStrings.length} subject(s) from Schema Registry ${schemaRegistry.id}`,
   );
 
-  // Fetch + sort the subject strings from the SR.
-  const sortedSubjectStrings: string[] = (await client.list()).sort((a, b) => a.localeCompare(b));
-
-  // Promote to Subject objects carrying the schema registry's metadata.
-  return sortedSubjectStrings.map(
-    (subjectString) =>
+  // Convert to Subject objects
+  const subjects: Subject[] = subjectStrings.map(
+    (name) =>
       new Subject(
-        subjectString,
+        name,
         schemaRegistry.connectionId,
         schemaRegistry.environmentId,
         schemaRegistry.id,
       ),
   );
+
+  return subjects;
 }
 
 /**
@@ -160,84 +184,158 @@ export async function fetchSchemasForSubject(
   schemaRegistry: SchemaRegistry,
   subject: string,
 ): Promise<Schema[]> {
-  const sidecarHandle = await getSidecar();
-  const client: SubjectsV1Api = sidecarHandle.getSubjectsV1Api(
-    schemaRegistry.id,
-    schemaRegistry.connectionId,
-  );
+  logger.debug(`fetching schemas for subject ${subject} from Schema Registry ${schemaRegistry.id}`);
 
-  // Learn all of the live version numbers for the subject in one round trip.
-  const versions: number[] = await client.listVersions({ subject });
+  const auth = await getAuthConfigForSchemaRegistry(schemaRegistry);
+  const proxy = schemaRegistryProxy.createSchemaRegistryProxy({
+    baseUrl: schemaRegistry.uri,
+    auth,
+  });
 
-  // Reverse sort versions to get the highest version first. This will then
-  // become the order of the returned array of Schema.
+  // Get all version numbers first
+  const versions = await proxy.listVersions(subject);
+
+  // Sort versions descending (highest first)
   versions.sort((a, b) => b - a);
 
-  // Now prep to fetch each of the versions concurrently via concurrent
-  // calls to fetchSchemaVersion() driven by executeInWorkerPool().
   const highestVersion = Math.max(...versions);
-  const concurrentVersionRequests: FetchSchemaVersionParams[] = versions.map(
-    (version): FetchSchemaVersionParams => {
-      return {
-        // The only varying parameter in the concurrent calls/requests is the version number.
-        schemaRegistry: schemaRegistry,
-        client: client,
-        subject: subject,
-        version: version,
-        highestVersion: highestVersion,
-      };
-    },
-  );
 
-  // Fetch all versions concurrently capped at 5 concurrent requests at a time.
-  const concurrentFetchResults = await executeInWorkerPool(
-    fetchSchemaVersion,
-    concurrentVersionRequests,
-    {
-      maxWorkers: 5,
-    },
-  );
+  // Prepare concurrent requests for each version
+  const fetchParams = versions.map((version) => ({
+    proxy,
+    schemaRegistry,
+    subject,
+    version,
+    highestVersion,
+  }));
 
-  // Filter the executeInWorkerPool() return for successful results and return the schemas.
-  // If any single request failed, fail the whole operation.
-  return extract(concurrentFetchResults);
+  // Fetch all versions concurrently, capped at 5 concurrent requests
+  const results = await executeInWorkerPool((params) => fetchSchemaVersion(params), fetchParams, {
+    maxWorkers: 5,
+  });
+
+  // Extract successful results (throws if any failed)
+  return extract(results);
 }
 
 /** Interface describing a bundle of params needed for call to {@link fetchSchemaVersion} */
 interface FetchSchemaVersionParams {
+  proxy: ReturnType<typeof schemaRegistryProxy.createSchemaRegistryProxy>;
   schemaRegistry: SchemaRegistry;
-  client: SubjectsV1Api;
   subject: string;
   version: number;
   highestVersion: number;
 }
 
-/** Hit the /subjects/{subject}/versions/{version} route, returning a Schema model. */
-export async function fetchSchemaVersion(params: FetchSchemaVersionParams): Promise<Schema> {
-  const responseSchema: ResponseSchema = await params.client.getSchemaByVersion({
-    subject: params.subject,
-    version: params.version.toString(),
-  });
+/**
+ * Hit the /subjects/{subject}/versions/{version} route, returning a Schema model.
+ */
+async function fetchSchemaVersion(params: FetchSchemaVersionParams): Promise<Schema> {
+  const { proxy, schemaRegistry, subject, version, highestVersion } = params;
 
-  // Convert the response schema to a Schema model. Discards the returned schema document, sigh. We're
-  // only interested in the metadata.
-  const schemaRegistry = params.schemaRegistry;
+  const response = await proxy.getSchemaByVersion(subject, version);
+
+  // Convert to Schema model
   return Schema.create({
-    // Fields copied from the SR ...
     connectionId: schemaRegistry.connectionId,
     connectionType: schemaRegistry.connectionType,
     schemaRegistryId: schemaRegistry.id,
     environmentId: schemaRegistry.environmentId,
-
-    // Fields specific to this single schema subject binding.
-    id: responseSchema.id!.toString(),
-    subject: responseSchema.subject!,
-    version: responseSchema.version!,
-    // AVRO doesn't show up in `schemaType`
-    // https://docs.confluent.io/platform/current/schema-registry/develop/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)
-    type: (responseSchema.schemaType as SchemaType) || SchemaType.Avro,
-    isHighestVersion: responseSchema.version === params.highestVersion,
+    id: response.id!.toString(),
+    subject: response.subject!,
+    version: response.version!,
+    // AVRO doesn't show up in schemaType, defaults to AVRO
+    type: (response.schemaType as SchemaType) || SchemaType.Avro,
+    isHighestVersion: response.version === highestVersion,
   });
+}
+
+/**
+ * Get authentication configuration for a Schema Registry based on connection type.
+ */
+async function getAuthConfigForSchemaRegistry(
+  schemaRegistry: SchemaRegistry,
+): Promise<AuthConfig | undefined> {
+  switch (schemaRegistry.connectionType) {
+    case ConnectionType.Ccloud: {
+      // CCloud uses bearer token authentication
+      const token = (await TokenManager.getInstance().getDataPlaneToken()) || "";
+      return {
+        type: "bearer",
+        token,
+      };
+    }
+    case ConnectionType.Direct: {
+      // Direct connections may have credentials stored
+      const resourceManager = getResourceManager();
+      const spec = await resourceManager.getDirectConnection(schemaRegistry.connectionId);
+      if (spec?.schemaRegistry?.credentials) {
+        const creds = spec.schemaRegistry.credentials;
+        if (creds.type === CredentialType.BASIC) {
+          return {
+            type: "basic",
+            username: creds.username,
+            password: creds.password,
+          };
+        }
+        if (creds.type === CredentialType.API_KEY) {
+          return {
+            type: "basic",
+            username: creds.apiKey,
+            password: creds.apiSecret,
+          };
+        }
+      }
+      return undefined;
+    }
+    case ConnectionType.Local:
+    default:
+      // Local connections typically don't require authentication
+      return undefined;
+  }
+}
+
+/**
+ * Get authentication configuration for a Kafka cluster based on connection type.
+ */
+async function getAuthConfigForCluster(cluster: KafkaCluster): Promise<AuthConfig | undefined> {
+  switch (cluster.connectionType) {
+    case ConnectionType.Ccloud: {
+      // CCloud uses bearer token authentication
+      const token = (await TokenManager.getInstance().getDataPlaneToken()) || "";
+      return {
+        type: "bearer",
+        token,
+      };
+    }
+    case ConnectionType.Direct: {
+      // Direct connections may have credentials stored
+      const resourceManager = getResourceManager();
+      const spec = await resourceManager.getDirectConnection(cluster.connectionId);
+      if (spec?.kafkaCluster?.credentials) {
+        const creds = spec.kafkaCluster.credentials;
+        if (creds.type === CredentialType.BASIC) {
+          return {
+            type: "basic",
+            username: creds.username,
+            password: creds.password,
+          };
+        }
+        if (creds.type === CredentialType.API_KEY) {
+          return {
+            type: "basic",
+            username: creds.apiKey,
+            password: creds.apiSecret,
+          };
+        }
+      }
+      return undefined;
+    }
+    case ConnectionType.Local:
+    default:
+      // Local connections typically don't require authentication
+      return undefined;
+  }
 }
 
 /** Generate a key for the given statement parameters to identify identical pending statements. */

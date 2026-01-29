@@ -1,5 +1,5 @@
-import type { AuthError, AuthErrors, CCloudStatus, Connection } from "../clients/sidecar";
-import { ConnectedState } from "../clients/sidecar";
+import type { AuthError, CCloudStatus, Connection } from "../connections";
+import { ConnectedState } from "../connections";
 import { observabilityContext } from "../context/observability";
 import { ccloudAuthSessionInvalidated, stableCCloudConnectedState } from "../emitters";
 import { Logger } from "../logging";
@@ -44,7 +44,7 @@ export async function handleUpdatedConnection(connection: Connection): Promise<v
   logger.debug("received update to CCloud connection", {
     currentState: connectedState,
     previousState,
-    expiration: status.requires_authentication_at,
+    expiration: status.requiresAuthenticationAt,
     errors: status.errors,
   });
 
@@ -55,18 +55,18 @@ export async function handleUpdatedConnection(connection: Connection): Promise<v
     logger.debug(`CCloud connected state transition: ${previousState} -> ${connectedState}`);
   }
 
-  if (connectedState !== ConnectedState.Expired) {
+  if (connectedState !== ConnectedState.EXPIRED) {
     // ensure any open progress notifications are closed even if no requests are going through the middleware
     stableCCloudConnectedState.fire();
   }
 
   switch (connectedState) {
-    case ConnectedState.Success:
-    case ConnectedState.Expired:
+    case ConnectedState.SUCCESS:
+    case ConnectedState.EXPIRED:
       // no action needed, just move on to checking for errors
       break;
 
-    case ConnectedState.Failed:
+    case ConnectedState.FAILED:
       // non-transient error that requires user intervention
       logger.warn("CCloud connection failed with non-transient error");
       ccloudAuthSessionInvalidated.fire();
@@ -79,10 +79,10 @@ export async function handleUpdatedConnection(connection: Connection): Promise<v
       );
       break;
 
-    case ConnectedState.None:
+    case ConnectedState.NONE:
       // try to detect session expiration via transition from SUCCESS/EXPIRED to NONE
       // see https://github.com/confluentinc/ide-sidecar/blob/121dc766ab64bea1d88212f34f0084eb692ade4d/src/main/java/io/confluent/idesidecar/restapi/connections/CCloudConnectionState.java#L116-L122
-      if (previousState === ConnectedState.Success || previousState === ConnectedState.Expired) {
+      if (previousState === ConnectedState.SUCCESS || previousState === ConnectedState.EXPIRED) {
         ccloudAuthSessionInvalidated.fire();
         logger.debug("CCloud session expired, prompting for reauthentication");
         void showInfoNotificationWithButtons(
@@ -91,13 +91,13 @@ export async function handleUpdatedConnection(connection: Connection): Promise<v
             [REAUTH_BUTTON_TEXT]: async () => await getCCloudAuthSession({ createIfNone: true }),
           },
         );
-      } else if (previousState !== ConnectedState.None) {
+      } else if (previousState !== ConnectedState.NONE) {
         logger.debug(
-          `CCloud connection transitioned from ${previousState} to ${ConnectedState.None}`,
+          `CCloud connection transitioned from ${previousState} to ${ConnectedState.NONE}`,
         );
         ccloudAuthSessionInvalidated.fire();
       } else {
-        logger.debug(`CCloud connection in initial ${ConnectedState.None} state (no tokens)`);
+        logger.debug(`CCloud connection in initial ${ConnectedState.NONE} state (no tokens)`);
       }
       break;
 
@@ -105,44 +105,23 @@ export async function handleUpdatedConnection(connection: Connection): Promise<v
       logger.warn(`handleUpdatedConnection: unhandled CCloud state ${connectedState}`);
   }
 
-  const errors: AuthErrors | undefined = status.errors;
+  const errors: AuthError[] | undefined = status.errors;
   // only show another notification if we haven't already handled the `Failed` state
-  if (connectedState !== ConnectedState.Failed && errors && Object.keys(errors).length > 0) {
+  if (connectedState !== ConnectedState.FAILED && errors && errors.length > 0) {
     logger.debug("checking CCloud status errors", { errors });
 
-    // parse AuthErrors to see if we have any transient (or non-transient) errors
-    const isTransientValues: boolean[] = [];
-    Object.values(errors).forEach((error: AuthError | undefined) => {
-      if (!error) return;
-      const isTransient: boolean | undefined = error.is_transient;
-      if (isTransient !== undefined) {
-        isTransientValues.push(isTransient);
-      }
-    });
-    const hasTransientErrors: boolean = isTransientValues.some((val) => val === true);
-    const hasNonTransientErrors: boolean = isTransientValues.some((val) => val === false);
+    // With the internal connection manager, any errors that reach here are non-transient
+    // since transient errors are handled internally with retries
+    const errorMessages = errors.map((e) => e.message).join("; ");
+    logger.warn("errors detected in CCloud connection", { errorMessages });
 
-    if (hasNonTransientErrors) {
-      logger.warn("non-transient errors detected, requiring user intervention", {
-        authStatusError: errors.auth_status_check?.message,
-        signInError: errors.sign_in?.message,
-        tokenRefreshError: errors.token_refresh?.message,
-      });
-
-      ccloudAuthSessionInvalidated.fire();
-      void showErrorNotificationWithButtons(
-        "Error authenticating with Confluent Cloud. Please try again.",
-        {
-          [CCLOUD_SIGN_IN_BUTTON_LABEL]: async () =>
-            await getCCloudAuthSession({ createIfNone: true }),
-        },
-      );
-    } else if (hasTransientErrors) {
-      logger.debug("transient errors detected, sidecar will retry automatically", {
-        authStatusError: errors.auth_status_check?.message,
-        signInError: errors.sign_in?.message,
-        tokenRefreshError: errors.token_refresh?.message,
-      });
-    }
+    ccloudAuthSessionInvalidated.fire();
+    void showErrorNotificationWithButtons(
+      "Error authenticating with Confluent Cloud. Please try again.",
+      {
+        [CCLOUD_SIGN_IN_BUTTON_LABEL]: async () =>
+          await getCCloudAuthSession({ createIfNone: true }),
+      },
+    );
   }
 }

@@ -25,9 +25,9 @@ import { ConnectionType } from "../types/connection";
 test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer] }, () => {
   // test dimensions:
   const connectionTypes: Array<[ConnectionType, Tag]> = [
-    [ConnectionType.Ccloud, Tag.CCloud],
-    [ConnectionType.Direct, Tag.Direct],
-    [ConnectionType.Local, Tag.Local],
+    [ConnectionType.CCLOUD, Tag.CCloud],
+    [ConnectionType.DIRECT, Tag.Direct],
+    [ConnectionType.LOCAL, Tag.Local],
   ];
   const entrypoints = [
     SelectKafkaCluster.FromResourcesView,
@@ -45,7 +45,7 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
     // specify the cluster label to use for all topics created in this suite so we can match it to
     // the API key/secret used for producing messages, but only for CCLOUD connections
     const clusterLabel =
-      connectionType === ConnectionType.Ccloud ? process.env.E2E_KAFKA_CLUSTER_NAME! : undefined;
+      connectionType === ConnectionType.CCLOUD ? process.env.E2E_KAFKA_CLUSTER_NAME! : undefined;
 
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
       for (const compressionType of compressionTypes) {

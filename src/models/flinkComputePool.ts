@@ -1,5 +1,5 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, UTM_SOURCE_VSCODE } from "../constants";
 import { IconNames } from "../icons";
 import { CustomMarkdownString } from "./main";

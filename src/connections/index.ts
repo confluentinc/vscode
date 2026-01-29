@@ -8,18 +8,24 @@
 // Core types
 export {
   ConnectedState,
+  ConnectionFromJSON,
   ConnectionType,
+  instanceOfConnection,
   isConnectedStateInProgress,
   isConnectedStateTerminal,
   isConnectedStateUsable,
+  type AuthError,
+  type AuthErrors,
   type CCloudStatus,
   type CCloudUser,
+  type Connection,
   type ConnectionError,
   type ConnectionId,
   type ConnectionMetadata,
   type ConnectionStatus,
   type KafkaClusterStatus,
   type SchemaRegistryStatus,
+  type UserInfo,
 } from "./types";
 
 // Credential types
@@ -27,6 +33,13 @@ export {
   apiKeyCredentials,
   basicCredentials,
   CredentialType,
+  instanceOfApiKeyAndSecret,
+  instanceOfApiKeyCredentials,
+  instanceOfBasicCredentials,
+  instanceOfKerberosCredentials,
+  instanceOfMtlsCredentials,
+  instanceOfOAuthCredentials,
+  instanceOfScramCredentials,
   isCredentialType,
   noCredentials,
   requiresSecureStorage,
@@ -50,6 +63,8 @@ export {
   FormConnectionType,
   hasKafkaCluster,
   hasSchemaRegistry,
+  instanceOfKafkaClusterConfig,
+  instanceOfSchemaRegistryConfig,
   validateConnectionSpec,
   type CCloudConfig,
   type ConnectionSpec,
@@ -87,3 +102,18 @@ export {
   type ConnectionDeletedEvent,
   type ConnectionUpdatedEvent,
 } from "./connectionManager";
+
+// Re-export ResponseError from kafkaRest client for backwards compatibility
+export { ResponseError } from "../clients/kafkaRest";
+
+// Re-export ConsumeRecord types from kafkaRestProxy
+export {
+  type ConsumeRecord,
+  type ConsumeRecordHeader,
+  type ConsumeRecordMetadata,
+  type ConsumePartitionData,
+  type ConsumeResponse,
+} from "../proxy/kafkaRestProxy";
+
+// Alias for backward compatibility with sidecar types
+export type { ConsumeRecord as PartitionConsumeRecord } from "../proxy/kafkaRestProxy";

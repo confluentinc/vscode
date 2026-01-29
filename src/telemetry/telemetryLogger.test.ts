@@ -1,5 +1,4 @@
 import * as assert from "assert";
-import * as ideSidecar from "ide-sidecar";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { preparePropertiesForTrack } from "./telemetryLogger";
@@ -49,12 +48,6 @@ describe("preparePropertiesForTrack", () => {
     assert.strictEqual(result.productVersion, vscode.version);
   });
 
-  it("should include ide-sidecar version as currentSidecarVersion", () => {
-    const version = "1.2.3";
-    sandbox.stub(ideSidecar, "version").value(version);
-    const result = preparePropertiesForTrack(undefined);
-    assert.strictEqual(result.currentSidecarVersion, version);
-  });
   it("should include platform", () => {
     const result = preparePropertiesForTrack(undefined);
     assert.strictEqual(result.platform, process.platform);

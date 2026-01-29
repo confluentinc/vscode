@@ -1,22 +1,21 @@
 import path from "path";
 import * as vscode from "vscode";
+import { TokenManager } from "../../auth/oauth2/tokenManager";
 import type {
   CreateArtifactV1FlinkArtifact201Response,
   CreateArtifactV1FlinkArtifactRequest,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
-import { artifactsChanged } from "../../emitters";
 import { extractResponseBody, isResponseError, logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import type { FlinkArtifact } from "../../models/flinkArtifact";
 import type { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
-import type { EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import { CloudProvider } from "../../models/resource";
 import { showInfoNotificationWithButtons } from "../../notifications";
+import { createCCloudArtifactsProxy } from "../../proxy/ccloudArtifactsProxy";
 import { type QuickPickItemWithValue } from "../../quickpicks/types";
-import { getSidecar } from "../../sidecar";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { readFileBuffer } from "../../utils/fsWrappers";
 import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
@@ -71,25 +70,32 @@ export async function prepareUploadFileFromUri(uri: vscode.Uri): Promise<{
 }
 
 /**
- * Requests a presigned upload URL for a Flink artifact using the sidecar.
+ * Requests a presigned upload URL for a Flink artifact.
  * @param request PresignedUploadUrlArtifactV1PresignedUrlRequest
  * @returns The presigned URL response object, or undefined if the request fails.
  */
 export async function getPresignedUploadUrl(
   request: PresignedUploadUrlArtifactV1PresignedUrlRequest,
 ): Promise<PresignedUploadUrlArtifactV1PresignedUrl200Response> {
-  const sidecarHandle = await getSidecar();
-  const providerRegion: IEnvProviderRegion = {
-    environmentId: request.environment as EnvironmentId,
-    provider: request.cloud,
-    region: request.region,
-  };
-  const presignedClient = sidecarHandle.getFlinkPresignedUrlsApi(providerRegion);
+  const token = await TokenManager.getInstance().getDataPlaneToken();
+  if (!token) {
+    throw new Error("Not authenticated to Confluent Cloud");
+  }
 
-  const urlResponse = await presignedClient.presignedUploadUrlArtifactV1PresignedUrl({
-    PresignedUploadUrlArtifactV1PresignedUrlRequest: request,
+  const proxy = createCCloudArtifactsProxy({
+    baseUrl: "https://api.confluent.cloud",
+    auth: {
+      type: "bearer",
+      token,
+    },
   });
-  return urlResponse;
+
+  return proxy.getPresignedUploadUrl({
+    cloud: request.cloud,
+    region: request.region,
+    environment: request.environment,
+    contentFormat: request.content_format,
+  });
 }
 
 export async function handleUploadToCloudProvider(
@@ -160,41 +166,29 @@ export async function uploadArtifactToCCloud(
   params: ArtifactUploadParams,
   uploadId: string,
 ): Promise<CreateArtifactV1FlinkArtifact201Response> {
-  const createRequest = buildCreateArtifactRequest(params, uploadId);
+  const token = await TokenManager.getInstance().getDataPlaneToken();
+  if (!token) {
+    throw new Error("Not authenticated to Confluent Cloud");
+  }
 
-  logger.info("Creating Flink artifact", {
-    artifactName: params.artifactName,
+  const proxy = createCCloudArtifactsProxy({
+    baseUrl: "https://api.confluent.cloud",
+    auth: {
+      type: "bearer",
+      token,
+    },
+  });
+
+  return proxy.createArtifact({
+    cloud: params.cloud,
+    region: params.region,
     environment: params.environment,
-    cloud: params.cloud,
-    region: params.region,
+    displayName: params.artifactName,
     uploadId,
-    requestPayload: createRequest,
+    contentFormat: params.fileFormat,
+    description: params.description,
+    documentationLink: params.documentationUrl,
   });
-
-  const sidecarHandle = await getSidecar();
-  const providerRegion: IEnvProviderRegion = {
-    environmentId: params.environment as EnvironmentId,
-    provider: params.cloud,
-    region: params.region,
-  };
-  const artifactsClient = sidecarHandle.getFlinkArtifactsApi(providerRegion);
-
-  const response = await artifactsClient.createArtifactV1FlinkArtifact({
-    CreateArtifactV1FlinkArtifactRequest: createRequest,
-    cloud: params.cloud,
-    region: params.region,
-  });
-
-  logger.info("Flink artifact created successfully", {
-    artifactId: response.id,
-    artifactName: params.artifactName,
-  });
-
-  // Inform all interested parties that we just mutated the artifacts list
-  // in this env/region.
-  artifactsChanged.fire(providerRegion);
-
-  return response;
 }
 
 export function buildCreateArtifactRequest(

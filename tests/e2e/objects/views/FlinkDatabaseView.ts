@@ -74,7 +74,7 @@ export class FlinkDatabaseView extends SearchableView {
    */
   private async selectFlinkDBFromResourcesView(clusterLabel?: string | RegExp): Promise<void> {
     const resourcesView = new ResourcesView(this.page);
-    await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
+    await resourcesView.expandConnectionEnvironment(ConnectionType.CCLOUD);
 
     const flinkableClusters = resourcesView.ccloudFlinkableKafkaClusters;
     await expect(flinkableClusters).not.toHaveCount(0);
@@ -91,7 +91,7 @@ export class FlinkDatabaseView extends SearchableView {
    */
   async clickUploadFromComputePool(provider: string, region: string): Promise<void> {
     const resourcesView = new ResourcesView(this.page);
-    await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
+    await resourcesView.expandConnectionEnvironment(ConnectionType.CCLOUD);
 
     const computePools = resourcesView.ccloudFlinkComputePools;
     await expect(computePools).not.toHaveCount(0);

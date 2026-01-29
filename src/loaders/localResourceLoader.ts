@@ -1,4 +1,4 @@
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import { LOCAL_CONNECTION_ID } from "../constants";
 import { createLocalResourceFetcher } from "../fetchers";
 import { Logger } from "../logging";

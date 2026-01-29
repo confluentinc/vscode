@@ -1,5 +1,5 @@
 import type { ColumnDetails, SqlV1StatementStatus } from "../../../src/clients/flinkSql";
-import { ConnectionType } from "../../../src/clients/sidecar";
+import { ConnectionType } from "../../../src/connections";
 import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
 import { FlinkStatement, Phase } from "../../../src/models/flinkStatement";
 import type { EnvironmentId, OrganizationId } from "../../../src/models/resource";

@@ -11,7 +11,7 @@ import {
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { ResponseError } from "../clients/sidecar";
+import { ResponseError } from "../connections";
 import * as schemaDocumentProvider from "../documentProviders/schema";
 import type { CCloudResourceLoader } from "../loaders";
 import { SchemaType, Subject } from "../models/schema";

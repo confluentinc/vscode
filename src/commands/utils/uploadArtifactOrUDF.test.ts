@@ -5,40 +5,32 @@ import path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import { eventEmitterStubs } from "../../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoaders";
-import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import {
   createFlinkArtifact,
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_ARTIFACT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../../tests/unit/testResources";
+import { TokenManager } from "../../auth/oauth2/tokenManager";
 import type { PresignedUploadUrlArtifactV1PresignedUrl200Response } from "../../clients/flinkArtifacts";
 import {
-  FlinkArtifactsArtifactV1Api,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../../clients/flinkArtifacts";
-import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
-import type { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
 import type { CCloudResourceLoader } from "../../loaders";
 import type { FlinkArtifact } from "../../models/flinkArtifact";
-import type { EnvironmentId } from "../../models/resource";
 import * as notifications from "../../notifications";
-import type { SidecarHandle } from "../../sidecar";
 import * as fsWrappers from "../../utils/fsWrappers";
 import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import * as uploadArtifactModule from "./uploadArtifactOrUDF";
 import {
   buildCreateArtifactRequest,
   executeCreateFunction,
-  getPresignedUploadUrl,
   handleUploadToCloudProvider,
   prepareUploadFileFromUri,
   PRESIGNED_URL_LOCATION,
   promptForFunctionAndClassName,
-  uploadArtifactToCCloud,
 } from "./uploadArtifactOrUDF";
 import * as uploadToProvider from "./uploadToProvider";
 
@@ -135,32 +127,70 @@ describe("commands/utils/uploadArtifact", () => {
   });
 
   describe("getPresignedUploadUrl", () => {
-    it("should return a presigned upload URL", async () => {
+    let tokenStub: sinon.SinonStub;
+    let fetchStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      // Stub token manager to return a token
+      tokenStub = sandbox.stub(TokenManager, "getInstance");
+      tokenStub.returns({
+        getDataPlaneToken: sandbox.stub().resolves("test-token"),
+      });
+    });
+
+    afterEach(() => {
+      fetchStub?.restore();
+    });
+
+    it("should return presigned URL response from API", async () => {
       const mockResponse = {
-        upload_url: "https://example.com/presigned-url",
-        api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
-        kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
-      };
-
-      const mockPresignedClient = sandbox.createStubInstance(PresignedUrlsArtifactV1Api);
-      mockPresignedClient.presignedUploadUrlArtifactV1PresignedUrl.resolves(mockResponse);
-
-      const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
-      stubbedSidecar.getFlinkPresignedUrlsApi.returns(mockPresignedClient);
-
-      const mockPresignedUploadUrlRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
-        content_format: "application/java-archive",
-        cloud: "azure",
-        region: "australiaeast",
-        environment: "env-123456",
-      };
-
-      const response = await getPresignedUploadUrl(mockPresignedUploadUrlRequest);
-      assert.deepStrictEqual(response, {
         api_version: "artifact/v1",
         kind: "PresignedUrl",
-        upload_url: "https://example.com/presigned-url",
+        upload_id: "test-upload-id",
+        upload_url: "https://storage.example.com/upload",
+        cloud: "AWS",
+        region: "us-east-1",
+        environment: "env-123456",
+        content_format: "JAR",
+      };
+
+      fetchStub = sandbox.stub(global, "fetch").resolves({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        headers: new Map([["content-type", "application/json"]]) as unknown as Headers,
+        json: async () => mockResponse,
+      } as Response);
+
+      const request = {
+        cloud: "AWS",
+        region: "us-east-1",
+        environment: "env-123456",
+        content_format: "JAR",
+      };
+
+      const result = await uploadArtifactModule.getPresignedUploadUrl(request);
+
+      assert.strictEqual(result.upload_id, "test-upload-id");
+      assert.strictEqual(result.upload_url, "https://storage.example.com/upload");
+    });
+
+    it("should throw error when not authenticated", async () => {
+      tokenStub.returns({
+        getDataPlaneToken: sandbox.stub().resolves(undefined),
       });
+
+      const request = {
+        cloud: "AWS",
+        region: "us-east-1",
+        environment: "env-123456",
+        content_format: "JAR",
+      };
+
+      await assert.rejects(
+        () => uploadArtifactModule.getPresignedUploadUrl(request),
+        /Not authenticated to Confluent Cloud/,
+      );
     });
   });
 
@@ -265,46 +295,56 @@ describe("commands/utils/uploadArtifact", () => {
     });
   });
   describe("uploadArtifactToCCloud", () => {
-    let stubbedFlinkArtifactsApi: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
-    let stubbedSidecarHandle: ReturnType<typeof getSidecarStub>;
-    let stubbedArtifactsChangedEmitter: sinon.SinonStubbedInstance<vscode.EventEmitter<any>>;
+    let tokenStub: sinon.SinonStub;
+    let fetchStub: sinon.SinonStub;
 
     beforeEach(() => {
-      stubbedFlinkArtifactsApi = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
-      stubbedSidecarHandle = getSidecarStub(sandbox);
-      stubbedSidecarHandle.getFlinkArtifactsApi.returns(stubbedFlinkArtifactsApi);
-
-      const stubbedEventEmitters = eventEmitterStubs(sandbox);
-      stubbedArtifactsChangedEmitter = stubbedEventEmitters.artifactsChanged!;
+      // Stub token manager to return a token
+      tokenStub = sandbox.stub(TokenManager, "getInstance");
+      tokenStub.returns({
+        getDataPlaneToken: sandbox.stub().resolves("test-token"),
+      });
     });
 
-    it("should upload the artifact to Confluent Cloud", async () => {
-      const mockUploadId = "upload-id-123";
-      stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.resolves({
-        id: "artifact-id-123",
-        cloud: "",
-        region: "",
-        environment: "",
-        display_name: "",
+    afterEach(() => {
+      fetchStub?.restore();
+    });
+
+    it("should create artifact via API", async () => {
+      const mockResponse = {
+        id: "artifact-123",
+        display_name: "test-artifact",
+        cloud: "Azure",
+        region: "australiaeast",
+        environment: "env-123456",
+      };
+
+      fetchStub = sandbox.stub(global, "fetch").resolves({
+        ok: true,
+        status: 201,
+        statusText: "Created",
+        headers: new Map([["content-type", "application/json"]]) as unknown as Headers,
+        json: async () => mockResponse,
+      } as Response);
+
+      const result = await uploadArtifactModule.uploadArtifactToCCloud(
+        mockAzureParams,
+        "upload-123",
+      );
+
+      assert.strictEqual(result.id, "artifact-123");
+      assert.strictEqual(result.display_name, "test-artifact");
+    });
+
+    it("should throw error when not authenticated", async () => {
+      tokenStub.returns({
+        getDataPlaneToken: sandbox.stub().resolves(undefined),
       });
 
-      await uploadArtifactToCCloud(mockAzureParams, mockUploadId);
-
-      sinon.assert.calledOnce(stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact);
-      sinon.assert.calledWith(stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact, {
-        CreateArtifactV1FlinkArtifactRequest: buildCreateArtifactRequest(
-          mockAzureParams,
-          mockUploadId,
-        ),
-        cloud: mockAzureParams.cloud,
-        region: mockAzureParams.region,
-      });
-      sinon.assert.called(stubbedArtifactsChangedEmitter.fire);
-      sinon.assert.calledWith(stubbedArtifactsChangedEmitter.fire, {
-        environmentId: mockAzureParams.environment as EnvironmentId,
-        provider: mockAzureParams.cloud,
-        region: mockAzureParams.region,
-      });
+      await assert.rejects(
+        () => uploadArtifactModule.uploadArtifactToCCloud(mockAzureParams, "upload-123"),
+        /Not authenticated to Confluent Cloud/,
+      );
     });
   });
 

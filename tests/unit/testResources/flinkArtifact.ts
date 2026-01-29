@@ -1,5 +1,5 @@
 import { ArtifactV1FlinkArtifactMetadataFromJSON } from "../../../src/clients/flinkArtifacts";
-import { ConnectionType } from "../../../src/clients/sidecar";
+import { ConnectionType } from "../../../src/connections";
 import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
 import { FlinkArtifact } from "../../../src/models/flinkArtifact";
 import { TEST_CCLOUD_ENVIRONMENT_ID } from "./environments";

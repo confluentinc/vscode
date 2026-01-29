@@ -1,7 +1,27 @@
 import * as vscode from "vscode";
-import type { ScaffoldV1Template, ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
+import { getCCloudAuthSession } from "../authn/utils";
+import {
+  Configuration,
+  TemplatesScaffoldV1Api,
+  type ScaffoldV1Template,
+  type ScaffoldV1TemplateSpec,
+} from "../clients/scaffoldingService";
 import type { QuickPickItemWithValue } from "../quickpicks/types";
-import { getSidecar } from "../sidecar";
+
+/**
+ * Creates a configured scaffolding API client with OAuth token authentication.
+ * @returns A configured TemplatesScaffoldV1Api instance.
+ */
+export function createScaffoldingApi(): TemplatesScaffoldV1Api {
+  const config = new Configuration({
+    basePath: "https://api.confluent.cloud",
+    accessToken: async () => {
+      const session = await getCCloudAuthSession();
+      return session?.accessToken ?? "";
+    },
+  });
+  return new TemplatesScaffoldV1Api(config);
+}
 
 export function filterSensitiveKeys<T>(obj: Record<string, T>): Record<string, T> {
   return Object.fromEntries(
@@ -26,17 +46,30 @@ export function sanitizeTemplateOptions(template: ScaffoldV1Template): ScaffoldV
   };
 }
 
+/**
+ * Fetches available project templates from the scaffolding service.
+ *
+ * @param collection - The template collection name (default: "vscode")
+ * @param sanitizeOptions - Whether to filter sensitive keys from template options
+ * @returns Promise resolving to an array of templates
+ */
 export async function getTemplatesList(
   collection?: string,
   sanitizeOptions: boolean = false,
 ): Promise<ScaffoldV1Template[]> {
-  const client = (await getSidecar()).getTemplatesApi();
-  const response = await client.listScaffoldV1Templates({
+  const api = createScaffoldingApi();
+  const response = await api.listScaffoldV1Templates({
     template_collection_name: collection ?? "vscode",
   });
 
-  const templates = Array.from(response.data) as ScaffoldV1Template[];
-  return sanitizeOptions ? templates.map(sanitizeTemplateOptions) : templates;
+  // Convert the Set to an array and cast to ScaffoldV1Template[]
+  // The API returns ScaffoldV1TemplateListDataInner which has the same shape
+  const templates = Array.from(response.data) as unknown as ScaffoldV1Template[];
+
+  if (sanitizeOptions) {
+    return templates.map(sanitizeTemplateOptions);
+  }
+  return templates;
 }
 
 export async function pickTemplate(

@@ -1,7 +1,7 @@
 import assert from "assert";
 import { describe, it } from "mocha";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { FlinkUdfParameter, FlinkUdfTreeItem, createFlinkUdfToolTip } from "./flinkUDF";
 

@@ -1,6 +1,6 @@
 import { Data, type Require as Enforced } from "dataclass";
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import {
   CCLOUD_BASE_PATH,
   CCLOUD_CONNECTION_ID,

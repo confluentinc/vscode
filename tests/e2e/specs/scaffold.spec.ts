@@ -52,13 +52,13 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
 
   // Connection types covered by the E2E tests
   const connectionTypes: Array<[ConnectionType, Tag]> = [
-    [ConnectionType.Ccloud, Tag.CCloud],
-    [ConnectionType.Direct, Tag.Direct],
-    [ConnectionType.Local, Tag.Local],
+    [ConnectionType.CCLOUD, Tag.CCloud],
+    [ConnectionType.DIRECT, Tag.Direct],
+    [ConnectionType.LOCAL, Tag.Local],
   ];
 
   test.describe("CCloud connection", { tag: [Tag.CCloud] }, () => {
-    test.use({ connectionType: ConnectionType.Ccloud });
+    test.use({ connectionType: ConnectionType.CCLOUD });
 
     test.beforeEach(async ({ connectionItem }) => {
       // ensure connection tree item has resources available to work with

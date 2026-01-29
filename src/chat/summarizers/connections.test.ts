@@ -11,8 +11,8 @@ import {
   TEST_DIRECT_CONNECTION,
   TEST_LOCAL_CONNECTION,
 } from "../../../tests/unit/testResources/connection";
-import type { Connection } from "../../clients/sidecar";
-import { ConnectedState, ConnectionFromJSON } from "../../clients/sidecar";
+import type { Connection } from "../../connections";
+import { ConnectedState, ConnectionFromJSON } from "../../connections";
 import * as contextValues from "../../context/values";
 import {
   summarizeCCloudConnection,
@@ -41,7 +41,7 @@ describe("chat/summarizers/connections.ts", () => {
 
     // ignore any headers, indentations, spacing, etc.
     assert.ok(result.includes(`${connection.spec.name!}`));
-    assert.ok(result.includes(`Status: ${ConnectedState.Success}`));
+    assert.ok(result.includes(`Status: ${ConnectedState.SUCCESS}`));
     assert.ok(result.includes("Auth Session Expires At:"));
   });
 
@@ -50,9 +50,8 @@ describe("chat/summarizers/connections.ts", () => {
       ...TEST_LOCAL_CONNECTION,
       spec: {
         ...TEST_LOCAL_CONNECTION.spec,
-        local_config: {
-          // XXX: required because LocalConfigFromJSON doesn't recognize `schema_registry_uri`
-          "schema-registry-uri": TEST_LOCAL_SCHEMA_REGISTRY.uri,
+        localConfig: {
+          schemaRegistryUri: TEST_LOCAL_SCHEMA_REGISTRY.uri,
         },
       },
     });
@@ -70,10 +69,10 @@ describe("chat/summarizers/connections.ts", () => {
     assert.ok(result.includes(`"${connection.spec.name!}"`));
 
     assert.ok(result.includes("Kafka"));
-    assert.ok(result.includes(`Status: ${ConnectedState.Success}`));
+    assert.ok(result.includes(`Status: ${ConnectedState.SUCCESS}`));
 
     assert.ok(result.includes("Schema Registry"));
-    assert.ok(result.includes(`Status: ${ConnectedState.Success}`));
+    assert.ok(result.includes(`Status: ${ConnectedState.SUCCESS}`));
     assert.ok(result.includes(`URI: ${TEST_LOCAL_SCHEMA_REGISTRY.uri}`));
   });
 
@@ -82,20 +81,20 @@ describe("chat/summarizers/connections.ts", () => {
       ...TEST_DIRECT_CONNECTION,
       spec: {
         ...TEST_DIRECT_CONNECTION.spec,
-        kafka_cluster: {
-          bootstrap_servers: TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers,
+        kafkaCluster: {
+          bootstrapServers: TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers,
         },
-        schema_registry: {
+        schemaRegistry: {
           uri: TEST_DIRECT_SCHEMA_REGISTRY.uri,
         },
       },
       status: {
         ...TEST_DIRECT_CONNECTION.status,
-        kafka_cluster: {
-          state: ConnectedState.Success,
+        kafkaCluster: {
+          state: ConnectedState.SUCCESS,
         },
-        schema_registry: {
-          state: ConnectedState.Success,
+        schemaRegistry: {
+          state: ConnectedState.SUCCESS,
         },
       },
     } satisfies Connection);
@@ -106,11 +105,11 @@ describe("chat/summarizers/connections.ts", () => {
     assert.ok(result.includes(`"${connection.spec.name!}"`));
 
     assert.ok(result.includes("Kafka Cluster"));
-    assert.ok(result.includes(`Status: ${ConnectedState.Success}`));
+    assert.ok(result.includes(`Status: ${ConnectedState.SUCCESS}`));
     assert.ok(result.includes(`Bootstrap Servers: ${TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers}`));
 
     assert.ok(result.includes("Schema Registry"));
-    assert.ok(result.includes(`Status: ${ConnectedState.Success}`));
+    assert.ok(result.includes(`Status: ${ConnectedState.SUCCESS}`));
     assert.ok(result.includes(`URI: ${TEST_DIRECT_SCHEMA_REGISTRY.uri}`));
   });
 
@@ -123,7 +122,7 @@ describe("chat/summarizers/connections.ts", () => {
     const result: MarkdownString = summarizeCCloudConnection(connection, summary);
 
     // ignore any headers, indentations, spacing, etc.
-    assert.ok(result.value.includes(`Status: ${ConnectedState.Success}`));
+    assert.ok(result.value.includes(`Status: ${ConnectedState.SUCCESS}`));
     assert.ok(result.value.includes("Auth Session Expires At:"));
     assert.ok(result.value.includes("hour")); // should include "in X hours" text
   });
@@ -136,8 +135,8 @@ describe("chat/summarizers/connections.ts", () => {
         ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status,
         ccloud: {
           ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud,
-          requires_authentication_at: expiration,
-          state: ConnectedState.Success,
+          requiresAuthenticationAt: expiration,
+          state: ConnectedState.SUCCESS,
         },
       },
     } satisfies Connection);
@@ -149,7 +148,7 @@ describe("chat/summarizers/connections.ts", () => {
 
     // ignore any headers, indentations, spacing, etc.
     assert.ok(result.value.includes("Sign-In Link:"));
-    assert.ok(result.value.includes(TEST_AUTHENTICATED_CCLOUD_CONNECTION.metadata.sign_in_uri!));
+    assert.ok(result.value.includes(TEST_AUTHENTICATED_CCLOUD_CONNECTION.metadata.signInUri!));
   });
 
   it("summarizeCCloudConnection() should include errors if present", () => {
@@ -160,10 +159,8 @@ describe("chat/summarizers/connections.ts", () => {
         ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status,
         ccloud: {
           ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud,
-          errors: {
-            auth_status_check: { message: errorMessage },
-          },
-          state: ConnectedState.Failed,
+          errors: [{ message: errorMessage }],
+          state: ConnectedState.FAILED,
         },
       },
     } satisfies Connection);
@@ -192,7 +189,7 @@ describe("chat/summarizers/connections.ts", () => {
 
     // ignore any headers, indentations, spacing, etc.
     assert.ok(result.value.includes("Kafka"));
-    assert.ok(result.value.includes(`Status: ${ConnectedState.Success}`));
+    assert.ok(result.value.includes(`Status: ${ConnectedState.SUCCESS}`));
     // we won't get any bootstrap servers from the connection until we migrate to a DIRECT type;
     // that can only be checked via the Docker engine API currently
   });
@@ -211,7 +208,7 @@ describe("chat/summarizers/connections.ts", () => {
 
     // ignore any headers, indentations, spacing, etc.
     assert.ok(result.value.includes("Kafka"));
-    assert.ok(result.value.includes(`Status: ${ConnectedState.None}`));
+    assert.ok(result.value.includes(`Status: ${ConnectedState.NONE}`));
   });
 
   it("summarizeLocalConnection() should show Schema Registry as running and include the URI when available", () => {
@@ -219,9 +216,8 @@ describe("chat/summarizers/connections.ts", () => {
       ...TEST_LOCAL_CONNECTION,
       spec: {
         ...TEST_LOCAL_CONNECTION.spec,
-        local_config: {
-          // XXX: required because LocalConfigFromJSON doesn't recognize `schema_registry_uri`
-          "schema-registry-uri": TEST_LOCAL_SCHEMA_REGISTRY.uri,
+        localConfig: {
+          schemaRegistryUri: TEST_LOCAL_SCHEMA_REGISTRY.uri,
         },
       },
     });
@@ -238,7 +234,7 @@ describe("chat/summarizers/connections.ts", () => {
 
     // ignore any headers, indentations, spacing, etc.
     assert.ok(result.value.includes("Schema Registry"));
-    assert.ok(result.value.includes(`Status: ${ConnectedState.Success}`));
+    assert.ok(result.value.includes(`Status: ${ConnectedState.SUCCESS}`));
     assert.ok(result.value.includes(`URI: ${TEST_LOCAL_SCHEMA_REGISTRY.uri}`));
   });
 
@@ -256,7 +252,7 @@ describe("chat/summarizers/connections.ts", () => {
 
     // ignore any headers, indentations, spacing, etc.
     assert.ok(result.value.includes("Schema Registry"));
-    assert.ok(result.value.includes(`Status: ${ConnectedState.None}`));
+    assert.ok(result.value.includes(`Status: ${ConnectedState.NONE}`));
     assert.ok(!result.value.includes("URI:"));
   });
 
@@ -265,14 +261,14 @@ describe("chat/summarizers/connections.ts", () => {
       ...TEST_DIRECT_CONNECTION,
       spec: {
         ...TEST_DIRECT_CONNECTION.spec,
-        kafka_cluster: {
-          bootstrap_servers: TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers,
+        kafkaCluster: {
+          bootstrapServers: TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers,
         },
       },
       status: {
         ...TEST_DIRECT_CONNECTION.status,
-        kafka_cluster: {
-          state: ConnectedState.Success,
+        kafkaCluster: {
+          state: ConnectedState.SUCCESS,
         },
       },
     } satisfies Connection);
@@ -286,27 +282,25 @@ describe("chat/summarizers/connections.ts", () => {
     assert.ok(
       result.value.includes(`Bootstrap Servers: ${TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers}`),
     );
-    assert.ok(result.value.includes(`Status: ${ConnectedState.Success}`));
+    assert.ok(result.value.includes(`Status: ${ConnectedState.SUCCESS}`));
   });
 
   it("summarizeDirectConnection() should include Kafka cluster errors when present", () => {
     const errorMessage = "Error connecting to Kafka";
-    const status: ConnectedState = ConnectedState.Failed;
+    const status: ConnectedState = ConnectedState.FAILED;
     const connection: Connection = ConnectionFromJSON({
       ...TEST_DIRECT_CONNECTION,
       spec: {
         ...TEST_DIRECT_CONNECTION.spec,
-        kafka_cluster: {
-          bootstrap_servers: TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers,
+        kafkaCluster: {
+          bootstrapServers: TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers,
         },
       },
       status: {
         ...TEST_DIRECT_CONNECTION.status,
-        kafka_cluster: {
+        kafkaCluster: {
           state: status,
-          errors: {
-            sign_in: { message: errorMessage },
-          },
+          errors: [{ message: errorMessage }],
         },
       },
     } satisfies Connection);
@@ -326,18 +320,18 @@ describe("chat/summarizers/connections.ts", () => {
   });
 
   it("summarizeDirectConnection() should include Schema Registry details when available", () => {
-    const status: ConnectedState = ConnectedState.Attempting;
+    const status: ConnectedState = ConnectedState.ATTEMPTING;
     const connection: Connection = ConnectionFromJSON({
       ...TEST_DIRECT_CONNECTION,
       spec: {
         ...TEST_DIRECT_CONNECTION.spec,
-        schema_registry: {
+        schemaRegistry: {
           uri: TEST_DIRECT_SCHEMA_REGISTRY.uri,
         },
       },
       status: {
         ...TEST_DIRECT_CONNECTION.status,
-        schema_registry: {
+        schemaRegistry: {
           state: status,
         },
       },
@@ -356,22 +350,20 @@ describe("chat/summarizers/connections.ts", () => {
 
   it("summarizeDirectConnection() should include Schema Registry errors when present", () => {
     const errorMessage = "Error connecting to Schema Registry";
-    const status: ConnectedState = ConnectedState.Failed;
+    const status: ConnectedState = ConnectedState.FAILED;
     const connection: Connection = ConnectionFromJSON({
       ...TEST_DIRECT_CONNECTION,
       spec: {
         ...TEST_DIRECT_CONNECTION.spec,
-        schema_registry: {
+        schemaRegistry: {
           uri: TEST_DIRECT_SCHEMA_REGISTRY.uri,
         },
       },
       status: {
         ...TEST_DIRECT_CONNECTION.status,
-        schema_registry: {
+        schemaRegistry: {
           state: status,
-          errors: {
-            sign_in: { message: errorMessage },
-          },
+          errors: [{ message: errorMessage }],
         },
       },
     } satisfies Connection);
@@ -394,20 +386,20 @@ describe("chat/summarizers/connections.ts", () => {
       ...TEST_DIRECT_CONNECTION,
       spec: {
         ...TEST_DIRECT_CONNECTION.spec,
-        kafka_cluster: {
-          bootstrap_servers: TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers,
+        kafkaCluster: {
+          bootstrapServers: TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers,
         },
-        schema_registry: {
+        schemaRegistry: {
           uri: TEST_DIRECT_SCHEMA_REGISTRY.uri,
         },
       },
       status: {
         ...TEST_DIRECT_CONNECTION.status,
-        kafka_cluster: {
-          state: ConnectedState.Success,
+        kafkaCluster: {
+          state: ConnectedState.SUCCESS,
         },
-        schema_registry: {
-          state: ConnectedState.Success,
+        schemaRegistry: {
+          state: ConnectedState.SUCCESS,
         },
       },
     } satisfies Connection);

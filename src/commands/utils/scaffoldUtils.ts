@@ -5,19 +5,18 @@ import { posix } from "path";
 import { unzip } from "unzipit";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
-import type {
-  ApplyScaffoldV1TemplateOperationRequest,
-  ScaffoldV1Template,
-  ScaffoldV1TemplateSpec,
-  TemplatesScaffoldV1Api,
-} from "../../clients/scaffoldingService";
+import type { ScaffoldV1Template, ScaffoldV1TemplateSpec } from "../../clients/scaffoldingService";
 import { projectScaffoldUri } from "../../emitters";
 import { isResponseError, logError } from "../../errors";
 import { showErrorNotificationWithButtons } from "../../notifications";
-import { getTemplatesList, pickTemplate } from "../../projectGeneration/templates";
-import { getSidecar } from "../../sidecar";
+import {
+  createScaffoldingApi,
+  getTemplatesList,
+  pickTemplate,
+} from "../../projectGeneration/templates";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { fileUriExists } from "../../utils/file";
+import { writeFile } from "../../utils/fsWrappers";
 import { WebviewPanelCache } from "../../webview-cache";
 import { handleWebviewMessage } from "../../webview/comms/comms";
 import type { post, PostResponse } from "../../webview/scaffold-form";
@@ -198,111 +197,100 @@ export const scaffoldProjectRequest = async (
   return { success: true, message: "Form opened" };
 };
 
-// Called on Form Submit
+/**
+ * Applies a selected template with the provided option values to generate a project.
+ *
+ * @param pickedTemplate - The template to apply
+ * @param manifestOptionValues - The option values provided by the user
+ * @param telemetrySource - Optional source for telemetry tracking
+ * @returns A PostResponse indicating success or failure
+ */
 export async function applyTemplate(
   pickedTemplate: ScaffoldV1Template,
   manifestOptionValues: { [key: string]: unknown },
   telemetrySource?: string,
 ): Promise<PostResponse> {
-  const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
+  const templateSpec = pickedTemplate.spec;
+  if (!templateSpec?.name) {
+    return { success: false, message: "Template name is missing" };
+  }
 
-  const stringifiedOptions = Object.fromEntries(
-    Object.entries(manifestOptionValues).map(([k, v]) => [k, String(v)]),
-  );
-  const request: ApplyScaffoldV1TemplateOperationRequest = {
-    template_collection_name: pickedTemplate.spec!.template_collection!.id,
-    name: pickedTemplate.spec!.name!,
-    ApplyScaffoldV1TemplateRequest: {
-      options: stringifiedOptions,
-    },
-  };
+  const collectionName = templateSpec.template_collection?.id ?? "vscode";
 
-  // Track which phase we are in so we can surface specific user notifications in case of error
-  let stage: string = "";
+  // Convert manifestOptionValues to the expected format (string values only)
+  const options: { [key: string]: string } = {};
+  for (const [key, value] of Object.entries(manifestOptionValues)) {
+    options[key] = String(value);
+  }
+
+  let zipBlob: Blob;
   try {
-    stage = "performing scaffold service apply operation";
-    const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request);
-
-    stage = "downloading template files";
-    const arrayBuffer = await applyTemplateResponse.arrayBuffer();
-
-    stage = "requesting a save location";
-    const SAVE_LABEL = "Save to directory";
-    const fileUris = await vscode.window.showOpenDialog({
-      openLabel: SAVE_LABEL,
-      canSelectFiles: false,
-      canSelectFolders: true,
-      canSelectMany: false,
-      // Parameter might be ignored on some OSes (e.g. macOS)
-      title: SAVE_LABEL,
-    });
-
-    if (!fileUris || fileUris.length !== 1) {
-      logUsage(UserEvent.ProjectScaffoldingAction, {
-        status: "cancelled before save",
-        templateCollection: pickedTemplate.spec!.template_collection?.id,
-        templateId: pickedTemplate.spec!.name,
-        templateName: pickedTemplate.spec!.display_name,
-        itemType: telemetrySource,
-      });
-      // Not a failure point - user action. Form remains open and shows X + message at bottom.
-      return { success: false, message: "Project generation cancelled before save." };
-    }
-    // Not a failure point we control - calls vscode internals
-    const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
-
-    stage = "saving template files to disk";
-    await extractZipContents(arrayBuffer, destination);
-
-    logUsage(UserEvent.ProjectScaffoldingAction, {
-      status: "project generated",
-      templateCollection: pickedTemplate.spec!.template_collection?.id,
-      templateId: pickedTemplate.spec!.name,
-      templateName: pickedTemplate.spec!.display_name,
-      itemType: telemetrySource,
-    });
-    // Notify the user that the project was generated successfully
-    const selection = await vscode.window.showInformationMessage(
-      `🎉 Project Generated`,
-      {
-        // Do not show a modal dialog when running E2E tests
-        modal: !process.env.CONFLUENT_VSCODE_E2E_TESTING,
-        detail: `Location: ${destination.path}`,
+    const api = createScaffoldingApi();
+    zipBlob = await api.applyScaffoldV1Template({
+      template_collection_name: collectionName,
+      name: templateSpec.name,
+      ApplyScaffoldV1TemplateRequest: {
+        options,
       },
-      { title: "Open in New Window" },
-      { title: "Open in Current Window" },
-      { title: "Dismiss", isCloseAffordance: true },
-    );
-    if (selection !== undefined && selection.title !== "Dismiss") {
-      // if "true" is set in the `vscode.openFolder` command, it will open a new window instead of
-      // reusing the current one
-      const keepsExistingWindow = selection.title === "Open in New Window";
-      logUsage(UserEvent.ProjectScaffoldingAction, {
-        status: "project folder opened",
-        templateCollection: pickedTemplate.spec!.template_collection?.id,
-        templateId: pickedTemplate.spec!.name,
-        templateName: pickedTemplate.spec!.display_name,
-        keepsExistingWindow,
-        itemType: telemetrySource,
-      });
-      vscode.commands.executeCommand(
-        "vscode.openFolder",
-        vscode.Uri.file(destination.path),
-        keepsExistingWindow,
-      );
-    }
-    return { success: true, message: "Project generated successfully." };
-  } catch (e) {
-    // Catches failure points above and gives stage-specific notification with details in output channel
-    logError(e, "applying template", {
-      extra: { templateName: pickedTemplate.spec!.name!, stage },
     });
-    const message = await parseErrorMessage(e);
-    const stageSpecificMessage = `Template generation failed while ${stage}: ${message}`;
-    // Surface user-facing notification with actionable context
+  } catch (err) {
+    logError(err, "template application", { extra: { functionName: "applyTemplate" } });
+    const baseMessage = await parseErrorMessage(err);
+    const stageSpecificMessage = `Project generation failed while applying template. ${baseMessage}`;
     void showErrorNotificationWithButtons(stageSpecificMessage);
     return { success: false, message: stageSpecificMessage };
   }
+
+  // Let user select destination folder
+  const destinationUri = await vscode.window.showOpenDialog({
+    canSelectFiles: false,
+    canSelectFolders: true,
+    canSelectMany: false,
+    openLabel: "Save Project",
+    title: "Choose destination folder",
+  });
+
+  if (!destinationUri || destinationUri.length === 0) {
+    return { success: false, message: "Project generation cancelled before save." };
+  }
+
+  // Get a non-conflicting directory path
+  const destination = await getNonConflictingDirPath(destinationUri[0], pickedTemplate);
+
+  // Extract the zip contents to the destination
+  try {
+    const buffer = await zipBlob.arrayBuffer();
+    await extractZipContents(buffer, destination);
+  } catch (err) {
+    logError(err, "template extraction", { extra: { functionName: "applyTemplate" } });
+    const baseMessage = await parseErrorMessage(err);
+    const stageSpecificMessage = `Project generation failed during extraction. ${baseMessage}`;
+    void showErrorNotificationWithButtons(stageSpecificMessage);
+    return { success: false, message: stageSpecificMessage };
+  }
+
+  logUsage(UserEvent.ProjectScaffoldingAction, {
+    status: "project saved",
+    templateCollection: collectionName,
+    templateId: templateSpec.name,
+    templateName: templateSpec.display_name,
+    itemType: telemetrySource,
+  });
+
+  // Offer to open the new project
+  const openAction = await vscode.window.showInformationMessage(
+    `Project "${templateSpec.display_name}" generated successfully!`,
+    "Open Folder",
+    "Open in New Window",
+  );
+
+  if (openAction === "Open Folder") {
+    await vscode.commands.executeCommand("vscode.openFolder", destination, false);
+  } else if (openAction === "Open in New Window") {
+    await vscode.commands.executeCommand("vscode.openFolder", destination, true);
+  }
+
+  return { success: true, message: "Project generated successfully" };
 }
 
 /**
@@ -379,7 +367,7 @@ async function extractZipContents(buffer: ArrayBuffer, destination: vscode.Uri) 
     const { entries } = await unzip(buffer);
     for (const [name, entry] of Object.entries(entries)) {
       const entryBuffer = await entry.arrayBuffer();
-      await vscode.workspace.fs.writeFile(
+      await writeFile(
         vscode.Uri.file(posix.join(destination.path, name)),
         new Uint8Array(entryBuffer),
       );

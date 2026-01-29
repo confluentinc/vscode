@@ -1,9 +1,6 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import type {
-  DeleteArtifactV1FlinkArtifactRequest,
-  UpdateArtifactV1FlinkArtifactRequest,
-} from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
+import { TokenManager } from "../auth/oauth2/tokenManager";
 import type {
   CreateArtifactV1FlinkArtifact201Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
@@ -17,7 +14,7 @@ import {
   showErrorNotificationWithButtons,
   showInfoNotificationWithButtons,
 } from "../notifications";
-import { getSidecar } from "../sidecar";
+import { createCCloudArtifactsProxy } from "../proxy/ccloudArtifactsProxy";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
@@ -178,42 +175,75 @@ export async function deleteArtifactCommand(
     void showErrorNotificationWithButtons("No Flink artifact selected for deletion.");
     return;
   }
-  const request: DeleteArtifactV1FlinkArtifactRequest = {
-    cloud: selectedArtifact.provider,
-    region: selectedArtifact.region,
-    environment: selectedArtifact.environmentId,
-    id: selectedArtifact.id,
-  };
-  const sidecarHandle = await getSidecar();
 
-  const artifactsClient = sidecarHandle.getFlinkArtifactsApi({
-    region: selectedArtifact.region,
-    environmentId: selectedArtifact.environmentId,
-    provider: selectedArtifact.provider,
-  });
-
-  const yesButton = "Yes, delete";
+  // Confirm deletion
+  const confirmMessage = `Are you sure you want to delete the artifact "${selectedArtifact.name}"?`;
   const confirmation = await vscode.window.showWarningMessage(
-    `Are you sure you want to delete "${selectedArtifact.name}"?`,
-    {
-      modal: true,
-      detail:
-        "Deleting this artifact will disable all User-Defined Functions (UDFs) created from it. Consequently, any Flink statements that utilize these UDFs will also fail. This action cannot be undone.",
-    },
-    { title: yesButton },
-    // "Cancel" is added by default
+    confirmMessage,
+    { modal: true },
+    "Delete",
   );
-  if (confirmation?.title !== yesButton) {
+
+  if (confirmation !== "Delete") {
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "delete",
+      status: "cancelled",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
     return;
   }
 
-  await artifactsClient.deleteArtifactV1FlinkArtifact(request);
+  try {
+    const token = await TokenManager.getInstance().getDataPlaneToken();
+    if (!token) {
+      throw new Error("Not authenticated to Confluent Cloud");
+    }
 
-  artifactsChanged.fire(selectedArtifact);
+    const proxy = createCCloudArtifactsProxy({
+      baseUrl: "https://api.confluent.cloud",
+      auth: {
+        type: "bearer",
+        token,
+      },
+    });
 
-  void vscode.window.showInformationMessage(
-    `Artifact "${selectedArtifact.name}" deleted successfully from Confluent Cloud.`,
-  );
+    await proxy.deleteArtifact({
+      id: selectedArtifact.id,
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+      environment: selectedArtifact.environmentId,
+    });
+
+    void showInfoNotificationWithButtons(
+      `Artifact "${selectedArtifact.name}" deleted successfully.`,
+    );
+
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "delete",
+      status: "success",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
+
+    // Fire event to refresh the Flink Database view's artifacts container
+    artifactsChanged.fire({
+      environmentId: selectedArtifact.environmentId,
+      provider: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
+  } catch (err) {
+    const errorMessage = `Failed to delete artifact "${selectedArtifact.name}": ${err instanceof Error ? err.message : String(err)}`;
+    logError(err, errorMessage);
+    void showErrorNotificationWithButtons(errorMessage);
+
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "delete",
+      status: "failed",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
+  }
 }
 
 /** Update an artifact's editable fields */
@@ -225,68 +255,64 @@ export async function updateArtifactCommand(
     return;
   }
 
-  const patchPayload = await getArtifactPatchParams(selectedArtifact);
-  if (!patchPayload) {
-    logUsage(UserEvent.FlinkArtifactAction, {
-      action: "update",
-      status: "exited early with no changes",
-      cloud: selectedArtifact.provider,
-      region: selectedArtifact.region,
-    });
-    void vscode.window.showInformationMessage("Update cancelled. No changes were made.");
+  // Prompt user for updated fields
+  const patchParams = await getArtifactPatchParams(selectedArtifact);
+  if (!patchParams) {
+    // User cancelled
     return;
   }
-  const request: UpdateArtifactV1FlinkArtifactRequest = {
-    cloud: selectedArtifact.provider,
-    region: selectedArtifact.region,
-    environment: selectedArtifact.environmentId,
-    id: selectedArtifact.id,
-    ArtifactV1FlinkArtifact: patchPayload,
-  };
 
   try {
+    const token = await TokenManager.getInstance().getDataPlaneToken();
+    if (!token) {
+      throw new Error("Not authenticated to Confluent Cloud");
+    }
+
+    const proxy = createCCloudArtifactsProxy({
+      baseUrl: "https://api.confluent.cloud",
+      auth: {
+        type: "bearer",
+        token,
+      },
+    });
+
+    await proxy.updateArtifact({
+      id: selectedArtifact.id,
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+      environment: selectedArtifact.environmentId,
+      description: patchParams.description,
+      documentationLink: patchParams.documentation_link,
+    });
+
+    void showInfoNotificationWithButtons(
+      `Artifact "${selectedArtifact.name}" updated successfully.`,
+    );
+
     logUsage(UserEvent.FlinkArtifactAction, {
       action: "update",
-      status: "request started",
+      status: "success",
       cloud: selectedArtifact.provider,
       region: selectedArtifact.region,
     });
-    const sidecarHandle = await getSidecar();
-    const artifactsClient = sidecarHandle.getFlinkArtifactsApi({
-      region: selectedArtifact.region,
+
+    // Fire event to refresh the Flink Database view's artifacts container
+    artifactsChanged.fire({
       environmentId: selectedArtifact.environmentId,
       provider: selectedArtifact.provider,
-    });
-
-    await artifactsClient.updateArtifactV1FlinkArtifact(request);
-
-    artifactsChanged.fire(selectedArtifact);
-
-    logUsage(UserEvent.FlinkArtifactAction, {
-      action: "update",
-      status: "succeeded",
-      cloud: selectedArtifact.provider,
       region: selectedArtifact.region,
     });
-
-    void vscode.window.showInformationMessage(
-      `Artifact "${selectedArtifact.name}" updated successfully in Confluent Cloud.`,
-    );
   } catch (err) {
+    const errorMessage = `Failed to update artifact "${selectedArtifact.name}": ${err instanceof Error ? err.message : String(err)}`;
+    logError(err, errorMessage);
+    void showErrorNotificationWithButtons(errorMessage);
+
     logUsage(UserEvent.FlinkArtifactAction, {
       action: "update",
       status: "failed",
       cloud: selectedArtifact.provider,
       region: selectedArtifact.region,
     });
-    logError(err, "Failed to update Flink artifact in Confluent Cloud", {
-      extra: {
-        artifactId: selectedArtifact.id,
-        cloud: selectedArtifact.provider,
-        region: selectedArtifact.region,
-      },
-    });
-    void showErrorNotificationWithButtons(`Failed to update artifact "${selectedArtifact.name}".`);
   }
 }
 

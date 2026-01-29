@@ -214,7 +214,7 @@ export class ResourcesView extends SearchableView {
 
   /** Locate a direct connection item in the view by its label. */
   async getDirectConnection(label: string | RegExp): Promise<Locator> {
-    return await this.getEnvironment(ConnectionType.Direct, label);
+    return await this.getEnvironment(ConnectionType.DIRECT, label);
   }
 
   /** Refresh the 'Confluent Cloud' connection by clicking its inline "Refresh Connection" action. */
@@ -260,7 +260,7 @@ export class ResourcesView extends SearchableView {
     let environment: Locator;
 
     switch (connectionType) {
-      case ConnectionType.Ccloud: {
+      case ConnectionType.CCLOUD: {
         try {
           // shorter timeout to allow refresh/retry below if needed
           await expect(this.ccloudEnvironments, "should see CCloud environment(s)").not.toHaveCount(
@@ -282,14 +282,14 @@ export class ResourcesView extends SearchableView {
           : this.ccloudEnvironments.first();
         break;
       }
-      case ConnectionType.Direct: {
+      case ConnectionType.DIRECT: {
         await expect(this.directConnections).not.toHaveCount(0);
         environment = label
           ? this.directConnections.filter({ hasText: label }).first()
           : this.directConnections.first();
         break;
       }
-      case ConnectionType.Local: {
+      case ConnectionType.LOCAL: {
         await expect(this.localItem).not.toHaveCount(0);
         environment = this.localItem;
         break;
@@ -342,15 +342,15 @@ export class ResourcesView extends SearchableView {
     await this.expandConnectionEnvironment(connectionType);
 
     switch (connectionType) {
-      case ConnectionType.Ccloud: {
+      case ConnectionType.CCLOUD: {
         kafkaClusters = this.ccloudKafkaClusters;
         break;
       }
-      case ConnectionType.Direct: {
+      case ConnectionType.DIRECT: {
         kafkaClusters = this.directKafkaClusters;
         break;
       }
-      case ConnectionType.Local: {
+      case ConnectionType.LOCAL: {
         kafkaClusters = this.localKafkaClusters;
         break;
       }
@@ -389,15 +389,15 @@ export class ResourcesView extends SearchableView {
     await this.expandConnectionEnvironment(connectionType);
 
     switch (connectionType) {
-      case ConnectionType.Ccloud: {
+      case ConnectionType.CCLOUD: {
         schemaRegistries = this.ccloudSchemaRegistries;
         break;
       }
-      case ConnectionType.Direct: {
+      case ConnectionType.DIRECT: {
         schemaRegistries = this.directSchemaRegistries;
         break;
       }
-      case ConnectionType.Local: {
+      case ConnectionType.LOCAL: {
         schemaRegistries = this.localSchemaRegistries;
         break;
       }

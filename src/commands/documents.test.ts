@@ -15,7 +15,7 @@ import * as statementUtils from "../flinkSql/statementUtils";
 import type { CCloudResourceLoader } from "../loaders";
 import * as flinkComputePoolsQuickPick from "../quickpicks/flinkComputePools";
 import * as flinkDatabaseQuickpick from "../quickpicks/kafkaClusters";
-import * as ccloudConnections from "../sidecar/connections/ccloud";
+import * as ccloudConnections from "../authn/ccloudSession";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import {

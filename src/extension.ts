@@ -22,15 +22,6 @@ import { handleFeedback } from "./chat/telemetry";
 import { registerChatTools } from "./chat/tools/registration";
 import { FlinkSqlCodelensProvider } from "./codelens/flinkSqlProvider";
 import { registerCommandWithLogging } from "./commands";
-import { ConnectionManager, type ConnectionStatusChangeEvent } from "./connections/connectionManager";
-import { ConnectedState } from "./connections/types";
-import {
-  connectionDisconnected,
-  connectionStable,
-  directConnectionCreated,
-  directConnectionsChanged,
-} from "./emitters";
-import type { ConnectionId } from "./models/resource";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
 import { registerDiffCommands } from "./commands/diffs";
@@ -55,6 +46,11 @@ import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
 import { registerUriCommands } from "./commands/uris";
 import { setProjectScaffoldListener } from "./commands/utils/scaffoldUtils";
+import {
+  ConnectionManager,
+  type ConnectionStatusChangeEvent,
+} from "./connections/connectionManager";
+import { ConnectedState } from "./connections/types";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
@@ -68,6 +64,12 @@ import { DocumentMetadataManager } from "./documentMetadataManager";
 import { FlinkStatementDocumentProvider } from "./documentProviders/flinkStatement";
 import { MESSAGE_URI_SCHEME, MessageDocumentProvider } from "./documentProviders/message";
 import { SCHEMA_URI_SCHEME, SchemaDocumentProvider } from "./documentProviders/schema";
+import {
+  connectionDisconnected,
+  connectionStable,
+  directConnectionCreated,
+  directConnectionsChanged,
+} from "./emitters";
 import { logError } from "./errors";
 import {
   ENABLE_CHAT_PARTICIPANT,
@@ -90,6 +92,7 @@ import { setFlinkWorkspaceListener } from "./flinkSql/flinkWorkspace";
 import { IconNames } from "./icons";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
+import type { ConnectionId } from "./models/resource";
 import { FlinkStatementResultsPanelProvider } from "./panelProviders/flinkStatementResults";
 import { getCCloudStatusBarItem } from "./statusBar/ccloudItem";
 import { SecretStorageKeys } from "./storage/constants";
@@ -120,8 +123,7 @@ export async function activate(
   observabilityContext.extensionVersion = extVersion;
   observabilityContext.extensionActivated = false;
 
-  // determine the writeable tmpdir for the extension to use. Must be done prior
-  // to starting the sidecar, as it will use this tmpdir for sidecar logfile.
+  // determine the writeable tmpdir for the extension to use
   const result = await WriteableTmpDir.getInstance().determine();
   if (result.errors.length) {
     sentryCaptureException(new Error("No writeable tmpdir found."), {

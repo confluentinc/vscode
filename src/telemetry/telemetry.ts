@@ -1,5 +1,5 @@
 import type * as vscode from "vscode";
-import type { UserInfo } from "../clients/sidecar/models/UserInfo";
+import type { UserInfo } from "../connections";
 import type { UserEvent } from "./events";
 import { logUsage } from "./events";
 
@@ -22,7 +22,7 @@ export function sendTelemetryIdentifyEvent({
 }) {
   const id = userInfo?.id || session?.account.id;
   const username = userInfo?.username || session?.account.label;
-  const social_connection = userInfo?.social_connection;
+  const social_connection = userInfo?.socialConnection;
   let domain: string | undefined;
   if (username) {
     //  email is redacted by VSCode TelemetryLogger, but we extract domain for Confluent analytics use

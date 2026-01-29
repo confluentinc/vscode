@@ -1,4 +1,4 @@
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import { createDirectResourceFetcher } from "../fetchers";
 import { Logger } from "../logging";
 import type { DirectEnvironment } from "../models/environment";

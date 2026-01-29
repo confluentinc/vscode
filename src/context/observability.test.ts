@@ -1,5 +1,4 @@
 import * as assert from "assert";
-import { version as sidecarVersion } from "ide-sidecar";
 import type { Extension, ExtensionContext } from "vscode";
 import { extensions } from "vscode";
 import { EXTENSION_ID } from "../constants";
@@ -33,10 +32,6 @@ describe("ObservabilityContext", () => {
     assert.ok(
       table.includes(`| extensionActivated | ${extensionActivated}`),
       `Wrong extensionActivated line, got:\n${table}\n\nExpected ${extensionActivated}`,
-    );
-    assert.ok(
-      table.includes(`| sidecarVersion | "${sidecarVersion}" |`),
-      `Wrong sidecarVersion line, got:\n${table}\n\nExpected ${sidecarVersion}`,
     );
   });
 });

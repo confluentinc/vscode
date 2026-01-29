@@ -1,6 +1,6 @@
 import { ObservableScope } from "inertial";
 import { type PartitionData } from "../clients/kafkaRest";
-import { type PartitionConsumeRecord } from "../clients/sidecar";
+import { type PartitionConsumeRecord } from "../connections";
 import { datetimeLocalToTimestamp, timestampToDatetimeLocal } from "../utils/dateUtils";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";

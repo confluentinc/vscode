@@ -40,7 +40,7 @@ describe("connections/spec", function () {
     const validSpec: ConnectionSpec = {
       id: "test-id" as ConnectionId,
       name: "Test Connection",
-      type: ConnectionType.DIRECT,
+      type: ConnectionType.Direct,
     };
 
     it("should return no errors for a valid spec", function () {
@@ -108,7 +108,7 @@ describe("connections/spec", function () {
       const spec: ConnectionSpec = {
         id: "test" as ConnectionId,
         name: "Test",
-        type: ConnectionType.DIRECT,
+        type: ConnectionType.Direct,
         kafkaCluster: { bootstrapServers: "localhost:9092" },
       };
       assert.strictEqual(hasKafkaCluster(spec), true);
@@ -118,7 +118,7 @@ describe("connections/spec", function () {
       const spec: ConnectionSpec = {
         id: "test" as ConnectionId,
         name: "Test",
-        type: ConnectionType.DIRECT,
+        type: ConnectionType.Direct,
       };
       assert.strictEqual(hasKafkaCluster(spec), false);
     });
@@ -127,7 +127,7 @@ describe("connections/spec", function () {
       const spec: ConnectionSpec = {
         id: "test" as ConnectionId,
         name: "Test",
-        type: ConnectionType.DIRECT,
+        type: ConnectionType.Direct,
         kafkaCluster: { bootstrapServers: "" },
       };
       assert.strictEqual(hasKafkaCluster(spec), false);
@@ -139,7 +139,7 @@ describe("connections/spec", function () {
       const spec: ConnectionSpec = {
         id: "test" as ConnectionId,
         name: "Test",
-        type: ConnectionType.DIRECT,
+        type: ConnectionType.Direct,
         schemaRegistry: { uri: "http://localhost:8081" },
       };
       assert.strictEqual(hasSchemaRegistry(spec), true);
@@ -149,7 +149,7 @@ describe("connections/spec", function () {
       const spec: ConnectionSpec = {
         id: "test" as ConnectionId,
         name: "Test",
-        type: ConnectionType.DIRECT,
+        type: ConnectionType.Direct,
       };
       assert.strictEqual(hasSchemaRegistry(spec), false);
     });
@@ -158,7 +158,7 @@ describe("connections/spec", function () {
       const spec: ConnectionSpec = {
         id: "test" as ConnectionId,
         name: "Test",
-        type: ConnectionType.DIRECT,
+        type: ConnectionType.Direct,
         schemaRegistry: { uri: "" },
       };
       assert.strictEqual(hasSchemaRegistry(spec), false);
@@ -170,7 +170,7 @@ describe("connections/spec", function () {
       const spec: ConnectionSpec = {
         id: "test" as ConnectionId,
         name: "Test",
-        type: ConnectionType.DIRECT,
+        type: ConnectionType.Direct,
         kafkaCluster: {
           bootstrapServers: "localhost:9092",
           credentials: {
@@ -187,7 +187,7 @@ describe("connections/spec", function () {
       const spec: ConnectionSpec = {
         id: "test" as ConnectionId,
         name: "Test",
-        type: ConnectionType.DIRECT,
+        type: ConnectionType.Direct,
         schemaRegistry: {
           uri: "http://localhost:8081",
           credentials: {
@@ -204,7 +204,7 @@ describe("connections/spec", function () {
       const spec: ConnectionSpec = {
         id: "test" as ConnectionId,
         name: "Test",
-        type: ConnectionType.DIRECT,
+        type: ConnectionType.Direct,
         kafkaCluster: {
           bootstrapServers: "localhost:9092",
           ssl: {

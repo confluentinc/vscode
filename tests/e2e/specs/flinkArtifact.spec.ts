@@ -21,7 +21,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () => {
-  test.use({ connectionType: ConnectionType.Ccloud });
+  test.use({ connectionType: ConnectionType.CCLOUD });
   test.beforeEach(async ({ connectionItem }) => {
     await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
   });

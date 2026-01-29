@@ -9,11 +9,11 @@ export type ConnectionId = string & { readonly __brand: "ConnectionId" };
 /** Type of connection to a Kafka cluster and/or Schema Registry. */
 export enum ConnectionType {
   /** Confluent Cloud via OAuth authentication. */
-  CCLOUD = "CCLOUD",
+  Ccloud = "CCLOUD",
   /** Local Docker-based Kafka/Schema Registry. */
-  LOCAL = "LOCAL",
+  Local = "LOCAL",
   /** Direct TCP connection with manual configuration. */
-  DIRECT = "DIRECT",
+  Direct = "DIRECT",
 }
 
 /** Current state of a connection or sub-connection. */
@@ -133,4 +133,65 @@ export function isConnectedStateTerminal(state: ConnectedState): boolean {
  */
 export function isConnectedStateInProgress(state: ConnectedState): boolean {
   return state === ConnectedState.ATTEMPTING;
+}
+
+/**
+ * User information from Confluent Cloud.
+ * Alias for CCloudUser for backwards compatibility.
+ */
+export type UserInfo = CCloudUser;
+
+/** Authentication error details. */
+export interface AuthError {
+  /** Error message. */
+  message: string;
+  /** Error type/code. */
+  type?: string;
+}
+
+/** Collection of authentication errors. */
+export interface AuthErrors {
+  /** List of authentication errors. */
+  errors: AuthError[];
+}
+
+/**
+ * A full connection object combining spec, status, and metadata.
+ * This is the runtime representation of a connection.
+ */
+export interface Connection {
+  /** Connection specification (configuration). */
+  spec: import("./spec").ConnectionSpec;
+  /** Current connection status. */
+  status: ConnectionStatus;
+  /** Read-only metadata about the connection. */
+  metadata: ConnectionMetadata;
+}
+
+/**
+ * Type guard to check if an object is a Connection.
+ * @param obj The object to check.
+ * @returns true if the object is a Connection.
+ */
+export function instanceOfConnection(obj: unknown): obj is Connection {
+  if (!obj || typeof obj !== "object") return false;
+  const conn = obj as Connection;
+  return "spec" in conn && "status" in conn && conn.spec != null && conn.status != null;
+}
+
+/**
+ * Converts a plain object to a Connection.
+ * @param json The JSON object to convert.
+ * @returns A Connection object.
+ */
+export function ConnectionFromJSON(json: unknown): Connection {
+  if (!json || typeof json !== "object") {
+    throw new Error("Invalid Connection JSON");
+  }
+  const obj = json as Record<string, unknown>;
+  return {
+    spec: obj.spec as import("./spec").ConnectionSpec,
+    status: obj.status as ConnectionStatus,
+    metadata: obj.metadata as ConnectionMetadata,
+  };
 }

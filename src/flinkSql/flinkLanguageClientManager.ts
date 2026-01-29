@@ -2,29 +2,22 @@ import { Mutex } from "async-mutex";
 import type { Disposable, TextDocument, TextEditor, Uri } from "vscode";
 import { window, workspace } from "vscode";
 import type { LanguageClient } from "vscode-languageclient/node";
-import type { CloseEvent, ErrorEvent, MessageEvent } from "ws";
+import type { CloseEvent, ErrorEvent } from "ws";
 import { WebSocket } from "ws";
 import { TokenManager } from "../auth/oauth2/tokenManager";
 import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
-import { CCLOUD_CONNECTION_ID } from "../constants";
 import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { logError } from "../errors";
-import {
-  FLINK_CONFIG_COMPUTE_POOL,
-  FLINK_CONFIG_DATABASE,
-  USE_INTERNAL_FETCHERS,
-} from "../extensionSettings/constants";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger, RotatingLogOutputChannel } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
-import { SIDECAR_PORT } from "../sidecar/constants";
-import { SecretStorageKeys, UriMetadataKeys } from "../storage/constants";
+import { hasCCloudAuthSession } from "../authn/ccloudSession";
+import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import type { UriMetadata } from "../storage/types";
-import { getSecretStorage } from "../storage/utils";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { DisposableCollection } from "../utils/disposables";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
@@ -451,8 +444,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
   /**
    * Builds the WebSocket URL for the Flink SQL Language Server.
-   * When USE_INTERNAL_FETCHERS is enabled, connects directly to CCloud.
-   * Otherwise, connects through the sidecar.
+   * Connects directly to CCloud.
    * @param poolInfo The compute pool info to use
    * @returns (string) WebSocket URL, or null if pool info is invalid
    */
@@ -462,21 +454,9 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       return null;
     }
 
-    // Check if we should use direct connection to CCloud
-    if (USE_INTERNAL_FETCHERS.value) {
-      logger.debug("Using direct Flink LSP connection (USE_INTERNAL_FETCHERS enabled)");
-      return buildFlinkLspUrl(poolInfo.environmentId, poolInfo.region, poolInfo.provider);
-    }
-
-    // Default: use sidecar proxy
-    return `ws://localhost:${SIDECAR_PORT}/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=${poolInfo.region}&provider=${poolInfo.provider}&environmentId=${poolInfo.environmentId}&organizationId=${poolInfo.organizationId}`;
-  }
-
-  /**
-   * Checks if we're using direct connection mode (bypassing sidecar).
-   */
-  private isDirectConnectionMode(): boolean {
-    return USE_INTERNAL_FETCHERS.value === true;
+    // Always use direct connection to CCloud Flink LSP
+    logger.debug("Using direct Flink LSP connection");
+    return buildFlinkLspUrl(poolInfo.environmentId, poolInfo.region, poolInfo.provider);
   }
 
   /**
@@ -649,40 +629,23 @@ export class FlinkLanguageClientManager extends DisposableCollection {
    * Creates a WebSocket (ws), then on ws.onopen makes the WebsocketTransport class for server, and then creates the Client.
    * Provides middleware for completions and diagnostics in ClientOptions
    *
-   * For sidecar connections: waits for the "OK" message indicating the sidecar's connection
-   * to CCloud is established.
-   *
-   * For direct connections: sends the auth message immediately after WebSocket opens,
+   * Sends the auth message immediately after WebSocket opens,
    * then proceeds to create the language client.
    *
    * @param url The URL of the language server websocket
-   * @param poolInfo The compute pool info (needed for direct connection auth)
+   * @param poolInfo The compute pool info (needed for auth)
    * @returns A promise that resolves to the language client, or null if initialization failed
    */
   private async initializeLanguageClient(
     url: string,
     poolInfo: ComputePoolInfo,
   ): Promise<LanguageClient | null> {
-    const isDirectMode = this.isDirectConnectionMode();
-
-    // Get the appropriate token based on connection mode
-    let accessToken: string | null | undefined;
-    if (isDirectMode) {
-      // For direct connection, use data plane token from TokenManager
-      accessToken = await TokenManager.getInstance().getDataPlaneToken();
-      if (!accessToken) {
-        const msg = "Failed to initialize Flink SQL language client: No data plane token available";
-        logError(new Error(msg), "No data plane token in TokenManager");
-        return null;
-      }
-    } else {
-      // For sidecar connection, use the sidecar auth token from secret storage
-      accessToken = await getSecretStorage().get(SecretStorageKeys.SIDECAR_AUTH_TOKEN);
-      if (!accessToken) {
-        const msg = "Failed to initialize Flink SQL language client: No access token found";
-        logError(new Error(msg), "No token found in secret storage");
-        return null;
-      }
+    // Get data plane token from TokenManager
+    const accessToken = await TokenManager.getInstance().getDataPlaneToken();
+    if (!accessToken) {
+      const msg = "Failed to initialize Flink SQL language client: No data plane token available";
+      logError(new Error(msg), "No data plane token in TokenManager");
+      return null;
     }
 
     return new Promise((resolve, reject) => {
@@ -719,59 +682,35 @@ export class FlinkLanguageClientManager extends DisposableCollection {
           });
       };
 
-      logger.debug(`WebSocket connection in progress (direct mode: ${isDirectMode})`);
+      logger.debug("WebSocket connection in progress");
 
       const ws = new WebSocket(url, {
         headers: { authorization: `Bearer ${accessToken}` },
       });
 
-      if (isDirectMode) {
-        // Direct connection mode: send auth message on open, then create client
-        ws.onopen = async () => {
-          logger.debug("Direct WebSocket connection opened, sending auth message");
-          try {
-            await sendAuthMessage(
-              ws,
-              {
-                region: poolInfo.region,
-                provider: poolInfo.provider,
-                environmentId: poolInfo.environmentId,
-                organizationId: poolInfo.organizationId,
-              },
-              () => TokenManager.getInstance().getDataPlaneToken(),
-            );
-            logger.debug("Auth message sent, creating language client");
-            createClient(ws);
-          } catch (error) {
-            const err = error instanceof Error ? error : new Error(String(error));
-            logError(err, "Failed to send auth message to Flink LSP", { extra: { wsUrl: url } });
-            safeReject(err);
-            ws.close(1000, "Auth failed");
-          }
-        };
-      } else {
-        // Sidecar connection mode: wait for "OK" message, then create client
-        const SIDECAR_PEER_CONNECTION_ESTABLISHED_MESSAGE = "OK";
-
-        ws.onmessage = (event: MessageEvent) => {
-          if (event.data === SIDECAR_PEER_CONNECTION_ESTABLISHED_MESSAGE) {
-            logger.debug("Sidecar peer connection established, creating language client");
-            ws.onmessage = null;
-            createClient(ws);
-          } else {
-            logger.error(
-              `Unexpected message received from WebSocket: ${JSON.stringify(event, null, 2)}`,
-            );
-            if (!promiseHandled) {
-              safeReject(
-                new Error(
-                  `Unexpected message received from WebSocket instead of ${SIDECAR_PEER_CONNECTION_ESTABLISHED_MESSAGE}`,
-                ),
-              );
-            }
-          }
-        };
-      }
+      // Send auth message on open, then create client
+      ws.onopen = async () => {
+        logger.debug("WebSocket connection opened, sending auth message");
+        try {
+          await sendAuthMessage(
+            ws,
+            {
+              region: poolInfo.region,
+              provider: poolInfo.provider,
+              environmentId: poolInfo.environmentId,
+              organizationId: poolInfo.organizationId,
+            },
+            () => TokenManager.getInstance().getDataPlaneToken(),
+          );
+          logger.debug("Auth message sent, creating language client");
+          createClient(ws);
+        } catch (error) {
+          const err = error instanceof Error ? error : new Error(String(error));
+          logError(err, "Failed to send auth message to Flink LSP", { extra: { wsUrl: url } });
+          safeReject(err);
+          ws.close(1000, "Auth failed");
+        }
+      };
 
       ws.onerror = (error: ErrorEvent) => {
         const msg = "WebSocket error connecting to Flink SQL language server.";
@@ -785,8 +724,9 @@ export class FlinkLanguageClientManager extends DisposableCollection {
         );
 
         if (!promiseHandled) {
-          const context = isDirectMode ? "before auth completed" : 'before receiving "OK" message';
-          logger.warn(`WebSocket connection closed ${context}, rejecting initialization`);
+          logger.warn(
+            "WebSocket connection closed before auth completed, rejecting initialization",
+          );
           safeReject(
             new Error(
               `WebSocket connection closed unexpectedly: ${closeEvent.reason} (Code: ${closeEvent.code})`,

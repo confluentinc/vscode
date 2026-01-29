@@ -220,7 +220,7 @@ export const test = testBase.extend<VSCodeFixtures>({
   ) => {
     if (!connectionType) {
       throw new Error(
-        "connectionType must be set, like `test.use({ connectionType: ConnectionType.Ccloud })`",
+        "connectionType must be set, like `test.use({ connectionType: ConnectionType.CCLOUD })`",
       );
     }
 
@@ -228,7 +228,7 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     // setup
     switch (connectionType) {
-      case ConnectionType.Ccloud:
+      case ConnectionType.CCLOUD:
         connection = await setupCCloudConnection(
           page,
           electronApp,
@@ -237,10 +237,10 @@ export const test = testBase.extend<VSCodeFixtures>({
           testInfo,
         );
         break;
-      case ConnectionType.Direct:
+      case ConnectionType.DIRECT:
         connection = await setupDirectConnection(page, directConnectionConfig);
         break;
-      case ConnectionType.Local:
+      case ConnectionType.LOCAL:
         connection = await setupLocalConnection(page, localConnectionConfig);
         break;
       default:
@@ -251,16 +251,16 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     // teardown
     switch (connectionType) {
-      case ConnectionType.Ccloud:
+      case ConnectionType.CCLOUD:
         // no explicit teardown needed since shutting down the extension+sidecar will invalidate the
         // CCloud auth session
         break;
-      case ConnectionType.Direct:
+      case ConnectionType.DIRECT:
         // no teardown needed since each test will use its own storage in TMPDIR, so any direct
         // connections created will be cleaned up automatically, and subsequent tests will use their
         // own blank-slate storage
         break;
-      case ConnectionType.Local:
+      case ConnectionType.LOCAL:
         // local resources are discovered automatically through the Docker engine API, so we need
         // to explicitly stop them to ensure the next tests can start them fresh
         await teardownLocalConnection(connection.page, {
@@ -281,7 +281,7 @@ export const test = testBase.extend<VSCodeFixtures>({
   ) => {
     if (!connectionType) {
       throw new Error(
-        "connectionType must be set, like `test.use({ connectionType: ConnectionType.Ccloud })`",
+        "connectionType must be set, like `test.use({ connectionType: ConnectionType.CCLOUD })`",
       );
     }
     if (!topicConfig) {
@@ -298,7 +298,7 @@ export const test = testBase.extend<VSCodeFixtures>({
     // set default replication factor (if it wasn't provided) based on connection type
     const replicationFactor =
       topicConfig.replicationFactor ??
-      (connectionType === ConnectionType.Local ? 1 : DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR);
+      (connectionType === ConnectionType.LOCAL ? 1 : DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR);
 
     const numPartitions = topicConfig.numPartitions ?? 1;
 
@@ -306,7 +306,7 @@ export const test = testBase.extend<VSCodeFixtures>({
     // specific CCloud cluster, so we can't use the first one that shows up in the resources view
     // (LOCAL/DIRECT connections don't have multiple clusters, so we can just skip this)
     let clusterLabel: string | RegExp | undefined;
-    if (topicConfig.produce && connectionType === ConnectionType.Ccloud) {
+    if (topicConfig.produce && connectionType === ConnectionType.CCLOUD) {
       clusterLabel = topicConfig.clusterLabel ?? process.env.E2E_KAFKA_CLUSTER_NAME!;
     }
 

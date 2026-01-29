@@ -19,7 +19,7 @@ import {
   LOCAL_SCHEMA_REGISTRY_IMAGE,
 } from "../extensionSettings/constants";
 import { Logger } from "../logging";
-import { updateLocalConnection } from "../sidecar/connections/local";
+import { updateLocalConnection } from "../docker/local";
 import { IntervalPoller } from "../utils/timing";
 import { defaultRequestInit, isDockerAvailable } from "./configs";
 import { LocalResourceKind } from "./constants";

@@ -7,7 +7,7 @@ import type {
   SqlV1StatementSpec,
   SqlV1StatementStatus,
 } from "../clients/flinkSql";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, UTM_SOURCE_VSCODE } from "../constants";
 import { IconNames } from "../icons";
 import type { IdItem } from "./main";

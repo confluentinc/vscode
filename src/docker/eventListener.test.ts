@@ -21,7 +21,7 @@ import {
   LOCAL_MEDUSA_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE,
 } from "../extensionSettings/constants";
-import * as localConnections from "../sidecar/connections/local";
+import * as localConnections from "../docker/local";
 import * as configs from "./configs";
 import type { SystemEventMessage } from "./eventListener";
 import { EventListener } from "./eventListener";

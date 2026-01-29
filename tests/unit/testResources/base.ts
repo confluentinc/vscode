@@ -1,4 +1,4 @@
-import { ConnectionType } from "../../../src/clients/sidecar";
+import { ConnectionType } from "../../../src/connections";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../../../src/constants";
 import type { ConnectionId, EnvironmentId } from "../../../src/models/resource";
 import type { BaseViewProviderData } from "../../../src/viewProviders/baseModels/base";

@@ -3,7 +3,7 @@ import sinon from "sinon";
 import type { ThemeIcon } from "vscode";
 import { window } from "vscode";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
-import * as organizationsGraphQL from "../graphql/organizations";
+import * as organizationFetcher from "../fetchers/organizationFetcher";
 import { IconNames } from "../icons";
 import { CCloudOrganization } from "../models/organization";
 import type { OrganizationId } from "../models/resource";
@@ -32,8 +32,8 @@ describe("quickpicks/organizations.ts organizationQuickPick()", function () {
     showQuickPickStub = sandbox.stub(window, "showQuickPick");
     showInfoStub = sandbox.stub(window, "showInformationMessage").resolves();
 
-    // graphql stubs
-    getOrganizationsStub = sandbox.stub(organizationsGraphQL, "getOrganizations");
+    // fetcher stubs
+    getOrganizationsStub = sandbox.stub(organizationFetcher, "getOrganizations");
     // return the two test organizations for most tests
     getOrganizationsStub.resolves(testOrganizations);
   });

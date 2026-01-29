@@ -28,12 +28,8 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResource
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type { ArtifactV1FlinkArtifactMetadata } from "../clients/flinkArtifacts";
-import type { ConnectionSpec } from "../clients/sidecar";
-import {
-  ConnectionType,
-  KafkaClusterConfigFromJSON,
-  KafkaClusterConfigToJSON,
-} from "../clients/sidecar";
+import type { ConnectionSpec, KafkaClusterConfig } from "../connections";
+import { ConnectionType } from "../connections";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { FlinkAIAgent } from "../models/flinkAiAgent";
@@ -1212,13 +1208,14 @@ describe("storage/resourceManager", () => {
 
 describe("CustomConnectionSpec object conversion", () => {
   it("CustomConnectionSpecFromJSON should correctly convert objects to typed CustomConnectionSpecs", () => {
+    // Input uses camelCase field names (no automatic transformation)
     const plainObj = {
       id: TEST_DIRECT_CONNECTION_ID,
       name: "Test Connection",
       type: "DIRECT",
       formConnectionType: "Apache Kafka",
-      kafka_cluster: {
-        bootstrap_servers: "localhost:9092",
+      kafkaCluster: {
+        bootstrapServers: "localhost:9092",
       },
     };
 
@@ -1231,12 +1228,10 @@ describe("CustomConnectionSpec object conversion", () => {
     assert.strictEqual(spec.type, "DIRECT");
     assert.strictEqual(spec.formConnectionType, "Apache Kafka");
     // ensure all KafkaClusterConfig fields are present
-    assert.deepStrictEqual(
-      spec.kafka_cluster,
-      KafkaClusterConfigFromJSON({
-        bootstrap_servers: "localhost:9092",
-      }),
-    );
+    const expectedKafkaCluster: KafkaClusterConfig = {
+      bootstrapServers: "localhost:9092",
+    };
+    assert.deepStrictEqual(spec.kafkaCluster, expectedKafkaCluster);
   });
 
   it("CustomConnectionSpecFromJSON should handle null input", () => {
@@ -1245,15 +1240,77 @@ describe("CustomConnectionSpec object conversion", () => {
     assert.strictEqual(spec, null);
   });
 
+  it("CustomConnectionSpecFromJSON should convert snake_case keys to camelCase (for imported JSON)", () => {
+    // This matches the format of exported connection JSON files
+    const snakeCaseObj = {
+      id: TEST_DIRECT_CONNECTION_ID,
+      name: "Imported Connection",
+      type: "DIRECT",
+      formConnectionType: "Confluent Cloud",
+      kafka_cluster: {
+        bootstrap_servers: "pkc-abc123.us-east1.gcp.confluent.cloud:9092",
+        credentials: {
+          api_key: "TESTKEY123",
+          api_secret: "testsecret456",
+        },
+        ssl: {
+          enabled: true,
+        },
+      },
+      schema_registry: {
+        uri: "https://psrc-xyz789.us-east1.gcp.confluent.cloud",
+        credentials: {
+          api_key: "SRKEY789",
+          api_secret: "srsecret012",
+        },
+        ssl: {
+          enabled: true,
+        },
+      },
+    };
+
+    const spec = CustomConnectionSpecFromJSON(snakeCaseObj);
+
+    assert.ok(spec);
+    assert.strictEqual(spec.id, TEST_DIRECT_CONNECTION_ID);
+    assert.strictEqual(spec.name, "Imported Connection");
+    assert.strictEqual(spec.type, "DIRECT");
+    assert.strictEqual(spec.formConnectionType, "Confluent Cloud");
+
+    // Kafka cluster should be converted from snake_case
+    assert.ok(spec.kafkaCluster);
+    assert.strictEqual(
+      spec.kafkaCluster!.bootstrapServers,
+      "pkc-abc123.us-east1.gcp.confluent.cloud:9092",
+    );
+    assert.ok(spec.kafkaCluster!.credentials);
+    assert.strictEqual((spec.kafkaCluster!.credentials as any).apiKey, "TESTKEY123");
+    assert.strictEqual((spec.kafkaCluster!.credentials as any).apiSecret, "testsecret456");
+    assert.ok(spec.kafkaCluster!.ssl);
+    assert.strictEqual(spec.kafkaCluster!.ssl!.enabled, true);
+
+    // Schema registry should be converted from snake_case
+    assert.ok(spec.schemaRegistry);
+    assert.strictEqual(
+      spec.schemaRegistry!.uri,
+      "https://psrc-xyz789.us-east1.gcp.confluent.cloud",
+    );
+    assert.ok(spec.schemaRegistry!.credentials);
+    assert.strictEqual((spec.schemaRegistry!.credentials as any).apiKey, "SRKEY789");
+    assert.strictEqual((spec.schemaRegistry!.credentials as any).apiSecret, "srsecret012");
+    assert.ok(spec.schemaRegistry!.ssl);
+    assert.strictEqual(spec.schemaRegistry!.ssl!.enabled, true);
+  });
+
   it("CustomConnectionSpecToJSON should correctly convert a typed CustomConnectionSpec to a plain object", () => {
-    // don't use existing test data since it will include all fields
+    // Use camelCase field names (no automatic transformation)
     const spec: object = {
       id: TEST_DIRECT_CONNECTION_ID,
       name: "Test Connection",
       type: "DIRECT",
       formConnectionType: "Apache Kafka",
-      kafka_cluster: {
-        bootstrap_servers: "localhost:9092",
+      kafkaCluster: {
+        bootstrapServers: "localhost:9092",
       },
     };
 
@@ -1263,12 +1320,10 @@ describe("CustomConnectionSpec object conversion", () => {
     assert.strictEqual(plainObj.name, "Test Connection");
     assert.strictEqual(plainObj.type, "DIRECT");
     assert.strictEqual(plainObj.formConnectionType, "Apache Kafka");
-    assert.deepStrictEqual(
-      plainObj.kafka_cluster,
-      KafkaClusterConfigToJSON({
-        bootstrap_servers: "localhost:9092",
-      }),
-    );
+    // The ToJSON function should preserve the camelCase field names
+    assert.deepStrictEqual(plainObj.kafkaCluster, {
+      bootstrapServers: "localhost:9092",
+    });
   });
 
   it("CustomConnectionSpec conversion should be reversible", () => {

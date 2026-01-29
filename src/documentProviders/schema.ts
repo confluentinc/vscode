@@ -1,9 +1,14 @@
 import * as vscode from "vscode";
 import { ResourceDocumentProvider } from ".";
-import type { SchemaString, SchemasV1Api } from "../clients/schemaRegistryRest";
+import { TokenManager } from "../auth/oauth2/tokenManager";
+import type { SchemaString } from "../clients/schemaRegistryRest";
+import { ConnectionType, CredentialType } from "../connections";
+import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { getLanguageTypes, Schema, SchemaType } from "../models/schema";
-import { getSidecar } from "../sidecar";
+import type { AuthConfig } from "../proxy/httpClient";
+import * as schemaRegistryProxy from "../proxy/schemaRegistryProxy";
+import { getResourceManager } from "../storage/resourceManager";
 
 export const SCHEMA_URI_SCHEME = "confluent.schema";
 
@@ -32,20 +37,92 @@ export class SchemaDocumentProvider extends ResourceDocumentProvider {
  * @param prettified Whether to prettify the schema definition before displaying, default=true
  * */
 export async function fetchSchemaBody(schema: Schema, prettified: boolean = true): Promise<string> {
-  // fetch the schema definition from the sidecar and attempt to prettify it before displaying
-  const client: SchemasV1Api = (await getSidecar()).getSchemasV1Api(
-    schema.schemaRegistryId,
-    schema.connectionId,
-  );
-  const schemaResp: SchemaString = await client.getSchema({
-    id: parseInt(schema.id, 10),
-    subject: schema.subject, // must also provide subject to disambiguate when custom contexts are in use.
+  if (!schema.environmentId) {
+    throw new Error("Schema is missing environmentId, cannot fetch body");
+  }
+
+  // Get the schema registry for this schema
+  const loader = ResourceLoader.getInstance(schema.connectionId);
+  const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(schema.environmentId);
+  if (!schemaRegistry) {
+    throw new Error(`No schema registry found for environment ${schema.environmentId}`);
+  }
+
+  // Get auth config based on connection type
+  const auth = await getAuthConfigForSchemaRegistry(schema);
+
+  // Create a proxy to fetch the schema content
+  const proxy = schemaRegistryProxy.createSchemaRegistryProxy({
+    baseUrl: schemaRegistry.uri,
+    auth,
   });
-  const schemaDefinition = prettified ? prettifySchemaDefinition(schemaResp) : schemaResp.schema;
-  if (!schemaDefinition) {
+
+  // Fetch the schema string content using the schema version endpoint
+  // getSchemaString returns the schema definition as a string directly
+  const schemaContent = await proxy.getSchemaString(schema.subject, schema.version);
+
+  if (!schemaContent) {
     throw new Error("Failed to load schema definition; it may be empty or invalid.");
   }
-  return schemaDefinition;
+
+  // Build a SchemaString object for prettifying
+  const schemaString: SchemaString = {
+    schema: schemaContent,
+    schemaType: schema.type,
+  };
+
+  if (prettified) {
+    const prettySchema = prettifySchemaDefinition(schemaString);
+    if (!prettySchema) {
+      throw new Error("Failed to load schema definition; it may be empty or invalid.");
+    }
+    return prettySchema;
+  }
+
+  return schemaContent;
+}
+
+/**
+ * Get authentication configuration for a Schema Registry based on connection type.
+ */
+async function getAuthConfigForSchemaRegistry(schema: Schema): Promise<AuthConfig | undefined> {
+  switch (schema.connectionType) {
+    case ConnectionType.Ccloud: {
+      // CCloud uses bearer token authentication
+      const token = (await TokenManager.getInstance().getDataPlaneToken()) || "";
+      return {
+        type: "bearer",
+        token,
+      };
+    }
+    case ConnectionType.Direct: {
+      // Direct connections may have credentials stored
+      const resourceManager = getResourceManager();
+      const spec = await resourceManager.getDirectConnection(schema.connectionId);
+      if (spec?.schemaRegistry?.credentials) {
+        const creds = spec.schemaRegistry.credentials;
+        if (creds.type === CredentialType.BASIC) {
+          return {
+            type: "basic",
+            username: creds.username,
+            password: creds.password,
+          };
+        }
+        if (creds.type === CredentialType.API_KEY) {
+          return {
+            type: "basic",
+            username: creds.apiKey,
+            password: creds.apiSecret,
+          };
+        }
+      }
+      return undefined;
+    }
+    case ConnectionType.Local:
+    default:
+      // Local connections typically don't require authentication
+      return undefined;
+  }
 }
 
 /**

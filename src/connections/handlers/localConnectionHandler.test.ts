@@ -1,8 +1,10 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { ConnectedState, ConnectionType, type ConnectionId } from "../types";
 import type { ConnectionSpec } from "../spec";
+import { ConnectedState, ConnectionType, type ConnectionId } from "../types";
 import { LocalConnectionHandler } from "./localConnectionHandler";
+import * as httpClient from "../../proxy/httpClient";
+import * as schemaRegistryProxy from "../../proxy/schemaRegistryProxy";
 
 describe("connections/handlers/localConnectionHandler", function () {
   let sandbox: sinon.SinonSandbox;
@@ -11,21 +13,53 @@ describe("connections/handlers/localConnectionHandler", function () {
   const kafkaOnlySpec: ConnectionSpec = {
     id: "vscode-local-connection" as ConnectionId,
     name: "Local",
-    type: ConnectionType.LOCAL,
+    type: ConnectionType.Local,
   };
 
   // Local connection with Schema Registry
   const fullSpec: ConnectionSpec = {
     id: "vscode-local-connection" as ConnectionId,
     name: "Local",
-    type: ConnectionType.LOCAL,
+    type: ConnectionType.Local,
     localConfig: {
       schemaRegistryUri: "http://localhost:8081",
     },
   };
 
+  // Mock HTTP client that returns successful cluster response
+  let mockHttpClient: sinon.SinonStubbedInstance<httpClient.HttpClient>;
+  // Mock Schema Registry proxy
+  let mockSrProxy: sinon.SinonStubbedInstance<schemaRegistryProxy.SchemaRegistryProxy>;
+
   beforeEach(function () {
     sandbox = sinon.createSandbox();
+
+    // Create mock HTTP client
+    mockHttpClient = {
+      get: sandbox.stub().resolves({
+        status: 200,
+        statusText: "OK",
+        headers: new Headers(),
+        data: { data: [{ cluster_id: "local-cluster-id" }] },
+        ok: true,
+      }),
+      post: sandbox.stub().resolves({ status: 200, data: {}, ok: true }),
+      put: sandbox.stub().resolves({ status: 200, data: {}, ok: true }),
+      patch: sandbox.stub().resolves({ status: 200, data: {}, ok: true }),
+      delete: sandbox.stub().resolves({ status: 200, data: {}, ok: true }),
+      request: sandbox.stub().resolves({ status: 200, data: {}, ok: true }),
+    } as unknown as sinon.SinonStubbedInstance<httpClient.HttpClient>;
+
+    // Stub createHttpClient to return our mock
+    sandbox.stub(httpClient, "createHttpClient").returns(mockHttpClient);
+
+    // Create mock Schema Registry proxy
+    mockSrProxy = {
+      listSubjects: sandbox.stub().resolves(["test-subject"]),
+    } as unknown as sinon.SinonStubbedInstance<schemaRegistryProxy.SchemaRegistryProxy>;
+
+    // Stub createSchemaRegistryProxy to return our mock
+    sandbox.stub(schemaRegistryProxy, "createSchemaRegistryProxy").returns(mockSrProxy);
   });
 
   afterEach(function () {
@@ -37,7 +71,7 @@ describe("connections/handlers/localConnectionHandler", function () {
       const handler = new LocalConnectionHandler(kafkaOnlySpec);
 
       assert.strictEqual(handler.connectionId, kafkaOnlySpec.id);
-      assert.strictEqual(handler.spec.type, ConnectionType.LOCAL);
+      assert.strictEqual(handler.spec.type, ConnectionType.Local);
       assert.strictEqual(handler.isConnected(), false);
     });
 

@@ -13,7 +13,7 @@ import { localKafkaConnected } from "../../emitters";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
-import { getLocalResourceContainers } from "../../sidecar/connections/local";
+import { getContainersForImageAndTag } from "../../docker/local";
 import { UserEvent } from "../../telemetry/events";
 import { createContainer } from "../containers";
 import { createNetwork } from "../networks";
@@ -62,7 +62,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     await this.checkForImage(this.imageRepo, this.imageTag);
     if (token.isCancellationRequested) return;
 
-    const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
+    const existingContainers: ContainerSummary[] = await getContainersForImageAndTag(
       this.imageRepo,
       this.imageTag,
       { onlyExtensionManaged: true, statuses: [] },
@@ -156,7 +156,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     this.imageTag = LOCAL_KAFKA_IMAGE_TAG.value;
 
     this.logAndUpdateProgress(`Checking existing ${this.resourceKind} containers...`);
-    const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
+    const existingContainers: ContainerSummary[] = await getContainersForImageAndTag(
       this.imageRepo,
       this.imageTag,
       { onlyExtensionManaged: false, statuses: [ContainerStateStatusEnum.Running] },

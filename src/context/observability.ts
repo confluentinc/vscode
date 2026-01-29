@@ -1,6 +1,5 @@
-import { version } from "ide-sidecar";
 import { env, version as ideVersion } from "vscode";
-import type { ConnectedState } from "../clients/sidecar";
+import type { ConnectedState } from "../connections";
 /**
  * Per-extension-instance singleton object for storing basic data to help debug issues, errors, etc.
  * This is created fresh each time the extension is activated, and will grow throughout the course
@@ -36,11 +35,6 @@ class ObservabilityContext {
     public extensionVersion: string = "",
     /** Whether or not the extension activated successfully. */
     public extensionActivated: boolean = false,
-
-    /** The version of the sidecar process associated with this extension instance. */
-    public sidecarVersion: string = version,
-    /** How many times the extension started the sidecar. Anything over one will indicate restarts were required. */
-    public sidecarStartCount: number = 0,
 
     /** Did the user successfully sign in to Confluent Cloud? */
     public ccloudAuthCompleted: boolean = false,

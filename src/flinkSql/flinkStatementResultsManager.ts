@@ -14,13 +14,22 @@ import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
 import { Logger } from "../logging";
 import type { FlinkStatement } from "../models/flinkStatement";
 import { showErrorNotificationWithButtons } from "../notifications";
-import type { SidecarHandle } from "../sidecar";
 import type { ViewMode } from "./flinkStatementResultColumns";
 import type { StatementResultsRow } from "./flinkStatementResults";
 import { parseResults } from "./flinkStatementResults";
 import { extractPageToken } from "./utils";
 
 const logger = new Logger("flink-statement-results");
+
+/**
+ * Interface for providing Flink SQL API instances.
+ * TODO(sidecar-removal): This interface replaces the SidecarHandle dependency.
+ * It will be implemented by a direct API client once the migration is complete.
+ */
+export interface FlinkSqlApiProvider {
+  getFlinkSqlStatementResultsApi(statement: FlinkStatement): StatementResultsSqlV1Api;
+  getFlinkSqlStatementsApi(statement: FlinkStatement): StatementsSqlV1Api;
+}
 
 export type ResultCount = { total: number; filter: number | null };
 export type StreamState = "running" | "completed";
@@ -140,7 +149,7 @@ export class FlinkStatementResultsManager {
   constructor(
     private os: Scope,
     private statement: FlinkStatement,
-    private sidecar: SidecarHandle,
+    private flinkApiProvider: FlinkSqlApiProvider,
     private notifyUI: () => void,
     private resultLimit: number,
     private resultsPollingIntervalMs: number = 800,
@@ -159,8 +168,8 @@ export class FlinkStatementResultsManager {
     this._filteredResults = os.signal<any[]>([]);
     this._getResultsAbortController = new AbortController();
 
-    this._flinkStatementResultsSqlApi = sidecar.getFlinkSqlStatementResultsApi(statement);
-    this._flinkStatementsSqlApi = sidecar.getFlinkSqlStatementsApi(statement);
+    this._flinkStatementResultsSqlApi = flinkApiProvider.getFlinkSqlStatementResultsApi(statement);
+    this._flinkStatementsSqlApi = flinkApiProvider.getFlinkSqlStatementsApi(statement);
 
     this._viewMode = this.os.signal<ViewMode>("table");
 

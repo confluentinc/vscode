@@ -1,17 +1,17 @@
 import type { Disposable } from "vscode";
 
+import { TokenManager } from "../auth/oauth2/tokenManager";
 import { getCCloudAuthSession } from "../authn/utils";
-import type { ArtifactV1FlinkArtifactListDataInner } from "../clients/flinkArtifacts";
-import type {
-  FcpmV2RegionListDataInner,
-  ListFcpmV2RegionsRequest,
-} from "../clients/flinkComputePool";
-import type { ListSqlv1StatementsRequest } from "../clients/flinkSql";
+// ArtifactV1FlinkArtifactListDataInner import removed - sidecar migration (phase-6)
+import type { FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
+import type { GetSqlv1Statement200Response } from "../clients/flinkSql";
+// ListSqlv1StatementsRequest import removed - sidecar migration (phase-6)
 import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { ccloudConnected, flinkStatementDeleted } from "../emitters";
+import { ccloudConnected } from "../emitters";
 import { createCCloudResourceFetcher } from "../fetchers";
+import { getCurrentOrganization } from "../fetchers/organizationFetcher";
 import type { FlinkWorkspaceParams } from "../flinkSql/flinkWorkspace";
 import type { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
 import {
@@ -21,8 +21,13 @@ import {
   submitFlinkStatement,
   waitForStatementCompletion,
 } from "../flinkSql/statementUtils";
-import { getCurrentOrganization } from "../fetchers/organizationFetcher";
 import { Logger } from "../logging";
+import { createCCloudArtifactsProxy } from "../proxy/ccloudArtifactsProxy";
+import {
+  CCloudDataPlaneProxy,
+  type FlinkStatement as FlinkStatementApi,
+} from "../proxy/ccloudDataPlaneProxy";
+import { buildFlinkDataPlaneBaseUrl } from "../proxy/flinkDataPlaneUrlBuilder";
 import type { CCloudEnvironment } from "../models/environment";
 import type { FlinkAIAgent } from "../models/flinkAiAgent";
 import type { FlinkAIConnection } from "../models/flinkAiConnection";
@@ -40,18 +45,14 @@ import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { CCloudOrganization } from "../models/organization";
 import type {
   EnvironmentId,
+  IEnvProviderRegion,
   IFlinkQueryable,
   IProviderRegion,
-  OrganizationId,
 } from "../models/resource";
 import type { CCloudSchemaRegistry } from "../models/schemaRegistry";
-import type { SidecarHandle } from "../sidecar";
-import { getSidecar } from "../sidecar";
 import { WorkspaceStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
-import type { ExecutionResult } from "../utils/workerPool";
-import { executeInWorkerPool, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 import type { RawFlinkAIAgentRow } from "./utils/flinkAiAgentsQuery";
 import { getFlinkAIAgentsQuery, transformRawFlinkAIAgentRows } from "./utils/flinkAiAgentsQuery";
@@ -77,6 +78,61 @@ import {
 } from "./utils/udfSystemCatalogQuery";
 
 const logger = new Logger("storage.ccloudResourceLoader");
+
+/**
+ * Converts a FlinkStatement from the proxy to the client type format.
+ * This ensures type compatibility with restFlinkStatementToModel.
+ *
+ * Note: We use type assertions here because the proxy types have optional
+ * values where the client types expect required values. The actual data
+ * from the API is structurally compatible.
+ */
+function proxyStatementToClientFormat(stmt: FlinkStatementApi): GetSqlv1Statement200Response {
+  // Convert metadata with proper date handling
+  const metadata: GetSqlv1Statement200Response["metadata"] = stmt.metadata
+    ? {
+        self: stmt.metadata.self ?? "",
+        created_at: stmt.metadata.created_at ? new Date(stmt.metadata.created_at) : undefined,
+        updated_at: stmt.metadata.updated_at ? new Date(stmt.metadata.updated_at) : undefined,
+        resource_version: stmt.metadata.resource_version,
+      }
+    : { self: "" };
+
+  // Convert status with proper date handling for scaling_status
+  const status: GetSqlv1Statement200Response["status"] = stmt.status
+    ? {
+        phase: stmt.status.phase ?? "PENDING",
+        detail: stmt.status.detail,
+        // Use type assertion for traits since the structure is compatible
+        traits: stmt.status.traits as GetSqlv1Statement200Response["status"]["traits"],
+        network_kind: stmt.status.network_kind,
+        latest_offsets: stmt.status.latest_offsets,
+        latest_offsets_timestamp: stmt.status.latest_offsets_timestamp
+          ? new Date(stmt.status.latest_offsets_timestamp)
+          : undefined,
+        scaling_status: stmt.status.scaling_status
+          ? {
+              scaling_state: stmt.status.scaling_status.scaling_state,
+              last_updated: stmt.status.scaling_status.last_updated
+                ? new Date(stmt.status.scaling_status.last_updated)
+                : undefined,
+            }
+          : undefined,
+      }
+    : { phase: "PENDING" };
+
+  // Use type assertion to bypass readonly properties that can't be set
+  return {
+    api_version: "sql/v1",
+    kind: "Statement",
+    name: stmt.name,
+    organization_id: stmt.organization_id,
+    environment_id: stmt.environment_id,
+    metadata,
+    spec: stmt.spec ?? {},
+    status,
+  } as GetSqlv1Statement200Response;
+}
 
 /** Flink SQL statement kinds for which we skip fetching results */
 export const SKIP_RESULTS_SQL_KINDS: string[] = ["CREATE_FUNCTION"];
@@ -337,33 +393,79 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   /**
    * Query the Flink statements for the given CCloud environment + provider-region.
    * @returns The Flink statements for the given environment + provider-region.
-   * @param providerRegion The CCloud environment, provider, region to get the Flink statements for.
+   * @param resource The CCloud environment or compute pool to get the Flink statements for.
    */
   public async getFlinkStatements(
     resource: CCloudEnvironment | CCloudFlinkComputePool,
   ): Promise<FlinkStatement[]> {
-    const queryables: IFlinkQueryable[] = await this.determineFlinkQueryables(resource);
-    const handle = await getSidecar();
-
-    // For each provider-region pair, get the Flink statements with reasonable concurrency.
-    const concurrentResults: ExecutionResult<FlinkStatement[]>[] = await executeInWorkerPool(
-      (queryable: IFlinkQueryable) => loadStatementsForProviderRegion(handle, queryable),
-      queryables,
-      { maxWorkers: 5 },
-    );
-
-    logger.debug(`getFlinkStatements() loaded ${concurrentResults.length} provider-region pairs`);
-
-    // Assemble the results into a single array of Flink statements.
-    const flinkStatements: FlinkStatement[] = [];
-
-    // extract will raise first error if any error was encountered.
-    const blocks: FlinkStatement[][] = extract(concurrentResults);
-    for (const block of blocks) {
-      flinkStatements.push(...block);
+    const org = await this.getOrganization();
+    if (!org) {
+      logger.warn("getFlinkStatements: Not connected to CCloud");
+      return [];
     }
 
-    return flinkStatements;
+    // Get auth token
+    const tokenManager = TokenManager.getInstance();
+    const dataPlaneToken = await tokenManager.getDataPlaneToken();
+    if (!dataPlaneToken) {
+      logger.warn("getFlinkStatements: Failed to get data plane token");
+      return [];
+    }
+
+    // Determine queryable regions based on resource type
+    const queryables = await this.determineFlinkQueryables(resource);
+    if (queryables.length === 0) {
+      logger.debug("getFlinkStatements: No queryable regions found for resource");
+      return [];
+    }
+
+    const allStatements: FlinkStatement[] = [];
+
+    // Fetch statements from each provider-region
+    for (const queryable of queryables) {
+      try {
+        const baseUrl = buildFlinkDataPlaneBaseUrl(
+          queryable.provider,
+          queryable.region,
+          queryable.environmentId,
+        );
+
+        const proxy = new CCloudDataPlaneProxy({
+          baseUrl,
+          organizationId: queryable.organizationId,
+          environmentId: queryable.environmentId,
+          auth: {
+            type: "bearer",
+            token: dataPlaneToken,
+          },
+        });
+
+        // Fetch statements, optionally filtering by compute pool
+        const statements = await proxy.fetchAllStatements({
+          computePoolId: queryable.computePoolId,
+          // Exclude hidden statements (system queries)
+          labelSelector: "user.confluent.io/hidden!=true",
+        });
+
+        // Convert to our model format
+        for (const apiStatement of statements) {
+          const statement = restFlinkStatementToModel(proxyStatementToClientFormat(apiStatement), {
+            provider: queryable.provider,
+            region: queryable.region,
+          });
+          allStatements.push(statement);
+        }
+      } catch (error) {
+        logger.error(
+          `Failed to fetch Flink statements for ${queryable.provider}-${queryable.region}`,
+          { error },
+        );
+        // Continue with other regions even if one fails
+      }
+    }
+
+    logger.debug(`Fetched ${allStatements.length} Flink statements`);
+    return allStatements;
   }
 
   /**
@@ -378,79 +480,71 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
-   * Delete the given Flink statement via the sidecar API.
+   * Delete the given Flink statement via the Flink SQL API.
    * @param statement The Flink statement to delete.
    */
   public async deleteFlinkStatement(statement: FlinkStatement): Promise<void> {
-    const handle = await getSidecar();
-    const statementsClient = handle.getFlinkSqlStatementsApi(statement);
-
-    logger.info(
-      `Deleting Flink statement ${statement.id} on ${statement.provider}-${statement.region} in environment ${statement.environmentId}`,
-    );
-
-    try {
-      await statementsClient.deleteSqlv1Statement({
-        organization_id: statement.organizationId,
-        environment_id: statement.environmentId,
-        statement_name: statement.name,
-      });
-    } catch (error) {
-      logger.error(`Error deleting Flink statement ${statement.id}`, { error });
-      throw error;
+    // Get auth token
+    const tokenManager = TokenManager.getInstance();
+    const dataPlaneToken = await tokenManager.getDataPlaneToken();
+    if (!dataPlaneToken) {
+      throw new Error("Failed to get data plane token for Flink SQL API");
     }
 
-    // fire event to get the UI refreshed
-    flinkStatementDeleted.fire(statement.id);
+    // Build the Flink Data Plane API base URL
+    const baseUrl = buildFlinkDataPlaneBaseUrl(
+      statement.provider,
+      statement.region,
+      statement.environmentId,
+    );
+
+    // Create the proxy instance
+    const proxy = new CCloudDataPlaneProxy({
+      baseUrl,
+      organizationId: statement.organizationId,
+      environmentId: statement.environmentId,
+      auth: {
+        type: "bearer",
+        token: dataPlaneToken,
+      },
+    });
+
+    logger.debug(`Deleting Flink statement "${statement.name}"`);
+    await proxy.deleteStatement(statement.name);
   }
 
-  /** Stop a currently running Flink statement */
+  /**
+   * Stop a currently running Flink statement.
+   * @param statement The Flink statement to stop.
+   */
   public async stopFlinkStatement(statement: FlinkStatement): Promise<void> {
-    const handle = await getSidecar();
-    const statementsClient = handle.getFlinkSqlStatementsApi(statement);
-
-    // Refresh the statement otherwise we cannot stop it, will always get an error.
-    const refreshedStatement = await this.refreshFlinkStatement(statement);
-
-    if (!refreshedStatement) {
-      throw new Error(`Could not find Flink statement ${statement.id} to stop.`);
+    // Get auth token
+    const tokenManager = TokenManager.getInstance();
+    const dataPlaneToken = await tokenManager.getDataPlaneToken();
+    if (!dataPlaneToken) {
+      throw new Error("Failed to get data plane token for Flink SQL API");
     }
 
-    if (!refreshedStatement.stoppable) {
-      throw new Error(`Statement ${statement.id} is not in a stoppable state.`);
-    }
-
-    logger.info(
-      `Stopping Flink statement ${statement.id} in ${statement.cloudRegion} and environment ${statement.environmentId}`,
+    // Build the Flink Data Plane API base URL
+    const baseUrl = buildFlinkDataPlaneBaseUrl(
+      statement.provider,
+      statement.region,
+      statement.environmentId,
     );
 
-    try {
-      // One does not merely stop a Flink statement, one must update its spec to indicate our desire
-      // for it to be stopped.
-      await statementsClient.updateSqlv1Statement({
-        organization_id: refreshedStatement.organizationId,
-        environment_id: refreshedStatement.environmentId,
-        statement_name: refreshedStatement.name,
-        UpdateSqlv1StatementRequest: {
-          metadata: refreshedStatement.metadata,
-          name: refreshedStatement.name,
-          organization_id: refreshedStatement.organizationId,
-          environment_id: refreshedStatement.environmentId,
-          status: refreshedStatement.status,
-          spec: {
-            ...refreshedStatement.spec,
-            stopped: true,
-          },
-        },
-      });
-    } catch (error) {
-      logger.error(`Error stopping Flink statement ${statement.id}`, { error });
-      throw error;
-    }
+    // Create the proxy instance
+    const proxy = new CCloudDataPlaneProxy({
+      baseUrl,
+      organizationId: statement.organizationId,
+      environmentId: statement.environmentId,
+      auth: {
+        type: "bearer",
+        token: dataPlaneToken,
+      },
+    });
 
-    // Since the statement was running, the FlinkStatementManager will already
-    // be polling its status, so no need to do anything more here. When it transitions
-    // to a terminal phase, the FlinkStatementManager will fire events to update the UI.
+    logger.debug(`Stopping Flink statement "${statement.name}"`);
+    await proxy.stopStatement(statement.name);
   }
 
   /**
@@ -463,21 +557,80 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     resource: CCloudFlinkDbKafkaCluster,
     forceDeepRefresh: boolean,
   ): Promise<FlinkArtifact[]> {
-    const queryable = await this.toFlinkQueryable(resource);
-
-    // Look to see if we have cached artifacts for this environment/provider/region already.
     const rm = getResourceManager();
-    let artifacts = await rm.getFlinkArtifacts(queryable);
-    if (artifacts === undefined || forceDeepRefresh) {
-      // Nope, deep fetch them (or was told to ignore cache and refetch).
-      const handle = await getSidecar();
-      artifacts = await loadArtifactsForProviderRegion(handle, queryable);
+    const cacheKey: IEnvProviderRegion = {
+      environmentId: resource.environmentId,
+      provider: resource.provider,
+      region: resource.region,
+    };
 
-      // Cache them in the resource manager for future reference.
-      await rm.setFlinkArtifacts(queryable, artifacts);
+    // Check cache first
+    if (!forceDeepRefresh) {
+      const cachedArtifacts = await rm.getFlinkArtifacts(cacheKey);
+      if (cachedArtifacts !== undefined) {
+        return cachedArtifacts;
+      }
     }
 
-    return artifacts;
+    // Deep fetch from the API
+    const token = await TokenManager.getInstance().getDataPlaneToken();
+    if (!token) {
+      logger.warn("getFlinkArtifacts: Not authenticated to Confluent Cloud");
+      return [];
+    }
+
+    const proxy = createCCloudArtifactsProxy({
+      baseUrl: "https://api.confluent.cloud",
+      auth: {
+        type: "bearer",
+        token,
+      },
+    });
+
+    try {
+      const apiArtifacts = await proxy.fetchAllArtifacts({
+        cloud: resource.provider,
+        region: resource.region,
+        environment: resource.environmentId,
+      });
+
+      // Convert API data to FlinkArtifact model instances
+      const artifacts: FlinkArtifact[] = apiArtifacts.map(
+        (data) =>
+          new FlinkArtifact({
+            connectionId: this.connectionId,
+            connectionType: this.connectionType,
+            environmentId: data.environment as EnvironmentId,
+            id: data.id,
+            name: data.display_name,
+            description: data.description ?? "",
+            provider: data.cloud,
+            region: data.region,
+            documentationLink: data.documentation_link ?? "",
+            metadata: {
+              self: data.metadata?.self,
+              resource_name: data.metadata?.resource_name,
+              created_at: data.metadata?.created_at
+                ? new Date(data.metadata.created_at)
+                : undefined,
+              updated_at: data.metadata?.updated_at
+                ? new Date(data.metadata.updated_at)
+                : undefined,
+              deleted_at: data.metadata?.deleted_at
+                ? new Date(data.metadata.deleted_at)
+                : undefined,
+            },
+          }),
+      );
+
+      // Cache the results
+      await rm.setFlinkArtifacts(cacheKey, artifacts);
+
+      return artifacts;
+    } catch (error) {
+      logger.error("getFlinkArtifacts: Failed to fetch artifacts from CCloud API", { error });
+      return [];
+    }
   }
 
   /**
@@ -837,250 +990,100 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   public async getFlinkWorkspace(
     params: FlinkWorkspaceParams,
   ): Promise<GetWsV1Workspace200Response | null> {
-    // Ensure we have a signed-in CCloud session (prompts login if needed)
-    // This should only ever be called from a URI handler context
-    try {
-      await getCCloudAuthSession({ createIfNone: true });
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        (error.message === "User did not consent to login." ||
-          error.name === "CCloudConnectionError")
-      ) {
-        return null; // User cancelled - silent exit
-      }
-      throw error;
-    }
+    // TODO: Migrate to direct Flink Workspaces API calls (sidecar removal phase-6)
+    // This function previously used getSidecar() to fetch workspaces via the sidecar proxy.
+    // Needs implementation using direct HTTP client to CCloud Flink Workspaces API.
+    logger.warn(
+      "getFlinkWorkspace: Feature temporarily unavailable during sidecar removal migration",
+    );
 
-    const sidecar = await getSidecar();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _params = params;
 
-    // Build the queryable from the params - provider/region come directly from the URI
-    const queryable: IFlinkQueryable = {
-      organizationId: params.organizationId as OrganizationId,
-      environmentId: params.environmentId as EnvironmentId,
-      provider: params.provider,
-      region: params.region,
-    };
-
-    try {
-      const workspacesApi = sidecar.getFlinkWorkspacesWsV1Api(queryable);
-      const workspace = await workspacesApi.getWsV1Workspace({
-        organization_id: params.organizationId,
-        environment_id: params.environmentId,
-        name: params.workspaceName,
-      });
-
-      return workspace;
-    } catch (error) {
-      logger.warn("Failed to fetch workspace", {
-        workspaceName: params.workspaceName,
-        environmentId: params.environmentId,
-        provider: params.provider,
-        region: params.region,
-        error,
-      });
-      return null;
-    }
+    // Return null to indicate workspace not found
+    return null;
   }
 }
 
+// TODO: loadStatementsForProviderRegion removed during sidecar migration (phase-6)
+// Previously used SidecarHandle to load Flink statements. Will be reimplemented
+// with direct HTTP client to CCloud Flink SQL API.
+
 /**
- * Load statements for a single provider/region and perhaps cluster-id
- * (Sub-unit of getFlinkStatements(), factored out for concurrency
- *  via executeInWorkerPool())
- */
-
-async function loadStatementsForProviderRegion(
-  handle: SidecarHandle,
-  queryable: IFlinkQueryable,
-): Promise<FlinkStatement[]> {
-  const statementsClient = handle.getFlinkSqlStatementsApi(queryable);
-
-  const request: ListSqlv1StatementsRequest = {
-    organization_id: queryable.organizationId,
-    environment_id: queryable.environmentId,
-    page_size: 100, // ccloud max page size
-    page_token: "", // start with the first page
-
-    // Possibly filter by compute pool ID, if specified (as when we're called with a CCloudFlinkComputePool instance).
-    spec_compute_pool_id: queryable.computePoolId,
-
-    // Don't show hidden statements, only user-created ones. "System" queries like
-    // ccloud workspaces UI examining the system catalog are created with this label
-    // set to true.
-    label_selector: "user.confluent.io/hidden!=true",
-  };
-
-  logger.debug(
-    `getFlinkStatements() requesting from ${queryable.provider}-${queryable.region} :\n${JSON.stringify(request, null, 2)}`,
-  );
-
-  const flinkStatements: FlinkStatement[] = [];
-
-  let needMore: boolean = true;
-
-  while (needMore) {
-    const restResult = await statementsClient.listSqlv1Statements(request);
-
-    // Convert each Flink statement from the REST API representation to our codebase model.
-    for (const restStatement of restResult.data) {
-      const statement = restFlinkStatementToModel(restStatement, queryable);
-      flinkStatements.push(statement);
-    }
-
-    // If this wasn't the last page, update the request to get the next page.
-    if (restResult.metadata.next) {
-      // `restResult.metadata.next` will be a full URL like "https://.../statements?page_token=UvmDWOB1iwfAIBPj6EYb"
-      // Must extract the page token from the URL.
-      const nextUrl = new URL(restResult.metadata.next);
-      const pageToken = nextUrl.searchParams.get("page_token");
-      if (!pageToken) {
-        // Should never happen, but just in case.
-        logger.error("Wacky. No page token found in next URL.");
-        needMore = false;
-      } else {
-        request.page_token = pageToken;
-      }
-    } else {
-      // No more pages to fetch.
-      needMore = false;
-    }
-  }
-
-  return flinkStatements;
-}
-/**
- * Load artifacts for a single provider/region
- * (Sub-unit of getFlinkArtifacts(), factored out for concurrency
- *  via executeInWorkerPool())
+ * Load artifacts for a single provider/region.
+ * Fetches Flink artifacts from the CCloud Artifacts API.
+ * @param _handle Unused, kept for backward compatibility
+ * @param queryable The Flink queryable context (environment, provider, region)
+ * @returns Array of FlinkArtifact models
  */
 export async function loadArtifactsForProviderRegion(
-  handle: SidecarHandle,
+  _handle: unknown,
   queryable: IFlinkQueryable,
 ): Promise<FlinkArtifact[]> {
-  const artifactsClient = handle.getFlinkArtifactsApi(queryable);
-
-  logger.debug(
-    `getFlinkArtifacts() requesting from ${queryable.provider}-${queryable.region} for environment ${queryable.environmentId}`,
-  );
-
-  const flinkArtifacts: FlinkArtifact[] = [];
-
-  const request = {
-    cloud: queryable.provider,
-    region: queryable.region,
-    environment: queryable.environmentId,
-    page_size: 100, // max page size
-    page_token: "", // start with the first page
-  };
-
-  let needMore: boolean = true;
-
-  while (needMore) {
-    try {
-      const restResult = await artifactsClient.listArtifactV1FlinkArtifacts(request);
-      const responseData = restResult.data ?? [];
-      // Convert each Flink artifact from the REST API representation to our codebase model.
-      for (const restArtifact of responseData) {
-        const artifact = restFlinkArtifactToModel(restArtifact, queryable);
-        flinkArtifacts.push(artifact);
-      }
-
-      // If this wasn't the last page, update the request to get the next page.
-      if (restResult.metadata.next) {
-        // `restResult.metadata.next` will be a full URL like "https://.../artifacts?page_token=UvmDWOB1iwfAIBPj6EYb"
-        // Must extract the page token from the URL.
-        const nextUrl = new URL(restResult.metadata.next);
-        const pageToken = nextUrl.searchParams.get("page_token");
-        if (!pageToken) {
-          // Should never happen, but just in case.
-          logger.error("No page token found in next URL.");
-          needMore = false;
-        } else {
-          request.page_token = pageToken;
-        }
-      } else {
-        // No more pages to fetch.
-        needMore = false;
-      }
-    } catch (error) {
-      logger.error(`Error loading Flink artifacts from ${queryable.provider}-${queryable.region}`, {
-        error,
-      });
-      // Re-throw to be handled by executeInWorkerPool
-      throw error;
-    }
+  const token = await TokenManager.getInstance().getDataPlaneToken();
+  if (!token) {
+    logger.warn("loadArtifactsForProviderRegion: Not authenticated to Confluent Cloud");
+    return [];
   }
 
-  return flinkArtifacts;
-}
+  const proxy = createCCloudArtifactsProxy({
+    baseUrl: "https://api.confluent.cloud",
+    auth: {
+      type: "bearer",
+      token,
+    },
+  });
 
-/** Load all available cloud provider/region combinations from the FCPM API.) */
-export async function loadProviderRegions(): Promise<FcpmV2RegionListDataInner[]> {
-  const sidecarHandle = await getSidecar();
-  const regionsClient = sidecarHandle.getRegionsFcpmV2Api();
+  try {
+    const apiArtifacts = await proxy.fetchAllArtifacts({
+      cloud: queryable.provider,
+      region: queryable.region,
+      environment: queryable.environmentId,
+    });
 
-  const regionData: FcpmV2RegionListDataInner[] = [];
-
-  let request: ListFcpmV2RegionsRequest = {
-    page_size: 100,
-  };
-
-  let needMore: boolean = true;
-
-  while (needMore) {
-    try {
-      const restResult = await regionsClient.listFcpmV2Regions(request);
-
-      regionData.push(...Array.from(restResult.data));
-      // If this wasn't the last page, update the request to get the next page.
-      if (restResult.metadata.next) {
-        // `restResult.metadata.next` will be a full URL like "https://.../regions?page_token=UvmDWOB1iwfAIBPj6EYb"
-        // Must extract the page token from the URL.
-        const nextUrl = new URL(restResult.metadata.next);
-        const pageToken = nextUrl.searchParams.get("page_token");
-        if (!pageToken) {
-          // Should never happen, but just in case.
-          logger.error("No page token found in next URL.");
-          needMore = false;
-        } else {
-          request = { ...request, page_token: pageToken };
-        }
-      } else {
-        // No more pages to fetch.
-        needMore = false;
-      }
-    } catch (error) {
-      logger.error("Error loading Flink regions", {
-        error,
-      });
-      // Re-throw to be handled by executeInWorkerPool
-      throw error;
-    }
+    // Convert API data to FlinkArtifact model instances
+    return apiArtifacts.map(
+      (data) =>
+        new FlinkArtifact({
+          connectionId: CCLOUD_CONNECTION_ID,
+          connectionType: ConnectionType.Ccloud,
+          environmentId: data.environment as EnvironmentId,
+          id: data.id,
+          name: data.display_name,
+          description: data.description ?? "",
+          provider: data.cloud,
+          region: data.region,
+          documentationLink: data.documentation_link ?? "",
+          metadata: {
+            self: data.metadata?.self,
+            resource_name: data.metadata?.resource_name,
+            created_at: data.metadata?.created_at ? new Date(data.metadata.created_at) : undefined,
+            updated_at: data.metadata?.updated_at ? new Date(data.metadata.updated_at) : undefined,
+            deleted_at: data.metadata?.deleted_at ? new Date(data.metadata.deleted_at) : undefined,
+          },
+        }),
+    );
+  } catch (error) {
+    logger.error("loadArtifactsForProviderRegion: Failed to fetch artifacts from CCloud API", {
+      error,
+    });
+    return [];
   }
-  return regionData;
 }
 
 /**
- * Convert a REST API Flink artifact representation to our codebase model.
- * @param restArtifact The REST API artifact representation
- * @param queryable The queryable context containing connection and environment info
- * @returns FlinkArtifact model instance
+ * Load all available cloud provider/region combinations from the FCPM API.
+ * @deprecated Temporarily stubbed during sidecar removal migration
  */
-function restFlinkArtifactToModel(
-  restArtifact: ArtifactV1FlinkArtifactListDataInner,
-  queryable: IFlinkQueryable,
-): FlinkArtifact {
-  return new FlinkArtifact({
-    connectionId: CCLOUD_CONNECTION_ID,
-    connectionType: ConnectionType.Ccloud,
-    environmentId: queryable.environmentId,
-    id: restArtifact.id,
-    name: restArtifact.display_name || restArtifact.id,
-    description: restArtifact.description || "",
-    provider: restArtifact.cloud,
-    region: restArtifact.region,
-    metadata: restArtifact.metadata,
-    documentationLink: restArtifact.documentation_link || "",
-  });
+export async function loadProviderRegions(): Promise<FcpmV2RegionListDataInner[]> {
+  // TODO: Migrate to direct FCPM API calls (sidecar removal phase-6)
+  // This function previously used getSidecar() to fetch regions via the sidecar proxy.
+  // Needs implementation using direct HTTP client to CCloud FCPM API.
+  logger.warn(
+    "loadProviderRegions: Feature temporarily unavailable during sidecar removal migration",
+  );
+  return [];
 }
+
+// TODO: restFlinkArtifactToModel removed during sidecar migration (phase-6)
+// Will be reimplemented when direct Flink Artifacts API integration is added.

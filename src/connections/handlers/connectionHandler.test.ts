@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { ConnectedState, ConnectionType, type ConnectionId, type ConnectionStatus } from "../types";
 import type { ConnectionSpec } from "../spec";
+import { ConnectedState, ConnectionType, type ConnectionId, type ConnectionStatus } from "../types";
 import {
   ConnectionHandler,
   type ConnectionStatusChangeEvent,
@@ -75,7 +75,7 @@ describe("connections/handlers/connectionHandler", function () {
     testSpec = {
       id: "test-connection-id" as ConnectionId,
       name: "Test Connection",
-      type: ConnectionType.DIRECT,
+      type: ConnectionType.Direct,
       kafkaCluster: {
         bootstrapServers: "localhost:9092",
       },
@@ -115,7 +115,7 @@ describe("connections/handlers/connectionHandler", function () {
       const handler = new TestConnectionHandler(testSpec);
 
       assert.strictEqual(handler.spec.name, "Test Connection");
-      assert.strictEqual(handler.spec.type, ConnectionType.DIRECT);
+      assert.strictEqual(handler.spec.type, ConnectionType.Direct);
     });
   });
 

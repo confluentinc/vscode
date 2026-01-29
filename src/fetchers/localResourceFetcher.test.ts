@@ -3,7 +3,7 @@ import * as sinon from "sinon";
 import { createLocalResourceFetcher } from "./localResourceFetcher";
 import * as dockerConfigs from "../docker/configs";
 import * as dockerContainers from "../docker/containers";
-import { ContainerStateStatusEnum, type ContainerSummary } from "../clients/docker";
+import { ContainerStateStatusEnum, PortTypeEnum, type ContainerSummary } from "../clients/docker";
 import { LOCAL_CONNECTION_ID } from "../constants";
 import { LocalEnvironment } from "../models/environment";
 
@@ -23,7 +23,7 @@ describe("fetchers/localResourceFetcher", function () {
       Ports: options.ports?.map((p) => ({
         PrivatePort: p.PrivatePort,
         PublicPort: p.PublicPort,
-        Type: "tcp",
+        Type: PortTypeEnum.Tcp,
       })),
     };
   }
@@ -126,6 +126,29 @@ describe("fetchers/localResourceFetcher", function () {
       const clusters = await fetcher.discoverKafkaClusters();
 
       assert.strictEqual(clusters.length, 0);
+    });
+
+    it("should discover Kafka cluster with dynamic bootstrap port (confluent-local)", async function () {
+      // confluent-local uses dynamic ports, not the standard 9092
+      const dynamicPort = 52345;
+      isDockerAvailableStub.resolves(true);
+      getContainersForImageStub.resolves([
+        createMockContainer({
+          id: "abc123def456",
+          name: "vscode-confluent-local-broker-1",
+          ports: [
+            { PrivatePort: dynamicPort, PublicPort: dynamicPort },
+            { PrivatePort: 8082, PublicPort: 8082 },
+          ],
+        }),
+      ]);
+
+      const fetcher = createLocalResourceFetcher();
+      const clusters = await fetcher.discoverKafkaClusters();
+
+      assert.strictEqual(clusters.length, 1);
+      assert.strictEqual(clusters[0].bootstrapServers, `localhost:${dynamicPort}`);
+      assert.strictEqual(clusters[0].uri, "http://localhost:8082");
     });
   });
 

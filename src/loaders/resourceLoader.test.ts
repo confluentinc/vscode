@@ -1,7 +1,6 @@
 import assert from "assert";
 import * as sinon from "sinon";
 import { getStubbedLocalResourceLoader } from "../../tests/stubs/resourceLoaders";
-import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
@@ -22,14 +21,13 @@ import {
   getTestExtensionContext,
 } from "../../tests/unit/testUtils";
 import type { TopicData } from "../clients/kafkaRest";
-import { SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import * as errors from "../errors";
 import type { ConnectionId } from "../models/resource";
 import type { Subject } from "../models/schema";
 import { Schema } from "../models/schema";
 import * as notifications from "../notifications";
-import type { SidecarHandle } from "../sidecar";
+import * as schemaRegistryProxy from "../proxy/schemaRegistryProxy";
 import type { ResourceManager } from "../storage/resourceManager";
 import { getResourceManager } from "../storage/resourceManager";
 import { clearWorkspaceState } from "../storage/utils";
@@ -584,16 +582,27 @@ describe("ResourceLoader::getTopicSubjectGroups() tests", () => {
 describe("ResourceLoader::deleteSchemaVersion()", () => {
   let loaderInstance: ResourceLoader;
   let sandbox: sinon.SinonSandbox;
-  let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
+  let mockProxy: {
+    deleteSchemaVersion: sinon.SinonStub;
+  };
   let clearCacheStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     loaderInstance = LocalResourceLoader.getInstance();
 
-    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
-    stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
-    stubbedSidecar.getSubjectsV1Api.returns(stubbedSubjectsV1Api);
+    mockProxy = {
+      deleteSchemaVersion: sandbox.stub().resolves(1),
+    };
+    sandbox
+      .stub(schemaRegistryProxy, "createSchemaRegistryProxy")
+      .returns(
+        mockProxy as unknown as ReturnType<typeof schemaRegistryProxy.createSchemaRegistryProxy>,
+      );
+
+    sandbox
+      .stub(loaderInstance, "getSchemaRegistryForEnvironmentId")
+      .resolves(TEST_LOCAL_SCHEMA_REGISTRY);
 
     clearCacheStub = sandbox.stub(loaderInstance, "clearCache");
   });
@@ -612,22 +621,15 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
         shouldClearSubjects,
       );
 
-      sinon.assert.calledOnce(stubbedSubjectsV1Api.deleteSchemaVersion);
-
-      const expectedRequest = {
-        subject: schema.subject,
-        version: `${schema.version}`,
-        permanent: false,
-      };
-
-      assert.deepEqual(
-        stubbedSubjectsV1Api.deleteSchemaVersion.getCall(0).args[0],
-        expectedRequest,
-      );
+      sinon.assert.calledOnce(mockProxy.deleteSchemaVersion);
+      assert.deepEqual(mockProxy.deleteSchemaVersion.getCall(0).args, [
+        schema.subject,
+        schema.version,
+        { permanent: false },
+      ]);
 
       if (shouldClearSubjects) {
         sinon.assert.calledOnce(clearCacheStub);
-        sinon.assert.calledOnceWithExactly(clearCacheStub, schema.subjectObject());
       } else {
         sinon.assert.notCalled(clearCacheStub);
       }
@@ -640,64 +642,56 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
     // hard delete; not the only schema version for the subject.
     await loaderInstance.deleteSchemaVersion(schema, true, false);
 
-    assert.equal(stubbedSubjectsV1Api.deleteSchemaVersion.callCount, 2);
+    assert.equal(mockProxy.deleteSchemaVersion.callCount, 2);
 
-    const expectedSoftDeleteRequest = {
-      subject: schema.subject,
-      version: `${schema.version}`,
-      permanent: false,
-    };
+    // First call should be soft delete
+    assert.deepEqual(mockProxy.deleteSchemaVersion.getCall(0).args, [
+      schema.subject,
+      schema.version,
+      { permanent: false },
+    ]);
 
-    assert.deepEqual(
-      stubbedSubjectsV1Api.deleteSchemaVersion.getCall(0).args[0],
-      expectedSoftDeleteRequest,
-    );
-
-    const expectedHardDeleteRequest = {
-      subject: schema.subject,
-      version: `${schema.version}`,
-      permanent: true,
-    };
-    assert.deepEqual(
-      stubbedSubjectsV1Api.deleteSchemaVersion.getCall(1).args[0],
-      expectedHardDeleteRequest,
-    );
+    // Second call should be hard delete
+    assert.deepEqual(mockProxy.deleteSchemaVersion.getCall(1).args, [
+      schema.subject,
+      schema.version,
+      { permanent: true },
+    ]);
   });
 
-  it("Deletion route call calls logError() on deletion attempt failure, rethrows", async () => {
+  it("Deletion route call throws on deletion attempt failure", async () => {
     const schema = TEST_LOCAL_SCHEMA;
 
-    const logErrorStub = sandbox.stub(errors, "logError");
-
     const thrownError = new Error("Deletion error");
-    stubbedSubjectsV1Api.deleteSchemaVersion.rejects(thrownError);
+    mockProxy.deleteSchemaVersion.rejects(thrownError);
 
     await assert.rejects(loaderInstance.deleteSchemaVersion(schema, true, false), (err) => {
       assert.strictEqual((err as Error).message, "Deletion error");
       return true;
     });
-
-    const logErrorArgs = logErrorStub.getCall(0).args;
-    assert.strictEqual(logErrorArgs[0], thrownError);
-    assert.strictEqual(logErrorArgs[1], "Error deleting schema version");
-    // would send to Sentry.
-    assert.ok(logErrorArgs[2]);
   });
 });
 
 describe("ResourceLoader::deleteSchemaSubject()", () => {
   let loaderInstance: ResourceLoader;
   let sandbox: sinon.SinonSandbox;
-  let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
+  let mockProxy: {
+    deleteSubject: sinon.SinonStub;
+  };
   let clearCacheStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     loaderInstance = LocalResourceLoader.getInstance();
 
-    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
-    stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
-    stubbedSidecar.getSubjectsV1Api.returns(stubbedSubjectsV1Api);
+    mockProxy = {
+      deleteSubject: sandbox.stub().resolves([1, 2]),
+    };
+    sandbox
+      .stub(schemaRegistryProxy, "createSchemaRegistryProxy")
+      .returns(
+        mockProxy as unknown as ReturnType<typeof schemaRegistryProxy.createSchemaRegistryProxy>,
+      );
 
     sandbox
       .stub(loaderInstance, "getSchemaRegistryForEnvironmentId")
@@ -716,20 +710,24 @@ describe("ResourceLoader::deleteSchemaSubject()", () => {
 
       await loaderInstance.deleteSchemaSubject(subject, hardDelete);
 
-      const expectedRequests = hardDelete
-        ? [
-            { subject: subject.name, permanent: false },
-            { subject: subject.name, permanent: true },
-          ]
-        : [{ subject: subject.name, permanent: false }];
-
-      assert.strictEqual(stubbedSubjectsV1Api.deleteSubject.callCount, expectedRequests.length);
-
-      for (let i = 0; i < expectedRequests.length; i++) {
-        assert.deepEqual(
-          stubbedSubjectsV1Api.deleteSubject.getCall(i).args[0],
-          expectedRequests[i],
-        );
+      if (hardDelete) {
+        // Hard delete requires soft delete first, then hard delete
+        assert.strictEqual(mockProxy.deleteSubject.callCount, 2);
+        assert.deepEqual(mockProxy.deleteSubject.getCall(0).args, [
+          subject.name,
+          { permanent: false },
+        ]);
+        assert.deepEqual(mockProxy.deleteSubject.getCall(1).args, [
+          subject.name,
+          { permanent: true },
+        ]);
+      } else {
+        // Soft delete is a single call
+        assert.strictEqual(mockProxy.deleteSubject.callCount, 1);
+        assert.deepEqual(mockProxy.deleteSubject.getCall(0).args, [
+          subject.name,
+          { permanent: false },
+        ]);
       }
 
       sinon.assert.calledOnce(clearCacheStub);

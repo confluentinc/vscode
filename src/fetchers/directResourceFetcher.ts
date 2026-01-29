@@ -5,7 +5,7 @@
  * Replaces sidecar's GraphQL queries for direct connections.
  */
 
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionType } from "../connections";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
@@ -92,27 +92,26 @@ class DirectResourceFetcherImpl implements DirectResourceFetcher {
     };
 
     let kafkaCluster: DirectKafkaCluster | undefined;
-    if (spec.kafka_cluster) {
+    if (spec.kafkaCluster) {
       // Generate a cluster ID from the bootstrap servers if not provided
-      const clusterId = this.generateClusterId(spec.kafka_cluster.bootstrap_servers);
+      const clusterId = this.generateClusterId(spec.kafkaCluster.bootstrapServers);
 
       kafkaCluster = DirectKafkaCluster.create({
         id: clusterId,
-        name: spec.name ?? "Kafka Cluster",
-        bootstrapServers: spec.kafka_cluster.bootstrap_servers,
-        uri: spec.kafka_cluster.uri ?? "",
+        name: spec.name || "Kafka Cluster",
+        bootstrapServers: spec.kafkaCluster.bootstrapServers,
         ...connectionInfo,
       });
     }
 
     let schemaRegistry: DirectSchemaRegistry | undefined;
-    if (spec.schema_registry) {
+    if (spec.schemaRegistry) {
       // Generate a registry ID from the URI if not provided
-      const registryId = this.generateRegistryId(spec.schema_registry.uri);
+      const registryId = this.generateRegistryId(spec.schemaRegistry.uri);
 
       schemaRegistry = DirectSchemaRegistry.create({
         id: registryId,
-        uri: spec.schema_registry.uri,
+        uri: spec.schemaRegistry.uri,
         environmentId: connectionId as unknown as EnvironmentId,
         ...connectionInfo,
       });
@@ -120,11 +119,11 @@ class DirectResourceFetcherImpl implements DirectResourceFetcher {
 
     const environment = new DirectEnvironment({
       id: connectionId as unknown as EnvironmentId,
-      name: spec.name ?? "Direct Connection",
+      name: spec.name || "Direct Connection",
       kafkaClusters: kafkaCluster ? [kafkaCluster] : [],
-      kafkaConfigured: !!spec.kafka_cluster,
+      kafkaConfigured: !!spec.kafkaCluster,
       schemaRegistry,
-      schemaRegistryConfigured: !!spec.schema_registry,
+      schemaRegistryConfigured: !!spec.schemaRegistry,
       formConnectionType: spec.formConnectionType,
       ...connectionInfo,
     });

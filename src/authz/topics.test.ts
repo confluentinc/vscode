@@ -1,73 +1,182 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { getSidecarStub } from "../../tests/stubs/sidecar";
-import { TEST_CCLOUD_KAFKA_TOPIC, TEST_LOCAL_KAFKA_TOPIC } from "../../tests/unit/testResources";
-import { createTestTopicData } from "../../tests/unit/testUtils";
-import type { TopicData } from "../clients/kafkaRest";
-import { TopicV3Api } from "../clients/kafkaRest";
-import type { SidecarHandle } from "../sidecar";
-import { KAFKA_TOPIC_OPERATIONS } from "./constants";
+import * as ccloudUtils from "../authn/utils";
+import {
+  TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_LOCAL_KAFKA_CLUSTER,
+} from "../../tests/unit/testResources/kafkaCluster";
+import { createKafkaTopic } from "../../tests/unit/testResources/topic";
+import { ConnectionType } from "../connections";
+import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
+import { HttpError } from "../proxy/httpClient";
+import * as kafkaRestProxy from "../proxy/kafkaRestProxy";
+import * as resourceManagerModule from "../storage/resourceManager";
 import { fetchTopicAuthorizedOperations } from "./topics";
 
 describe("authz.topics", function () {
   let sandbox: sinon.SinonSandbox;
-  let mockClient: sinon.SinonStubbedInstance<TopicV3Api>;
+  let getCCloudAuthSessionStub: sinon.SinonStub;
+  let getResourceManagerStub: sinon.SinonStub;
+  let kafkaRestProxyStub: sinon.SinonStubbedInstance<kafkaRestProxy.KafkaRestProxy>;
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
-    // create the stubs for the sidecar + service client
-    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
-    mockClient = sandbox.createStubInstance(TopicV3Api);
-    stubbedSidecar.getTopicV3Api.returns(mockClient);
+
+    // Stub getCCloudAuthSession
+    getCCloudAuthSessionStub = sandbox.stub(ccloudUtils, "getCCloudAuthSession");
+
+    // Stub ResourceManager
+    getResourceManagerStub = sandbox.stub(resourceManagerModule, "getResourceManager");
+
+    // Create a stubbed KafkaRestProxy instance
+    kafkaRestProxyStub = sandbox.createStubInstance(kafkaRestProxy.KafkaRestProxy);
+
+    // Stub the KafkaRestProxy constructor to return our stubbed instance
+    sandbox
+      .stub(kafkaRestProxy, "KafkaRestProxy")
+      .returns(kafkaRestProxyStub as unknown as kafkaRestProxy.KafkaRestProxy);
   });
 
   afterEach(function () {
     sandbox.restore();
   });
 
-  it("fetchTopicAuthorizedOperations() should return authorized operations for a local topic", async function () {
-    // local kafka rest api responds to the 'include_authorized_operations' query param just fine, returns
-    // all operations. This and next test basically just test that the mock route is called and demonstrate
-    // what we expect to return.
-    const topicResp: TopicData = createTestTopicData(
-      TEST_LOCAL_KAFKA_TOPIC.clusterId,
-      TEST_LOCAL_KAFKA_TOPIC.name,
-      [...KAFKA_TOPIC_OPERATIONS], // needs to not be typed 'readonly'
-    );
+  it("fetchTopicAuthorizedOperations() should return cached operations for a local topic", async function () {
+    // Local topics should return cached operations without making API calls
+    const testTopic = createKafkaTopic({
+      connectionId: LOCAL_CONNECTION_ID,
+      connectionType: ConnectionType.Local,
+      environmentId: TEST_LOCAL_KAFKA_CLUSTER.environmentId,
+      clusterId: TEST_LOCAL_KAFKA_CLUSTER.id,
+      name: "test-local-topic",
+      operations: ["READ", "WRITE"],
+    });
 
-    mockClient.getKafkaTopic.resolves(topicResp);
-
-    const operations = await fetchTopicAuthorizedOperations(TEST_LOCAL_KAFKA_TOPIC);
-    assert.deepEqual(operations, KAFKA_TOPIC_OPERATIONS);
-  });
-
-  it("fetchTopicAuthorizedOperations() should return authorized operations for a CCloud topic", async function () {
-    const topicResp: TopicData = createTestTopicData(
-      TEST_CCLOUD_KAFKA_TOPIC.clusterId,
-      TEST_CCLOUD_KAFKA_TOPIC.name,
-      ["READ", "WRITE"],
-    );
-    mockClient.getKafkaTopic.resolves(topicResp);
-
-    const operations = await fetchTopicAuthorizedOperations(TEST_CCLOUD_KAFKA_TOPIC);
-
+    const operations = await fetchTopicAuthorizedOperations(testTopic);
     assert.deepStrictEqual(operations, ["READ", "WRITE"]);
+
+    // Should not have tried to get auth session for local topics
+    sinon.assert.notCalled(getCCloudAuthSessionStub);
   });
 
-  /*
-  it("validateKafkaTopicOperations() should return empty array if operations array is empty", function () {
-    const operations = validateKafkaTopicOperations([]);
-    assert.deepStrictEqual(operations, []);
-  });
+  describe("CCloud topics", function () {
+    it("should return fresh operations from API when available", async function () {
+      // Setup auth session
+      getCCloudAuthSessionStub.resolves({ accessToken: "test-token" });
 
-  it("validateKafkaTopicOperations() should return valid operations", function () {
-    const operations = validateKafkaTopicOperations(["READ", "WRITE"]);
-    assert.deepStrictEqual(operations, ["READ", "WRITE"]);
-  });
+      // Setup resource manager with cluster info
+      const mockCluster = {
+        id: TEST_CCLOUD_KAFKA_CLUSTER.id,
+        bootstrapServers: "pkc-test.us-west-2.aws.confluent.cloud:9092",
+      };
+      getResourceManagerStub.returns({
+        getKafkaClustersForEnvironmentId: sandbox.stub().resolves([mockCluster]),
+      });
 
-  it("validateKafkaTopicOperations() should return only valid operations if invalid operations are passed", function () {
-    const operations = validateKafkaTopicOperations(["READ", "INVALID_OP"]);
-    assert.deepStrictEqual(operations, ["READ"]);
+      // Setup proxy to return fresh authorized operations
+      kafkaRestProxyStub.getTopic.resolves({
+        topic_name: "test-ccloud-topic",
+        authorized_operations: ["READ", "WRITE", "DELETE", "CREATE"],
+      } as kafkaRestProxy.TopicData);
+
+      const testTopic = createKafkaTopic({
+        connectionId: CCLOUD_CONNECTION_ID,
+        connectionType: ConnectionType.Ccloud,
+        environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+        clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+        name: "test-ccloud-topic",
+        operations: ["READ"], // Cached operations are different
+      });
+
+      const operations = await fetchTopicAuthorizedOperations(testTopic);
+      assert.deepStrictEqual(operations, ["READ", "WRITE", "DELETE", "CREATE"]);
+    });
+
+    it("should return cached operations when no auth session", async function () {
+      getCCloudAuthSessionStub.resolves(null);
+
+      const testTopic = createKafkaTopic({
+        connectionId: CCLOUD_CONNECTION_ID,
+        connectionType: ConnectionType.Ccloud,
+        environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+        clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+        name: "test-ccloud-topic",
+        operations: ["READ", "WRITE"],
+      });
+
+      const operations = await fetchTopicAuthorizedOperations(testTopic);
+      assert.deepStrictEqual(operations, ["READ", "WRITE"]);
+    });
+
+    it("should return cached operations when cluster not found", async function () {
+      getCCloudAuthSessionStub.resolves({ accessToken: "test-token" });
+      getResourceManagerStub.returns({
+        getKafkaClustersForEnvironmentId: sandbox.stub().resolves([]),
+      });
+
+      const testTopic = createKafkaTopic({
+        connectionId: CCLOUD_CONNECTION_ID,
+        connectionType: ConnectionType.Ccloud,
+        environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+        clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+        name: "test-ccloud-topic",
+        operations: ["READ"],
+      });
+
+      const operations = await fetchTopicAuthorizedOperations(testTopic);
+      assert.deepStrictEqual(operations, ["READ"]);
+    });
+
+    it("should return cached operations on 401/403 errors", async function () {
+      getCCloudAuthSessionStub.resolves({ accessToken: "test-token" });
+
+      const mockCluster = {
+        id: TEST_CCLOUD_KAFKA_CLUSTER.id,
+        bootstrapServers: "pkc-test.us-west-2.aws.confluent.cloud:9092",
+      };
+      getResourceManagerStub.returns({
+        getKafkaClustersForEnvironmentId: sandbox.stub().resolves([mockCluster]),
+      });
+
+      kafkaRestProxyStub.getTopic.rejects(new HttpError("Forbidden", 403, "Forbidden"));
+
+      const testTopic = createKafkaTopic({
+        connectionId: CCLOUD_CONNECTION_ID,
+        connectionType: ConnectionType.Ccloud,
+        environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+        clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+        name: "test-ccloud-topic",
+        operations: ["READ", "WRITE"],
+      });
+
+      const operations = await fetchTopicAuthorizedOperations(testTopic);
+      assert.deepStrictEqual(operations, ["READ", "WRITE"]);
+    });
+
+    it("should return empty array on 404 error", async function () {
+      getCCloudAuthSessionStub.resolves({ accessToken: "test-token" });
+
+      const mockCluster = {
+        id: TEST_CCLOUD_KAFKA_CLUSTER.id,
+        bootstrapServers: "pkc-test.us-west-2.aws.confluent.cloud:9092",
+      };
+      getResourceManagerStub.returns({
+        getKafkaClustersForEnvironmentId: sandbox.stub().resolves([mockCluster]),
+      });
+
+      kafkaRestProxyStub.getTopic.rejects(new HttpError("Not Found", 404, "Not Found"));
+
+      const testTopic = createKafkaTopic({
+        connectionId: CCLOUD_CONNECTION_ID,
+        connectionType: ConnectionType.Ccloud,
+        environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+        clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+        name: "test-ccloud-topic",
+        operations: ["READ", "WRITE"],
+      });
+
+      const operations = await fetchTopicAuthorizedOperations(testTopic);
+      assert.deepStrictEqual(operations, []);
+    });
   });
-*/
 });

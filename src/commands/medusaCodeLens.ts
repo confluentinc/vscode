@@ -1,13 +1,15 @@
 import * as path from "path";
 import { join, parse } from "path";
-import { Disposable, Uri, window, workspace } from "vscode";
+import type { Disposable } from "vscode";
+import { Uri, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
-import { DatasetDTO } from "../clients/medusa";
+import type { DatasetDTO } from "../clients/medusa";
+import { LOCAL_MEDUSA_INTERNAL_PORT } from "../constants";
 import { LocalResourceKind } from "../docker/constants";
+import { getContainerPublicPort, getMedusaContainer } from "../docker/local";
 import { extractResponseBody, isResponseError } from "../errors";
 import { Logger } from "../logging";
 import { getMedusaSchemaManagementApi } from "../medusa/api";
-import { getContainerPublicPort, getMedusaContainer } from "../sidecar/connections/local";
 import { getEditorOrFileContents } from "../utils/file";
 import { writeFile } from "../utils/fsWrappers";
 import { runWorkflowWithProgress } from "./docker";
@@ -74,7 +76,7 @@ async function convertAvroSchemaToDataset(avroSchemaContent: string): Promise<Da
   if (!medusaContainer) {
     throw new Error("Medusa container not found. Please start the local Medusa service.");
   }
-  const medusaPort = getContainerPublicPort(medusaContainer);
+  const medusaPort = getContainerPublicPort(medusaContainer, LOCAL_MEDUSA_INTERNAL_PORT);
   if (!medusaPort) {
     throw new Error("Medusa container port not accessible. Please check container configuration.");
   }

@@ -9,7 +9,7 @@ import type { TopicData } from "../../src/clients/kafkaRest/models";
 import { TopicDataFromJSON } from "../../src/clients/kafkaRest/models";
 import { ResponseError as ScaffoldingServiceResponseError } from "../../src/clients/scaffoldingService";
 import { ResponseError as SchemaRegistryResponseError } from "../../src/clients/schemaRegistryRest";
-import { ResponseError as SidecarResponseError } from "../../src/clients/sidecar";
+import { ResponseError as SidecarResponseError } from "../../src/connections";
 import { EXTENSION_ID } from "../../src/constants";
 import { setExtensionContext } from "../../src/context/extension";
 import type { AnyResponseError } from "../../src/errors";

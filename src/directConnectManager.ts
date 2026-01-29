@@ -1,12 +1,9 @@
 import { randomUUID } from "crypto";
 import type { Disposable, SecretStorageChangeEvent } from "vscode";
 import { window } from "vscode";
-import type { ConnectionSpec as SidecarConnectionSpec } from "./clients/sidecar";
-import { ConnectionType, ResponseError } from "./clients/sidecar";
+import { type ConnectionSpec, ResponseError } from "./connections";
 import { getExtensionContext } from "./context/extension";
 import { DirectConnectionHandler } from "./connections/handlers/directConnectionHandler";
-import type { ConnectionSpec as InternalConnectionSpec } from "./connections/spec";
-import { ConnectionType as InternalConnectionType } from "./connections/types";
 import { getCredentialsType } from "./directConnections/credentials";
 import { hasCCloudDomain } from "./directConnections/utils";
 import { directConnectionsChanged, environmentChanged } from "./emitters";
@@ -22,49 +19,6 @@ import { logUsage, UserEvent } from "./telemetry/events";
 import { DisposableCollection } from "./utils/disposables";
 
 const logger = new Logger("directConnectManager");
-
-/**
- * Converts a sidecar ConnectionSpec to the internal ConnectionSpec format.
- * The sidecar uses snake_case properties while internal uses camelCase.
- */
-function convertToInternalSpec(spec: SidecarConnectionSpec): InternalConnectionSpec {
-  return {
-    id: spec.id as unknown as InternalConnectionSpec["id"],
-    name: spec.name ?? "",
-    type:
-      spec.type === ConnectionType.Direct
-        ? InternalConnectionType.DIRECT
-        : InternalConnectionType.LOCAL,
-    kafkaCluster: spec.kafka_cluster
-      ? {
-          bootstrapServers: spec.kafka_cluster.bootstrap_servers ?? "",
-          // Pass credentials through - they'll be validated by DirectConnectionHandler
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          credentials: spec.kafka_cluster.credentials as any,
-          ssl: spec.kafka_cluster.ssl
-            ? {
-                enabled: spec.kafka_cluster.ssl.enabled ?? false,
-                verifyHostname: spec.kafka_cluster.ssl.verify_hostname ?? true,
-              }
-            : undefined,
-        }
-      : undefined,
-    schemaRegistry: spec.schema_registry
-      ? {
-          uri: spec.schema_registry.uri ?? "",
-          // Pass credentials through - they'll be validated by DirectConnectionHandler
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          credentials: spec.schema_registry.credentials as any,
-          ssl: spec.schema_registry.ssl
-            ? {
-                enabled: spec.schema_registry.ssl.enabled ?? false,
-                verifyHostname: spec.schema_registry.ssl.verify_hostname ?? true,
-              }
-            : undefined,
-        }
-      : undefined,
-  };
-}
 
 /**
  * Singleton class responsible for the following:
@@ -191,10 +145,11 @@ export class DirectConnectionManager extends DisposableCollection {
     spec: CustomConnectionSpec,
     dryRun: boolean = false,
   ): Promise<{ success: boolean; errorMessage: string | null }> {
-    let incomingSpec: SidecarConnectionSpec = spec;
+    let incomingSpec: ConnectionSpec = spec;
     // check for an existing ConnectionSpec
-    const currentSpec: SidecarConnectionSpec | null =
-      await getResourceManager().getDirectConnection(spec.id);
+    const currentSpec: ConnectionSpec | null = await getResourceManager().getDirectConnection(
+      spec.id,
+    );
     if (dryRun && currentSpec) {
       incomingSpec.id = randomUUID() as ConnectionId; // dryRun must have unique ID
     }
@@ -206,11 +161,11 @@ export class DirectConnectionManager extends DisposableCollection {
       action: dryRun ? "tested" : "created",
       type: spec.formConnectionType,
       specifiedConnectionType: spec.specifiedConnectionType,
-      withKafka: !!spec.kafka_cluster,
-      withSchemaRegistry: !!spec.schema_registry,
-      kafkaAuthType: getCredentialsType(spec.kafka_cluster?.credentials),
-      schemaRegistryAuthType: getCredentialsType(spec.schema_registry?.credentials),
-      hasCCloudDomain: hasCCloudDomain(spec.kafka_cluster) || hasCCloudDomain(spec.schema_registry),
+      withKafka: !!spec.kafkaCluster,
+      withSchemaRegistry: !!spec.schemaRegistry,
+      kafkaAuthType: getCredentialsType(spec.kafkaCluster?.credentials),
+      schemaRegistryAuthType: getCredentialsType(spec.schemaRegistry?.credentials),
+      hasCCloudDomain: hasCCloudDomain(spec.kafkaCluster) || hasCCloudDomain(spec.schemaRegistry),
     });
 
     if (!errorMessage && !dryRun) {
@@ -247,13 +202,13 @@ export class DirectConnectionManager extends DisposableCollection {
       action: "deleted",
       type: spec.formConnectionType,
       specifiedConnectionType: spec?.specifiedConnectionType,
-      withKafka: !!spec.kafka_cluster,
-      withSchemaRegistry: !!spec.schema_registry,
-      kafkaAuthType: getCredentialsType(spec.kafka_cluster?.credentials),
-      kafkaSslEnabled: spec.kafka_cluster?.ssl?.enabled,
-      schemaRegistryAuthType: getCredentialsType(spec.schema_registry?.credentials),
-      schemaRegistrySslEnabled: spec.schema_registry?.ssl?.enabled,
-      hasCCloudDomain: hasCCloudDomain(spec.kafka_cluster) || hasCCloudDomain(spec.schema_registry),
+      withKafka: !!spec.kafkaCluster,
+      withSchemaRegistry: !!spec.schemaRegistry,
+      kafkaAuthType: getCredentialsType(spec.kafkaCluster?.credentials),
+      kafkaSslEnabled: spec.kafkaCluster?.ssl?.enabled,
+      schemaRegistryAuthType: getCredentialsType(spec.schemaRegistry?.credentials),
+      schemaRegistrySslEnabled: spec.schemaRegistry?.ssl?.enabled,
+      hasCCloudDomain: hasCCloudDomain(spec.kafkaCluster) || hasCCloudDomain(spec.schemaRegistry),
     });
   }
 
@@ -269,15 +224,14 @@ export class DirectConnectionManager extends DisposableCollection {
       action: "updated",
       type: incomingSpec.formConnectionType,
       specifiedConnectionType: incomingSpec.specifiedConnectionType,
-      withKafka: !!incomingSpec.kafka_cluster,
-      withSchemaRegistry: !!incomingSpec.schema_registry,
-      kafkaAuthType: getCredentialsType(incomingSpec.kafka_cluster?.credentials),
-      kafkaSslEnabled: incomingSpec.kafka_cluster?.ssl?.enabled,
-      schemaRegistryAuthType: getCredentialsType(incomingSpec.schema_registry?.credentials),
-      schemaRegistrySslEnabled: incomingSpec.schema_registry?.ssl?.enabled,
+      withKafka: !!incomingSpec.kafkaCluster,
+      withSchemaRegistry: !!incomingSpec.schemaRegistry,
+      kafkaAuthType: getCredentialsType(incomingSpec.kafkaCluster?.credentials),
+      kafkaSslEnabled: incomingSpec.kafkaCluster?.ssl?.enabled,
+      schemaRegistryAuthType: getCredentialsType(incomingSpec.schemaRegistry?.credentials),
+      schemaRegistrySslEnabled: incomingSpec.schemaRegistry?.ssl?.enabled,
       hasCCloudDomain:
-        hasCCloudDomain(incomingSpec.kafka_cluster) ||
-        hasCCloudDomain(incomingSpec.schema_registry),
+        hasCCloudDomain(incomingSpec.kafkaCluster) || hasCCloudDomain(incomingSpec.schemaRegistry),
     });
 
     // update the connection in secret storage (via full replace of the connection by its id)
@@ -290,17 +244,13 @@ export class DirectConnectionManager extends DisposableCollection {
    * If validation fails, the `errorMessage` will be populated with the error message.
    * Otherwise, the `errorMessage` will be `null`.
    */
-  private async validateConnection(
-    spec: SidecarConnectionSpec,
-  ): Promise<{ errorMessage: string | null }> {
+  private async validateConnection(spec: ConnectionSpec): Promise<{ errorMessage: string | null }> {
     let errorMessage: string | null = null;
 
     logger.debug("Starting validateConnection()");
 
     try {
-      // Convert sidecar spec format to internal spec format
-      const internalSpec = convertToInternalSpec(spec);
-      const handler = new DirectConnectionHandler(internalSpec);
+      const handler = new DirectConnectionHandler(spec);
       const testResult = await handler.testConnection();
       if (!testResult.success) {
         errorMessage = testResult.error ?? "Connection test failed";

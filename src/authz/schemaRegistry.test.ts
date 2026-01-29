@@ -1,8 +1,8 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { window } from "vscode";
+import * as ccloudUtils from "../authn/utils";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
-import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
@@ -11,70 +11,48 @@ import {
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
 import type { CCloudResourceLoader } from "../loaders";
-import type { SidecarHandle } from "../sidecar";
+import { HttpError } from "../proxy/httpClient";
+import * as schemaRegistryProxyModule from "../proxy/schemaRegistryProxy";
 import * as schemaRegistry from "./schemaRegistry";
 
 describe("authz.schemaRegistry", function () {
   let sandbox: sinon.SinonSandbox;
-  let mockClient: sinon.SinonStubbedInstance<SubjectsV1Api>;
   let stubbedConfigs: StubbedWorkspaceConfiguration;
   let ccloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+  let getCCloudAuthSessionStub: sinon.SinonStub;
+  let schemaRegistryProxyStub: sinon.SinonStubbedInstance<schemaRegistryProxyModule.SchemaRegistryProxy>;
 
   beforeEach(async function () {
-    // preload the schema registry in extension state
     await getTestExtensionContext();
 
     sandbox = sinon.createSandbox();
-    // create the stubs for the sidecar + service client
-    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
-    mockClient = sandbox.createStubInstance(SubjectsV1Api);
-    stubbedSidecar.getSubjectsV1Api.returns(mockClient);
-
     stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
 
     ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
-    // By default, set the ccloudLoader to return the TEST_CCLOUD_SCHEMA_REGISTRY for its environmentId
     ccloudLoader.getSchemaRegistryForEnvironmentId
       .withArgs(TEST_CCLOUD_SCHEMA_REGISTRY.environmentId)
       .resolves(TEST_CCLOUD_SCHEMA_REGISTRY);
+
+    // Stub getCCloudAuthSession
+    getCCloudAuthSessionStub = sandbox.stub(ccloudUtils, "getCCloudAuthSession");
+
+    // Create a stubbed SchemaRegistryProxy instance
+    schemaRegistryProxyStub = sandbox.createStubInstance(
+      schemaRegistryProxyModule.SchemaRegistryProxy,
+    );
+
+    // Stub the SchemaRegistryProxy constructor to return our stubbed instance
+    sandbox
+      .stub(schemaRegistryProxyModule, "SchemaRegistryProxy")
+      .returns(schemaRegistryProxyStub as unknown as schemaRegistryProxyModule.SchemaRegistryProxy);
   });
 
   afterEach(async function () {
     sandbox.restore();
   });
-
-  // FIXME: canAccessSchemaForTopic() tests
-  // it("canAccessSchemaForTopic() should return true if both key and value access are true", async function () {
-  //   const stub = sandbox.stub(schemaRegistry, "canAccessSchemaTypeForTopic").resolves(true);
-  //   const result = await schemaRegistry.canAccessSchemaForTopic(TEST_CCLOUD_KAFKA_TOPIC);
-  //   sinon.assert.calledTwice(stub);
-  //   assert.strictEqual(result, true);
-  // });
-
-  // it("canAccessSchemaForTopic() should return true if either key or value access is true", async function () {
-  //   // stub the canAccessSchemaTypeForTopic "key" request to return true, "value" to return false
-  //   const topic = TEST_CCLOUD_KAFKA_TOPIC;
-  //   const stub = sandbox
-  //     .stub(schemaRegistry, "canAccessSchemaTypeForTopic")
-  //     .withArgs(topic, "key")
-  //     .resolves(true)
-  //     .withArgs(topic, "value")
-  //     .resolves(false);
-  //   const result = await schemaRegistry.canAccessSchemaForTopic(topic);
-  //   sinon.assert.calledTwice(stub);
-  //   assert.strictEqual(result, true);
-  // });
-
-  // it("canAccessSchemaForTopic() should return false if both key and value access are false", async function () {
-  //   const stub = sandbox.stub(schemaRegistry, "canAccessSchemaTypeForTopic").resolves(false);
-  //   const result = await schemaRegistry.canAccessSchemaForTopic(TEST_CCLOUD_KAFKA_TOPIC);
-  //   sinon.assert.calledTwice(stub);
-  //   assert.strictEqual(result, false);
-  // });
 
   // canAccessSchemaTypeForTopic() tests
   it("canAccessSchemaTypeForTopic() should return true if asked about a local topic.", async function () {
@@ -88,7 +66,6 @@ describe("authz.schemaRegistry", function () {
   });
 
   it("canAccessSchemaTypeForTopic() should return true if schemaRegistry is not found", async function () {
-    // clear out the existing Schema Registry before checking schema access.
     ccloudLoader.getSchemaRegistryForEnvironmentId
       .withArgs(TEST_CCLOUD_SCHEMA_REGISTRY.environmentId)
       .resolves(undefined);
@@ -97,24 +74,96 @@ describe("authz.schemaRegistry", function () {
     assert.strictEqual(result, true);
   });
 
-  it("canAccessSchemaTypeForTopic() should return true on successful response to the 'lookUpSchemaUnderSubject' endpoint", async function () {
-    mockClient.lookUpSchemaUnderSubject.resolves({});
-    const result = await schemaRegistry.canAccessSchemaTypeForTopic(TEST_CCLOUD_KAFKA_TOPIC, "key");
-    assert.strictEqual(result, true);
-  });
+  it("canAccessSchemaTypeForTopic() should return false if no auth session available", async function () {
+    getCCloudAuthSessionStub.resolves(null);
 
-  it("canAccessSchemaTypeForTopic() should return false on a 403 ResponseError", async function () {
-    const error = new ResponseError(new Response(null, { status: 403 }));
-    mockClient.lookUpSchemaUnderSubject.rejects(error);
-    sandbox.stub(schemaRegistry, "determineAccessFromResponseError").resolves(false);
     const result = await schemaRegistry.canAccessSchemaTypeForTopic(TEST_CCLOUD_KAFKA_TOPIC, "key");
     assert.strictEqual(result, false);
   });
 
-  it("canAccessSchemaTypeForTopic() should return false on other response errors", async function () {
-    mockClient.lookUpSchemaUnderSubject.rejects(new Error("test error"));
-    const result = await schemaRegistry.canAccessSchemaTypeForTopic(TEST_CCLOUD_KAFKA_TOPIC, "key");
-    assert.strictEqual(result, false);
+  describe("CCloud schema access checks", function () {
+    beforeEach(function () {
+      // Default to having a valid auth session
+      getCCloudAuthSessionStub.resolves({ accessToken: "test-token" });
+    });
+
+    it("should return true when subject exists and user has access", async function () {
+      schemaRegistryProxyStub.listVersions.resolves([1, 2, 3]);
+
+      const result = await schemaRegistry.canAccessSchemaTypeForTopic(
+        TEST_CCLOUD_KAFKA_TOPIC,
+        "value",
+      );
+      assert.strictEqual(result, true);
+    });
+
+    it("should return true when subject does not exist (40401)", async function () {
+      schemaRegistryProxyStub.listVersions.rejects(
+        new HttpError("Subject not found", 404, "Not Found", { error_code: 40401 }),
+      );
+
+      const result = await schemaRegistry.canAccessSchemaTypeForTopic(
+        TEST_CCLOUD_KAFKA_TOPIC,
+        "key",
+      );
+      assert.strictEqual(result, true);
+    });
+
+    it("should return true when schema not found (40403)", async function () {
+      schemaRegistryProxyStub.listVersions.rejects(
+        new HttpError("Schema not found", 404, "Not Found", { error_code: 40403 }),
+      );
+
+      const result = await schemaRegistry.canAccessSchemaTypeForTopic(
+        TEST_CCLOUD_KAFKA_TOPIC,
+        "key",
+      );
+      assert.strictEqual(result, true);
+    });
+
+    it("should return true on generic 404 without error code", async function () {
+      schemaRegistryProxyStub.listVersions.rejects(new HttpError("Not Found", 404, "Not Found"));
+
+      const result = await schemaRegistry.canAccessSchemaTypeForTopic(
+        TEST_CCLOUD_KAFKA_TOPIC,
+        "key",
+      );
+      assert.strictEqual(result, true);
+    });
+
+    it("should return false when user is denied access (40301)", async function () {
+      schemaRegistryProxyStub.listVersions.rejects(
+        new HttpError("User denied", 403, "Forbidden", { error_code: 40301 }),
+      );
+
+      const result = await schemaRegistry.canAccessSchemaTypeForTopic(
+        TEST_CCLOUD_KAFKA_TOPIC,
+        "key",
+      );
+      assert.strictEqual(result, false);
+    });
+
+    it("should return false on 401 Unauthorized", async function () {
+      schemaRegistryProxyStub.listVersions.rejects(
+        new HttpError("Unauthorized", 401, "Unauthorized"),
+      );
+
+      const result = await schemaRegistry.canAccessSchemaTypeForTopic(
+        TEST_CCLOUD_KAFKA_TOPIC,
+        "key",
+      );
+      assert.strictEqual(result, false);
+    });
+
+    it("should return false on 403 Forbidden", async function () {
+      schemaRegistryProxyStub.listVersions.rejects(new HttpError("Forbidden", 403, "Forbidden"));
+
+      const result = await schemaRegistry.canAccessSchemaTypeForTopic(
+        TEST_CCLOUD_KAFKA_TOPIC,
+        "key",
+      );
+      assert.strictEqual(result, false);
+    });
   });
 
   // determineAccessFromResponseError() tests

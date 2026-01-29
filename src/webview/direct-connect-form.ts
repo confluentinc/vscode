@@ -1,7 +1,10 @@
 import { ObservableScope } from "inertial";
-import type { ConnectedState } from "../clients/sidecar";
-import type { FormConnectionType, SupportedAuthTypes } from "../directConnections/types";
-import type { CustomConnectionSpec } from "../storage/resourceManager";
+import type {
+  ConnectedState,
+  CustomConnectionSpec,
+  FormConnectionType,
+  SupportedAuthTypes,
+} from "./types";
 import { AuthCredentials } from "./auth-credentials";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
@@ -54,10 +57,10 @@ class DirectConnectFormViewModel extends ViewModel {
 
   /** Kafka */
   kafkaBootstrapServers = this.derive(() => {
-    return this.spec()?.kafka_cluster?.bootstrap_servers ?? null;
+    return this.spec()?.kafkaCluster?.bootstrapServers ?? null;
   });
   kafkaCreds = this.derive(() => {
-    return this.spec()?.kafka_cluster?.credentials;
+    return this.spec()?.kafkaCluster?.credentials;
   });
   kafkaAuthType = this.derive(() => {
     return this.getAuthTypes()?.kafka ?? "None";
@@ -91,36 +94,36 @@ class DirectConnectFormViewModel extends ViewModel {
   // We must use a specific client ID suffix for connecting to WarpStream by K8s port-forwarding
   warpStreamPortForwardingEnabled = this.derive(() => {
     return (
-      this.spec()?.kafka_cluster?.client_id_suffix?.toString() ===
+      this.spec()?.kafkaCluster?.clientIdSuffix?.toString() ===
       WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX
     );
   });
 
   // SSL enabled is true by default. If this is undefined it means the user never set/saved it
   kafkaSslEnabled = this.derive(() => {
-    if (this.spec()?.kafka_cluster?.ssl?.enabled?.toString() === "false") return false;
+    if (this.spec()?.kafkaCluster?.ssl?.enabled?.toString() === "false") return false;
     else return true;
   });
   kafkaSslConfig = this.derive(() => {
-    return this.spec()?.kafka_cluster?.ssl || {};
+    return this.spec()?.kafkaCluster?.ssl || {};
   });
 
   /** Schema Registry */
   schemaUri = this.derive(() => {
-    return this.spec()?.schema_registry?.uri ?? null;
+    return this.spec()?.schemaRegistry?.uri ?? null;
   });
   schemaCreds = this.derive(() => {
-    return this.spec()?.schema_registry?.credentials;
+    return this.spec()?.schemaRegistry?.credentials;
   });
   schemaAuthType = this.derive(() => {
     return this.getAuthTypes()?.schema || "None";
   });
   schemaSslEnabled = this.derive(() => {
-    if (this.spec()?.schema_registry?.ssl?.enabled?.toString() === "false") return false;
+    if (this.spec()?.schemaRegistry?.ssl?.enabled?.toString() === "false") return false;
     else return true;
   });
   schemaSslConfig = this.derive(() => {
-    return this.spec()?.schema_registry?.ssl || {};
+    return this.spec()?.schemaRegistry?.ssl || {};
   });
 
   /** Get valid auth types based on form connection type */
@@ -237,14 +240,14 @@ class DirectConnectFormViewModel extends ViewModel {
       case "schema_registry.ssl.enabled":
         this.schemaSslEnabled(input.checked);
         break;
-      case "kafka_cluster.client_id_suffix":
+      case "kafka_cluster.clientIdSuffix":
         this.warpStreamPortForwardingEnabled(input.checked);
         await post("UpdateSpecValue", {
-          inputName: "kafka_cluster.client_id_suffix",
+          inputName: "kafka_cluster.clientIdSuffix",
           inputValue: input.checked ? WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX : "",
         });
         break;
-      case "kafka_cluster.bootstrap_servers":
+      case "kafka_cluster.bootstrapServers":
         this.kafkaBootstrapServers(input.value);
         // if localhost, uncheck SSL
         if (input.value.includes("localhost")) {
@@ -315,7 +318,7 @@ class DirectConnectFormViewModel extends ViewModel {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
-    if (!data["kafka_cluster.bootstrap_servers"] && !data["schema_registry.uri"]) {
+    if (!data["kafka_cluster.bootstrapServers"] && !data["schema_registry.uri"]) {
       this.message("Please provide either Kafka cluster or Schema Registry details");
       this.loading(false);
       return;
@@ -336,9 +339,9 @@ class DirectConnectFormViewModel extends ViewModel {
       data["kafka_cluster.credentials.hash_algorithm"] = "SCRAM_SHA_512";
     }
     if (this.warpStreamPortForwardingEnabled()) {
-      data["kafka_cluster.client_id_suffix"] = WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX;
+      data["kafka_cluster.clientIdSuffix"] = WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX;
     } else {
-      data["kafka_cluster.client_id_suffix"] = "";
+      data["kafka_cluster.clientIdSuffix"] = "";
     }
 
     if (data["formConnectionType"] === "Confluent Cloud") {
