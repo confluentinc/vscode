@@ -97,7 +97,18 @@ const TOKEN_URIS: Record<CCloudEnvironment, string> = {
 };
 
 /**
+ * CCloud base URLs by environment (for session/login endpoints).
+ * These are different from the control plane API URLs.
+ */
+const CCLOUD_BASE_URIS: Record<CCloudEnvironment, string> = {
+  [CCloudEnvironment.PRODUCTION]: "https://confluent.cloud",
+  [CCloudEnvironment.STAGING]: "https://stag.cpdev.cloud",
+  [CCloudEnvironment.DEVELOPMENT]: "https://devel.cpdev.cloud",
+};
+
+/**
  * Control plane API base URLs by environment.
+ * Note: These are prefixed with "api." compared to the base URLs.
  */
 const CONTROL_PLANE_URIS: Record<CCloudEnvironment, string> = {
   [CCloudEnvironment.PRODUCTION]: "https://api.confluent.cloud",
@@ -140,15 +151,17 @@ export const CONTROL_PLANE_ENDPOINTS = {
  * Gets the OAuth configuration for a specific environment.
  * @param environment The CCloud environment.
  * @param useVscodeUri Whether to use VS Code URI handler (true) or local server (false).
+ *   Defaults to false because the CCloud auth provider doesn't support the VS Code URI yet.
  * @returns The OAuth configuration for the environment.
  */
 export function getOAuthConfig(
   environment: CCloudEnvironment = CCloudEnvironment.PRODUCTION,
-  useVscodeUri = true,
+  useVscodeUri = false,
 ): OAuthConfig {
   return {
     authorizeUri: AUTHORIZE_URIS[environment],
     tokenUri: TOKEN_URIS[environment],
+    ccloudBaseUri: CCLOUD_BASE_URIS[environment],
     controlPlaneUri: CONTROL_PLANE_URIS[environment],
     clientId: CLIENT_IDS[environment],
     redirectUri: useVscodeUri ? CALLBACK_URIS.VSCODE_URI : CALLBACK_URIS.LOCAL_SERVER,

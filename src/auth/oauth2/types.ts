@@ -8,15 +8,18 @@
 /**
  * OAuth tokens received from authentication flow.
  * Includes ID token, control plane token, data plane token, and refresh token.
+ *
+ * Note: Control plane and data plane tokens are optional during the initial
+ * authentication flow. They will be obtained on-demand when making API calls.
  */
 export interface OAuthTokens {
   /** JWT ID token from initial OAuth exchange. */
   idToken: string;
 
-  /** Control plane access token for CCloud management APIs. */
-  controlPlaneToken: string;
+  /** Control plane access token for CCloud management APIs (obtained on-demand). */
+  controlPlaneToken?: string;
 
-  /** Data plane access token for Kafka/SR operations. */
+  /** Data plane access token for Kafka/SR operations (obtained on-demand). */
   dataPlaneToken?: string;
 
   /** Refresh token for obtaining new tokens. */
@@ -25,8 +28,8 @@ export interface OAuthTokens {
   /** Timestamp when the ID token expires. */
   idTokenExpiresAt: Date;
 
-  /** Timestamp when the control plane token expires. */
-  controlPlaneTokenExpiresAt: Date;
+  /** Timestamp when the control plane token expires (if present). */
+  controlPlaneTokenExpiresAt?: Date;
 
   /** Timestamp when the data plane token expires (if present). */
   dataPlaneTokenExpiresAt?: Date;
@@ -63,7 +66,10 @@ export interface OAuthConfig {
   /** Token endpoint URL for code exchange. */
   tokenUri: string;
 
-  /** Control plane API base URL. */
+  /** CCloud base URL for session/login endpoints (e.g., https://confluent.cloud). */
+  ccloudBaseUri: string;
+
+  /** Control plane API base URL (e.g., https://api.confluent.cloud). */
   controlPlaneUri: string;
 
   /** OAuth client ID. */

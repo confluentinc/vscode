@@ -53,6 +53,9 @@ describe("connections/handlers/ccloudConnectionHandler", function () {
   beforeEach(function () {
     sandbox = sinon.createSandbox();
 
+    // Create a mock disposable for event subscriptions
+    const mockDisposable = { dispose: sandbox.stub() };
+
     // Stub AuthService singleton
     const mockAuthService = {
       isAuthenticated: sandbox.stub().returns(false),
@@ -60,6 +63,10 @@ describe("connections/handlers/ccloudConnectionHandler", function () {
       refreshTokens: sandbox.stub().resolves({ success: true, tokens: mockTokens }),
       signOut: sandbox.stub().resolves(),
       getState: sandbox.stub().returns(AuthState.UNAUTHENTICATED),
+      // Event subscription methods - these return disposables
+      onAuthenticated: sandbox.stub().returns(mockDisposable),
+      onAuthenticationFailed: sandbox.stub().returns(mockDisposable),
+      onSessionExpired: sandbox.stub().returns(mockDisposable),
     };
     sandbox.stub(AuthService, "getInstance").returns(mockAuthService as unknown as AuthService);
 

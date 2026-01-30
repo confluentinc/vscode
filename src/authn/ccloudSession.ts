@@ -5,6 +5,7 @@
  * CCloud connections. These functions were previously in src/sidecar/connections/ccloud.ts.
  */
 
+import { AuthService } from "../auth/oauth2/authService";
 import { ConnectionManager } from "../connections/connectionManager";
 import { ConnectedState, type Connection, type ConnectionId } from "../connections/types";
 import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../constants";
@@ -54,12 +55,16 @@ export async function getCCloudConnection(): Promise<Connection | null> {
     return null;
   }
 
+  // Get sign-in URI from AuthService (will reuse existing PKCE state if valid)
+  const authService = AuthService.getInstance();
+  const signInUri = await authService.getOrCreateSignInUri();
+
   const status = await handler.getStatus();
   return {
     spec: handler.spec,
     status,
     metadata: {
-      signInUri: undefined, // TODO: Populate from OAuth flow when implemented
+      signInUri,
     },
   };
 }
@@ -106,12 +111,16 @@ export async function createCCloudConnection(): Promise<Connection> {
     handler = await manager.createConnection(CCLOUD_CONNECTION_SPEC);
   }
 
+  // Get sign-in URI from AuthService (generates new PKCE state if needed)
+  const authService = AuthService.getInstance();
+  const signInUri = await authService.getOrCreateSignInUri();
+
   const status = await handler.getStatus();
   return {
     spec: handler.spec,
     status,
     metadata: {
-      signInUri: undefined, // TODO: Populate from OAuth flow when implemented
+      signInUri,
     },
   };
 }
@@ -170,11 +179,15 @@ export async function waitForConnectionToBeStable(
       srState === ConnectedState.FAILED;
 
     if (isStable) {
+      // Get sign-in URI from AuthService
+      const authService = AuthService.getInstance();
+      const signInUri = await authService.getOrCreateSignInUri();
+
       return {
         spec: handler.spec,
         status,
         metadata: {
-          signInUri: undefined, // TODO: Populate from OAuth flow
+          signInUri,
         },
       };
     }

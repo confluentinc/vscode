@@ -5,6 +5,7 @@
  * session management, token refresh, and organization/resource discovery.
  */
 
+import type { Disposable } from "vscode";
 import type { ConnectionSpec } from "../spec";
 import {
   ConnectedState,
@@ -48,12 +49,73 @@ export class CCloudConnectionHandler extends ConnectionHandler {
   /** Timestamp when authentication is required. */
   private _requiresAuthenticationAt?: Date;
 
+  /** Subscription to AuthService events. */
+  private _authServiceSubscriptions: Disposable[] = [];
+
   /**
    * Creates a new CCloud connection handler.
    * @param spec The connection specification with optional ccloud config.
    */
   constructor(spec: ConnectionSpec) {
     super(spec);
+    this.subscribeToAuthServiceEvents();
+  }
+
+  /**
+   * Subscribes to AuthService events to update connection status
+   * when authentication state changes externally (e.g., from browser callback).
+   */
+  private subscribeToAuthServiceEvents(): void {
+    const authService = AuthService.getInstance();
+
+    // When authentication completes successfully, update our status
+    this._authServiceSubscriptions.push(
+      authService.onAuthenticated(async () => {
+        // Only update if we're not already connected (avoid duplicate updates)
+        if (this._ccloudStatus.state !== ConnectedState.SUCCESS) {
+          const user = await this.getUserFromTokens();
+          this._ccloudStatus = {
+            state: ConnectedState.SUCCESS,
+            user: user ?? { id: "unknown", username: "authenticated-user" },
+          };
+          this._requiresAuthenticationAt = await this.getSessionExpiryFromTokens();
+          this._refreshAttempts = 0;
+          this._connected = true;
+          this.updateStatus({ ccloud: this._ccloudStatus });
+        }
+      }),
+    );
+
+    // When authentication fails, update our status
+    this._authServiceSubscriptions.push(
+      authService.onAuthenticationFailed((error) => {
+        // Only update if we're not already in a failed state
+        if (
+          this._ccloudStatus.state !== ConnectedState.FAILED &&
+          this._ccloudStatus.state !== ConnectedState.EXPIRED
+        ) {
+          this._ccloudStatus = {
+            state: ConnectedState.FAILED,
+            errors: [{ message: error }],
+          };
+          this._connected = false;
+          this.updateStatus({ ccloud: this._ccloudStatus });
+        }
+      }),
+    );
+
+    // When session expires, update our status
+    this._authServiceSubscriptions.push(
+      authService.onSessionExpired(() => {
+        this._ccloudStatus = {
+          state: ConnectedState.EXPIRED,
+          user: this._ccloudStatus.user,
+          errors: [{ message: "Session expired" }],
+        };
+        this._connected = false;
+        this.updateStatus({ ccloud: this._ccloudStatus });
+      }),
+    );
   }
 
   /**
@@ -395,6 +457,12 @@ export class CCloudConnectionHandler extends ConnectionHandler {
    * Disposes of the handler and cleans up resources.
    */
   dispose(): void {
+    // Clean up AuthService subscriptions
+    for (const subscription of this._authServiceSubscriptions) {
+      subscription.dispose();
+    }
+    this._authServiceSubscriptions = [];
+
     // Clear session state before disposing
     this._connected = false;
     this._ccloudStatus = { state: ConnectedState.NONE };

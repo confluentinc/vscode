@@ -25,8 +25,12 @@ import { Logger } from "../logging";
 
 const logger = new Logger("ccloudResourceFetcher");
 
-/** Default CCloud Control Plane API URL. */
-const CCLOUD_CONTROL_PLANE_URL = "https://api.confluent.cloud";
+/**
+ * Default CCloud Control Plane API URL.
+ * Note: Resource APIs (organizations, environments, clusters) use confluent.cloud,
+ * NOT api.confluent.cloud. The api.confluent.cloud URL returns 404 for these endpoints.
+ */
+const CCLOUD_CONTROL_PLANE_URL = "https://confluent.cloud";
 
 /**
  * Configuration for creating a CCloud resource fetcher.

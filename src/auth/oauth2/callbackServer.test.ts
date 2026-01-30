@@ -121,7 +121,7 @@ describe("auth/oauth2/callbackServer", function () {
       );
 
       assert.strictEqual(response.statusCode, 200);
-      assert.ok(response.body.includes("Authentication Successful"));
+      assert.ok(response.body.includes("Authentication Complete"));
       assert.ok(receivedResult);
       assert.strictEqual(receivedResult!.success, true);
       assert.strictEqual(receivedResult!.code, "test-code");
@@ -156,7 +156,7 @@ describe("auth/oauth2/callbackServer", function () {
       const response = await makeRequest("/gateway/v1/callback-vscode-docs?state=test-state");
 
       assert.strictEqual(response.statusCode, 400);
-      assert.ok(response.body.includes("missing_code"));
+      assert.ok(response.body.includes("No authorization code provided"));
       assert.ok(receivedResult);
       assert.strictEqual(receivedResult!.success, false);
       assert.strictEqual(receivedResult!.error?.error, "missing_code");

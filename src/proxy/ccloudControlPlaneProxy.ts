@@ -387,7 +387,8 @@ export class CCloudControlPlaneProxy {
   ): Promise<CCloudListResponse<CCloudKafkaClusterData>> {
     const params = this.buildPaginationParams(options);
     if (options?.environmentId) {
-      params["spec.environment"] = options.environmentId;
+      // The CCloud API expects 'environment' parameter, not 'spec.environment'
+      params["environment"] = options.environmentId;
     }
     const response = await this.client.get<CCloudListResponse<CCloudKafkaClusterData>>(
       "/api/cmk/v2/clusters",
@@ -420,7 +421,8 @@ export class CCloudControlPlaneProxy {
   ): Promise<CCloudListResponse<CCloudSchemaRegistryData>> {
     const params = this.buildPaginationParams(options);
     if (options?.environmentId) {
-      params["spec.environment"] = options.environmentId;
+      // The CCloud API expects 'environment' parameter, not 'spec.environment'
+      params["environment"] = options.environmentId;
     }
     const response = await this.client.get<CCloudListResponse<CCloudSchemaRegistryData>>(
       "/api/srcm/v3/clusters",
@@ -456,7 +458,8 @@ export class CCloudControlPlaneProxy {
   ): Promise<CCloudListResponse<CCloudFlinkComputePoolData>> {
     const params = this.buildPaginationParams(options);
     if (options?.environmentId) {
-      params["spec.environment"] = options.environmentId;
+      // The CCloud API expects 'environment' parameter, not 'spec.environment'
+      params["environment"] = options.environmentId;
     }
     if (options?.region) {
       params["spec.region"] = options.region;

@@ -20,11 +20,11 @@ const TOKEN_STORAGE_KEY = "confluent.oauth.tokens";
  */
 interface SerializedTokens {
   idToken: string;
-  controlPlaneToken: string;
+  controlPlaneToken?: string;
   dataPlaneToken?: string;
   refreshToken: string;
   idTokenExpiresAt: string;
-  controlPlaneTokenExpiresAt: string;
+  controlPlaneTokenExpiresAt?: string;
   dataPlaneTokenExpiresAt?: string;
   refreshTokenExpiresAt: string;
 }
@@ -218,7 +218,7 @@ export class TokenManager implements vscode.Disposable {
    */
   async getControlPlaneToken(): Promise<string | null> {
     const tokens = await this.getTokens();
-    if (!tokens) {
+    if (!tokens || !tokens.controlPlaneToken || !tokens.controlPlaneTokenExpiresAt) {
       return null;
     }
 
@@ -421,7 +421,7 @@ export class TokenManager implements vscode.Disposable {
       dataPlaneToken: tokens.dataPlaneToken,
       refreshToken: tokens.refreshToken,
       idTokenExpiresAt: tokens.idTokenExpiresAt.toISOString(),
-      controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt.toISOString(),
+      controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt?.toISOString(),
       dataPlaneTokenExpiresAt: tokens.dataPlaneTokenExpiresAt?.toISOString(),
       refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
     };
@@ -437,7 +437,9 @@ export class TokenManager implements vscode.Disposable {
       dataPlaneToken: serialized.dataPlaneToken,
       refreshToken: serialized.refreshToken,
       idTokenExpiresAt: new Date(serialized.idTokenExpiresAt),
-      controlPlaneTokenExpiresAt: new Date(serialized.controlPlaneTokenExpiresAt),
+      controlPlaneTokenExpiresAt: serialized.controlPlaneTokenExpiresAt
+        ? new Date(serialized.controlPlaneTokenExpiresAt)
+        : undefined,
       dataPlaneTokenExpiresAt: serialized.dataPlaneTokenExpiresAt
         ? new Date(serialized.dataPlaneTokenExpiresAt)
         : undefined,
@@ -489,7 +491,7 @@ export class TokenManager implements vscode.Disposable {
       this._onTokenExpiring.fire({ tokenType: "idToken", expiresAt: tokens.idTokenExpiresAt });
     }
 
-    if (isTokenExpiring(tokens.controlPlaneTokenExpiresAt)) {
+    if (tokens.controlPlaneTokenExpiresAt && isTokenExpiring(tokens.controlPlaneTokenExpiresAt)) {
       this._onTokenExpiring.fire({
         tokenType: "controlPlaneToken",
         expiresAt: tokens.controlPlaneTokenExpiresAt,

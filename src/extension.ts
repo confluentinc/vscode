@@ -13,6 +13,7 @@ if (process.env.SENTRY_DSN) {
 }
 
 import { handleNewOrUpdatedExtensionInstallation } from "./activation/compareVersions";
+import { AuthService } from "./auth/oauth2/authService";
 import { ConfluentCloudAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
 import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
@@ -53,7 +54,7 @@ import {
 import { ConnectedState } from "./connections/types";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
 import { activateMessageViewer } from "./consume";
-import { setExtensionContext } from "./context/extension";
+import { getExtensionContext, setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
 import { ContextValues, setContextValue } from "./context/values";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./diagnostics/constants";
@@ -563,6 +564,12 @@ async function setupStorage(): Promise<void> {
  * @returns A {@link vscode.Disposable} for the auth provider
  */
 async function setupAuthProvider(): Promise<vscode.Disposable[]> {
+  // Initialize the OAuth2 AuthService with VS Code context (for secret storage)
+  // This must happen before the auth provider is used so PKCE state can be persisted
+  const context = getExtensionContext();
+  const authService = AuthService.getInstance();
+  await authService.initialize(context);
+
   const provider = ConfluentCloudAuthProvider.getInstance();
   const providerDisposable = vscode.authentication.registerAuthenticationProvider(
     AUTH_PROVIDER_ID,

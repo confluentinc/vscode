@@ -5,7 +5,7 @@
  * instead of GraphQL queries through the sidecar.
  */
 
-import { getCCloudAuthSession } from "../authn/utils";
+import { TokenManager } from "../auth/oauth2/tokenManager";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { CCloudOrganization } from "../models/organization";
@@ -28,16 +28,19 @@ let cachedCurrentOrgId: OrganizationId | undefined;
 export async function getOrganizations(): Promise<CCloudOrganization[]> {
   const orgs: CCloudOrganization[] = [];
 
-  const session = await getCCloudAuthSession();
-  if (!session) {
-    logger.debug("No CCloud auth session, cannot fetch organizations");
+  // Get the control plane token from TokenManager
+  const tokenManager = TokenManager.getInstance();
+  const token = await tokenManager.getControlPlaneToken();
+  if (!token) {
+    logger.debug("No control plane token, cannot fetch organizations");
     return orgs;
   }
 
   try {
+    // Note: CCloud resource APIs use confluent.cloud, not api.confluent.cloud
     const proxy = new CCloudControlPlaneProxy({
-      baseUrl: "https://api.confluent.cloud",
-      auth: { type: "bearer", token: session.accessToken },
+      baseUrl: "https://confluent.cloud",
+      auth: { type: "bearer", token },
     });
 
     const orgDataList = await proxy.fetchAllOrganizations();

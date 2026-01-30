@@ -3,6 +3,7 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { AuthService, AuthState } from "./authService";
 import { TokenManager } from "./tokenManager";
+import { PKCEStateManager } from "./pkceStateManager";
 import type { OAuthTokens } from "./types";
 import { TOKEN_LIFETIMES, CCloudEnvironment } from "./config";
 
@@ -32,6 +33,7 @@ describe("auth/oauth2/authService", function () {
 
   beforeEach(function () {
     TokenManager.resetInstance();
+    PKCEStateManager.resetInstance();
     AuthService.resetInstance();
 
     storageData = new Map();
@@ -64,6 +66,7 @@ describe("auth/oauth2/authService", function () {
 
   afterEach(function () {
     AuthService.resetInstance();
+    PKCEStateManager.resetInstance();
     TokenManager.resetInstance();
     sinon.restore();
   });
@@ -101,7 +104,7 @@ describe("auth/oauth2/authService", function () {
         dataPlaneToken: tokens.dataPlaneToken,
         refreshToken: tokens.refreshToken,
         idTokenExpiresAt: tokens.idTokenExpiresAt.toISOString(),
-        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt.toISOString(),
+        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt!.toISOString(),
         dataPlaneTokenExpiresAt: tokens.dataPlaneTokenExpiresAt!.toISOString(),
         refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
       };
@@ -122,7 +125,7 @@ describe("auth/oauth2/authService", function () {
         dataPlaneToken: tokens.dataPlaneToken,
         refreshToken: tokens.refreshToken,
         idTokenExpiresAt: tokens.idTokenExpiresAt.toISOString(),
-        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt.toISOString(),
+        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt!.toISOString(),
         dataPlaneTokenExpiresAt: tokens.dataPlaneTokenExpiresAt!.toISOString(),
         refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
       };
@@ -153,7 +156,7 @@ describe("auth/oauth2/authService", function () {
         controlPlaneToken: tokens.controlPlaneToken,
         refreshToken: tokens.refreshToken,
         idTokenExpiresAt: tokens.idTokenExpiresAt.toISOString(),
-        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt.toISOString(),
+        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt!.toISOString(),
         refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
       };
       storageData.set("confluent.oauth.tokens", JSON.stringify(serialized));
@@ -179,7 +182,7 @@ describe("auth/oauth2/authService", function () {
         controlPlaneToken: tokens.controlPlaneToken,
         refreshToken: tokens.refreshToken,
         idTokenExpiresAt: tokens.idTokenExpiresAt.toISOString(),
-        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt.toISOString(),
+        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt!.toISOString(),
         refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
       };
       storageData.set("confluent.oauth.tokens", JSON.stringify(serialized));
@@ -201,7 +204,7 @@ describe("auth/oauth2/authService", function () {
         controlPlaneToken: tokens.controlPlaneToken,
         refreshToken: tokens.refreshToken,
         idTokenExpiresAt: tokens.idTokenExpiresAt.toISOString(),
-        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt.toISOString(),
+        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt!.toISOString(),
         refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
       };
       storageData.set("confluent.oauth.tokens", JSON.stringify(serialized));
@@ -235,7 +238,7 @@ describe("auth/oauth2/authService", function () {
         controlPlaneToken: tokens.controlPlaneToken,
         refreshToken: tokens.refreshToken,
         idTokenExpiresAt: tokens.idTokenExpiresAt.toISOString(),
-        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt.toISOString(),
+        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt!.toISOString(),
         refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
       };
       storageData.set("confluent.oauth.tokens", JSON.stringify(serialized));
@@ -326,7 +329,7 @@ describe("auth/oauth2/authService", function () {
         controlPlaneToken: tokens.controlPlaneToken,
         refreshToken: tokens.refreshToken,
         idTokenExpiresAt: tokens.idTokenExpiresAt.toISOString(),
-        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt.toISOString(),
+        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt!.toISOString(),
         refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
       };
       storageData.set("confluent.oauth.tokens", JSON.stringify(serialized));
@@ -353,7 +356,7 @@ describe("auth/oauth2/authService", function () {
         controlPlaneToken: tokens.controlPlaneToken,
         refreshToken: tokens.refreshToken,
         idTokenExpiresAt: tokens.idTokenExpiresAt.toISOString(),
-        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt.toISOString(),
+        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt!.toISOString(),
         refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
       };
       storageData.set("confluent.oauth.tokens", JSON.stringify(serialized));

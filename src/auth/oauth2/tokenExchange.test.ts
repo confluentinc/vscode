@@ -146,7 +146,7 @@ describe("auth/oauth2/tokenExchange", function () {
       };
       fetchStub.resolves(mockFetchResponse(mockResponse));
 
-      const result = await exchangeIdTokenForControlPlaneToken(config.controlPlaneUri, "id-token");
+      const result = await exchangeIdTokenForControlPlaneToken(config.ccloudBaseUri, "id-token");
 
       assert.strictEqual(result.token, "cp-token");
       assert.strictEqual(result.user.id, "user-123");
@@ -157,7 +157,7 @@ describe("auth/oauth2/tokenExchange", function () {
     it("should include organization ID when provided", async function () {
       fetchStub.resolves(mockFetchResponse({ token: "token", user: {} }));
 
-      await exchangeIdTokenForControlPlaneToken(config.controlPlaneUri, "id-token", {
+      await exchangeIdTokenForControlPlaneToken(config.ccloudBaseUri, "id-token", {
         organizationId: "org-123",
       });
 
@@ -169,7 +169,7 @@ describe("auth/oauth2/tokenExchange", function () {
     it("should call sessions endpoint", async function () {
       fetchStub.resolves(mockFetchResponse({ token: "token", user: {} }));
 
-      await exchangeIdTokenForControlPlaneToken(config.controlPlaneUri, "id-token");
+      await exchangeIdTokenForControlPlaneToken(config.ccloudBaseUri, "id-token");
 
       const [url] = fetchStub.firstCall.args;
       assert.ok(url.includes("/api/sessions"));
@@ -179,7 +179,7 @@ describe("auth/oauth2/tokenExchange", function () {
       fetchStub.resolves(mockFetchResponse({ error: "unauthorized" }, 401));
 
       await assert.rejects(
-        () => exchangeIdTokenForControlPlaneToken(config.controlPlaneUri, "bad-token"),
+        () => exchangeIdTokenForControlPlaneToken(config.ccloudBaseUri, "bad-token"),
         TokenExchangeError,
       );
     });
@@ -188,7 +188,7 @@ describe("auth/oauth2/tokenExchange", function () {
       const mockResponse = { auth_token: "auth-cp-token", user: {} };
       fetchStub.resolves(mockFetchResponse(mockResponse));
 
-      const result = await exchangeIdTokenForControlPlaneToken(config.controlPlaneUri, "id-token");
+      const result = await exchangeIdTokenForControlPlaneToken(config.ccloudBaseUri, "id-token");
 
       assert.strictEqual(result.token, "auth-cp-token");
     });
@@ -200,7 +200,7 @@ describe("auth/oauth2/tokenExchange", function () {
       fetchStub.resolves(mockFetchResponse(mockResponse));
 
       const result = await exchangeControlPlaneTokenForDataPlaneToken(
-        config.controlPlaneUri,
+        config.ccloudBaseUri,
         "cp-token",
       );
 
@@ -210,7 +210,7 @@ describe("auth/oauth2/tokenExchange", function () {
     it("should include cluster ID when provided", async function () {
       fetchStub.resolves(mockFetchResponse({ token: "token" }));
 
-      await exchangeControlPlaneTokenForDataPlaneToken(config.controlPlaneUri, "cp-token", {
+      await exchangeControlPlaneTokenForDataPlaneToken(config.ccloudBaseUri, "cp-token", {
         clusterId: "lkc-12345",
       });
 
@@ -222,7 +222,7 @@ describe("auth/oauth2/tokenExchange", function () {
     it("should include authorization header", async function () {
       fetchStub.resolves(mockFetchResponse({ token: "token" }));
 
-      await exchangeControlPlaneTokenForDataPlaneToken(config.controlPlaneUri, "cp-token");
+      await exchangeControlPlaneTokenForDataPlaneToken(config.ccloudBaseUri, "cp-token");
 
       const [, options] = fetchStub.firstCall.args;
       assert.strictEqual(options.headers.Authorization, "Bearer cp-token");
@@ -231,7 +231,7 @@ describe("auth/oauth2/tokenExchange", function () {
     it("should call access_tokens endpoint", async function () {
       fetchStub.resolves(mockFetchResponse({ token: "token" }));
 
-      await exchangeControlPlaneTokenForDataPlaneToken(config.controlPlaneUri, "cp-token");
+      await exchangeControlPlaneTokenForDataPlaneToken(config.ccloudBaseUri, "cp-token");
 
       const [url] = fetchStub.firstCall.args;
       assert.ok(url.includes("/api/access_tokens"));
@@ -242,7 +242,7 @@ describe("auth/oauth2/tokenExchange", function () {
       fetchStub.resolves(mockFetchResponse(mockResponse));
 
       const result = await exchangeControlPlaneTokenForDataPlaneToken(
-        config.controlPlaneUri,
+        config.ccloudBaseUri,
         "cp-token",
       );
 
@@ -254,7 +254,7 @@ describe("auth/oauth2/tokenExchange", function () {
       fetchStub.resolves(mockFetchResponse(mockResponse));
 
       const result = await exchangeControlPlaneTokenForDataPlaneToken(
-        config.controlPlaneUri,
+        config.ccloudBaseUri,
         "cp-token",
       );
 
@@ -265,7 +265,7 @@ describe("auth/oauth2/tokenExchange", function () {
       fetchStub.resolves(mockFetchResponse({ error: "forbidden" }, 403));
 
       await assert.rejects(
-        () => exchangeControlPlaneTokenForDataPlaneToken(config.controlPlaneUri, "bad-token"),
+        () => exchangeControlPlaneTokenForDataPlaneToken(config.ccloudBaseUri, "bad-token"),
         TokenExchangeError,
       );
     });

@@ -87,7 +87,7 @@ describe("auth/oauth2/tokenManager", function () {
         dataPlaneToken: tokens.dataPlaneToken,
         refreshToken: tokens.refreshToken,
         idTokenExpiresAt: tokens.idTokenExpiresAt.toISOString(),
-        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt.toISOString(),
+        controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt!.toISOString(),
         dataPlaneTokenExpiresAt: tokens.dataPlaneTokenExpiresAt!.toISOString(),
         refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
       };

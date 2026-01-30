@@ -9,11 +9,11 @@
 import * as vscode from "vscode";
 import type { OAuthCallbackResult, OAuthConfig, OAuthFlowState, OAuthTokens } from "./types";
 import { CCloudEnvironment, getOAuthConfig, OAUTH_CONSTANTS } from "./config";
-import { buildAuthorizationUrl, generatePKCEParams, validateState } from "./pkce";
+import { validateState } from "./pkce";
+import { PKCEStateManager } from "./pkceStateManager";
 import { TokenManager } from "./tokenManager";
 import { performFullTokenExchange, performTokenRefresh, TokenExchangeError } from "./tokenExchange";
 import { OAuthCallbackServer } from "./callbackServer";
-import { OAuthUriHandler } from "./uriHandler";
 
 /**
  * Authentication state for the service.
@@ -75,8 +75,8 @@ export class AuthService implements vscode.Disposable {
   private environment: CCloudEnvironment = CCloudEnvironment.PRODUCTION;
 
   private tokenManager: TokenManager;
+  private pkceStateManager: PKCEStateManager;
   private callbackServer: OAuthCallbackServer | null = null;
-  private uriHandler: OAuthUriHandler;
 
   private readonly disposables: vscode.Disposable[] = [];
 
@@ -97,14 +97,13 @@ export class AuthService implements vscode.Disposable {
 
   private constructor() {
     this.tokenManager = TokenManager.getInstance();
-    this.uriHandler = new OAuthUriHandler();
+    this.pkceStateManager = PKCEStateManager.getInstance();
 
     this.disposables.push(
       this._onStateChanged,
       this._onAuthenticated,
       this._onAuthenticationFailed,
       this._onSessionExpired,
-      this.uriHandler,
     );
 
     // Listen for token events
@@ -141,12 +140,15 @@ export class AuthService implements vscode.Disposable {
    * @param context The extension context.
    */
   async initialize(context: vscode.ExtensionContext): Promise<void> {
-    // Initialize token manager
-    await this.tokenManager.initialize(context.secrets);
+    // Initialize token manager and PKCE state manager
+    await Promise.all([
+      this.tokenManager.initialize(context.secrets),
+      this.pkceStateManager.initialize(context.secrets),
+    ]);
 
-    // Register URI handler
-    this.uriHandler.activate(context);
-    this.uriHandler.onCallback((result) => this.handleCallback(result));
+    // Note: We don't register a URI handler here because the extension already has one
+    // (UriEventHandler in src/uriHandler.ts) that fires the ccloudAuthCallback event.
+    // The ConfluentCloudAuthProvider handles those events and calls handleCCloudAuthCallback.
 
     // Check if we have existing tokens
     const existingTokens = await this.tokenManager.getTokens();
@@ -157,6 +159,52 @@ export class AuthService implements vscode.Disposable {
       } else {
         this.setState(AuthState.EXPIRED);
       }
+    }
+  }
+
+  /**
+   * Gets or creates a sign-in URI for CCloud authentication.
+   *
+   * This method generates PKCE parameters and stores them securely so that
+   * the token exchange can complete even if VS Code restarts during the
+   * browser-based authentication flow.
+   *
+   * Also starts the local callback server to receive the OAuth callback from CCloud.
+   *
+   * @param environment The CCloud environment to authenticate against.
+   * @param organizationId Optional organization ID to pre-select.
+   * @param forceNew Force creation of new PKCE state even if existing state is valid.
+   * @returns The sign-in URI to open in the browser.
+   */
+  async getOrCreateSignInUri(
+    environment: CCloudEnvironment = CCloudEnvironment.PRODUCTION,
+    organizationId?: string,
+    forceNew = false,
+  ): Promise<string> {
+    // Ensure the callback server is running to receive the OAuth callback
+    await this.ensureCallbackServerRunning();
+
+    return this.pkceStateManager.getOrCreateSignInUri(environment, organizationId, forceNew);
+  }
+
+  /**
+   * Ensures the local OAuth callback server is running.
+   * The server receives callbacks from CCloud on port 26636.
+   */
+  private async ensureCallbackServerRunning(): Promise<void> {
+    if (this.callbackServer?.isRunning()) {
+      return;
+    }
+
+    try {
+      this.callbackServer = new OAuthCallbackServer();
+      await this.callbackServer.start();
+      this.callbackServer.onCallback((result) => this.handleCallback(result));
+      this.disposables.push(this.callbackServer);
+    } catch (error) {
+      // Log but don't throw - the callback server might already be running from another source
+      // or we might be in a web environment where it's not needed
+      console.warn("Failed to start OAuth callback server:", error);
     }
   }
 
@@ -174,38 +222,29 @@ export class AuthService implements vscode.Disposable {
     }
 
     this.environment = options.environment ?? CCloudEnvironment.PRODUCTION;
-    const useLocalServer = options.useLocalServer ?? false;
 
-    this.config = getOAuthConfig(this.environment, !useLocalServer);
+    // Use local server by default since CCloud doesn't support VS Code URI yet
+    this.config = getOAuthConfig(this.environment);
 
-    // Generate PKCE parameters
-    const pkce = generatePKCEParams();
+    // Get or create PKCE state and ensure callback server is running
+    const authUrl = await this.getOrCreateSignInUri(this.environment, options.organizationId);
 
-    // Create flow state
+    // Get the PKCE params from storage for the pending flow
+    const pkceState = await this.pkceStateManager.getState();
+    if (!pkceState) {
+      return {
+        success: false,
+        error: "Failed to create PKCE state for authentication",
+      };
+    }
+
+    // Create flow state using the stored PKCE params
     this.pendingFlow = {
-      pkce,
+      pkce: pkceState.pkce,
       initiatedAt: new Date(),
       completed: false,
       organizationId: options.organizationId,
     };
-
-    // Set up callback handlers
-    if (useLocalServer) {
-      try {
-        this.callbackServer = new OAuthCallbackServer();
-        await this.callbackServer.start();
-        this.callbackServer.onCallback((result) => this.handleCallback(result));
-        this.disposables.push(this.callbackServer);
-      } catch (error) {
-        return {
-          success: false,
-          error: `Failed to start callback server: ${error}`,
-        };
-      }
-    }
-
-    // Build and open authorization URL
-    const authUrl = buildAuthorizationUrl(this.config, pkce);
 
     this.setState(AuthState.AUTHENTICATING);
 
@@ -242,17 +281,56 @@ export class AuthService implements vscode.Disposable {
    * @param callbackResult The callback result to process.
    */
   async handleCallback(callbackResult: OAuthCallbackResult): Promise<void> {
-    if (!this.pendingFlow || this.pendingFlow.completed) {
+    // Get PKCE state - either from pending flow or from storage
+    // (storage is used if VS Code was restarted during auth flow)
+    let codeVerifier: string | undefined;
+    let expectedState: string | undefined;
+    let organizationId: string | undefined;
+
+    if (this.pendingFlow && !this.pendingFlow.completed) {
+      codeVerifier = this.pendingFlow.pkce.codeVerifier;
+      expectedState = this.pendingFlow.pkce.state;
+      organizationId = this.pendingFlow.organizationId;
+    } else {
+      // Try to get PKCE state from storage (VS Code may have restarted)
+      const storedState = await this.pkceStateManager.getState();
+      if (storedState) {
+        codeVerifier = storedState.pkce.codeVerifier;
+        expectedState = storedState.pkce.state;
+        organizationId = storedState.organizationId;
+
+        // Reconstruct pending flow for completeFlow() to work
+        this.pendingFlow = {
+          pkce: storedState.pkce,
+          initiatedAt: storedState.createdAt,
+          completed: false,
+          organizationId,
+        };
+
+        // Also set the config from stored environment
+        this.config = getOAuthConfig(storedState.environment);
+        this.environment = storedState.environment;
+      }
+    }
+
+    if (!codeVerifier || !expectedState) {
+      // No valid PKCE state found
+      return;
+    }
+
+    if (this.pendingFlow?.completed) {
       return;
     }
 
     // Validate state
     if (callbackResult.state) {
-      if (!validateState(callbackResult.state, this.pendingFlow.pkce.state)) {
+      if (!validateState(callbackResult.state, expectedState)) {
         this.completeFlow({
           success: false,
           error: "State mismatch - possible CSRF attack",
         });
+        // Clear stored PKCE state on validation failure
+        await this.pkceStateManager.clearState();
         return;
       }
     }
@@ -264,6 +342,8 @@ export class AuthService implements vscode.Disposable {
         success: false,
         error: errorMessage,
       });
+      // Clear stored PKCE state on failure
+      await this.pkceStateManager.clearState();
       return;
     }
 
@@ -272,6 +352,8 @@ export class AuthService implements vscode.Disposable {
         success: false,
         error: "No authorization code received",
       });
+      // Clear stored PKCE state on failure
+      await this.pkceStateManager.clearState();
       return;
     }
 
@@ -280,12 +362,15 @@ export class AuthService implements vscode.Disposable {
       const tokens = await performFullTokenExchange(
         this.config!,
         callbackResult.code,
-        this.pendingFlow.pkce.codeVerifier,
-        { organizationId: this.pendingFlow.organizationId },
+        codeVerifier,
+        { organizationId },
       );
 
-      // Store tokens
-      await this.tokenManager.storeTokens(tokens);
+      // Store tokens and clear PKCE state (no longer needed)
+      await Promise.all([
+        this.tokenManager.storeTokens(tokens),
+        this.pkceStateManager.clearState(),
+      ]);
 
       this.completeFlow({
         success: true,
@@ -301,6 +386,8 @@ export class AuthService implements vscode.Disposable {
         success: false,
         error: message,
       });
+      // Clear stored PKCE state on failure
+      await this.pkceStateManager.clearState();
     }
   }
 
@@ -361,10 +448,10 @@ export class AuthService implements vscode.Disposable {
   }
 
   /**
-   * Signs out by clearing all tokens.
+   * Signs out by clearing all tokens and PKCE state.
    */
   async signOut(): Promise<void> {
-    await this.tokenManager.clearTokens();
+    await Promise.all([this.tokenManager.clearTokens(), this.pkceStateManager.clearState()]);
     this.setState(AuthState.UNAUTHENTICATED);
   }
 
@@ -463,6 +550,7 @@ export class AuthService implements vscode.Disposable {
 
   /**
    * Cleans up flow resources.
+   * Note: Does not stop the callback server - it stays running to handle future callbacks.
    */
   private cleanupFlow(): void {
     if (this.flowTimeout) {
@@ -470,10 +558,9 @@ export class AuthService implements vscode.Disposable {
       this.flowTimeout = null;
     }
 
-    if (this.callbackServer) {
-      this.callbackServer.stop().catch(() => {});
-      this.callbackServer = null;
-    }
+    // Don't stop the callback server - it needs to stay running to receive callbacks
+    // even after the flow times out or is cancelled, since the user might still complete
+    // the auth in the browser
 
     this.pendingFlow = null;
     this.flowResolver = null;

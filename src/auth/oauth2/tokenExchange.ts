@@ -106,19 +106,20 @@ export async function exchangeCodeForIdToken(
  * Exchanges an ID token for a control plane token.
  *
  * This is the second step, authenticating with the CCloud control plane.
+ * The sessions endpoint is on the CCloud base URL (confluent.cloud), not the API URL.
  *
- * @param controlPlaneUri Base URL of the control plane API.
+ * @param ccloudBaseUri Base URL of CCloud (e.g., https://confluent.cloud).
  * @param idToken JWT ID token from the OAuth provider.
  * @param options Optional settings like organization ID.
  * @returns The control plane token exchange response.
  * @throws TokenExchangeError if the exchange fails.
  */
 export async function exchangeIdTokenForControlPlaneToken(
-  controlPlaneUri: string,
+  ccloudBaseUri: string,
   idToken: string,
   options?: ControlPlaneExchangeOptions,
 ): Promise<ControlPlaneTokenExchangeResponse> {
-  const url = `${controlPlaneUri}${CONTROL_PLANE_ENDPOINTS.SESSIONS}`;
+  const url = `${ccloudBaseUri}${CONTROL_PLANE_ENDPOINTS.SESSIONS}`;
 
   const body: Record<string, string> = {
     id_token: idToken,
@@ -176,19 +177,20 @@ export async function exchangeIdTokenForControlPlaneToken(
  * Exchanges a control plane token for a data plane token.
  *
  * This provides access to Kafka and Schema Registry operations.
+ * The access_tokens endpoint is on the CCloud base URL (confluent.cloud), not the API URL.
  *
- * @param controlPlaneUri Base URL of the control plane API.
+ * @param ccloudBaseUri Base URL of CCloud (e.g., https://confluent.cloud).
  * @param controlPlaneToken Control plane access token.
  * @param options Optional settings like cluster ID.
  * @returns The data plane token exchange response.
  * @throws TokenExchangeError if the exchange fails.
  */
 export async function exchangeControlPlaneTokenForDataPlaneToken(
-  controlPlaneUri: string,
+  ccloudBaseUri: string,
   controlPlaneToken: string,
   options?: DataPlaneExchangeOptions,
 ): Promise<DataPlaneTokenExchangeResponse> {
-  const url = `${controlPlaneUri}${CONTROL_PLANE_ENDPOINTS.ACCESS_TOKENS}`;
+  const url = `${ccloudBaseUri}${CONTROL_PLANE_ENDPOINTS.ACCESS_TOKENS}`;
 
   const body: Record<string, unknown> = {};
 
@@ -273,12 +275,17 @@ export async function refreshTokens(
 /**
  * Performs the complete token exchange flow from authorization code to full token set.
  *
+ * Exchanges the authorization code for:
+ * 1. ID token and refresh token (from Auth0)
+ * 2. Control plane token (from CCloud /api/sessions)
+ * 3. Data plane token is obtained on-demand when needed for Kafka/SR operations
+ *
  * @param config OAuth configuration.
  * @param code Authorization code from callback.
  * @param codeVerifier PKCE code verifier.
  * @param options Optional settings for the exchange.
- * @returns Complete OAuth tokens.
- * @throws TokenExchangeError if any step fails.
+ * @returns OAuth tokens with ID token, control plane token, and refresh token.
+ * @throws TokenExchangeError if the exchange fails.
  */
 export async function performFullTokenExchange(
   config: OAuthConfig,
@@ -288,12 +295,12 @@ export async function performFullTokenExchange(
 ): Promise<OAuthTokens> {
   const now = new Date();
 
-  // Step 1: Exchange authorization code for ID token
+  // Step 1: Exchange authorization code for ID token and refresh token from Auth0
   const idTokenResponse = await exchangeCodeForIdToken(config, code, codeVerifier);
 
-  // Step 2: Exchange ID token for control plane token
+  // Step 2: Exchange ID token for control plane token from CCloud
   const cpTokenResponse = await exchangeIdTokenForControlPlaneToken(
-    config.controlPlaneUri,
+    config.ccloudBaseUri,
     idTokenResponse.idToken,
     { organizationId: options?.organizationId },
   );
@@ -304,21 +311,24 @@ export async function performFullTokenExchange(
 
   try {
     const dpTokenResponse = await exchangeControlPlaneTokenForDataPlaneToken(
-      config.controlPlaneUri,
+      config.ccloudBaseUri,
       cpTokenResponse.token,
       { clusterId: options?.clusterId },
     );
     dataPlaneToken = dpTokenResponse.token;
     dataPlaneTokenExpiresAt = calculateTokenExpiry(TOKEN_LIFETIMES.DATA_PLANE_TOKEN, now);
   } catch {
-    // Data plane token is optional - some operations don't need it
+    // Data plane token is optional - continue without it if exchange fails
   }
+
+  // Use refresh token from control plane response if provided (can be rotated)
+  const refreshToken = cpTokenResponse.refreshToken ?? idTokenResponse.refreshToken;
 
   return {
     idToken: idTokenResponse.idToken,
     controlPlaneToken: cpTokenResponse.token,
     dataPlaneToken,
-    refreshToken: cpTokenResponse.refreshToken ?? idTokenResponse.refreshToken,
+    refreshToken,
     idTokenExpiresAt: calculateTokenExpiry(TOKEN_LIFETIMES.ID_TOKEN, now),
     controlPlaneTokenExpiresAt: calculateTokenExpiry(TOKEN_LIFETIMES.CONTROL_PLANE_TOKEN, now),
     dataPlaneTokenExpiresAt,
@@ -346,8 +356,9 @@ export async function performTokenRefresh(
   const refreshResponse = await refreshTokens(config, currentTokens.refreshToken);
 
   // Step 2: Exchange new ID token for control plane token
+  // Note: Sessions endpoint is on ccloudBaseUri, not controlPlaneUri
   const cpTokenResponse = await exchangeIdTokenForControlPlaneToken(
-    config.controlPlaneUri,
+    config.ccloudBaseUri,
     refreshResponse.idToken,
     { organizationId: options?.organizationId },
   );
@@ -358,8 +369,9 @@ export async function performTokenRefresh(
 
   if (currentTokens.dataPlaneToken || options?.clusterId) {
     try {
+      // Note: Access tokens endpoint is on ccloudBaseUri, not controlPlaneUri
       const dpTokenResponse = await exchangeControlPlaneTokenForDataPlaneToken(
-        config.controlPlaneUri,
+        config.ccloudBaseUri,
         cpTokenResponse.token,
         { clusterId: options?.clusterId },
       );

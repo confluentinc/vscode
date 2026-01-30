@@ -56,6 +56,9 @@ export {
 // Token Manager
 export { TokenManager, type AllTokenStatus, type TokenStatus } from "./tokenManager";
 
+// PKCE State Manager
+export { PKCEStateManager, type PKCEState } from "./pkceStateManager";
+
 // Token Exchange
 export {
   exchangeCodeForIdToken,

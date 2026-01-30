@@ -209,8 +209,10 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     logger.debug("Using internal fetcher for CCloud resources");
     const fetcher = createCCloudResourceFetcher({
       getAccessToken: async () => {
-        const session = await getCCloudAuthSession();
-        return session?.accessToken;
+        // Get the control plane token from TokenManager, not the session
+        // The session.accessToken is just a placeholder connection ID
+        const tokenManager = TokenManager.getInstance();
+        return (await tokenManager.getControlPlaneToken()) ?? undefined;
       },
     });
     return await fetcher.fetchEnvironments();
