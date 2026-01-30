@@ -42,10 +42,10 @@ endif
 ci-bin-sem-cache-store:
 ifneq ($(SEMAPHORE_GIT_REF_TYPE),pull-request)
 	@echo "Storing semaphore caches"
-	$(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_npm_cache SEM_CACHE_PATH=$(HOME)/.npm
+	$(MAKE) sem-cache-store-entry SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_npm_cache SEM_CACHE_PATH=$(HOME)/.npm
 # Cache packages installed by `npx playwright install`
-	[[ $(os_name) == "Darwin" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_playwright_cache SEM_CACHE_PATH=$(HOME)/Library/Caches/ms-playwright || true
-	[[ $(os_name) == "Linux" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_playwright_cache SEM_CACHE_PATH=$(HOME)/.cache/ms-playwright || true
+	[[ $(os_name) == "Darwin" ]] && $(MAKE) sem-cache-store-entry SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_playwright_cache SEM_CACHE_PATH=$(HOME)/Library/Caches/ms-playwright || true
+	[[ $(os_name) == "Linux" ]] && $(MAKE) sem-cache-store-entry SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_playwright_cache SEM_CACHE_PATH=$(HOME)/.cache/ms-playwright || true
 endif
 
 # cache restore allows fuzzy matching. When it finds multiple matches, it will select the most recent cache archive.
@@ -53,9 +53,9 @@ endif
 # Therefore, we store the cache with a timestamp in the key to avoid collisions.
 #
 # But caching can be expensive, so we'll only recache an item if the previous item was cached a while ago,
-# we arbitrarily put seven days ago for now, see the logic in _ci-bin-sem-cache-store
-.PHONY: _ci-bin-sem-cache-store
-_ci-bin-sem-cache-store:
+# we arbitrarily put seven days ago for now, see the logic in sem-cache-store-entry
+.PHONY: sem-cache-store-entry
+sem-cache-store-entry:
 	@stored_timestamp=$$(cache list | grep $(SEM_CACHE_KEY)_ | awk '{print $$1}' | awk -F_ '{print $$NF}' | sort -r | awk 'NR==1'); \
 	if [ -z "$$stored_timestamp" ]; then \
 		echo "Cache entry $(SEM_CACHE_KEY) does not exist in the cache, try to store it..."; \
