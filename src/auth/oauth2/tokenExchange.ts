@@ -255,10 +255,18 @@ export async function refreshTokens(
   config: OAuthConfig,
   refreshToken: string,
 ): Promise<TokenRefreshResponse> {
+  // Note: redirect_uri is required even for refresh token grants (matches sidecar behavior)
   const body = new URLSearchParams({
     grant_type: "refresh_token",
     client_id: config.clientId,
     refresh_token: refreshToken,
+    redirect_uri: config.redirectUri,
+  });
+
+  logger.debug("Refreshing tokens", {
+    tokenUri: config.tokenUri,
+    clientId: config.clientId,
+    hasRefreshToken: !!refreshToken,
   });
 
   const response = await fetch(config.tokenUri, {
@@ -271,6 +279,11 @@ export async function refreshTokens(
 
   if (!response.ok) {
     const errorBody = await parseErrorResponse(response);
+    logger.error("Token refresh failed", {
+      status: response.status,
+      error: errorBody?.error,
+      errorDescription: errorBody?.errorDescription,
+    });
     throw new TokenExchangeError(
       `Failed to refresh tokens: ${errorBody?.error ?? response.statusText}`,
       errorBody,
@@ -279,6 +292,12 @@ export async function refreshTokens(
   }
 
   const data = await response.json();
+  logger.debug("Token refresh successful", {
+    hasAccessToken: !!data.access_token,
+    hasRefreshToken: !!data.refresh_token,
+    hasIdToken: !!data.id_token,
+    expiresIn: data.expires_in,
+  });
 
   return {
     accessToken: data.access_token,
@@ -315,6 +334,14 @@ export async function performFullTokenExchange(
   // Step 1: Exchange authorization code for ID token and refresh token from Auth0
   const idTokenResponse = await exchangeCodeForIdToken(config, code, codeVerifier);
 
+  logger.debug("ID token exchange response", {
+    hasAccessToken: !!idTokenResponse.accessToken,
+    hasRefreshToken: !!idTokenResponse.refreshToken,
+    refreshTokenLength: idTokenResponse.refreshToken?.length ?? 0,
+    hasIdToken: !!idTokenResponse.idToken,
+    expiresIn: idTokenResponse.expiresIn,
+  });
+
   // Step 2: Exchange ID token for control plane token from CCloud
   const cpTokenResponse = await exchangeIdTokenForControlPlaneToken(
     config.ccloudBaseUri,
@@ -348,7 +375,23 @@ export async function performFullTokenExchange(
   }
 
   // Use refresh token from control plane response if provided (can be rotated)
-  const refreshToken = cpTokenResponse.refreshToken ?? idTokenResponse.refreshToken;
+  // Important: Use || instead of ?? because the control plane may return an empty string
+  // for refresh_token, which is falsy but not nullish, and we need to fall back to Auth0's token
+  const refreshToken = cpTokenResponse.refreshToken || idTokenResponse.refreshToken;
+
+  logger.debug("Final token set being returned", {
+    hasIdToken: !!idTokenResponse.idToken,
+    hasControlPlaneToken: !!cpTokenResponse.token,
+    hasDataPlaneToken: !!dataPlaneToken,
+    hasRefreshToken: !!refreshToken,
+    refreshTokenLength: refreshToken?.length ?? 0,
+    cpResponseHasRefreshToken: !!cpTokenResponse.refreshToken,
+    idResponseHasRefreshToken: !!idTokenResponse.refreshToken,
+  });
+
+  if (!refreshToken) {
+    logger.warn("No refresh token available after token exchange - session will not be refreshable");
+  }
 
   return {
     idToken: idTokenResponse.idToken,
@@ -359,6 +402,9 @@ export async function performFullTokenExchange(
     controlPlaneTokenExpiresAt: calculateTokenExpiry(TOKEN_LIFETIMES.CONTROL_PLANE_TOKEN, now),
     dataPlaneTokenExpiresAt,
     refreshTokenExpiresAt: calculateTokenExpiry(TOKEN_LIFETIMES.REFRESH_TOKEN_ABSOLUTE, now),
+    // Include user and organization info from control plane response
+    user: cpTokenResponse.user,
+    organization: cpTokenResponse.organization,
   };
 }
 
@@ -377,6 +423,21 @@ export async function performTokenRefresh(
   options?: ControlPlaneExchangeOptions & DataPlaneExchangeOptions,
 ): Promise<OAuthTokens> {
   const now = new Date();
+
+  // Debug: Log what tokens we have
+  logger.debug("performTokenRefresh called", {
+    hasIdToken: !!currentTokens.idToken,
+    hasControlPlaneToken: !!currentTokens.controlPlaneToken,
+    hasDataPlaneToken: !!currentTokens.dataPlaneToken,
+    hasRefreshToken: !!currentTokens.refreshToken,
+    refreshTokenLength: currentTokens.refreshToken?.length ?? 0,
+    idTokenExpiresAt: currentTokens.idTokenExpiresAt?.toISOString(),
+    refreshTokenExpiresAt: currentTokens.refreshTokenExpiresAt?.toISOString(),
+  });
+
+  if (!currentTokens.refreshToken) {
+    throw new TokenExchangeError("No refresh token available for token refresh");
+  }
 
   // Step 1: Refresh to get new ID token
   const refreshResponse = await refreshTokens(config, currentTokens.refreshToken);
@@ -418,6 +479,9 @@ export async function performTokenRefresh(
     dataPlaneTokenExpiresAt,
     // Keep original refresh token expiry - it's an absolute timeout
     refreshTokenExpiresAt: currentTokens.refreshTokenExpiresAt,
+    // Include user and organization info from control plane response
+    user: cpTokenResponse.user,
+    organization: cpTokenResponse.organization,
   };
 }
 

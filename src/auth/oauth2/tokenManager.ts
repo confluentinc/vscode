@@ -6,7 +6,7 @@
  */
 
 import * as vscode from "vscode";
-import type { OAuthTokens } from "./types";
+import type { AuthenticatedOrganization, AuthenticatedUser, OAuthTokens } from "./types";
 import { isTokenExpiring, getTimeUntilExpiry, OAUTH_CONSTANTS } from "./config";
 
 /**
@@ -27,6 +27,8 @@ interface SerializedTokens {
   controlPlaneTokenExpiresAt?: string;
   dataPlaneTokenExpiresAt?: string;
   refreshTokenExpiresAt: string;
+  user?: AuthenticatedUser;
+  organization?: AuthenticatedOrganization;
 }
 
 /**
@@ -274,6 +276,24 @@ export class TokenManager implements vscode.Disposable {
   }
 
   /**
+   * Gets the authenticated user info from stored tokens.
+   * @returns User info from control plane token exchange, or null if not available.
+   */
+  async getUser(): Promise<AuthenticatedUser | null> {
+    const tokens = await this.getTokens();
+    return tokens?.user ?? null;
+  }
+
+  /**
+   * Gets the authenticated organization info from stored tokens.
+   * @returns Organization info from control plane token exchange, or null if not available.
+   */
+  async getOrganization(): Promise<AuthenticatedOrganization | null> {
+    const tokens = await this.getTokens();
+    return tokens?.organization ?? null;
+  }
+
+  /**
    * Gets the status of all tokens.
    * @returns Detailed status of each token type.
    */
@@ -402,10 +422,22 @@ export class TokenManager implements vscode.Disposable {
 
     try {
       const serialized: SerializedTokens = JSON.parse(stored);
+
+      // Debug: Log what's in the serialized data (without exposing actual tokens)
+      console.log("[tokenManager.loadTokens] Loaded from storage:", {
+        hasIdToken: !!serialized.idToken,
+        hasControlPlaneToken: !!serialized.controlPlaneToken,
+        hasDataPlaneToken: !!serialized.dataPlaneToken,
+        hasRefreshToken: !!serialized.refreshToken,
+        refreshTokenLength: serialized.refreshToken?.length ?? 0,
+        keys: Object.keys(serialized),
+      });
+
       this.cachedTokens = this.deserializeTokens(serialized);
       return this.cachedTokens;
-    } catch {
+    } catch (error) {
       // Invalid stored data, clear it
+      console.error("[tokenManager.loadTokens] Failed to parse stored tokens:", error);
       await this.secretStorage.delete(TOKEN_STORAGE_KEY);
       return null;
     }
@@ -424,6 +456,8 @@ export class TokenManager implements vscode.Disposable {
       controlPlaneTokenExpiresAt: tokens.controlPlaneTokenExpiresAt?.toISOString(),
       dataPlaneTokenExpiresAt: tokens.dataPlaneTokenExpiresAt?.toISOString(),
       refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
+      user: tokens.user,
+      organization: tokens.organization,
     };
   }
 
@@ -444,6 +478,8 @@ export class TokenManager implements vscode.Disposable {
         ? new Date(serialized.dataPlaneTokenExpiresAt)
         : undefined,
       refreshTokenExpiresAt: new Date(serialized.refreshTokenExpiresAt),
+      user: serialized.user,
+      organization: serialized.organization,
     };
   }
 

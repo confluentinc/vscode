@@ -15,6 +15,7 @@ if (process.env.SENTRY_DSN) {
 import { handleNewOrUpdatedExtensionInstallation } from "./activation/compareVersions";
 import { AuthService } from "./auth/oauth2/authService";
 import { ConfluentCloudAuthProvider } from "./authn/ccloudProvider";
+import { createCCloudConnection } from "./authn/ccloudSession";
 import { getCCloudAuthSession } from "./authn/utils";
 import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
 import { PARTICIPANT_ID } from "./chat/constants";
@@ -54,7 +55,7 @@ import {
 import { ConnectedState } from "./connections/types";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
 import { activateMessageViewer } from "./consume";
-import { getExtensionContext, setExtensionContext } from "./context/extension";
+import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
 import { ContextValues, setContextValue } from "./context/values";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./diagnostics/constants";
@@ -199,11 +200,29 @@ async function _activateExtension(
   await Promise.all([setupStorage(), setupContextValues()]);
   logger.info("Storage and context values initialized");
 
+  // Initialize AuthService FIRST so it loads tokens from SecretStorage.
+  // This must happen before ConnectionManager because the CCloud handler checks
+  // AuthService.isAuthenticated() during initialization to restore session state.
+  const authService = AuthService.getInstance();
+  await authService.initialize(context);
+  logger.info("AuthService initialized");
+
   // Initialize the internal connection manager
+  // The CCloud handler will now see AuthService as authenticated if tokens exist.
   const connectionManager = ConnectionManager.getInstance();
   await connectionManager.initialize();
   context.subscriptions.push(connectionManager);
   logger.info("Connection manager initialized");
+
+  // Initialize DirectConnectionManager early so direct connections can be rehydrated before views
+  const directConnectionManager = DirectConnectionManager.getInstance();
+  context.subscriptions.push(directConnectionManager);
+
+  // Rehydrate all connections from secret storage so they're ready when views load.
+  // CCloud rehydration depends on AuthService being initialized.
+  // Direct connections rehydration depends on DirectConnectionManager being created.
+  await Promise.all([rehydrateCCloudConnection(), rehydrateConnections()]);
+  logger.info("Connections rehydrated");
 
   // Wire ConnectionManager events to existing emitters for backward compatibility
   context.subscriptions.push(
@@ -353,13 +372,6 @@ async function _activateExtension(
   EventListener.getInstance().start();
   // reset the Docker credentials secret so `src/docker/configs.ts` can pull it fresh
   void context.secrets.delete(SecretStorageKeys.DOCKER_CREDS_SECRET_KEY);
-
-  const directConnectionManager = DirectConnectionManager.getInstance();
-  context.subscriptions.push(directConnectionManager);
-
-  // Rehydrate direct connections from secret storage so they appear in the Resources view
-  // This must happen after DirectConnectionManager is created but before views start loading
-  await rehydrateConnections();
 
   // ensure our diagnostic collection(s) are cleared when the extension is deactivated
   context.subscriptions.push(JSON_DIAGNOSTIC_COLLECTION);
@@ -562,14 +574,11 @@ async function setupStorage(): Promise<void> {
  * the initial connection state context values, and attempt to get a session to trigger the initial
  * auth badge for signing in.
  * @returns A {@link vscode.Disposable} for the auth provider
+ *
+ * Note: AuthService initialization and CCloud rehydration are done earlier in _activateExtension()
+ * (before view providers are created) to ensure the CCloud connection is ready when views load.
  */
 async function setupAuthProvider(): Promise<vscode.Disposable[]> {
-  // Initialize the OAuth2 AuthService with VS Code context (for secret storage)
-  // This must happen before the auth provider is used so PKCE state can be persisted
-  const context = getExtensionContext();
-  const authService = AuthService.getInstance();
-  await authService.initialize(context);
-
   const provider = ConfluentCloudAuthProvider.getInstance();
   const providerDisposable = vscode.authentication.registerAuthenticationProvider(
     AUTH_PROVIDER_ID,
@@ -586,8 +595,9 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   //  discover a local Kafka cluster
   // - localSchemaRegistryAvailable: `true/false` if the Resources view loads/refreshes and we can
   //  discover a local Schema Registry
+  // NOTE: Don't reset ccloudConnectionAvailable here - it may have already been set to true
+  // during CCloud rehydration earlier in activation. Only set local resource values.
   await Promise.all([
-    setContextValue(ContextValues.ccloudConnectionAvailable, false),
     setContextValue(ContextValues.localKafkaClusterAvailable, false),
     setContextValue(ContextValues.localSchemaRegistryAvailable, false),
   ]);
@@ -661,5 +671,30 @@ export async function rehydrateConnections(): Promise<void> {
     logger.info("Rehydrated direct connections from storage");
   } catch (error) {
     logger.error("Failed to rehydrate direct connections", { error });
+  }
+}
+
+/**
+ * Rehydrate the CCloud connection if we have valid tokens from a previous session.
+ *
+ * This creates the CCloud connection in ConnectionManager so that getCCloudConnection()
+ * returns a valid connection. The CCloudConnectionHandler will initialize its status
+ * from the existing AuthService state (which has already loaded tokens from SecretStorage).
+ */
+async function rehydrateCCloudConnection(): Promise<void> {
+  const authService = AuthService.getInstance();
+
+  // Only rehydrate if we have valid tokens from a previous session
+  if (!authService.isAuthenticated()) {
+    logger.debug("No existing CCloud auth session to rehydrate");
+    return;
+  }
+
+  try {
+    // Create the CCloud connection - the handler will initialize from existing auth state
+    await createCCloudConnection();
+    logger.info("Rehydrated CCloud connection from stored tokens");
+  } catch (error) {
+    logger.error("Failed to rehydrate CCloud connection", { error });
   }
 }

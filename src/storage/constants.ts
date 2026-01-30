@@ -52,22 +52,11 @@ export enum UriMetadataKeys {
 }
 
 export enum SecretStorageKeys {
-  /**
-   * Indicate the outcome of the last CCloud authentication attempt.
-   * Used by the `ConfluentCloudAuthProvider` to resolve promises that are waiting for the user's
-   * browser-based authentication flow to complete after handling a URI callback.
-   */
-  AUTH_COMPLETED = "authCompleted",
-
-  /** The user recently reset their password and needs to reauthenticate. */
-  AUTH_PASSWORD_RESET = "authPasswordReset",
-
-  /** Only used as a way to kick off cross-workspace events for the authentication provider. Only
-   * ever set to "true" or deleted. */
-  AUTH_SESSION_EXISTS = "authSessionExists",
-
   /** Store the latest CCloud connected state. */
   CCLOUD_STATE = "ccloudState",
+
+  /** Store the CCloud session info (user id, username) for rehydration at activation. */
+  CCLOUD_SESSION = "ccloudSession",
 
   /** A map of connection id:ConnectionSpec */
   DIRECT_CONNECTIONS = "directConnections",

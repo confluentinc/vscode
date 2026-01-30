@@ -9,8 +9,9 @@ import { AuthService } from "../auth/oauth2/authService";
 import { ConnectionManager } from "../connections/connectionManager";
 import { ConnectedState, type Connection, type ConnectionId } from "../connections/types";
 import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../constants";
-import { ContextValues, getContextValue } from "../context/values";
+import { ContextValues, getContextValue, setContextValue } from "../context/values";
 import {
+  ccloudConnected,
   flinkDatabaseViewResourceChanged,
   schemasViewResourceChanged,
   topicsViewResourceChanged,
@@ -53,6 +54,12 @@ export async function getCCloudConnection(): Promise<Connection | null> {
 
   if (!handler) {
     return null;
+  }
+
+  // Wait for handler initialization to complete (important on extension restart
+  // when handler is created with existing tokens but needs to initialize status)
+  if ("initialized" in handler && handler.initialized instanceof Promise) {
+    await handler.initialized;
   }
 
   // Get sign-in URI from AuthService (will reuse existing PKCE state if valid)
@@ -111,11 +118,25 @@ export async function createCCloudConnection(): Promise<Connection> {
     handler = await manager.createConnection(CCLOUD_CONNECTION_SPEC);
   }
 
+  // Wait for handler initialization to complete (important on extension restart
+  // when handler is created with existing tokens but needs to initialize status)
+  if ("initialized" in handler && handler.initialized instanceof Promise) {
+    await handler.initialized;
+  }
+
   // Get sign-in URI from AuthService (generates new PKCE state if needed)
   const authService = AuthService.getInstance();
   const signInUri = await authService.getOrCreateSignInUri();
 
   const status = await handler.getStatus();
+
+  // If the connection is now authenticated, set the context value and fire the connected event.
+  // This ensures the UI reflects the connection state after rehydration.
+  if (status.ccloud?.state === ConnectedState.SUCCESS) {
+    await setContextValue(ContextValues.ccloudConnectionAvailable, true);
+    ccloudConnected.fire(true);
+  }
+
   return {
     spec: handler.spec,
     status,

@@ -1,6 +1,5 @@
 import { Mutex } from "async-mutex";
 import type { SecretStorage, Uri } from "vscode";
-import type { AuthCallbackEvent } from "../authn/types";
 import type { ConnectionSpec } from "../connections";
 import { ConnectedState, connectionSpecFromJSON, connectionSpecToJSON } from "../connections";
 import { getExtensionContext } from "../context/extension";
@@ -44,6 +43,14 @@ export interface CustomConnectionSpec extends ConnectionSpec {
   formConnectionType: FormConnectionType;
   /** If the formConnectionType is "Other" we prompt users to specify the type */
   specifiedConnectionType?: string;
+}
+
+/** CCloud session info stored in SecretStorage for rehydration at activation. */
+export interface CCloudSessionInfo {
+  /** CCloud user ID */
+  userId: string;
+  /** CCloud username (email) */
+  username: string;
 }
 
 /** Map of {@link ConnectionId} to {@link CustomConnectionSpec}; only used for `DIRECT` connections. */
@@ -702,34 +709,6 @@ export class ResourceManager {
 
   // AUTH PROVIDER
 
-  /**
-   * Set the secret key to indicate that the CCloud auth flow has completed successfully.
-   *
-   * This also sets the `AUTH_PASSWORD_RESET` key to indicate whether the user has reset their
-   * password recently, since we will know both the success state and the reset state at the same time.
-   */
-  async setAuthFlowCompleted(authCallback: AuthCallbackEvent): Promise<void> {
-    await Promise.all([
-      this.secrets.store(SecretStorageKeys.AUTH_COMPLETED, String(authCallback.success)),
-      this.secrets.store(SecretStorageKeys.AUTH_PASSWORD_RESET, String(authCallback.resetPassword)),
-    ]);
-  }
-
-  /**
-   * Get the secret key that indicates whether the CCloud auth flow has completed successfully.
-   * @returns `true` if the auth flow completed successfully; `false` otherwise
-   */
-  async getAuthFlowCompleted(): Promise<boolean> {
-    const success: string | undefined = await this.secrets.get(SecretStorageKeys.AUTH_COMPLETED);
-    return success === "true";
-  }
-
-  /** Get the flag indicating whether or not the user has reset their password recently. */
-  async getAuthFlowPasswordReset(): Promise<boolean> {
-    const reset: string | undefined = await this.secrets.get(SecretStorageKeys.AUTH_PASSWORD_RESET);
-    return reset === "true";
-  }
-
   /** Store the latest CCloud {@link ConnectedState}. */
   async setCCloudState(state: ConnectedState): Promise<void> {
     await this.secrets.store(SecretStorageKeys.CCLOUD_STATE, String(state));
@@ -749,6 +728,39 @@ export class ResourceManager {
       return ConnectedState.NONE;
     }
     return storedState as ConnectedState;
+  }
+
+  /**
+   * Store CCloud session info for rehydration at extension activation.
+   * This enables the extension to restore the authenticated session without
+   * requiring the user to sign in again.
+   */
+  async setCCloudSession(session: CCloudSessionInfo | null): Promise<void> {
+    if (session === null) {
+      await this.secrets.delete(SecretStorageKeys.CCLOUD_SESSION);
+    } else {
+      await this.secrets.store(SecretStorageKeys.CCLOUD_SESSION, JSON.stringify(session));
+    }
+  }
+
+  /**
+   * Get stored CCloud session info for rehydration.
+   * @returns The stored session info, or null if not available.
+   */
+  async getCCloudSession(): Promise<CCloudSessionInfo | null> {
+    const storedSession: string | undefined = await this.secrets.get(
+      SecretStorageKeys.CCLOUD_SESSION,
+    );
+    if (!storedSession) {
+      return null;
+    }
+    try {
+      return JSON.parse(storedSession) as CCloudSessionInfo;
+    } catch (error) {
+      logger.warn("Failed to parse stored CCloud session, clearing it", error);
+      await this.secrets.delete(SecretStorageKeys.CCLOUD_SESSION);
+      return null;
+    }
   }
 
   // DIRECT CONNECTIONS - entirely handled through SecretStorage

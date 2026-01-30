@@ -8,12 +8,15 @@
 
 import * as vscode from "vscode";
 import type { OAuthCallbackResult, OAuthConfig, OAuthFlowState, OAuthTokens } from "./types";
-import { CCloudEnvironment, getOAuthConfig, OAUTH_CONSTANTS } from "./config";
+import { CCloudEnvironment, getOAuthConfig, isTokenExpiring, OAUTH_CONSTANTS } from "./config";
 import { validateState } from "./pkce";
 import { PKCEStateManager } from "./pkceStateManager";
 import { TokenManager } from "./tokenManager";
 import { performFullTokenExchange, performTokenRefresh, TokenExchangeError } from "./tokenExchange";
 import { OAuthCallbackServer } from "./callbackServer";
+import { Logger } from "../../logging";
+
+const logger = new Logger("auth.authService");
 
 /**
  * Authentication state for the service.
@@ -113,7 +116,25 @@ export class AuthService implements vscode.Disposable {
         this._onSessionExpired.fire();
       }),
     );
+
+    // Listen for token expiring events to proactively refresh tokens
+    // This mirrors the sidecar's behavior of refreshing tokens before they expire
+    this.disposables.push(
+      this.tokenManager.onTokenExpiring(({ tokenType, expiresAt }) => {
+        logger.debug("Token expiring soon, triggering proactive refresh", {
+          tokenType,
+          expiresAt: expiresAt.toISOString(),
+        });
+        // Only refresh if we're authenticated (not during auth flow or already expired)
+        if (this.state === AuthState.AUTHENTICATED) {
+          void this.proactiveTokenRefresh();
+        }
+      }),
+    );
   }
+
+  /** Flag to prevent concurrent refresh attempts. */
+  private isRefreshing = false;
 
   /**
    * Gets the singleton instance of AuthService.
@@ -155,11 +176,170 @@ export class AuthService implements vscode.Disposable {
     if (existingTokens) {
       const isValid = await this.tokenManager.isSessionValid();
       if (isValid) {
-        this.setState(AuthState.AUTHENTICATED);
+        // Session is valid (refresh token not expired), but control/data plane tokens
+        // may be expired since they only last 5 minutes. Check and refresh if needed.
+        const refreshSucceeded = await this.refreshExpiredTokensIfNeeded(existingTokens);
+        if (refreshSucceeded) {
+          this.setState(AuthState.AUTHENTICATED);
+        }
+        // If refresh failed due to server-side invalidation, handleSessionInvalidation
+        // already set the state to EXPIRED
       } else {
-        this.setState(AuthState.EXPIRED);
+        // Refresh token expired locally - clear tokens and mark as expired
+        await this.handleSessionInvalidation("Refresh token expired");
       }
     }
+  }
+
+  /**
+   * Refreshes control plane and data plane tokens if they are expired.
+   * This is called during initialization when we have valid session (refresh token)
+   * but the short-lived CP/DP tokens have expired.
+   *
+   * @param tokens Current tokens from storage.
+   * @returns true if refresh succeeded or wasn't needed, false if session is invalid.
+   */
+  private async refreshExpiredTokensIfNeeded(tokens: OAuthTokens): Promise<boolean> {
+    // Check if refresh token is present FIRST - if missing, session is fundamentally invalid
+    // regardless of whether the short-lived tokens are still valid
+    if (!tokens.refreshToken) {
+      logger.warn("No refresh token available during initialization, clearing invalid tokens");
+      await this.handleSessionInvalidation("No refresh token available");
+      return false;
+    }
+
+    const needsRefresh =
+      !tokens.controlPlaneToken ||
+      !tokens.controlPlaneTokenExpiresAt ||
+      isTokenExpiring(tokens.controlPlaneTokenExpiresAt);
+
+    if (!needsRefresh) {
+      logger.debug("Control plane token is still valid, no refresh needed");
+      return true;
+    }
+
+    logger.debug("Control plane token expired or missing, refreshing tokens");
+
+    try {
+      const config = getOAuthConfig(this.environment);
+      const newTokens = await performTokenRefresh(config, tokens);
+      await this.tokenManager.storeTokens(newTokens);
+      logger.info("Successfully refreshed expired tokens during initialization");
+      return true;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const oauthError = error instanceof TokenExchangeError ? error.oauthError?.error : undefined;
+
+      logger.warn("Failed to refresh tokens during initialization", {
+        error: errorMessage,
+        oauthError,
+      });
+
+      // Check if this is a server-side session invalidation
+      if (oauthError === "invalid_grant" || oauthError === "invalid_token") {
+        logger.info(
+          "Server-side session invalidation detected during initialization, clearing tokens",
+        );
+        await this.handleSessionInvalidation(`Session invalidated by server: ${oauthError}`);
+        return false;
+      }
+
+      // For other errors (network issues, etc.), don't clear tokens
+      // The user can retry or the proactive refresh will handle it
+      return true;
+    }
+  }
+
+  /**
+   * Proactively refreshes tokens when they are about to expire.
+   * This is called by the onTokenExpiring event listener and mirrors
+   * the sidecar's behavior of refreshing tokens before they expire.
+   */
+  private async proactiveTokenRefresh(): Promise<void> {
+    // Prevent concurrent refresh attempts
+    if (this.isRefreshing) {
+      logger.debug("Token refresh already in progress, skipping");
+      return;
+    }
+
+    // Check if we've exceeded max refresh attempts
+    if (this.tokenManager.hasExceededMaxRefreshAttempts()) {
+      logger.warn("Maximum refresh attempts exceeded, marking session as expired");
+      await this.handleSessionInvalidation("Maximum refresh attempts exceeded");
+      return;
+    }
+
+    this.isRefreshing = true;
+
+    try {
+      const currentTokens = await this.tokenManager.getTokens();
+      if (!currentTokens) {
+        logger.debug("No tokens to refresh");
+        return;
+      }
+
+      // Check if refresh token is present - if missing, session cannot be refreshed
+      if (!currentTokens.refreshToken) {
+        logger.warn("No refresh token available, session cannot be refreshed");
+        await this.handleSessionInvalidation("No refresh token available");
+        return;
+      }
+
+      // Check if session is still valid (refresh token not expired locally)
+      const isValid = await this.tokenManager.isSessionValid();
+      if (!isValid) {
+        logger.info("Session expired (refresh token invalid), marking as expired");
+        await this.handleSessionInvalidation("Refresh token expired");
+        return;
+      }
+
+      logger.debug("Proactively refreshing tokens");
+      this.tokenManager.incrementRefreshAttempts();
+
+      const config = getOAuthConfig(this.environment);
+      const newTokens = await performTokenRefresh(config, currentTokens);
+      await this.tokenManager.storeTokens(newTokens);
+
+      // Reset refresh attempts on success
+      this.tokenManager.resetRefreshAttempts();
+      logger.info("Successfully refreshed tokens proactively");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const oauthError = error instanceof TokenExchangeError ? error.oauthError?.error : undefined;
+
+      logger.warn("Proactive token refresh failed", {
+        error: errorMessage,
+        oauthError,
+        attempts: this.tokenManager.getRefreshAttempts(),
+      });
+
+      // Check if this is a server-side session invalidation
+      // invalid_grant means the refresh token is no longer valid (user signed out elsewhere, etc.)
+      // invalid_token means the token itself is invalid
+      if (oauthError === "invalid_grant" || oauthError === "invalid_token") {
+        logger.info(
+          "Server-side session invalidation detected, clearing tokens and marking as expired",
+        );
+        await this.handleSessionInvalidation(`Session invalidated by server: ${oauthError}`);
+      }
+      // For other errors, don't mark as expired - the scheduled check will retry
+    } finally {
+      this.isRefreshing = false;
+    }
+  }
+
+  /**
+   * Handles session invalidation by clearing tokens and updating state.
+   * Called when we detect that the session is no longer valid (server-side invalidation,
+   * missing refresh token, or max attempts exceeded).
+   *
+   * @param reason The reason for invalidation (for logging).
+   */
+  private async handleSessionInvalidation(reason: string): Promise<void> {
+    logger.info("Handling session invalidation", { reason });
+    await this.tokenManager.clearTokens();
+    this.setState(AuthState.EXPIRED);
+    this._onSessionExpired.fire();
   }
 
   /**

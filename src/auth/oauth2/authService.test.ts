@@ -340,10 +340,16 @@ describe("auth/oauth2/authService", function () {
       authService = AuthService.getInstance();
       await authService.initialize(mockContext);
 
-      const result = await authService.refreshTokens();
+      // With expired refresh token, initialization should:
+      // 1. Detect the expired session
+      // 2. Clear the invalid tokens
+      // 3. Set state to EXPIRED
+      assert.strictEqual(authService.getState(), AuthState.EXPIRED);
 
+      // Tokens should be cleared during initialization
+      const result = await authService.refreshTokens();
       assert.strictEqual(result.success, false);
-      assert.ok(result.error?.includes("expired"));
+      assert.ok(result.error?.includes("No tokens"));
     });
   });
 

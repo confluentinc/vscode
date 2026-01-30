@@ -6,6 +6,11 @@
  */
 
 import type { Disposable } from "vscode";
+import { AuthService, type AuthResult } from "../../auth/oauth2/authService";
+import { TokenManager } from "../../auth/oauth2/tokenManager";
+import { ContextValues, setContextValue } from "../../context/values";
+import { ccloudConnected } from "../../emitters";
+import { Logger } from "../../logging";
 import type { ConnectionSpec } from "../spec";
 import {
   ConnectedState,
@@ -14,8 +19,6 @@ import {
   type ConnectionStatus,
 } from "../types";
 import { ConnectionHandler, type ConnectionTestResult } from "./connectionHandler";
-import { AuthService, type AuthResult } from "../../auth/oauth2/authService";
-import { TokenManager } from "../../auth/oauth2/tokenManager";
 
 /** Maximum session lifetime in seconds (8 hours). */
 const MAX_SESSION_LIFETIME_SECONDS = 28800;
@@ -53,12 +56,69 @@ export class CCloudConnectionHandler extends ConnectionHandler {
   private _authServiceSubscriptions: Disposable[] = [];
 
   /**
+   * Promise that resolves when the handler has finished initializing from
+   * existing auth state. Callers should await this before checking status
+   * if they need accurate state immediately after construction.
+   */
+  readonly initialized: Promise<void>;
+
+  /**
    * Creates a new CCloud connection handler.
    * @param spec The connection specification with optional ccloud config.
    */
   constructor(spec: ConnectionSpec) {
     super(spec);
     this.subscribeToAuthServiceEvents();
+    // Initialize from existing auth state (handles extension restart with valid tokens)
+    // Store the promise so callers can await it if needed
+    this.initialized = this.initializeFromExistingAuth();
+  }
+
+  /**
+   * Initializes the handler from existing auth state if available.
+   * This handles the case where the extension restarts with valid tokens stored.
+   * Since onAuthenticated only fires when auth *completes*, we need to check
+   * for existing auth state at construction time.
+   */
+  private async initializeFromExistingAuth(): Promise<void> {
+    const logger = new Logger("ccloudConnectionHandler");
+    const authService = AuthService.getInstance();
+
+    // Only initialize if AuthService reports authenticated state
+    const isAuthenticated = authService.isAuthenticated();
+    if (!isAuthenticated) {
+      logger.debug("initializeFromExistingAuth: AuthService not authenticated, skipping", {
+        authState: authService.getState(),
+      });
+      return;
+    }
+
+    // Get user info from tokens
+    const user = await this.getUserFromTokens();
+    if (!user) {
+      logger.debug("initializeFromExistingAuth: Failed to get user from tokens");
+      return;
+    }
+
+    logger.debug("initializeFromExistingAuth: Setting status to SUCCESS", {
+      username: user.username,
+    });
+
+    // Initialize status from existing tokens
+    this._ccloudStatus = {
+      state: ConnectedState.SUCCESS,
+      user,
+    };
+    this._requiresAuthenticationAt = await this.getSessionExpiryFromTokens();
+    this._refreshAttempts = 0;
+    this._connected = true;
+    this.updateStatus({ ccloud: this._ccloudStatus });
+
+    // Set context value and fire connected event so the UI updates
+    // This is necessary because onAuthenticated only fires when auth *completes*,
+    // not when we rehydrate from existing tokens
+    await setContextValue(ContextValues.ccloudConnectionAvailable, true);
+    ccloudConnected.fire(true);
   }
 
   /**
@@ -403,13 +463,31 @@ export class CCloudConnectionHandler extends ConnectionHandler {
 
   /**
    * Gets user information from the stored tokens.
-   * Decodes the ID token to extract user claims.
+   * Uses the user info from the control plane token exchange response,
+   * which contains the correct CCloud user ID (e.g., u-abc123).
    */
   private async getUserFromTokens(): Promise<CCloudUser | undefined> {
     const tokenManager = TokenManager.getInstance();
     const tokens = await tokenManager.getTokens();
 
-    if (!tokens?.idToken) {
+    if (!tokens) {
+      return undefined;
+    }
+
+    // Prefer user info from control plane token exchange (has correct resource_id)
+    if (tokens.user) {
+      return {
+        id: tokens.user.id,
+        username: tokens.user.email,
+        firstName: tokens.user.firstName,
+        lastName: tokens.user.lastName,
+        socialConnection: tokens.user.socialConnection,
+        authType: tokens.user.authType,
+      };
+    }
+
+    // Fallback to decoding ID token if user info not stored (legacy tokens)
+    if (!tokens.idToken) {
       return undefined;
     }
 

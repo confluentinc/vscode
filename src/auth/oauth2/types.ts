@@ -36,6 +36,12 @@ export interface OAuthTokens {
 
   /** Absolute timestamp when refresh token expires (8 hours from initial auth). */
   refreshTokenExpiresAt: Date;
+
+  /** Authenticated user info from control plane token exchange. */
+  user?: AuthenticatedUser;
+
+  /** Authenticated organization info from control plane token exchange. */
+  organization?: AuthenticatedOrganization;
 }
 
 /**

@@ -16,11 +16,11 @@ import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type { Connection } from "../connections";
 import { ConnectedState, ConnectionFromJSON } from "../connections";
 import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_BASE_PATH } from "../constants";
-import { ccloudAuthCallback, ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
+import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
 import * as errors from "../errors";
 import * as notifications from "../notifications";
 import { SecretStorageKeys } from "../storage/constants";
-import type { ResourceManager } from "../storage/resourceManager";
+import type { CCloudSessionInfo, ResourceManager } from "../storage/resourceManager";
 import { clearWorkspaceState } from "../storage/utils";
 import { ConfluentCloudAuthProvider } from "./ccloudProvider";
 import * as ccloud from "./ccloudSession";
@@ -140,6 +140,19 @@ describe("authn/ccloudProvider.ts", () => {
           stubbedResourceManager.setCCloudState,
           TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.state,
         );
+      });
+
+      it("should store session info on successful authentication", async () => {
+        getCCloudConnectionStub.resolves(TEST_CCLOUD_CONNECTION);
+        // authentication completes successfully
+        browserAuthFlowStub.resolves({ success: true, resetPassword: false });
+
+        await authProvider.createSession();
+
+        sinon.assert.calledWith(stubbedResourceManager.setCCloudSession, {
+          userId: TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.user!.id,
+          username: TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.user!.username,
+        });
       });
 
       it("should throw a CCloudConnectionError if no sign-in URI is available", async () => {
@@ -308,21 +321,9 @@ describe("authn/ccloudProvider.ts", () => {
     });
 
     describe("getSessions()", () => {
-      let handleSessionRemovedStub: sinon.SinonStub;
-      let convertToAuthSessionStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        handleSessionRemovedStub = sandbox.stub().resolves();
-        authProvider["handleSessionRemoved"] = handleSessionRemovedStub;
-
-        // return a valid auth session by default
-        convertToAuthSessionStub = sandbox
-          .stub(authProvider, "convertToAuthSession")
-          .returns(TEST_CCLOUD_AUTH_SESSION);
-      });
-
       it(`should treat connections with a ${ConnectedState.NONE}/${ConnectedState.FAILED} state as nonexistent`, async () => {
         getCCloudConnectionStub.resolves(TEST_CCLOUD_CONNECTION);
+        stubbedResourceManager.getCCloudSession.resolves(null);
 
         const sessions = await authProvider.getSessions();
 
@@ -331,6 +332,7 @@ describe("authn/ccloudProvider.ts", () => {
 
       it("should return an empty array when no connection exists", async () => {
         getCCloudConnectionStub.resolves(null);
+        stubbedResourceManager.getCCloudSession.resolves(null);
 
         const sessions = await authProvider.getSessions();
 
@@ -339,6 +341,10 @@ describe("authn/ccloudProvider.ts", () => {
 
       it("should return an AuthenticationSession when a valid connection exists", async () => {
         getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+        stubbedResourceManager.getCCloudSession.resolves({
+          userId: TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.user!.id,
+          username: TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.user!.username,
+        });
 
         const sessions = await authProvider.getSessions();
 
@@ -346,7 +352,36 @@ describe("authn/ccloudProvider.ts", () => {
         assert.deepStrictEqual(sessions[0], TEST_CCLOUD_AUTH_SESSION);
       });
 
-      it("should handle missing 'user' info when trying to convert an authenticated Connection to a VS Code AuthenticationSession", async () => {
+      it("should clear stale stored session when no connection exists", async () => {
+        getCCloudConnectionStub.resolves(null);
+        stubbedResourceManager.getCCloudSession.resolves({
+          userId: "some-user-id",
+          username: "some-username",
+        });
+
+        const sessions = await authProvider.getSessions();
+
+        assert.deepStrictEqual(sessions, []);
+        sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudSession, null);
+        sinon.assert.calledOnce(clearCurrentCCloudResourcesStub);
+      });
+
+      it("should update stored session when connection differs from stored", async () => {
+        getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+        stubbedResourceManager.getCCloudSession.resolves({
+          userId: "different-user-id",
+          username: "different-username",
+        });
+
+        await authProvider.getSessions();
+
+        sinon.assert.calledWith(stubbedResourceManager.setCCloudSession, {
+          userId: TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.user!.id,
+          username: TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.user!.username,
+        });
+      });
+
+      it("should handle missing 'user' info when connection exists", async () => {
         const badConnection = ConnectionFromJSON({
           ...TEST_AUTHENTICATED_CCLOUD_CONNECTION,
           status: {
@@ -358,23 +393,15 @@ describe("authn/ccloudProvider.ts", () => {
           },
         } satisfies Connection);
         getCCloudConnectionStub.resolves(badConnection);
-        const conversionError = new Error("Connection has no CCloud user.");
-        convertToAuthSessionStub.throws(conversionError);
+        stubbedResourceManager.getCCloudSession.resolves(null);
 
         const sessions = await authProvider.getSessions();
 
         assert.deepStrictEqual(sessions, []);
-        sinon.assert.calledOnceWithExactly(handleSessionRemovedStub, true);
-        sinon.assert.calledOnceWithExactly(
-          createAndLogConnectionErrorStub,
-          `Failed to convert existing CCloud connection to auth session: ${conversionError}`,
-          badConnection,
-        );
+        sinon.assert.calledOnce(createAndLogConnectionErrorStub);
       });
 
-      it("should handle missing user ID/username when trying to convert an authenticated Connection to a VS Code AuthenticationSession", async () => {
-        // Use type assertion to simulate a malformed connection that bypasses type checking
-        // (This can happen at runtime if the data comes from an external source)
+      it("should handle missing user ID/username when connection exists", async () => {
         const badConnection = ConnectionFromJSON({
           ...TEST_AUTHENTICATED_CCLOUD_CONNECTION,
           status: {
@@ -389,18 +416,12 @@ describe("authn/ccloudProvider.ts", () => {
           },
         } satisfies Connection);
         getCCloudConnectionStub.resolves(badConnection);
-        const conversionError = new Error("Connection has CCloud user with no id or username.");
-        convertToAuthSessionStub.throws(conversionError);
+        stubbedResourceManager.getCCloudSession.resolves(null);
 
         const sessions = await authProvider.getSessions();
 
         assert.deepStrictEqual(sessions, []);
-        sinon.assert.calledOnceWithExactly(handleSessionRemovedStub, true);
-        sinon.assert.calledOnceWithExactly(
-          createAndLogConnectionErrorStub,
-          `Failed to convert existing CCloud connection to auth session: ${conversionError}`,
-          badConnection,
-        );
+        sinon.assert.calledOnce(createAndLogConnectionErrorStub);
       });
     });
 
@@ -412,9 +433,12 @@ describe("authn/ccloudProvider.ts", () => {
       });
 
       it("should delete an existing connection and the connected state secret", async () => {
-        const handleSessionRemovedStub = sandbox.stub().resolves();
-        authProvider["handleSessionRemoved"] = handleSessionRemovedStub;
         getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+        const storedSession: CCloudSessionInfo = {
+          userId: TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.user!.id,
+          username: TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.user!.username,
+        };
+        stubbedResourceManager.getCCloudSession.resolves(storedSession);
         const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
 
         await authProvider.removeSession("sessionId");
@@ -424,139 +448,32 @@ describe("authn/ccloudProvider.ts", () => {
           stubbedSecretStorage.delete,
           SecretStorageKeys.CCLOUD_STATE,
         );
-        sinon.assert.calledOnceWithExactly(handleSessionRemovedStub, true);
+        sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudSession, null);
       });
 
-      it("should only update the provider's internal state when no connection exists", async () => {
-        const handleSessionRemovedStub = sandbox.stub().resolves();
-        authProvider["handleSessionRemoved"] = handleSessionRemovedStub;
+      it("should only clear stored session when no connection exists but stored session exists", async () => {
         getCCloudConnectionStub.resolves(null);
+        const storedSession: CCloudSessionInfo = {
+          userId: "some-user-id",
+          username: "some-username",
+        };
+        stubbedResourceManager.getCCloudSession.resolves(storedSession);
 
-        authProvider["_session"] = null;
         await authProvider.removeSession("sessionId");
 
         sinon.assert.notCalled(deleteCCloudConnectionStub);
-        sinon.assert.notCalled(handleSessionRemovedStub);
+        sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudSession, null);
       });
 
-      it("should only update the provider's internal state when no connection exists but the provider is still tracking a session internally", async () => {
-        const handleSessionRemovedStub = sandbox.stub().resolves();
-        authProvider["handleSessionRemoved"] = handleSessionRemovedStub;
+      it("should do nothing when no connection and no stored session exists", async () => {
         getCCloudConnectionStub.resolves(null);
+        stubbedResourceManager.getCCloudSession.resolves(null);
 
-        authProvider["_session"] = TEST_CCLOUD_AUTH_SESSION;
         await authProvider.removeSession("sessionId");
 
         sinon.assert.notCalled(deleteCCloudConnectionStub);
-        sinon.assert.calledOnceWithExactly(handleSessionRemovedStub, true);
+        sinon.assert.notCalled(stubbedResourceManager.setCCloudSession);
       });
-    });
-
-    describe("handleSessionCreated()", () => {
-      let stubOnDidChangeSessions: sinon.SinonStubbedInstance<
-        vscode.EventEmitter<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>
-      >;
-
-      beforeEach(() => {
-        stubOnDidChangeSessions = sandbox.createStubInstance(vscode.EventEmitter);
-        authProvider["_onDidChangeSessions"] = stubOnDidChangeSessions;
-      });
-
-      it("should update the provider's internal state, fire the _onDidChangeSessions event.", async () => {
-        const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
-
-        await authProvider["handleSessionCreated"](TEST_CCLOUD_AUTH_SESSION, true);
-
-        assert.strictEqual(authProvider["_session"], TEST_CCLOUD_AUTH_SESSION);
-        sinon.assert.calledWith(
-          stubbedSecretStorage.store,
-          SecretStorageKeys.AUTH_SESSION_EXISTS,
-          "true",
-        );
-        sinon.assert.called(stubOnDidChangeSessions.fire);
-        sinon.assert.calledWith(stubOnDidChangeSessions.fire, {
-          added: [TEST_CCLOUD_AUTH_SESSION],
-          removed: [],
-          changed: [],
-        });
-      });
-    });
-
-    describe("handleSessionRemoved()", () => {
-      let stubOnDidChangeSessions: sinon.SinonStubbedInstance<
-        vscode.EventEmitter<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>
-      >;
-
-      beforeEach(() => {
-        stubOnDidChangeSessions = sandbox.createStubInstance(vscode.EventEmitter);
-        authProvider["_onDidChangeSessions"] = stubOnDidChangeSessions;
-      });
-
-      it("should update the provider's internal state, fire the _onDidChangeSessions event.", async () => {
-        const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
-
-        authProvider["_session"] = TEST_CCLOUD_AUTH_SESSION;
-        await authProvider["handleSessionRemoved"](true);
-
-        assert.strictEqual(authProvider["_session"], null);
-        sinon.assert.calledOnce(clearCurrentCCloudResourcesStub);
-        sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.AUTH_SESSION_EXISTS);
-        sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.AUTH_COMPLETED);
-        sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.AUTH_PASSWORD_RESET);
-        sinon.assert.called(stubOnDidChangeSessions.fire);
-        sinon.assert.calledWith(stubOnDidChangeSessions.fire, {
-          added: [],
-          removed: [TEST_CCLOUD_AUTH_SESSION],
-          changed: [],
-        });
-      });
-    });
-
-    describe("handleSessionSecretChange()", () => {
-      let handleSessionCreatedStub: sinon.SinonStub;
-      let handleSessionRemovedStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        handleSessionCreatedStub = sandbox.stub().resolves();
-        authProvider["handleSessionCreated"] = handleSessionCreatedStub;
-        handleSessionRemovedStub = sandbox.stub().resolves();
-        authProvider["handleSessionRemoved"] = handleSessionRemovedStub;
-      });
-
-      it("should call handleSessionCreated() when a session is available", async () => {
-        sandbox.stub(vscode.authentication, "getSession").resolves(TEST_CCLOUD_AUTH_SESSION);
-
-        await authProvider["handleSessionSecretChange"]();
-
-        sinon.assert.calledOnceWithExactly(handleSessionCreatedStub, TEST_CCLOUD_AUTH_SESSION);
-        sinon.assert.notCalled(handleSessionRemovedStub);
-      });
-
-      it("should call handleSessionRemoved() when no session is available", async () => {
-        sandbox.stub(vscode.authentication, "getSession").resolves(undefined);
-
-        authProvider["_session"] = TEST_CCLOUD_AUTH_SESSION;
-        await authProvider["handleSessionSecretChange"]();
-
-        sinon.assert.notCalled(handleSessionCreatedStub);
-        sinon.assert.calledOnce(handleSessionRemovedStub);
-      });
-    });
-
-    describe("waitForUriHandling()", () => {
-      for (const success of [true, false] as const) {
-        it(`should return '${success}' when the URI query contains 'success=${success}'`, async () => {
-          const promise: Promise<AuthCallbackEvent> = authProvider.waitForUriHandling();
-          const uri = vscode.Uri.parse(CCLOUD_AUTH_CALLBACK_URI).with({
-            query: `success=${success}`,
-          });
-          ccloudAuthCallback.fire(uri);
-          authProvider["_onAuthFlowCompletedSuccessfully"].fire({ success, resetPassword: false });
-          const result: AuthCallbackEvent = await promise;
-
-          assert.strictEqual(result.success, success);
-        });
-      }
     });
 
     describe("handleCCloudAuthCallback()", () => {
@@ -581,10 +498,6 @@ describe("authn/ccloudProvider.ts", () => {
           });
           await authProvider.handleCCloudAuthCallback(uri);
 
-          sinon.assert.calledWith(stubbedResourceManager.setAuthFlowCompleted, {
-            success,
-            resetPassword: false,
-          });
           sinon.assert.notCalled(deleteCCloudConnectionStub);
           sinon.assert.notCalled(stubbedSecretStorage.delete);
           sinon.assert.notCalled(showInfoNotificationWithButtonsStub);
@@ -594,16 +507,16 @@ describe("authn/ccloudProvider.ts", () => {
 
       it("should invalidate the current CCloud auth session for reset-password URI callbacks", async () => {
         const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
+        stubbedResourceManager.getCCloudSession.resolves({
+          userId: "some-user-id",
+          username: "some-username",
+        });
 
         const uri = vscode.Uri.parse(CCLOUD_AUTH_CALLBACK_URI).with({
           query: "success=false&reset_password=true",
         });
         await authProvider.handleCCloudAuthCallback(uri);
 
-        sinon.assert.calledWith(stubbedResourceManager.setAuthFlowCompleted, {
-          success: false,
-          resetPassword: true,
-        });
         sinon.assert.calledOnce(deleteCCloudConnectionStub);
         sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.CCLOUD_STATE);
         sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
@@ -612,6 +525,21 @@ describe("authn/ccloudProvider.ts", () => {
           "Your password has been reset. Please sign in again to Confluent Cloud.",
           { [CCLOUD_SIGN_IN_BUTTON_LABEL]: sinon.match.func },
         );
+      });
+
+      it("should notify pending auth flow callback when URI is handled", async () => {
+        // Set up a pending callback
+        let callbackResult: AuthCallbackEvent | null = null;
+        authProvider["_pendingAuthFlowCallback"] = (event) => {
+          callbackResult = event;
+        };
+
+        const uri = vscode.Uri.parse(CCLOUD_AUTH_CALLBACK_URI).with({
+          query: "success=true",
+        });
+        await authProvider.handleCCloudAuthCallback(uri);
+
+        assert.deepStrictEqual(callbackResult, { success: true, resetPassword: false });
       });
     });
 
@@ -650,45 +578,14 @@ describe("authn/ccloudProvider.ts", () => {
       });
     });
 
-    describe("convertToAuthSession()", () => {
-      it("should throw if the Connection is missing .user", () => {
-        // has status.ccloud, but no status.ccloud.user
-        const connection = TEST_CCLOUD_CONNECTION;
+    describe("createAuthSession()", () => {
+      it("should create an AuthenticationSession from user info", () => {
+        const userInfo = {
+          id: TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.user!.id,
+          username: TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.user!.username,
+        };
 
-        assert.throws(
-          () => authProvider.convertToAuthSession(connection),
-          Error("Connection has no CCloud user."),
-        );
-      });
-
-      for (const missingField of ["id", "username"]) {
-        it(`should throw if the Connection's UserInfo is missing '${missingField}'`, () => {
-          const connection = ConnectionFromJSON({
-            ...TEST_AUTHENTICATED_CCLOUD_CONNECTION,
-            status: {
-              ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status,
-              ccloud: {
-                ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!,
-                user: {
-                  ...TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.user!,
-                  [missingField]: undefined,
-                },
-              },
-            },
-          } satisfies Connection);
-
-          assert.throws(
-            () => authProvider.convertToAuthSession(connection),
-            Error("Connection has CCloud user with no id or username."),
-          );
-        });
-      }
-
-      it("should convert a Connection to an AuthenticationSession", () => {
-        // has valid status.ccloud.user data
-        const connection = TEST_AUTHENTICATED_CCLOUD_CONNECTION;
-
-        const session: vscode.AuthenticationSession = authProvider.convertToAuthSession(connection);
+        const session: vscode.AuthenticationSession = authProvider.createAuthSession(userInfo);
 
         assert.deepStrictEqual(session, TEST_CCLOUD_AUTH_SESSION);
       });
