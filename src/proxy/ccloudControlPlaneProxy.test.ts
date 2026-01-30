@@ -200,7 +200,7 @@ describe("proxy/ccloudControlPlaneProxy", function () {
       await proxy.listKafkaClusters({ environmentId: "env-123" });
 
       const url = String(fetchStub.firstCall.args[0]);
-      assert.ok(url.includes("spec.environment=env-123"));
+      assert.ok(url.includes("environment=env-123"));
     });
   });
 
@@ -246,7 +246,7 @@ describe("proxy/ccloudControlPlaneProxy", function () {
       await proxy.listSchemaRegistries({ environmentId: "env-456" });
 
       const url = String(fetchStub.firstCall.args[0]);
-      assert.ok(url.includes("spec.environment=env-456"));
+      assert.ok(url.includes("environment=env-456"));
     });
   });
 
@@ -290,7 +290,7 @@ describe("proxy/ccloudControlPlaneProxy", function () {
       await proxy.listFlinkComputePools({ environmentId: "env-789", region: "us-west-2" });
 
       const url = String(fetchStub.firstCall.args[0]);
-      assert.ok(url.includes("spec.environment=env-789"));
+      assert.ok(url.includes("environment=env-789"));
       assert.ok(url.includes("spec.region=us-west-2"));
     });
   });
@@ -348,7 +348,7 @@ describe("proxy/ccloudControlPlaneProxy", function () {
 
       assert.strictEqual(result.length, 2);
       const url = String(fetchStub.firstCall.args[0]);
-      assert.ok(url.includes("spec.environment=env-123"));
+      assert.ok(url.includes("environment=env-123"));
     });
   });
 
@@ -360,7 +360,7 @@ describe("proxy/ccloudControlPlaneProxy", function () {
 
       assert.strictEqual(result.length, 1);
       const url = String(fetchStub.firstCall.args[0]);
-      assert.ok(url.includes("spec.environment=env-456"));
+      assert.ok(url.includes("environment=env-456"));
     });
   });
 
@@ -372,7 +372,7 @@ describe("proxy/ccloudControlPlaneProxy", function () {
 
       assert.strictEqual(result.length, 2);
       const url = String(fetchStub.firstCall.args[0]);
-      assert.ok(url.includes("spec.environment=env-789"));
+      assert.ok(url.includes("environment=env-789"));
     });
   });
 

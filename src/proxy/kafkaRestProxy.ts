@@ -33,13 +33,15 @@ export type {
  * API version/format for the Kafka REST API.
  *
  * - "v3": Confluent Kafka REST v3 API (e.g., /kafka/v3/clusters/{cluster_id}/topics)
- *         Used by Confluent Cloud and some Confluent Platform deployments.
+ *         Used by some Confluent Platform deployments.
+ * - "v3-ccloud": CCloud-specific Kafka REST v3 API with internal consume endpoint.
+ *                Uses /kafka/v3/clusters/{cluster_id}/internal/topics/{topic}/partitions/-/records:consume_guarantee_progress
  * - "v3-local": Kafka REST v3 API without /kafka prefix (e.g., /v3/clusters/{cluster_id}/topics)
  *               Used by confluent-local Docker containers which support v3 but with different paths.
  * - "v2": Kafka REST Proxy v2 API (e.g., /topics)
  *         Deprecated for LOCAL connections - prefer v3-local.
  */
-export type KafkaRestApiVersion = "v2" | "v3" | "v3-local";
+export type KafkaRestApiVersion = "v2" | "v3" | "v3-ccloud" | "v3-local";
 
 /**
  * Kafka REST proxy configuration.
@@ -214,8 +216,9 @@ export class KafkaRestProxy {
   async listTopics(options?: ListTopicsOptions): Promise<TopicData[]> {
     const params: Record<string, string | boolean | undefined> = {};
     if (options?.includeAuthorizedOperations) {
-      // Use snake_case parameter name as per Kafka REST v3 API spec
-      params.include_authorized_operations = true;
+      // The Kafka REST v3 API has an inconsistency: listTopics uses camelCase,
+      // while getTopic uses snake_case. See OpenAPI spec line 847 vs 910.
+      params.includeAuthorizedOperations = true;
     }
 
     logger.debug(
@@ -251,7 +254,8 @@ export class KafkaRestProxy {
   async getTopic(topicName: string, options?: ListTopicsOptions): Promise<TopicData> {
     const params: Record<string, string | boolean | undefined> = {};
     if (options?.includeAuthorizedOperations) {
-      // Use snake_case parameter name as per Kafka REST v3 API spec
+      // The Kafka REST v3 API has an inconsistency: getTopic uses snake_case,
+      // while listTopics uses camelCase. See OpenAPI spec line 910 vs 847.
       params.include_authorized_operations = true;
     }
 
@@ -507,12 +511,24 @@ export interface ConsumeRecordMetadata {
   key_schema_subject?: string;
   /** Key schema version. */
   key_schema_version?: number;
+  /** Key schema type (AVRO, PROTOBUF, JSON). */
+  key_schema_type?: string;
+  /** Key data format used for deserialization. */
+  key_data_format?: string;
+  /** Key deserialization error message. */
+  key_error?: string;
   /** Value schema ID. */
   value_schema_id?: number;
   /** Value schema subject. */
   value_schema_subject?: string;
   /** Value schema version. */
   value_schema_version?: number;
+  /** Value schema type (AVRO, PROTOBUF, JSON). */
+  value_schema_type?: string;
+  /** Value data format used for deserialization. */
+  value_data_format?: string;
+  /** Value deserialization error message. */
+  value_error?: string;
 }
 
 /**
@@ -635,9 +651,16 @@ export class KafkaConsumeProxy {
       return this.consumeV2(topicName, request, signal);
     }
 
-    // v3 or v3-local API: use simple consume endpoint
-    const prefix = this.apiVersion === "v3-local" ? "" : "/kafka";
-    const path = `${prefix}/v3/clusters/${encodeURIComponent(this.clusterId)}/topics/${encodeURIComponent(topicName)}/partitions/-/consume`;
+    // Build path based on API version
+    let path: string;
+    if (this.apiVersion === "v3-ccloud") {
+      // CCloud uses an internal endpoint with a different path structure
+      path = `/kafka/v3/clusters/${encodeURIComponent(this.clusterId)}/internal/topics/${encodeURIComponent(topicName)}/partitions/-/records:consume_guarantee_progress`;
+    } else {
+      // v3 or v3-local API: use simple consume endpoint
+      const prefix = this.apiVersion === "v3-local" ? "" : "/kafka";
+      path = `${prefix}/v3/clusters/${encodeURIComponent(this.clusterId)}/topics/${encodeURIComponent(topicName)}/partitions/-/consume`;
+    }
 
     const response = await this.client.post<ConsumeResponse>(path, request, { signal });
     return response.data;

@@ -1,4 +1,5 @@
-import { getCCloudAuthSession } from "../authn/utils";
+import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TARGET_SR_CLUSTER_HEADER } from "../constants";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
@@ -48,10 +49,10 @@ export async function canAccessSchemaTypeForTopic(
     return true;
   }
 
-  // Get the CCloud auth session for the bearer token
-  const session = await getCCloudAuthSession();
-  if (!session) {
-    logger.warn("No CCloud auth session available for schema access check; assuming no access");
+  // Get the data plane token for Schema Registry access
+  const token = await TokenManager.getInstance().getDataPlaneToken();
+  if (!token) {
+    logger.warn("No data plane token available for schema access check; assuming no access");
     return false;
   }
 
@@ -59,11 +60,15 @@ export async function canAccessSchemaTypeForTopic(
   const subjectName = `${topic.name}-${type}`;
 
   // Create a Schema Registry proxy to check subject access
+  // CCloud Schema Registry requires target-sr-cluster header for routing
   const proxy = new SchemaRegistryProxy({
     baseUrl: schemaRegistry.uri,
     auth: {
       type: "bearer",
-      token: session.accessToken,
+      token,
+    },
+    headers: {
+      [TARGET_SR_CLUSTER_HEADER]: schemaRegistry.id,
     },
   });
 

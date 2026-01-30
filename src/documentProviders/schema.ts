@@ -3,6 +3,7 @@ import { ResourceDocumentProvider } from ".";
 import { TokenManager } from "../auth/oauth2/tokenManager";
 import type { SchemaString } from "../clients/schemaRegistryRest";
 import { ConnectionType, type Credentials } from "../connections";
+import { TARGET_SR_CLUSTER_HEADER } from "../constants";
 import { getCredentialsType } from "../directConnections/credentials";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
@@ -51,11 +52,13 @@ export async function fetchSchemaBody(schema: Schema, prettified: boolean = true
 
   // Get auth config based on connection type
   const auth = await getAuthConfigForSchemaRegistry(schema);
+  const headers = getHeadersForSchemaRegistry(schema, schemaRegistry.id);
 
   // Create a proxy to fetch the schema content
   const proxy = schemaRegistryProxy.createSchemaRegistryProxy({
     baseUrl: schemaRegistry.uri,
     auth,
+    headers,
   });
 
   // Fetch the schema string content using the schema version endpoint
@@ -158,6 +161,22 @@ async function getAuthConfigForSchemaRegistry(schema: Schema): Promise<AuthConfi
       // Local connections typically don't require authentication
       return undefined;
   }
+}
+
+/**
+ * Get custom headers for Schema Registry requests based on connection type.
+ */
+function getHeadersForSchemaRegistry(
+  schema: Schema,
+  schemaRegistryId: string,
+): Record<string, string> {
+  if (schema.connectionType === ConnectionType.Ccloud) {
+    // CCloud Schema Registry requires target-sr-cluster header for routing
+    return {
+      [TARGET_SR_CLUSTER_HEADER]: schemaRegistryId,
+    };
+  }
+  return {};
 }
 
 /**

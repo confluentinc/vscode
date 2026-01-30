@@ -9,6 +9,7 @@ import {
 } from "../../../clients/schemaRegistryRest";
 import { TokenManager } from "../../../auth/oauth2/tokenManager";
 import { ConnectionType, CredentialType } from "../../../connections";
+import { TARGET_SR_CLUSTER_HEADER } from "../../../constants";
 import { schemaSubjectChanged, schemaVersionsChanged } from "../../../emitters";
 import { ResourceLoader } from "../../../loaders";
 import { Logger } from "../../../logging";
@@ -123,9 +124,11 @@ export async function uploadSchema(
   content: string,
 ): Promise<void> {
   const auth = await getAuthConfigForSchemaRegistry(registry);
+  const headers = getHeadersForSchemaRegistry(registry);
   const proxy = schemaRegistryProxy.createSchemaRegistryProxy({
     baseUrl: registry.uri,
     auth,
+    headers,
   });
 
   try {
@@ -223,6 +226,19 @@ async function getAuthConfigForSchemaRegistry(
       // Local connections typically don't require authentication
       return undefined;
   }
+}
+
+/**
+ * Get custom headers for Schema Registry requests based on connection type.
+ */
+function getHeadersForSchemaRegistry(schemaRegistry: SchemaRegistry): Record<string, string> {
+  if (schemaRegistry.connectionType === ConnectionType.Ccloud) {
+    // CCloud Schema Registry requires target-sr-cluster header for routing
+    return {
+      [TARGET_SR_CLUSTER_HEADER]: schemaRegistry.id,
+    };
+  }
+  return {};
 }
 
 /**

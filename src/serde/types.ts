@@ -56,11 +56,15 @@ export interface DeserializedResult {
 export interface SchemaRegistryDeserializerConfig {
   /** Schema Registry URL. */
   schemaRegistryUrl: string;
-  /** Authentication configuration. */
+  /** Basic auth credentials (LOCAL/DIRECT connections). */
   auth?: {
     username: string;
     password: string;
   };
+  /** Bearer token for CCloud connections. */
+  bearerToken?: string;
+  /** Custom headers (e.g., target-sr-cluster for CCloud). */
+  headers?: Record<string, string>;
   /** Connection ID for error caching. */
   connectionId: string;
   /** Cluster ID for logging. */
@@ -75,6 +79,8 @@ export interface DeserializationContext {
   topicName: string;
   /** Whether this is a key (true) or value (false). */
   isKey: boolean;
+  /** Schema ID from record headers (future SR 8.0+ support). */
+  headerSchemaId?: number;
 }
 
 /**

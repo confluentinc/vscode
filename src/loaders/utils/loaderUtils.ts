@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { TARGET_SR_CLUSTER_HEADER } from "../../constants";
 import { KAFKA_TOPIC_OPERATIONS } from "../../authz/constants";
 import { toKafkaTopicOperations } from "../../authz/types";
 import { TokenManager } from "../../auth/oauth2/tokenManager";
@@ -172,9 +173,11 @@ export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<Sub
   logger.debug(`fetching subjects from Schema Registry ${schemaRegistry.id}`);
 
   const auth = await getAuthConfigForSchemaRegistry(schemaRegistry);
+  const headers = getHeadersForSchemaRegistry(schemaRegistry);
   const proxy = schemaRegistryProxy.createSchemaRegistryProxy({
     baseUrl: schemaRegistry.uri,
     auth,
+    headers,
   });
 
   const subjectStrings = await proxy.listSubjects();
@@ -199,6 +202,22 @@ export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<Sub
 }
 
 /**
+ * Get custom headers for Schema Registry requests based on connection type.
+ */
+function getHeadersForSchemaRegistry(schemaRegistry: SchemaRegistry): Record<string, string> {
+  if (schemaRegistry.connectionType === ConnectionType.Ccloud) {
+    // CCloud Schema Registry requires target-sr-cluster header for routing
+    logger.debug("adding target-sr-cluster header for CCloud Schema Registry", {
+      clusterId: schemaRegistry.id,
+    });
+    return {
+      [TARGET_SR_CLUSTER_HEADER]: schemaRegistry.id,
+    };
+  }
+  return {};
+}
+
+/**
  * Given a schema registry and a subject, fetch the versions available, then fetch the details
  * of each version and return them as an array of {@link Schema}.
  *
@@ -213,9 +232,11 @@ export async function fetchSchemasForSubject(
   logger.debug(`fetching schemas for subject ${subject} from Schema Registry ${schemaRegistry.id}`);
 
   const auth = await getAuthConfigForSchemaRegistry(schemaRegistry);
+  const headers = getHeadersForSchemaRegistry(schemaRegistry);
   const proxy = schemaRegistryProxy.createSchemaRegistryProxy({
     baseUrl: schemaRegistry.uri,
     auth,
+    headers,
   });
 
   // Get all version numbers first
@@ -333,10 +354,18 @@ async function getAuthConfigForSchemaRegistry(
   switch (schemaRegistry.connectionType) {
     case ConnectionType.Ccloud: {
       // CCloud uses bearer token authentication
-      const token = (await TokenManager.getInstance().getDataPlaneToken()) || "";
+      const token = await TokenManager.getInstance().getDataPlaneToken();
+      logger.debug("getting auth config for CCloud Schema Registry", {
+        registryId: schemaRegistry.id,
+        hasDataPlaneToken: !!token,
+        tokenLength: token?.length ?? 0,
+      });
+      if (!token) {
+        logger.warn("no data plane token available for CCloud Schema Registry");
+      }
       return {
         type: "bearer",
-        token,
+        token: token || "",
       };
     }
     case ConnectionType.Direct: {

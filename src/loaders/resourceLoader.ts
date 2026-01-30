@@ -5,6 +5,7 @@ import {
   instanceOfBasicCredentials,
   instanceOfScramCredentials,
 } from "../connections";
+import { TARGET_SR_CLUSTER_HEADER } from "../constants";
 import { isResponseError, logError } from "../errors";
 import { Logger } from "../logging";
 import type { Environment } from "../models/environment";
@@ -341,9 +342,11 @@ export abstract class ResourceLoader extends DisposableCollection implements IRe
     }
 
     const auth = await this.getAuthConfigForSchemaRegistry(schemaRegistry);
+    const headers = this.getHeadersForSchemaRegistry(schemaRegistry);
     const proxy = schemaRegistryProxy.createSchemaRegistryProxy({
       baseUrl: schemaRegistry.uri,
       auth,
+      headers,
     });
 
     logger.debug(
@@ -374,9 +377,11 @@ export abstract class ResourceLoader extends DisposableCollection implements IRe
     }
 
     const auth = await this.getAuthConfigForSchemaRegistry(schemaRegistry);
+    const headers = this.getHeadersForSchemaRegistry(schemaRegistry);
     const proxy = schemaRegistryProxy.createSchemaRegistryProxy({
       baseUrl: schemaRegistry.uri,
       auth,
+      headers,
     });
 
     logger.debug(`Deleting subject ${subject.name} (permanent: ${hardDelete})`);
@@ -443,6 +448,19 @@ export abstract class ResourceLoader extends DisposableCollection implements IRe
         // Local connections typically don't require authentication
         return undefined;
     }
+  }
+
+  /**
+   * Get custom headers for Schema Registry requests based on connection type.
+   */
+  protected getHeadersForSchemaRegistry(schemaRegistry: SchemaRegistry): Record<string, string> {
+    if (this.connectionType === ConnectionType.Ccloud) {
+      // CCloud Schema Registry requires target-sr-cluster header for routing
+      return {
+        [TARGET_SR_CLUSTER_HEADER]: schemaRegistry.id,
+      };
+    }
+    return {};
   }
 
   /**

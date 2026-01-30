@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { window } from "vscode";
-import * as ccloudUtils from "../authn/utils";
+import { TokenManager } from "../auth/oauth2/tokenManager";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import {
@@ -22,7 +22,7 @@ describe("authz.schemaRegistry", function () {
   let sandbox: sinon.SinonSandbox;
   let stubbedConfigs: StubbedWorkspaceConfiguration;
   let ccloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
-  let getCCloudAuthSessionStub: sinon.SinonStub;
+  let getDataPlaneTokenStub: sinon.SinonStub;
   let schemaRegistryProxyStub: sinon.SinonStubbedInstance<schemaRegistryProxyModule.SchemaRegistryProxy>;
 
   beforeEach(async function () {
@@ -36,8 +36,8 @@ describe("authz.schemaRegistry", function () {
       .withArgs(TEST_CCLOUD_SCHEMA_REGISTRY.environmentId)
       .resolves(TEST_CCLOUD_SCHEMA_REGISTRY);
 
-    // Stub getCCloudAuthSession
-    getCCloudAuthSessionStub = sandbox.stub(ccloudUtils, "getCCloudAuthSession");
+    // Stub TokenManager.getInstance().getDataPlaneToken()
+    getDataPlaneTokenStub = sandbox.stub(TokenManager.getInstance(), "getDataPlaneToken");
 
     // Create a stubbed SchemaRegistryProxy instance
     schemaRegistryProxyStub = sandbox.createStubInstance(
@@ -74,8 +74,8 @@ describe("authz.schemaRegistry", function () {
     assert.strictEqual(result, true);
   });
 
-  it("canAccessSchemaTypeForTopic() should return false if no auth session available", async function () {
-    getCCloudAuthSessionStub.resolves(null);
+  it("canAccessSchemaTypeForTopic() should return false if no data plane token available", async function () {
+    getDataPlaneTokenStub.resolves(null);
 
     const result = await schemaRegistry.canAccessSchemaTypeForTopic(TEST_CCLOUD_KAFKA_TOPIC, "key");
     assert.strictEqual(result, false);
@@ -83,8 +83,8 @@ describe("authz.schemaRegistry", function () {
 
   describe("CCloud schema access checks", function () {
     beforeEach(function () {
-      // Default to having a valid auth session
-      getCCloudAuthSessionStub.resolves({ accessToken: "test-token" });
+      // Default to having a valid data plane token
+      getDataPlaneTokenStub.resolves("test-data-plane-token");
     });
 
     it("should return true when subject exists and user has access", async function () {

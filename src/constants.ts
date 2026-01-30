@@ -24,6 +24,9 @@ export const CCLOUD_BASE_PATH =
 /** Attribution to use for CCloud URLs, e.g. `?utm_source=${UTM_SOURCE_VSCODE}` */
 export const UTM_SOURCE_VSCODE = "vscode-ext";
 
+/** CCloud Schema Registry requires this header for routing requests to the correct logical SR cluster. */
+export const TARGET_SR_CLUSTER_HEADER = "target-sr-cluster";
+
 export const DIFFABLE_READONLY_SCHEME = "confluent.resource";
 
 // must match the `contributes.authentication` ID in package.json

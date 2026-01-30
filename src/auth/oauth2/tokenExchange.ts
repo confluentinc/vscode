@@ -19,6 +19,9 @@ import type {
 } from "./types";
 import { isOAuthError } from "./types";
 import { calculateTokenExpiry, CONTROL_PLANE_ENDPOINTS, TOKEN_LIFETIMES } from "./config";
+import { Logger } from "../../logging";
+
+const logger = new Logger("auth.tokenExchange");
 
 /**
  * Error thrown when token exchange fails.
@@ -198,6 +201,8 @@ export async function exchangeControlPlaneTokenForDataPlaneToken(
     body.cluster_id = options.clusterId;
   }
 
+  logger.debug("requesting data plane token", { url, hasClusterId: !!options?.clusterId });
+
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -207,8 +212,15 @@ export async function exchangeControlPlaneTokenForDataPlaneToken(
     body: JSON.stringify(body),
   });
 
+  logger.debug("data plane token response", { status: response.status, ok: response.ok });
+
   if (!response.ok) {
     const errorBody = await parseErrorResponse(response);
+    logger.error("data plane token exchange failed", {
+      status: response.status,
+      error: errorBody?.error,
+      errorDescription: errorBody?.errorDescription,
+    });
     throw new TokenExchangeError(
       `Failed to exchange control plane token for data plane token: ${errorBody?.error ?? response.statusText}`,
       errorBody,
@@ -217,6 +229,11 @@ export async function exchangeControlPlaneTokenForDataPlaneToken(
   }
 
   const data = await response.json();
+  logger.debug("data plane token response data", {
+    hasToken: !!data.token,
+    hasAccessToken: !!data.access_token,
+    keys: Object.keys(data),
+  });
 
   return {
     token: data.token ?? data.access_token,
@@ -310,6 +327,11 @@ export async function performFullTokenExchange(
   let dataPlaneTokenExpiresAt: Date | undefined;
 
   try {
+    logger.debug("exchanging control plane token for data plane token", {
+      ccloudBaseUri: config.ccloudBaseUri,
+      hasControlPlaneToken: !!cpTokenResponse.token,
+      clusterId: options?.clusterId,
+    });
     const dpTokenResponse = await exchangeControlPlaneTokenForDataPlaneToken(
       config.ccloudBaseUri,
       cpTokenResponse.token,
@@ -317,8 +339,12 @@ export async function performFullTokenExchange(
     );
     dataPlaneToken = dpTokenResponse.token;
     dataPlaneTokenExpiresAt = calculateTokenExpiry(TOKEN_LIFETIMES.DATA_PLANE_TOKEN, now);
-  } catch {
+    logger.debug("data plane token exchange successful", { hasToken: !!dataPlaneToken });
+  } catch (error) {
     // Data plane token is optional - continue without it if exchange fails
+    logger.warn("data plane token exchange failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   // Use refresh token from control plane response if provided (can be rotated)

@@ -9,7 +9,7 @@ import {
 } from "./authz/schemaRegistry";
 import { registerCommandWithLogging } from "./commands";
 import { ResponseError, type PartitionConsumeRecord } from "./connections";
-import { LOCAL_CONNECTION_ID } from "./constants";
+import { LOCAL_CONNECTION_ID, TARGET_SR_CLUSTER_HEADER } from "./constants";
 import { getExtensionContext } from "./context/extension";
 import { showJsonPreview } from "./documentProviders/message";
 import { logError } from "./errors";
@@ -36,12 +36,16 @@ import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
 
-import { getCCloudAuthSession } from "./authn/utils";
+import { TokenManager } from "./auth/oauth2/tokenManager";
 import { ConnectionType } from "./connections";
 import { getCredentialsType } from "./directConnections/credentials";
 import { isDesktopEnvironment } from "./kafka/environment";
 import { createNativeKafkaConsumer, type NativeKafkaConsumer } from "./kafka/nativeConsumer";
 import type { KafkaRestProxyConfig } from "./proxy/kafkaRestProxy";
+import {
+  createCCloudRecordDeserializer,
+  type CCloudRecordDeserializer,
+} from "./serde/ccloudDeserializer";
 import { createSchemaRegistryDeserializer } from "./serde/schemaRegistryDeserializer";
 import type { SchemaRegistryDeserializerConfig } from "./serde/types";
 import { getResourceManager } from "./storage/resourceManager";
@@ -99,6 +103,95 @@ class NativeConsumerProxy implements MessageConsumer {
       reassignment: { related: "" },
     }));
     return { data };
+  }
+
+  async dispose(): Promise<void> {
+    await this.consumer.dispose();
+  }
+}
+
+/**
+ * Wraps a MessageConsumer to deserialize CCloud __raw__ fields in responses.
+ * Used for CCloud connections where the REST API returns base64-encoded wire format data.
+ */
+class DeserializingConsumerProxy implements MessageConsumer {
+  private readonly consumer: MessageConsumer;
+  private readonly deserializer: CCloudRecordDeserializer;
+  private readonly topicName: string;
+
+  constructor(
+    consumer: MessageConsumer,
+    deserializer: CCloudRecordDeserializer,
+    topicName: string,
+  ) {
+    this.consumer = consumer;
+    this.deserializer = deserializer;
+    this.topicName = topicName;
+  }
+
+  async consume(
+    topicName: string,
+    request: ConsumeRequest,
+    signal?: AbortSignal,
+  ): Promise<ConsumeResponse> {
+    const response = await this.consumer.consume(topicName, request, signal);
+
+    // Post-process each record to deserialize __raw__ fields
+    if (response.partition_data_list) {
+      for (const partition of response.partition_data_list) {
+        if (partition.records) {
+          for (const record of partition.records) {
+            await this.deserializeRecord(record);
+          }
+        }
+      }
+    }
+
+    return response;
+  }
+
+  private async deserializeRecord(record: ConsumeRecord): Promise<void> {
+    // Deserialize key if present
+    if (record.key !== null && record.key !== undefined) {
+      const keyResult = await this.deserializer.deserialize(record.key, {
+        topicName: this.topicName,
+        isKey: true,
+      });
+      record.key = keyResult.value;
+      // Store metadata if there was a schema
+      if (keyResult.metadata.schemaId !== undefined) {
+        record.metadata = record.metadata ?? {};
+        record.metadata.key_schema_id = keyResult.metadata.schemaId;
+        record.metadata.key_schema_type = keyResult.metadata.schemaType;
+        record.metadata.key_data_format = keyResult.metadata.dataFormat;
+        if (keyResult.errorMessage) {
+          record.metadata.key_error = keyResult.errorMessage;
+        }
+      }
+    }
+
+    // Deserialize value if present
+    if (record.value !== null && record.value !== undefined) {
+      const valueResult = await this.deserializer.deserialize(record.value, {
+        topicName: this.topicName,
+        isKey: false,
+      });
+      record.value = valueResult.value;
+      // Store metadata if there was a schema
+      if (valueResult.metadata.schemaId !== undefined) {
+        record.metadata = record.metadata ?? {};
+        record.metadata.value_schema_id = valueResult.metadata.schemaId;
+        record.metadata.value_schema_type = valueResult.metadata.schemaType;
+        record.metadata.value_data_format = valueResult.metadata.dataFormat;
+        if (valueResult.errorMessage) {
+          record.metadata.value_error = valueResult.errorMessage;
+        }
+      }
+    }
+  }
+
+  async listPartitions(topicName: string): Promise<{ data: PartitionData[] }> {
+    return this.consumer.listPartitions(topicName);
   }
 
   async dispose(): Promise<void> {
@@ -183,9 +276,30 @@ async function getSchemaRegistryConfig(
       logger.debug(`no Schema Registry configured for direct connection ${topic.connectionId}`);
       return null;
     }
-    case ConnectionType.Ccloud:
-      // CCloud out of scope - messages from REST proxy may already be decoded
-      return null;
+    case ConnectionType.Ccloud: {
+      // CCloud connections use bearer token auth and require target-sr-cluster header
+      const token = await TokenManager.getInstance().getDataPlaneToken();
+      if (!token) {
+        logger.debug("No data plane token for CCloud SR deserialization");
+        return null;
+      }
+
+      // Look up Schema Registry for this environment
+      const ccloudLoader = CCloudResourceLoader.getInstance();
+      const registry = await ccloudLoader.getSchemaRegistryForEnvironmentId(topic.environmentId);
+      if (!registry?.uri) {
+        logger.debug(`No SR found for environment ${topic.environmentId}`);
+        return null;
+      }
+
+      return {
+        schemaRegistryUrl: registry.uri,
+        bearerToken: token,
+        headers: { [TARGET_SR_CLUSTER_HEADER]: registry.id },
+        connectionId: topic.connectionId,
+        clusterId: topic.clusterId,
+      };
+    }
     default:
       return null;
   }
@@ -229,15 +343,27 @@ async function createConsumeProxyForTopic(topic: KafkaTopic): Promise<MessageCon
 
   switch (topic.connectionType) {
     case ConnectionType.Ccloud: {
-      // CCloud connections use the data plane API with OAuth token
-      const session = await getCCloudAuthSession();
-      if (!session) {
-        throw new Error("Not authenticated to Confluent Cloud");
+      // CCloud connections use the data plane API with data plane token
+      const token = await TokenManager.getInstance().getDataPlaneToken();
+      if (!token) {
+        throw new Error("No data plane token available for Confluent Cloud");
       }
+
+      // Look up the cluster to get its REST API endpoint (http_endpoint from CCloud API)
+      const ccloudLoader = CCloudResourceLoader.getInstance();
+      const clusters = await ccloudLoader.getKafkaClustersForEnvironmentId(topic.environmentId);
+      const cluster = clusters.find((c) => c.id === topic.clusterId);
+      if (!cluster?.uri) {
+        throw new Error(
+          `Could not find CCloud Kafka cluster ${topic.clusterId} or it has no REST endpoint`,
+        );
+      }
+
       config = {
-        baseUrl: `https://${topic.clusterId}.${getCloudRegion(topic)}.confluent.cloud`,
+        baseUrl: cluster.uri,
         clusterId: topic.clusterId,
-        auth: { type: "bearer", token: session.accessToken },
+        auth: { type: "bearer", token },
+        apiVersion: "v3-ccloud",
       };
       break;
     }
@@ -279,18 +405,23 @@ async function createConsumeProxyForTopic(topic: KafkaTopic): Promise<MessageCon
       throw new Error(`Unsupported connection type: ${topic.connectionType}`);
   }
 
-  return createKafkaConsumeProxy(config);
-}
+  const consumeProxy = createKafkaConsumeProxy(config);
 
-/**
- * Gets the cloud region for a CCloud topic.
- * This is a placeholder - in reality we'd get this from the cluster metadata.
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function getCloudRegion(topic: KafkaTopic): string {
-  // TODO: Get actual region from cluster metadata - for now use placeholder
-  // The topic parameter will be used once we have proper cluster metadata
-  return "us-west-2.aws";
+  // For CCloud connections, wrap with deserializing proxy for schema support
+  if (topic.connectionType === ConnectionType.Ccloud) {
+    const srConfig = await getSchemaRegistryConfig(topic);
+    if (srConfig) {
+      logger.debug(
+        `configuring CCloud SR deserializer for topic ${topic.name}: url=${srConfig.schemaRegistryUrl}`,
+      );
+      const deserializer = createCCloudRecordDeserializer(srConfig);
+      return new DeserializingConsumerProxy(consumeProxy, deserializer, topic.name);
+    } else {
+      logger.debug(`no Schema Registry configured for CCloud topic ${topic.name}`);
+    }
+  }
+
+  return consumeProxy;
 }
 
 export function activateMessageViewer(context: ExtensionContext) {
