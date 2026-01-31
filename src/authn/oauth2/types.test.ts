@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { isOAuthError, type OAuthError, type OAuthTokens, type PKCEParams } from "./types";
 
-describe("auth/oauth2/types", function () {
+describe("authn/oauth2/types", function () {
   describe("OAuthTokens interface", function () {
     it("should allow creating valid tokens object", function () {
       const now = new Date();

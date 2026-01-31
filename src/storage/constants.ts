@@ -58,6 +58,9 @@ export enum SecretStorageKeys {
   /** Store the CCloud session info (user id, username) for rehydration at activation. */
   CCLOUD_SESSION = "ccloudSession",
 
+  /** Track pending auth flow for cross-window coordination. */
+  CCLOUD_AUTH_PENDING = "ccloudAuthPending",
+
   /** A map of connection id:ConnectionSpec */
   DIRECT_CONNECTIONS = "directConnections",
 

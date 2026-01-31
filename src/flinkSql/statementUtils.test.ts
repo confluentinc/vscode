@@ -11,7 +11,7 @@ import {
   TEST_CCLOUD_FLINK_STATEMENT,
 } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import { uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
 import { FlinkSpecProperties, Phase } from "../models/flinkStatement";

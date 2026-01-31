@@ -4,7 +4,7 @@ import type * as vscode from "vscode";
 import { PKCEStateManager } from "./pkceStateManager";
 import { CCloudEnvironment } from "./config";
 
-describe("auth/oauth2/pkceStateManager", function () {
+describe("authn/oauth2/pkceStateManager", function () {
   let mockSecretStorage: sinon.SinonStubbedInstance<vscode.SecretStorage>;
   let pkceStateManager: PKCEStateManager;
   let storageData: Map<string, string>;

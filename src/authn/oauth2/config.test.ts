@@ -12,7 +12,7 @@ import {
   getTimeUntilExpiry,
 } from "./config";
 
-describe("auth/oauth2/config", function () {
+describe("authn/oauth2/config", function () {
   describe("TOKEN_LIFETIMES", function () {
     it("should have correct ID token lifetime (60 seconds)", function () {
       assert.strictEqual(TOKEN_LIFETIMES.ID_TOKEN, 60);

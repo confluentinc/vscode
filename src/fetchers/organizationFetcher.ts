@@ -5,7 +5,7 @@
  * instead of GraphQL queries through the sidecar.
  */
 
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { CCloudOrganization } from "../models/organization";

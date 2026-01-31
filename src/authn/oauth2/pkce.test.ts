@@ -13,7 +13,7 @@ import {
 import { OAUTH_CONSTANTS, getOAuthConfig, CCloudEnvironment } from "./config";
 import type { PKCEParams } from "./types";
 
-describe("auth/oauth2/pkce", function () {
+describe("authn/oauth2/pkce", function () {
   describe("base64UrlEncode()", function () {
     it("should encode buffer to base64url format", function () {
       const buffer = Buffer.from("hello world");

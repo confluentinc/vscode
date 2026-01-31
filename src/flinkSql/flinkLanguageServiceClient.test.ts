@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import {
   buildDirectFlinkLspUrl,
   createFlinkLanguageServiceClient,

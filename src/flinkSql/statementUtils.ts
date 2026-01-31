@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import type { GetSqlv1Statement200Response } from "../clients/flinkSql";
 import { uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";

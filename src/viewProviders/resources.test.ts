@@ -45,6 +45,7 @@ import { LocalMedusa, MedusaTreeItem } from "../models/medusa";
 import type { ConnectionId } from "../models/resource";
 import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
 import * as notifications from "../notifications";
+import { HttpError } from "../proxy/httpClient";
 import type { AnyConnectionRow } from "./resources";
 import {
   CCloudConnectionRow,
@@ -739,6 +740,83 @@ describe("viewProviders/resources.ts", () => {
             // Should have reverted to empty state.
             assert.strictEqual(ccloudConnectionRow.ccloudOrganization, undefined);
             assert.strictEqual(ccloudConnectionRow.environments.length, 0);
+          });
+
+          it("suppresses error notification for HTTP 401 (auth expired during sign-out)", async () => {
+            const showErrorNotificationWithButtonsStub = sandbox.stub(
+              notifications,
+              "showErrorNotificationWithButtons",
+            );
+
+            // Set up to look like previously connected
+            ccloudConnectionRow.environments.push(TEST_CCLOUD_ENVIRONMENT);
+            ccloudConnectionRow.ccloudOrganization = TEST_CCLOUD_ORGANIZATION;
+
+            // Simulate HTTP 401 error (auth invalidated during sign-out)
+            const httpError = new HttpError("Unauthorized", 401, "Unauthorized");
+            getEnvironmentsStub.rejects(httpError);
+
+            await ccloudConnectionRow.refresh(false);
+
+            // Should NOT have notified the user since this is an expected auth error
+            sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+
+            // Should have reverted to empty state
+            assert.strictEqual(ccloudConnectionRow.ccloudOrganization, undefined);
+            assert.strictEqual(ccloudConnectionRow.environments.length, 0);
+          });
+
+          it("shows error notification for non-401 HTTP errors", async () => {
+            const showErrorNotificationWithButtonsStub = sandbox.stub(
+              notifications,
+              "showErrorNotificationWithButtons",
+            );
+
+            // Set up to look like previously connected
+            ccloudConnectionRow.environments.push(TEST_CCLOUD_ENVIRONMENT);
+            ccloudConnectionRow.ccloudOrganization = TEST_CCLOUD_ORGANIZATION;
+
+            // Simulate HTTP 500 error (server error - should show notification)
+            const httpError = new HttpError("Internal Server Error", 500, "Internal Server Error");
+            getEnvironmentsStub.rejects(httpError);
+
+            await ccloudConnectionRow.refresh(false);
+
+            // Should have notified the user since this is NOT an expected auth error
+            sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+
+            // Should have reverted to empty state
+            assert.strictEqual(ccloudConnectionRow.ccloudOrganization, undefined);
+            assert.strictEqual(ccloudConnectionRow.environments.length, 0);
+          });
+
+          it("uses generic error message when organization name is undefined", async () => {
+            const showErrorNotificationWithButtonsStub = sandbox.stub(
+              notifications,
+              "showErrorNotificationWithButtons",
+            );
+
+            // Set up with no organization (simulates error happening before org was loaded)
+            ccloudConnectionRow.environments.push(TEST_CCLOUD_ENVIRONMENT);
+            ccloudConnectionRow.ccloudOrganization = undefined;
+
+            const msg = "Test error message";
+            getEnvironmentsStub.rejects(new Error(msg));
+
+            await ccloudConnectionRow.refresh(false);
+
+            // Should use generic error message without undefined organization name
+            sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+            const errorMessage = showErrorNotificationWithButtonsStub.firstCall.args[0];
+            assert.strictEqual(
+              errorMessage,
+              "Failed to load Confluent Cloud information.",
+              "Should use generic message when org name is undefined",
+            );
+            assert.ok(
+              !errorMessage.includes("undefined"),
+              "Error message should not contain 'undefined'",
+            );
           });
         });
       });

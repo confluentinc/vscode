@@ -1,6 +1,6 @@
 import type { Scope, Signal } from "inertial";
 import * as vscode from "vscode";
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import {
   GetSqlv1StatementResult200ResponseApiVersionEnum,
   GetSqlv1StatementResult200ResponseKindEnum,

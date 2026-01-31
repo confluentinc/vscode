@@ -1,4 +1,4 @@
-import { TokenManager } from "../../auth/oauth2/tokenManager";
+import { TokenManager } from "../../authn/oauth2/tokenManager";
 import type { TopicV3Api } from "../../clients/kafkaRest";
 import { ConnectionType, CredentialType } from "../../connections";
 import { ResourceLoader } from "../../loaders/resourceLoader";

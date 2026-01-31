@@ -6,7 +6,7 @@
  * base URL and authentication.
  */
 
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import { Configuration, StatementResultsSqlV1Api, StatementsSqlV1Api } from "../clients/flinkSql";
 import { Logger } from "../logging";
 import type { FlinkStatement } from "../models/flinkStatement";

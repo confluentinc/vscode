@@ -5,7 +5,7 @@ import { OAuthUriHandler, createCallbackUri, createErrorCallbackUri } from "./ur
 import type { OAuthCallbackResult } from "./types";
 import { CALLBACK_URIS } from "./config";
 
-describe("auth/oauth2/uriHandler", function () {
+describe("authn/oauth2/uriHandler", function () {
   let handler: OAuthUriHandler;
   let mockContext: vscode.ExtensionContext;
 

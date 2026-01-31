@@ -6,8 +6,8 @@
  */
 
 import type { Disposable } from "vscode";
-import { AuthService, type AuthResult } from "../../auth/oauth2/authService";
-import { TokenManager } from "../../auth/oauth2/tokenManager";
+import { AuthService, type AuthResult } from "../../authn/oauth2/authService";
+import { TokenManager } from "../../authn/oauth2/tokenManager";
 import { ContextValues, setContextValue } from "../../context/values";
 import { ccloudConnected } from "../../emitters";
 import { Logger } from "../../logging";
@@ -142,6 +142,12 @@ export class CCloudConnectionHandler extends ConnectionHandler {
           this._refreshAttempts = 0;
           this._connected = true;
           this.updateStatus({ ccloud: this._ccloudStatus });
+
+          // Set context value and fire connected event so the UI updates immediately.
+          // Without this, the Resources view shows "(No connection)" until createSession()
+          // finishes waiting for waitForConnectionToBeStable().
+          await setContextValue(ContextValues.ccloudConnectionAvailable, true);
+          ccloudConnected.fire(true);
         }
       }),
     );

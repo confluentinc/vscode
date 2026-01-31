@@ -252,7 +252,7 @@ describe("documentProviders/schema.ts", function () {
 
       // Verify the document was opened
       assert.ok(showTextDocumentStub.calledOnce);
-      const calledUri = showTextDocumentStub.firstCall.args[0] as vscode.Uri;
+      const calledUri = showTextDocumentStub.firstCall.args[0] as Uri;
       assert.strictEqual(calledUri.scheme, "confluent.schema");
 
       // Verify the language was set

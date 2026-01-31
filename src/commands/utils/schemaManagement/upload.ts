@@ -7,7 +7,7 @@ import {
   type SubjectsV1Api,
   type SubjectVersion,
 } from "../../../clients/schemaRegistryRest";
-import { TokenManager } from "../../../auth/oauth2/tokenManager";
+import { TokenManager } from "../../../authn/oauth2/tokenManager";
 import { ConnectionType, CredentialType } from "../../../connections";
 import { TARGET_SR_CLUSTER_HEADER } from "../../../constants";
 import { schemaSubjectChanged, schemaVersionsChanged } from "../../../emitters";

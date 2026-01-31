@@ -459,7 +459,7 @@ describe("FlinkLanguageClientManager", () => {
         mockAccessToken = "mock-access-token";
 
         // Stub TokenManager prototype method (before getInstance is called)
-        const { TokenManager } = await import("../auth/oauth2/tokenManager");
+        const { TokenManager } = await import("../authn/oauth2/tokenManager");
         getDataPlaneTokenStub = sandbox
           .stub(TokenManager.prototype, "getDataPlaneToken")
           .resolves(mockAccessToken);

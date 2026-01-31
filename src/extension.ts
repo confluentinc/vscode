@@ -13,7 +13,7 @@ if (process.env.SENTRY_DSN) {
 }
 
 import { handleNewOrUpdatedExtensionInstallation } from "./activation/compareVersions";
-import { AuthService } from "./auth/oauth2/authService";
+import { AuthService } from "./authn/oauth2/authService";
 import { ConfluentCloudAuthProvider } from "./authn/ccloudProvider";
 import { createCCloudConnection } from "./authn/ccloudSession";
 import { getCCloudAuthSession } from "./authn/utils";

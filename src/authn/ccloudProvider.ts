@@ -34,6 +34,16 @@ import type { AuthCallbackEvent } from "./types";
 /** Callback type for auth flow completion */
 type AuthFlowCallback = (event: AuthCallbackEvent) => void;
 
+/**
+ * State stored in SecretStorage to coordinate auth flow across windows.
+ */
+interface PendingAuthFlow {
+  /** When the auth flow was started (unix timestamp ms) */
+  startedAt: number;
+  /** The sign-in URI for showing link in other windows */
+  signInUri: string;
+}
+
 const logger = new Logger("authn.ccloudProvider");
 
 /**
@@ -411,6 +421,10 @@ export class ConfluentCloudAuthProvider
     // This is used to detect when a user signs in or out from another workspace.
     const secretsOnDidChangeSub: vscode.Disposable = context.secrets.onDidChange(
       async ({ key }: vscode.SecretStorageChangeEvent) => {
+        if (key === SecretStorageKeys.CCLOUD_AUTH_PENDING) {
+          logger.debug("pending auth flow storage change detected");
+          await this.handlePendingAuthChange();
+        }
         if (key === SecretStorageKeys.CCLOUD_SESSION || key === SecretStorageKeys.CCLOUD_STATE) {
           logger.debug(`storage change detected for key: ${key}`);
           // Trigger getSessions to re-evaluate auth state
@@ -451,6 +465,37 @@ export class ConfluentCloudAuthProvider
    * successful, or `undefined` if the user cancelled the operation.
    */
   async browserAuthFlow(uri: string): Promise<AuthCallbackEvent | undefined> {
+    // Check for stale pending flow from a previous attempt (e.g., crashed window)
+    const existingPending = await getSecretStorage().get(SecretStorageKeys.CCLOUD_AUTH_PENDING);
+    if (existingPending) {
+      try {
+        const pending = JSON.parse(existingPending) as PendingAuthFlow;
+        const isStale = Date.now() - pending.startedAt > 5 * 60 * 1000; // 5 minutes
+        if (isStale) {
+          logger.debug("browserAuthFlow() clearing stale pending auth flow");
+          await getSecretStorage().delete(SecretStorageKeys.CCLOUD_AUTH_PENDING);
+        }
+      } catch {
+        // Invalid JSON, clear it
+        await getSecretStorage().delete(SecretStorageKeys.CCLOUD_AUTH_PENDING);
+      }
+    }
+
+    // Set up the auth callback BEFORE writing to storage.
+    // This prevents handlePendingAuthChange() from showing a duplicate "cross-window"
+    // progress notification for our own auth flow when the storage change event fires.
+    const authCallbackPromise = this.waitForAuthCallback();
+
+    // Store pending state so other windows know auth is in progress
+    const pendingFlow: PendingAuthFlow = {
+      startedAt: Date.now(),
+      signInUri: uri,
+    };
+    await getSecretStorage().store(
+      SecretStorageKeys.CCLOUD_AUTH_PENDING,
+      JSON.stringify(pendingFlow),
+    );
+
     return await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -468,7 +513,7 @@ export class ConfluentCloudAuthProvider
         // - we handle the auth completion event and resolve with the callback query params
         // - user clicks the "Cancel" button from the notification
         const [authCallback, cancelled] = await Promise.race([
-          this.waitForAuthCallback().then((authCallback): [AuthCallbackEvent, boolean] => [
+          authCallbackPromise.then((authCallback): [AuthCallbackEvent, boolean] => [
             authCallback,
             false,
           ]),
@@ -477,6 +522,10 @@ export class ConfluentCloudAuthProvider
             true,
           ]),
         ]);
+
+        // Clear the pending flow marker now that we're done (success or cancel)
+        await getSecretStorage().delete(SecretStorageKeys.CCLOUD_AUTH_PENDING);
+
         if (cancelled) {
           this._pendingAuthFlowCallback = null;
           return;
@@ -528,6 +577,50 @@ export class ConfluentCloudAuthProvider
     logger.debug("handleSessionSecretChange() result", { hasSession });
 
     // getSessions already handles firing appropriate events and updating state
+  }
+
+  /**
+   * Handle changes to the pending auth flow storage key. This is called when:
+   * - Another window starts an auth flow (pendingFlowJson is set)
+   * - Auth completes in any window (pendingFlowJson is cleared)
+   */
+  private async handlePendingAuthChange(): Promise<void> {
+    const pendingFlowJson = await getSecretStorage().get(SecretStorageKeys.CCLOUD_AUTH_PENDING);
+
+    if (pendingFlowJson && !this._pendingAuthFlowCallback) {
+      // Another window started an auth flow and we don't have a local pending callback.
+      // Show a progress notification here so the user knows auth is in progress.
+      try {
+        const pendingFlow = JSON.parse(pendingFlowJson) as PendingAuthFlow;
+        logger.debug("Auth flow started in another window, showing progress notification");
+        void this.showCrossWindowAuthProgress(pendingFlow.signInUri);
+      } catch {
+        logger.debug("handlePendingAuthChange() failed to parse pending flow JSON");
+      }
+    } else if (!pendingFlowJson && this._pendingAuthFlowCallback) {
+      // Pending flow was cleared (auth completed in another window).
+      // Resolve our local pending callback with success so the progress notification closes.
+      logger.debug("Auth completed in another window, resolving local pending callback");
+      this._pendingAuthFlowCallback({ success: true, resetPassword: false });
+    }
+  }
+
+  /**
+   * Show a progress notification for an auth flow initiated in another window.
+   * This notification will close when auth completes (detected via storage change).
+   */
+  private async showCrossWindowAuthProgress(signInUri: string): Promise<void> {
+    return await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `Signing in to [Confluent Cloud](${signInUri})...`,
+        cancellable: false, // Can't cancel from non-initiating window
+      },
+      async (): Promise<void> => {
+        // Wait for auth to complete by polling for the pending flow to be cleared
+        await this.waitForAuthCallback();
+      },
+    );
   }
 
   /**

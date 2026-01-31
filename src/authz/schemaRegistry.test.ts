@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { window } from "vscode";
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import {

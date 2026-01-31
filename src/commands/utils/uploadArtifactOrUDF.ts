@@ -1,6 +1,6 @@
 import path from "path";
 import * as vscode from "vscode";
-import { TokenManager } from "../../auth/oauth2/tokenManager";
+import { TokenManager } from "../../authn/oauth2/tokenManager";
 import type {
   CreateArtifactV1FlinkArtifact201Response,
   CreateArtifactV1FlinkArtifactRequest,

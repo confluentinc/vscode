@@ -5,7 +5,7 @@ import { TokenManager } from "./tokenManager";
 import type { OAuthTokens } from "./types";
 import { OAUTH_CONSTANTS, TOKEN_LIFETIMES } from "./config";
 
-describe("auth/oauth2/tokenManager", function () {
+describe("authn/oauth2/tokenManager", function () {
   let tokenManager: TokenManager;
   let mockSecretStorage: sinon.SinonStubbedInstance<vscode.SecretStorage>;
   let storageData: Map<string, string>;

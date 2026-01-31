@@ -12,7 +12,7 @@ import {
   TEST_CCLOUD_FLINK_ARTIFACT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../../tests/unit/testResources";
-import { TokenManager } from "../../auth/oauth2/tokenManager";
+import { TokenManager } from "../../authn/oauth2/tokenManager";
 import type { PresignedUploadUrlArtifactV1PresignedUrl200Response } from "../../clients/flinkArtifacts";
 import {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,

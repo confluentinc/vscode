@@ -1,6 +1,6 @@
 import type { Disposable } from "vscode";
 
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 // ArtifactV1FlinkArtifactListDataInner import removed - sidecar migration (phase-6)
 import type { FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
 import type { GetSqlv1Statement200Response } from "../clients/flinkSql";

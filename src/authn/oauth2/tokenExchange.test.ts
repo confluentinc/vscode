@@ -12,7 +12,7 @@ import {
 import { getOAuthConfig, CCloudEnvironment, TOKEN_LIFETIMES } from "./config";
 import type { OAuthConfig, OAuthTokens } from "./types";
 
-describe("auth/oauth2/tokenExchange", function () {
+describe("authn/oauth2/tokenExchange", function () {
   let config: OAuthConfig;
   let fetchStub: sinon.SinonStub;
 

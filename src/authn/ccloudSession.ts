@@ -5,7 +5,7 @@
  * CCloud connections. These functions were previously in src/sidecar/connections/ccloud.ts.
  */
 
-import { AuthService } from "../auth/oauth2/authService";
+import { AuthService } from "./oauth2/authService";
 import { ConnectionManager } from "../connections/connectionManager";
 import { ConnectedState, type Connection, type ConnectionId } from "../connections/types";
 import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../constants";

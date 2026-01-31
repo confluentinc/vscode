@@ -590,6 +590,131 @@ describe("authn/ccloudProvider.ts", () => {
         assert.deepStrictEqual(session, TEST_CCLOUD_AUTH_SESSION);
       });
     });
+
+    describe("handlePendingAuthChange()", () => {
+      let stubbedSecretStorage: StubbedSecretStorage;
+
+      beforeEach(() => {
+        stubbedSecretStorage = getStubbedSecretStorage(sandbox);
+      });
+
+      it("should resolve pending callback when pending flow is cleared (auth completed in another window)", async () => {
+        // Simulate having a pending callback from this window
+        let callbackResult: { success: boolean; resetPassword: boolean } | null = null;
+        authProvider["_pendingAuthFlowCallback"] = (event) => {
+          callbackResult = event;
+        };
+
+        // Simulate the pending flow being cleared (auth completed in another window)
+        stubbedSecretStorage.get.resolves(undefined);
+
+        await authProvider["handlePendingAuthChange"]();
+
+        // Callback should have been resolved with success
+        assert.deepStrictEqual(callbackResult, { success: true, resetPassword: false });
+      });
+
+      it("should not resolve callback when there is no pending callback", async () => {
+        // No pending callback
+        authProvider["_pendingAuthFlowCallback"] = null;
+
+        // Simulate the pending flow being cleared
+        stubbedSecretStorage.get.resolves(undefined);
+
+        // Should not throw, just complete silently
+        await authProvider["handlePendingAuthChange"]();
+      });
+
+      it("should ignore invalid JSON in pending flow storage", async () => {
+        // No existing pending callback
+        authProvider["_pendingAuthFlowCallback"] = null;
+
+        // Simulate invalid JSON
+        stubbedSecretStorage.get.resolves("invalid json{");
+
+        // Should not throw, just complete silently
+        await authProvider["handlePendingAuthChange"]();
+      });
+    });
+
+    describe("browserAuthFlow() cross-window coordination", () => {
+      let stubbedSecretStorage: StubbedSecretStorage;
+
+      beforeEach(() => {
+        stubbedSecretStorage = getStubbedSecretStorage(sandbox);
+      });
+
+      it("should clear stale pending flow before starting", async () => {
+        // Mock a stale pending flow (older than 5 minutes)
+        const stalePendingFlow = JSON.stringify({
+          startedAt: Date.now() - 6 * 60 * 1000, // 6 minutes ago
+          signInUri: "https://old.example.com",
+        });
+        stubbedSecretStorage.get.resolves(stalePendingFlow);
+
+        // Stub openExternal to prevent actual browser open
+        sandbox.stub(vscode.env, "openExternal").resolves(true);
+
+        // Create a pending auth flow that immediately resolves
+        const promise = authProvider.browserAuthFlow("https://test.example.com");
+
+        // Simulate immediate cancellation
+        setTimeout(() => {
+          authProvider["_pendingAuthFlowCallback"]?.({ success: true, resetPassword: false });
+        }, 10);
+
+        await promise;
+
+        // Should have deleted the stale pending flow
+        sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.CCLOUD_AUTH_PENDING);
+      });
+
+      it("should store pending flow in SecretStorage when starting auth", async () => {
+        stubbedSecretStorage.get.resolves(undefined);
+
+        // Stub openExternal to prevent actual browser open
+        sandbox.stub(vscode.env, "openExternal").resolves(true);
+
+        const testUri = "https://test.confluent.cloud/signin";
+        const promise = authProvider.browserAuthFlow(testUri);
+
+        // Immediately resolve to finish the test
+        setTimeout(() => {
+          authProvider["_pendingAuthFlowCallback"]?.({ success: true, resetPassword: false });
+        }, 10);
+
+        await promise;
+
+        // Should have stored the pending flow with the signInUri
+        sinon.assert.calledWith(
+          stubbedSecretStorage.store,
+          SecretStorageKeys.CCLOUD_AUTH_PENDING,
+          sinon.match((value: string) => {
+            const parsed = JSON.parse(value);
+            return parsed.signInUri === testUri && typeof parsed.startedAt === "number";
+          }),
+        );
+      });
+
+      it("should clear pending flow after auth completes", async () => {
+        stubbedSecretStorage.get.resolves(undefined);
+
+        // Stub openExternal to prevent actual browser open
+        sandbox.stub(vscode.env, "openExternal").resolves(true);
+
+        const promise = authProvider.browserAuthFlow("https://test.example.com");
+
+        // Simulate successful auth completion
+        setTimeout(() => {
+          authProvider["_pendingAuthFlowCallback"]?.({ success: true, resetPassword: false });
+        }, 10);
+
+        await promise;
+
+        // Should have deleted the pending flow marker
+        sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.CCLOUD_AUTH_PENDING);
+      });
+    });
   });
 });
 

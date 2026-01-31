@@ -4,7 +4,7 @@ import { window, workspace } from "vscode";
 import type { LanguageClient } from "vscode-languageclient/node";
 import type { CloseEvent, ErrorEvent } from "ws";
 import { WebSocket } from "ws";
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
 import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { ccloudConnected, uriMetadataSet } from "../emitters";

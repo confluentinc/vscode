@@ -7,7 +7,7 @@ import { PKCEStateManager } from "./pkceStateManager";
 import type { OAuthTokens } from "./types";
 import { TOKEN_LIFETIMES, CCloudEnvironment } from "./config";
 
-describe("auth/oauth2/authService", function () {
+describe("authn/oauth2/authService", function () {
   let authService: AuthService;
   let mockContext: vscode.ExtensionContext;
   let mockSecretStorage: sinon.SinonStubbedInstance<vscode.SecretStorage>;

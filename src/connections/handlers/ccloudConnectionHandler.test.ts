@@ -3,8 +3,8 @@ import sinon from "sinon";
 import type { ConnectionSpec } from "../spec";
 import { ConnectedState, ConnectionType, type ConnectionId } from "../types";
 import { CCloudConnectionHandler } from "./ccloudConnectionHandler";
-import { AuthService, AuthState } from "../../auth/oauth2/authService";
-import { TokenManager } from "../../auth/oauth2/tokenManager";
+import { AuthService, AuthState } from "../../authn/oauth2/authService";
+import { TokenManager } from "../../authn/oauth2/tokenManager";
 
 describe("connections/handlers/ccloudConnectionHandler", function () {
   let sandbox: sinon.SinonSandbox;

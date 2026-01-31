@@ -36,7 +36,7 @@ import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
 
-import { TokenManager } from "./auth/oauth2/tokenManager";
+import { TokenManager } from "./authn/oauth2/tokenManager";
 import { ConnectionType } from "./connections";
 import { getCredentialsType } from "./directConnections/credentials";
 import { isDesktopEnvironment } from "./kafka/environment";

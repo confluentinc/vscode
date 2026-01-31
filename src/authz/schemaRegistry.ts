@@ -1,4 +1,4 @@
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import { TARGET_SR_CLUSTER_HEADER } from "../constants";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";

@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import { TARGET_SR_CLUSTER_HEADER } from "../../constants";
 import { KAFKA_TOPIC_OPERATIONS } from "../../authz/constants";
 import { toKafkaTopicOperations } from "../../authz/types";
-import { TokenManager } from "../../auth/oauth2/tokenManager";
+import { TokenManager } from "../../authn/oauth2/tokenManager";
 import { ConnectionType, type Credentials } from "../../connections";
 import { getCredentialsType } from "../../directConnections/credentials";
 import type { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";

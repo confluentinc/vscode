@@ -10,6 +10,7 @@ import {
 } from "vscode";
 import type { ConnectionType } from "../connections";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
+import { HttpError } from "../proxy/httpClient";
 import { ContextValues, getContextValue, setContextValue } from "../context/values";
 import {
   ccloudConnected,
@@ -298,11 +299,21 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
         ]);
         this.ccloudOrganization = results[0] as CCloudOrganization;
       } catch (e) {
-        const msg = `Failed to load Confluent Cloud information for the "${this.ccloudOrganization?.name}" organization.`;
+        // Use stored org name if available, otherwise fall back to generic message
+        const orgName = this.ccloudOrganization?.name;
+        const msg = orgName
+          ? `Failed to load Confluent Cloud information for the "${orgName}" organization.`
+          : "Failed to load Confluent Cloud information.";
         logError(e, "loading CCloud environments or organization", {
           extra: { functionName: "loadCCloudResources" },
         });
-        void showErrorNotificationWithButtons(msg);
+
+        // Don't show error notification for expected auth errors during sign-out
+        // (401 Unauthorized indicates the auth session was invalidated)
+        const isAuthError = e instanceof HttpError && e.status === 401;
+        if (!isAuthError) {
+          void showErrorNotificationWithButtons(msg);
+        }
 
         this.environments.length = 0;
         this.ccloudOrganization = undefined;

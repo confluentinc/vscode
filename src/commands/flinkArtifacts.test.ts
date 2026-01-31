@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { createFlinkArtifact } from "../../tests/unit/testResources/flinkArtifact";
 
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import type {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,

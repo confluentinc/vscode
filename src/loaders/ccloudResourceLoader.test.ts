@@ -1,7 +1,6 @@
 import assert from "assert";
 import * as sinon from "sinon";
 
-import { loadFixtureFromFile } from "../../tests/fixtures/utils";
 import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedResourceManager } from "../../tests/stubs/extensionStorage";
@@ -13,46 +12,14 @@ import {
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
-import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
-import type {
-  ArtifactV1FlinkArtifactList,
-  ArtifactV1FlinkArtifactListDataInner,
-} from "../clients/flinkArtifacts";
-import {
-  ArtifactV1FlinkArtifactListApiVersionEnum,
-  ArtifactV1FlinkArtifactListDataInnerApiVersionEnum,
-  ArtifactV1FlinkArtifactListDataInnerKindEnum,
-  ArtifactV1FlinkArtifactListKindEnum,
-  FlinkArtifactsArtifactV1Api,
-} from "../clients/flinkArtifacts";
-import type { FcpmV2RegionList, FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
-import {
-  FcpmV2RegionListApiVersionEnum,
-  FcpmV2RegionListDataInnerApiVersionEnum,
-  FcpmV2RegionListDataInnerKindEnum,
-  FcpmV2RegionListKindEnum,
-  RegionsFcpmV2Api,
-} from "../clients/flinkComputePool";
-import type {
-  GetSqlv1Statement200Response,
-  SqlV1StatementList,
-  SqlV1StatementListDataInner,
-} from "../clients/flinkSql";
-import {
-  SqlV1StatementListApiVersionEnum,
-  SqlV1StatementListDataInnerApiVersionEnum,
-  SqlV1StatementListDataInnerKindEnum,
-  SqlV1StatementListKindEnum,
-  StatementsSqlV1Api,
-} from "../clients/flinkSql";
-import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import * as ccloudResourceFetcher from "../fetchers/ccloudResourceFetcher";
 import * as organizationFetcher from "../fetchers/organizationFetcher";
-import * as statementUtils from "../flinkSql/statementUtils";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { FlinkStatement } from "../models/flinkStatement";
-import { Phase, restFlinkStatementToModel } from "../models/flinkStatement";
+import { Phase } from "../models/flinkStatement";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { EnvironmentId, IFlinkQueryable } from "../models/resource";
@@ -66,32 +33,24 @@ import { createFlinkAIConnection } from "../../tests/unit/testResources/flinkAIC
 import { createFlinkAITool } from "../../tests/unit/testResources/flinkAITool";
 import { TEST_FLINK_RELATION } from "../../tests/unit/testResources/flinkRelation";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
-import { TokenManager } from "../auth/oauth2/tokenManager";
-import { CCloudConnectionError } from "../authn/errors";
-import * as authnUtils from "../authn/utils";
-import {
-  CCloudDataPlaneProxy,
-  HttpError,
-  type FlinkStatement as FlinkStatementApi,
-} from "../proxy";
-import * as ccloudArtifactsProxy from "../proxy/ccloudArtifactsProxy";
-import type { FlinkArtifactData, FlinkArtifactListResponse } from "../proxy/ccloudArtifactsProxy";
-import {
-  CCloudControlPlaneProxy,
-  type CCloudFlinkRegionData,
-} from "../proxy/ccloudControlPlaneProxy";
-import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
-import {
-  GetWsV1Workspace200ResponseApiVersionEnum,
-  GetWsV1Workspace200ResponseKindEnum,
-  WorkspacesWsV1Api,
-} from "../clients/flinkWorkspaces";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import type { FlinkWorkspaceParams } from "../flinkSql/flinkWorkspace";
 import type { FlinkAIAgent } from "../models/flinkAiAgent";
 import type { FlinkAIConnection } from "../models/flinkAiConnection";
 import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
 import type { FlinkRelation } from "../models/flinkRelation";
 import type { FlinkUdf } from "../models/flinkUDF";
+import {
+  CCloudDataPlaneProxy,
+  HttpError,
+  type FlinkStatement as FlinkStatementApi,
+} from "../proxy";
+import type { FlinkArtifactData } from "../proxy/ccloudArtifactsProxy";
+import * as ccloudArtifactsProxy from "../proxy/ccloudArtifactsProxy";
+import {
+  CCloudControlPlaneProxy,
+  type CCloudFlinkRegionData,
+} from "../proxy/ccloudControlPlaneProxy";
 import { WorkspaceStorageKeys } from "../storage/constants";
 import {
   CCloudResourceLoader,

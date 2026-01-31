@@ -7,7 +7,7 @@
  * - LOCAL/DIRECT connections in VS Code for Web (v2/v3 API fallback)
  */
 
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import { ConnectionType, CredentialType } from "../connections";
 import { Logger } from "../logging";
 import type { KafkaCluster } from "../models/kafkaCluster";

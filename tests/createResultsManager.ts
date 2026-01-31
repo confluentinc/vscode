@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import { ObservableScope } from "inertial";
-import { TokenManager } from "../src/auth/oauth2/tokenManager";
+import { TokenManager } from "../src/authn/oauth2/tokenManager";
 import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "../src/clients/flinkSql";
 import { DEFAULT_RESULTS_LIMIT } from "../src/flinkSql/flinkStatementResults";
 import type {

@@ -8,7 +8,7 @@
 import type { Disposable } from "vscode";
 import type { CloseEvent, ErrorEvent, MessageEvent } from "ws";
 import { WebSocket } from "ws";
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import {

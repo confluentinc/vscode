@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { ResourceDocumentProvider } from ".";
-import { TokenManager } from "../auth/oauth2/tokenManager";
+import { TokenManager } from "../authn/oauth2/tokenManager";
 import type { SchemaString } from "../clients/schemaRegistryRest";
 import { ConnectionType, type Credentials } from "../connections";
 import { TARGET_SR_CLUSTER_HEADER } from "../constants";

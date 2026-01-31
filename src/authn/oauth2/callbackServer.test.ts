@@ -4,7 +4,7 @@ import { OAuthCallbackServer } from "./callbackServer";
 import type { OAuthCallbackResult } from "./types";
 import { OAUTH_CONSTANTS } from "./config";
 
-describe("auth/oauth2/callbackServer", function () {
+describe("authn/oauth2/callbackServer", function () {
   // Use a different port for tests to avoid conflicts
   const TEST_PORT = 26637;
   let server: OAuthCallbackServer;

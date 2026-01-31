@@ -26,7 +26,7 @@ import {
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../../../tests/unit/testUtils";
-import { TokenManager } from "../../../auth/oauth2/tokenManager";
+import { TokenManager } from "../../../authn/oauth2/tokenManager";
 import type { Configuration, RegisterRequest } from "../../../clients/schemaRegistryRest";
 import { ResponseError, SchemasV1Api, SubjectsV1Api } from "../../../clients/schemaRegistryRest";
 import { ConnectionType } from "../../../connections";
