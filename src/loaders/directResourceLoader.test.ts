@@ -7,31 +7,30 @@ import {
   TEST_DIRECT_KAFKA_CLUSTER,
   TEST_DIRECT_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
-import { TEST_DIRECT_CONNECTION_ID } from "../../tests/unit/testResources/connection";
+import {
+  TEST_DIRECT_CONNECTION_FORM_SPEC,
+  TEST_DIRECT_CONNECTION_ID,
+} from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-// TODO: Re-enable when direct GraphQL module is restored (sidecar removal migration)
-// import * as directGraphQl from "../graphql/direct";
 import { DirectEnvironment } from "../models/environment";
 import type { EnvironmentId } from "../models/resource";
+import * as resourceManagerModule from "../storage/resourceManager";
+import type { CustomConnectionSpec } from "../storage/resourceManager";
 import { DirectResourceLoader } from "./directResourceLoader";
 
-// TODO: Re-enable these tests when direct GraphQL module is restored (sidecar removal migration)
-// The DirectResourceLoader tests depend on getDirectResources() from graphql/direct module
-// which has been removed during the sidecar removal migration.
-describe.skip("DirectResourceLoader", () => {
+describe("DirectResourceLoader", () => {
   let myEnvironment: DirectEnvironment;
+  let connectionSpec: CustomConnectionSpec;
 
   let sandbox: sinon.SinonSandbox;
   let loader: DirectResourceLoader;
-  // let getDirectResourcesStub: sinon.SinonStub;
+  let getDirectConnectionStub: sinon.SinonStub;
 
   before(async () => {
     await getTestExtensionContext();
   });
 
   beforeEach(async () => {
-    loader = new DirectResourceLoader(TEST_DIRECT_CONNECTION_ID);
-
     sandbox = sinon.createSandbox();
 
     // Use the test fixture with Kafka cluster and Schema Registry configured
@@ -43,11 +42,25 @@ describe.skip("DirectResourceLoader", () => {
       schemaRegistryConfigured: false,
     });
 
-    // TODO: Re-enable when direct GraphQL module is restored
-    // stub getDirectResources() to return our test environment.
-    // getDirectResourcesStub = sandbox
-    //   .stub(directGraphQl, "getDirectResources")
-    //   .resolves(myEnvironment);
+    // Create a connection spec that matches our test environment
+    connectionSpec = {
+      ...TEST_DIRECT_CONNECTION_FORM_SPEC,
+      kafkaCluster: {
+        bootstrapServers: TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers,
+      },
+      schemaRegistry: {
+        uri: TEST_DIRECT_SCHEMA_REGISTRY.uri,
+      },
+    };
+
+    // Stub getResourceManager to return a mock with getDirectConnection
+    const mockResourceManager = resourceManagerModule.getResourceManager();
+    getDirectConnectionStub = sandbox
+      .stub(mockResourceManager, "getDirectConnection")
+      .resolves(connectionSpec);
+
+    // Create loader after stubbing
+    loader = new DirectResourceLoader(TEST_DIRECT_CONNECTION_ID);
 
     // Ensure workspace storage cached data for this connection id is cleared before each test.
     await loader.reset();
@@ -60,54 +73,61 @@ describe.skip("DirectResourceLoader", () => {
   describe("getEnvironments()", () => {
     it("Deep fetches once and caches the result", async () => {
       const environments = await loader.getEnvironments();
-      // sinon.assert.calledOnce(getDirectResourcesStub);
-      assert.deepStrictEqual(environments, [myEnvironment], "first fetch");
+      sinon.assert.calledOnce(getDirectConnectionStub);
+      assert.strictEqual(environments.length, 1, "first fetch should return one environment");
 
       // Call again, should not call the stub again.
       const cachedEnvironments = await loader.getEnvironments();
-      // sinon.assert.calledOnce(getDirectResourcesStub);
-      assert.deepStrictEqual(cachedEnvironments, [myEnvironment], "secton fetch");
+      sinon.assert.calledOnce(getDirectConnectionStub);
+      assert.strictEqual(
+        cachedEnvironments.length,
+        1,
+        "second fetch should return cached environment",
+      );
 
       // Call with forceDeepRefresh, should call the stub again.
       const refreshedEnvironments = await loader.getEnvironments(true);
-      // sinon.assert.calledTwice(getDirectResourcesStub);
-      assert.deepStrictEqual(refreshedEnvironments, [myEnvironment], "third fetch");
+      sinon.assert.calledTwice(getDirectConnectionStub);
+      assert.strictEqual(
+        refreshedEnvironments.length,
+        1,
+        "third fetch should return refreshed environment",
+      );
     });
 
-    it("should not cache when getDirectResources returns undefined and retry on next call", async () => {
-      // TODO: Re-enable when direct GraphQL module is restored
-      // Stub getDirectResources to return undefined (simulating GraphQL query failure)
-      // getDirectResourcesStub.resolves(undefined);
+    it("should not cache when getDirectConnection returns null and retry on next call", async () => {
+      // Stub getDirectConnection to return null (simulating no connection found)
+      getDirectConnectionStub.resolves(null);
 
       const environments = await loader.getEnvironments();
-      // sinon.assert.calledOnce(getDirectResourcesStub);
+      sinon.assert.calledOnce(getDirectConnectionStub);
       assert.deepStrictEqual(environments, []);
 
       // Call again, should call the stub again since nothing was cached
       const secondCallEnvironments = await loader.getEnvironments();
-      // sinon.assert.calledTwice(getDirectResourcesStub);
+      sinon.assert.calledTwice(getDirectConnectionStub);
       assert.deepStrictEqual(secondCallEnvironments, []);
 
-      // Now fix the stub to return a valid environment
-      // getDirectResourcesStub.resolves(myEnvironment);
+      // Now fix the stub to return a valid connection spec
+      getDirectConnectionStub.resolves(connectionSpec);
       const thirdCallEnvironments = await loader.getEnvironments();
-      // sinon.assert.calledThrice(getDirectResourcesStub);
-      assert.deepStrictEqual(thirdCallEnvironments, [myEnvironment]);
+      sinon.assert.calledThrice(getDirectConnectionStub);
+      assert.strictEqual(thirdCallEnvironments.length, 1);
 
       // Fourth call should use cache now
       const fourthCallEnvironments = await loader.getEnvironments();
-      // sinon.assert.calledThrice(getDirectResourcesStub); // Should still be 3 calls
-      assert.deepStrictEqual(fourthCallEnvironments, [myEnvironment]);
+      sinon.assert.calledThrice(getDirectConnectionStub); // Should still be 3 calls
+      assert.strictEqual(fourthCallEnvironments.length, 1);
     });
   });
 
   describe("reset()", () => {
     it("Clears the cached environments", async () => {
       await loader.getEnvironments(); // Load and cache first.
-      // sinon.assert.calledOnce(getDirectResourcesStub);
+      sinon.assert.calledOnce(getDirectConnectionStub);
       await loader.reset(); // Clear the cache.
       await loader.getEnvironments(); // Should call the stub again.
-      // sinon.assert.calledTwice(getDirectResourcesStub); // Should have called the stub again.
+      sinon.assert.calledTwice(getDirectConnectionStub); // Should have called the stub again.
     });
   });
 
@@ -116,7 +136,11 @@ describe.skip("DirectResourceLoader", () => {
       const kafkaClusters = await loader.getKafkaClustersForEnvironmentId(
         TEST_DIRECT_ENVIRONMENT_ID,
       );
-      assert.deepStrictEqual(kafkaClusters, myEnvironment.kafkaClusters);
+      assert.strictEqual(kafkaClusters.length, 1);
+      assert.strictEqual(
+        kafkaClusters[0].bootstrapServers,
+        TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers,
+      );
     });
 
     it("Returns empty array for unknown environment ID", async () => {
@@ -130,12 +154,20 @@ describe.skip("DirectResourceLoader", () => {
   describe("getSchemaRegistries()", () => {
     it("Returns the expected schema registry", async () => {
       const schemaRegistries = await loader.getSchemaRegistries();
-      assert.deepStrictEqual(schemaRegistries, [myEnvironment.schemaRegistry]);
+      assert.strictEqual(schemaRegistries.length, 1);
+      assert.strictEqual(schemaRegistries[0].uri, TEST_DIRECT_SCHEMA_REGISTRY.uri);
     });
 
     it("Returns an empty array if no schema registries are configured", async () => {
-      // Modify the environment to not have a schema registry.
-      myEnvironment.schemaRegistry = undefined;
+      // Create a spec without schema registry
+      const specWithoutSR = {
+        ...connectionSpec,
+        schemaRegistry: undefined,
+      };
+      getDirectConnectionStub.resolves(specWithoutSR);
+
+      // Reset to clear cache and force re-fetch
+      await loader.reset();
       const schemaRegistries = await loader.getSchemaRegistries();
       assert.deepStrictEqual(schemaRegistries, []);
     });
@@ -146,7 +178,8 @@ describe.skip("DirectResourceLoader", () => {
       const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(
         TEST_DIRECT_ENVIRONMENT_ID,
       );
-      assert.deepStrictEqual(schemaRegistry, myEnvironment.schemaRegistry);
+      assert.ok(schemaRegistry);
+      assert.strictEqual(schemaRegistry.uri, TEST_DIRECT_SCHEMA_REGISTRY.uri);
     });
 
     it("Returns undefined for an environment without a schema registry", async () => {

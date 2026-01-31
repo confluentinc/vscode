@@ -29,8 +29,7 @@ const logger = new Logger("flink-statement-results");
 
 /**
  * Interface for providing Flink SQL API instances.
- * TODO(sidecar-removal): This interface replaces the SidecarHandle dependency.
- * It will be implemented by a direct API client once the migration is complete.
+ * @see CCloudFlinkSqlApiProvider for the implementation.
  */
 export interface FlinkSqlApiProvider {
   getFlinkSqlStatementResultsApi(statement: FlinkStatement): StatementResultsSqlV1Api;

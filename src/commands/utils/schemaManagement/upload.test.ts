@@ -26,6 +26,7 @@ import {
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../../../tests/unit/testUtils";
+import { TokenManager } from "../../../auth/oauth2/tokenManager";
 import type { Configuration, RegisterRequest } from "../../../clients/schemaRegistryRest";
 import { ResponseError, SchemasV1Api, SubjectsV1Api } from "../../../clients/schemaRegistryRest";
 import { ConnectionType } from "../../../connections";
@@ -36,9 +37,14 @@ import type {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
   LocalSchemaRegistry,
+  SchemaRegistry,
 } from "../../../models/schemaRegistry";
 import { KafkaTopic } from "../../../models/topic";
+import { HttpError } from "../../../proxy/httpClient";
+import * as schemaRegistryProxy from "../../../proxy/schemaRegistryProxy";
 import * as quickPicksSchemas from "../../../quickpicks/schemas";
+import * as resourceManagerModule from "../../../storage/resourceManager";
+import * as schemasViewProviderModule from "../../../viewProviders/schemas";
 import {
   chooseSubject,
   determineDraftSchemaUri,
@@ -54,6 +60,7 @@ import {
   schemaFromString,
   schemaRegistrationMessage,
   updateRegistryCacheAndFindNewSchema,
+  uploadSchema,
   validateNewSubject,
 } from "./upload";
 
@@ -227,11 +234,233 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
     });
   }
 
-  // TODO(sidecar-removal): Re-enable uploadSchema tests after implementing direct API calls
   for (const connectionType of Object.values(ConnectionType)) {
     describe(`uploadSchema() to a ${connectionType} Schema Registry`, function () {
-      it.skip("tests skipped pending sidecar removal refactor", () => {
-        // These tests require sidecar stub which has been removed
+      let stubbedLoader: sinon.SinonStubbedInstance<ResourceLoader>;
+      let createSchemaRegistryProxyStub: sinon.SinonStub;
+      let mockProxy: {
+        listVersions: sinon.SinonStub;
+        registerSchema: sinon.SinonStub;
+        getSchemaByVersion: sinon.SinonStub;
+      };
+      let showInformationMessageStub: sinon.SinonStub;
+      let showErrorMessageStub: sinon.SinonStub;
+      let tokenManagerStub: sinon.SinonStubbedInstance<TokenManager>;
+      let getResourceManagerStub: sinon.SinonStub;
+      let getSchemasViewProviderStub: sinon.SinonStub;
+      let schemaSubjectChangedStub: sinon.SinonStub;
+      let schemaVersionsChangedStub: sinon.SinonStub;
+
+      let testSchemaRegistry: SchemaRegistry;
+      let testSchema: Schema;
+
+      beforeEach(function () {
+        // Set up connection-type-specific test data and loader
+        switch (connectionType) {
+          case ConnectionType.Ccloud:
+            stubbedLoader = getStubbedCCloudResourceLoader(
+              sandbox,
+            ) as unknown as sinon.SinonStubbedInstance<ResourceLoader>;
+            testSchemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+            testSchema = TEST_CCLOUD_SCHEMA;
+            break;
+          case ConnectionType.Local:
+            stubbedLoader = getStubbedLocalResourceLoader(
+              sandbox,
+            ) as unknown as sinon.SinonStubbedInstance<ResourceLoader>;
+            testSchemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
+            testSchema = TEST_LOCAL_SCHEMA;
+            break;
+          case ConnectionType.Direct:
+            stubbedLoader = getStubbedDirectResourceLoader(
+              sandbox,
+            ) as unknown as sinon.SinonStubbedInstance<ResourceLoader>;
+            testSchemaRegistry = TEST_DIRECT_SCHEMA_REGISTRY;
+            testSchema = TEST_DIRECT_SCHEMA;
+            break;
+          default:
+            throw new Error(`Unsupported connection type: ${connectionType}`);
+        }
+
+        // Create mock proxy with stubbed methods
+        mockProxy = {
+          listVersions: sandbox.stub(),
+          registerSchema: sandbox.stub(),
+          getSchemaByVersion: sandbox.stub(),
+        };
+        createSchemaRegistryProxyStub = sandbox
+          .stub(schemaRegistryProxy, "createSchemaRegistryProxy")
+          .returns(mockProxy as unknown as schemaRegistryProxy.SchemaRegistryProxy);
+
+        // Stub vscode UI
+        showInformationMessageStub = sandbox.stub(window, "showInformationMessage").resolves();
+        showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
+
+        // Stub TokenManager for CCloud auth
+        tokenManagerStub = sandbox.createStubInstance(TokenManager);
+        tokenManagerStub.getDataPlaneToken.resolves("test-data-plane-token");
+        sandbox.stub(TokenManager, "getInstance").returns(tokenManagerStub);
+
+        // Stub getResourceManager for Direct connection credentials
+        getResourceManagerStub = sandbox.stub(resourceManagerModule, "getResourceManager").returns({
+          getDirectConnection: sandbox.stub().resolves(null),
+        } as any);
+
+        // Stub getSchemasViewProvider for view refresh
+        getSchemasViewProviderStub = sandbox
+          .stub(schemasViewProviderModule, "getSchemasViewProvider")
+          .returns({
+            refresh: sandbox.stub(),
+          } as any);
+
+        // Stub event emitters
+        schemaSubjectChangedStub = sandbox.stub(schemaSubjectChanged, "fire");
+        schemaVersionsChangedStub = sandbox.stub(schemaVersionsChanged, "fire");
+      });
+
+      it("should successfully upload a schema to a new subject", async function () {
+        const subject = "new-subject-value";
+        const schemaType = SchemaType.Avro;
+        const content = '{"type": "record", "name": "Test", "fields": []}';
+        const newSchemaId = 123;
+        const newVersion = 1;
+
+        // No existing versions (new subject) - use HttpError for 404
+        // HttpError constructor: (message, status, statusText, data?, headers?)
+        mockProxy.listVersions
+          .onFirstCall()
+          .rejects(new HttpError("Subject not found", 404, "Not Found"));
+        // After registration, return the new version
+        mockProxy.listVersions.onSecondCall().resolves([newVersion]);
+
+        // Register returns new schema ID
+        mockProxy.registerSchema.resolves({ id: newSchemaId });
+
+        // Get schema by version returns matching ID
+        mockProxy.getSchemaByVersion.resolves({ id: newSchemaId, version: newVersion });
+
+        // Loader returns the new schema for cache update
+        const newSchema = Schema.create({
+          ...testSchema,
+          id: String(newSchemaId),
+          version: newVersion,
+          subject,
+        });
+        stubbedLoader.getSchemasForSubject.resolves([newSchema]);
+
+        await uploadSchema(testSchemaRegistry, subject, schemaType, content);
+
+        // Verify proxy was created with correct config
+        sinon.assert.calledOnce(createSchemaRegistryProxyStub);
+        const proxyConfig = createSchemaRegistryProxyStub.firstCall.args[0];
+        assert.strictEqual(proxyConfig.baseUrl, testSchemaRegistry.uri);
+
+        // Verify schema was registered
+        sinon.assert.calledOnce(mockProxy.registerSchema);
+        const registerArgs = mockProxy.registerSchema.firstCall.args[0];
+        assert.strictEqual(registerArgs.subject, subject);
+        assert.strictEqual(registerArgs.schemaType, schemaType);
+        assert.strictEqual(registerArgs.schema, content);
+        assert.strictEqual(registerArgs.normalize, true);
+
+        // Verify success message shown
+        sinon.assert.calledOnce(showInformationMessageStub);
+        sinon.assert.calledWithMatch(
+          showInformationMessageStub,
+          `Schema registered to new subject "${subject}"`,
+        );
+
+        // Verify cache was cleared for new subject
+        sinon.assert.calledOnce(stubbedLoader.clearCache);
+
+        // Verify schemaSubjectChanged event fired
+        sinon.assert.calledOnce(schemaSubjectChangedStub);
+        sinon.assert.calledWithMatch(schemaSubjectChangedStub, { change: "added" });
+
+        // Verify view refresh called
+        sinon.assert.called(getSchemasViewProviderStub);
+      });
+
+      it("should successfully upload a new version to an existing subject", async function () {
+        const subject = "existing-subject-value";
+        const schemaType = SchemaType.Avro;
+        const content =
+          '{"type": "record", "name": "Test", "fields": [{"name": "id", "type": "int"}]}';
+        const newSchemaId = 456;
+        const existingVersion = 1;
+        const newVersion = 2;
+
+        // Subject already has version 1
+        mockProxy.listVersions.onFirstCall().resolves([existingVersion]);
+        // After registration, return both versions
+        mockProxy.listVersions.onSecondCall().resolves([existingVersion, newVersion]);
+
+        // Register returns new schema ID
+        mockProxy.registerSchema.resolves({ id: newSchemaId });
+
+        // Get schema by version returns matching ID for new version
+        mockProxy.getSchemaByVersion.resolves({ id: newSchemaId, version: newVersion });
+
+        // Loader returns schemas including the new one for cache update
+        const existingSchema = Schema.create({
+          ...testSchema,
+          id: "100",
+          version: existingVersion,
+          subject,
+        });
+        const newSchema = Schema.create({
+          ...testSchema,
+          id: String(newSchemaId),
+          version: newVersion,
+          subject,
+          isHighestVersion: true,
+        });
+        stubbedLoader.getSchemasForSubject.resolves([newSchema, existingSchema]);
+
+        await uploadSchema(testSchemaRegistry, subject, schemaType, content);
+
+        // Verify success message for new version
+        sinon.assert.calledOnce(showInformationMessageStub);
+        sinon.assert.calledWithMatch(
+          showInformationMessageStub,
+          `New version ${newVersion} registered to existing subject "${subject}"`,
+        );
+
+        // Verify cache was NOT cleared (existing subject)
+        sinon.assert.notCalled(stubbedLoader.clearCache);
+
+        // Verify schemaVersionsChanged event fired (not schemaSubjectChanged)
+        sinon.assert.notCalled(schemaSubjectChangedStub);
+        sinon.assert.calledOnce(schemaVersionsChangedStub);
+        sinon.assert.calledWithMatch(schemaVersionsChangedStub, { change: "added" });
+      });
+
+      it("should show error message when registration fails with HttpError", async function () {
+        const subject = "test-subject-value";
+        const schemaType = SchemaType.Avro;
+        const content = '{"invalid": "schema"}';
+
+        // No existing versions - use HttpError for 404
+        // HttpError constructor: (message, status, statusText, data?, headers?)
+        mockProxy.listVersions.rejects(new HttpError("Subject not found", 404, "Not Found"));
+
+        // Registration fails with 422 invalid schema
+        mockProxy.registerSchema.rejects(
+          new HttpError("Invalid schema: syntax error", 422, "Unprocessable Entity"),
+        );
+
+        await uploadSchema(testSchemaRegistry, subject, schemaType, content);
+
+        // Verify error message shown
+        sinon.assert.calledOnce(showErrorMessageStub);
+        sinon.assert.calledWithMatch(showErrorMessageStub, /Invalid schema/);
+
+        // Verify no success message
+        sinon.assert.notCalled(showInformationMessageStub);
+
+        // Verify no events fired
+        sinon.assert.notCalled(schemaSubjectChangedStub);
+        sinon.assert.notCalled(schemaVersionsChangedStub);
       });
     });
   }

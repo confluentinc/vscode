@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import type { TextEditor } from "vscode";
+import type { TextEditor, Uri } from "vscode";
 import { languages, window } from "vscode";
 import {
   getStubbedCCloudResourceLoader,
@@ -208,16 +208,59 @@ describe("documentProviders/schema.ts", function () {
     });
   });
 
-  // TODO: Re-enable after openReadOnlySchemaDocument is refactored to use direct API calls
-  describe.skip("openReadOnlySchemaDocument()", function () {
+  describe("openReadOnlySchemaDocument()", function () {
+    let mockProxy: {
+      getSchemaString: sinon.SinonStub;
+    };
+
     before(async function () {
       // activate to make sure we register the SchemaDocumentProvider URI scheme
       await getTestExtensionContext();
     });
 
-    it("should load or create a schema viewer for a valid schema", async function () {
-      // Tests need to be updated after sidecar removal
-      assert.ok(true);
+    it("should open a read-only schema document and set the language", async function () {
+      const testSchema = TEST_CCLOUD_SCHEMA;
+
+      // Set up resource loader stub
+      getStubbedCCloudResourceLoader(sandbox).getSchemaRegistryForEnvironmentId.resolves(
+        TEST_CCLOUD_SCHEMA_REGISTRY,
+      );
+
+      // Set up proxy stub
+      mockProxy = {
+        getSchemaString: sandbox.stub().resolves('{"type": "record", "name": "Test"}'),
+      };
+      sandbox
+        .stub(schemaRegistryProxy, "createSchemaRegistryProxy")
+        .returns(
+          mockProxy as unknown as ReturnType<typeof schemaRegistryProxy.createSchemaRegistryProxy>,
+        );
+
+      // Stub VS Code window and languages APIs
+      const mockEditor = {
+        document: { uri: { scheme: "confluent.schema" } },
+      } as unknown as TextEditor;
+      const showTextDocumentStub = sandbox.stub(window, "showTextDocument").resolves(mockEditor);
+      const getLanguagesStub = sandbox.stub(languages, "getLanguages").resolves(["json"]);
+      const setTextDocumentLanguageStub = sandbox
+        .stub(languages, "setTextDocumentLanguage")
+        .resolves();
+
+      // Import and call the function
+      const { openReadOnlySchemaDocument } = await import("./schema");
+      const editor = await openReadOnlySchemaDocument(testSchema);
+
+      // Verify the document was opened
+      assert.ok(showTextDocumentStub.calledOnce);
+      const calledUri = showTextDocumentStub.firstCall.args[0] as vscode.Uri;
+      assert.strictEqual(calledUri.scheme, "confluent.schema");
+
+      // Verify the language was set
+      assert.ok(getLanguagesStub.calledOnce);
+      assert.ok(setTextDocumentLanguageStub.calledOnce);
+
+      // Verify the returned editor
+      assert.strictEqual(editor, mockEditor);
     });
   });
 

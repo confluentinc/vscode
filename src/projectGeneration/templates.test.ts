@@ -101,39 +101,27 @@ describe("templates.ts", () => {
     });
   });
 
-  // TODO: These tests need restructuring - stubbing createScaffoldingApi doesn't work
-  // because the function is called internally within the same module. Sinon can only
-  // stub the exported function reference, not internal calls.
-  describe.skip("getTemplatesList", () => {
+  describe("getTemplatesList", () => {
     it("should fetch templates and return them unsanitized by default", async () => {
       const fakeTemplates = [
         { spec: { name: "java-client" } },
         { spec: { name: "python-client" } },
       ] as ScaffoldV1Template[];
 
-      // Using 'as any' because these tests are skipped (stubbing doesn't work due to ES module issue)
       const fakeResponse = {
         api_version: "scaffold/v1",
         kind: "TemplateList",
         metadata: {},
         data: new Set(fakeTemplates),
-      } as any;
+      };
 
-      sandbox.stub(authnUtils, "getCCloudAuthSession").resolves({
-        accessToken: "test-token",
-        id: "test-session",
-        account: { id: "test", label: "Test" },
-        scopes: [],
-      });
-
-      // Stub the createScaffoldingApi function to return a mock API
       const listTemplatesStub = sandbox.stub().resolves(fakeResponse);
-      sandbox.stub(templates, "createScaffoldingApi").returns({
-        listScaffoldV1Templates: listTemplatesStub,
-        applyScaffoldV1Template: sandbox.stub(),
-      } as any);
+      const mockApiFactory = () =>
+        ({
+          listScaffoldV1Templates: listTemplatesStub,
+        }) as any;
 
-      const result = await templates.getTemplatesList();
+      const result = await templates.getTemplatesList(undefined, false, mockApiFactory);
 
       assert.strictEqual(result.length, 2);
       assert.strictEqual(result[0].spec?.name, "java-client");
@@ -153,28 +141,20 @@ describe("templates.ts", () => {
         },
       ] as unknown as ScaffoldV1Template[];
 
-      // Using 'as any' because these tests are skipped (stubbing doesn't work due to ES module issue)
       const fakeResponse = {
         api_version: "scaffold/v1",
         kind: "TemplateList",
         metadata: {},
         data: new Set(fakeTemplates),
-      } as any;
-
-      sandbox.stub(authnUtils, "getCCloudAuthSession").resolves({
-        accessToken: "test-token",
-        id: "test-session",
-        account: { id: "test", label: "Test" },
-        scopes: [],
-      });
+      };
 
       const listTemplatesStub = sandbox.stub().resolves(fakeResponse);
-      sandbox.stub(templates, "createScaffoldingApi").returns({
-        listScaffoldV1Templates: listTemplatesStub,
-        applyScaffoldV1Template: sandbox.stub(),
-      } as any);
+      const mockApiFactory = () =>
+        ({
+          listScaffoldV1Templates: listTemplatesStub,
+        }) as any;
 
-      const result = await templates.getTemplatesList("vscode", true);
+      const result = await templates.getTemplatesList("vscode", true, mockApiFactory);
 
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].spec?.options?.api_key, undefined);
@@ -182,28 +162,20 @@ describe("templates.ts", () => {
     });
 
     it("should use custom collection name when provided", async () => {
-      // Using 'as any' because these tests are skipped (stubbing doesn't work due to ES module issue)
       const fakeResponse = {
         api_version: "scaffold/v1",
         kind: "TemplateList",
         metadata: {},
         data: new Set([]),
-      } as any;
-
-      sandbox.stub(authnUtils, "getCCloudAuthSession").resolves({
-        accessToken: "test-token",
-        id: "test-session",
-        account: { id: "test", label: "Test" },
-        scopes: [],
-      });
+      };
 
       const listTemplatesStub = sandbox.stub().resolves(fakeResponse);
-      sandbox.stub(templates, "createScaffoldingApi").returns({
-        listScaffoldV1Templates: listTemplatesStub,
-        applyScaffoldV1Template: sandbox.stub(),
-      } as any);
+      const mockApiFactory = () =>
+        ({
+          listScaffoldV1Templates: listTemplatesStub,
+        }) as any;
 
-      await templates.getTemplatesList("custom-collection");
+      await templates.getTemplatesList("custom-collection", false, mockApiFactory);
 
       sinon.assert.calledOnce(listTemplatesStub);
       sinon.assert.calledWithMatch(listTemplatesStub, {

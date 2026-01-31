@@ -46,10 +46,9 @@ import {
   StatementsSqlV1Api,
 } from "../clients/flinkSql";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
+import * as ccloudResourceFetcher from "../fetchers/ccloudResourceFetcher";
+import * as organizationFetcher from "../fetchers/organizationFetcher";
 import * as statementUtils from "../flinkSql/statementUtils";
-// TODO: Re-enable GraphQL imports when modules are restored (sidecar removal migration)
-// import * as graphqlCCloud from "../graphql/ccloud";
-// import * as graphqlOrgs from "../graphql/organizations";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { FlinkStatement } from "../models/flinkStatement";
@@ -67,8 +66,20 @@ import { createFlinkAIConnection } from "../../tests/unit/testResources/flinkAIC
 import { createFlinkAITool } from "../../tests/unit/testResources/flinkAITool";
 import { TEST_FLINK_RELATION } from "../../tests/unit/testResources/flinkRelation";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
+import { TokenManager } from "../auth/oauth2/tokenManager";
 import { CCloudConnectionError } from "../authn/errors";
 import * as authnUtils from "../authn/utils";
+import {
+  CCloudDataPlaneProxy,
+  HttpError,
+  type FlinkStatement as FlinkStatementApi,
+} from "../proxy";
+import * as ccloudArtifactsProxy from "../proxy/ccloudArtifactsProxy";
+import type { FlinkArtifactData, FlinkArtifactListResponse } from "../proxy/ccloudArtifactsProxy";
+import {
+  CCloudControlPlaneProxy,
+  type CCloudFlinkRegionData,
+} from "../proxy/ccloudControlPlaneProxy";
 import type { GetWsV1Workspace200Response } from "../clients/flinkWorkspaces";
 import {
   GetWsV1Workspace200ResponseApiVersionEnum,
@@ -86,6 +97,7 @@ import {
   CCloudResourceLoader,
   loadProviderRegions,
   SKIP_RESULTS_SQL_KINDS,
+  type StatementExecutionDeps,
 } from "./ccloudResourceLoader";
 import * as aiAgentsQueryUtils from "./utils/flinkAiAgentsQuery";
 import * as aiConnectionsQueryUtils from "./utils/flinkAiConnectionsQuery";
@@ -210,12 +222,10 @@ describe("CCloudResourceLoader", () => {
     });
   });
 
-  // TODO: Re-enable when graphql/organizations module is restored (sidecar removal migration)
-  describe.skip("getOrganization", () => {
+  describe("getOrganization", () => {
     let getCurrentOrganizationStub: sinon.SinonStub;
     beforeEach(() => {
-      // getCurrentOrganizationStub = sandbox.stub(graphqlOrgs, "getCurrentOrganization");
-      getCurrentOrganizationStub = sandbox.stub();
+      getCurrentOrganizationStub = sandbox.stub(organizationFetcher, "getCurrentOrganization");
     });
 
     it("should return the cached current organization", async () => {
@@ -478,193 +488,159 @@ describe("CCloudResourceLoader", () => {
     });
   });
 
-  // TODO: Re-enable when getSidecarHandle is restored (sidecar removal migration)
-  describe.skip("getFlinkStatements", () => {
-    let flinkStatementsApiStub: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
+  describe("getFlinkStatements", () => {
+    let tokenManagerStub: sinon.SinonStubbedInstance<TokenManager>;
+    let fetchAllStatementsStub: sinon.SinonStub;
 
     beforeEach(() => {
-      // stub the sidecar handle getFlinkSqlStatementsApi API
-      flinkStatementsApiStub = sandbox.createStubInstance(StatementsSqlV1Api);
-      // sandbox.stub(getSidecarHandle(), "getFlinkSqlStatementsApi").returns(flinkStatementsApiStub);
-
       sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+
+      // Stub TokenManager to return a data plane token
+      tokenManagerStub = sandbox.createStubInstance(TokenManager);
+      tokenManagerStub.getDataPlaneToken.resolves("test-data-plane-token");
+      sandbox.stub(TokenManager, "getInstance").returns(tokenManagerStub);
+
+      // Stub determineFlinkQueryables to return a single queryable
+      sandbox.stub(loader, "determineFlinkQueryables").resolves([
+        {
+          organizationId: TEST_CCLOUD_ORGANIZATION.id,
+          environmentId: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
+          provider: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
+          region: TEST_CCLOUD_FLINK_COMPUTE_POOL.region,
+          computePoolId: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+        },
+      ]);
+
+      // Stub the CCloudDataPlaneProxy.prototype.fetchAllStatements method
+      fetchAllStatementsStub = sandbox
+        .stub(CCloudDataPlaneProxy.prototype, "fetchAllStatements")
+        .resolves([]);
     });
 
     it("Handles zero statements to list", async () => {
-      // Simulate zero available statements.
-      const mockResponse = makeFakeListStatementsResponse(false, 0);
-
-      flinkStatementsApiStub.listSqlv1Statements.resolves(mockResponse);
+      fetchAllStatementsStub.resolves([]);
 
       const statements = await loader.getFlinkStatements(TEST_CCLOUD_FLINK_COMPUTE_POOL);
       assert.strictEqual(statements.length, 0);
-      sinon.assert.calledOnce(flinkStatementsApiStub.listSqlv1Statements);
+      sinon.assert.calledOnce(fetchAllStatementsStub);
 
-      // Test the args passed to the API.
-      const args = flinkStatementsApiStub.listSqlv1Statements.getCall(0).args[0];
-      assert.strictEqual(args.organization_id, TEST_CCLOUD_ORGANIZATION.id);
-      assert.strictEqual(args.environment_id, TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId);
-      assert.strictEqual(args.page_size, 100);
-      assert.strictEqual(args.page_token, "");
-      // Should be excluding hidden statements.
-      assert.strictEqual(args.label_selector, "user.confluent.io/hidden!=true");
+      // Check that the correct options were passed
+      const callArgs = fetchAllStatementsStub.firstCall.args[0];
+      assert.strictEqual(callArgs.computePoolId, TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
+      assert.strictEqual(callArgs.labelSelector, "user.confluent.io/hidden!=true");
     });
 
-    it("Handles one page of statements", async () => {
-      // Simulate one page of statements.
-      const mockResponse = makeFakeListStatementsResponse(false, 3);
+    it("Handles statements from proxy", async () => {
+      // Create mock proxy statements
+      const mockStatements: FlinkStatementApi[] = makeFakeStatements(3);
+      fetchAllStatementsStub.resolves(mockStatements);
 
-      flinkStatementsApiStub.listSqlv1Statements.resolves(mockResponse);
       const statements = await loader.getFlinkStatements(TEST_CCLOUD_FLINK_COMPUTE_POOL);
       assert.strictEqual(statements.length, 3);
-      sinon.assert.calledOnce(flinkStatementsApiStub.listSqlv1Statements);
+      sinon.assert.calledOnce(fetchAllStatementsStub);
     });
 
-    it("Handles multiple pages of statements", async () => {
-      // Simulate multiple pages of statements.
-      const mockResponse = makeFakeListStatementsResponse(true, 3);
-      const mockResponse2 = makeFakeListStatementsResponse(false, 2);
-      flinkStatementsApiStub.listSqlv1Statements
-        .onFirstCall()
-        .resolves(mockResponse)
-        .onSecondCall()
-        .resolves(mockResponse2);
+    it("Returns empty array when no data plane token", async () => {
+      tokenManagerStub.getDataPlaneToken.resolves(null);
+
       const statements = await loader.getFlinkStatements(TEST_CCLOUD_FLINK_COMPUTE_POOL);
-      assert.strictEqual(statements.length, 5);
-      sinon.assert.calledTwice(flinkStatementsApiStub.listSqlv1Statements);
+      assert.strictEqual(statements.length, 0);
+      sinon.assert.notCalled(fetchAllStatementsStub);
     });
 
-    /** Make a fake list flink statements API response with requested statement count and indicating next page available. */
-    function makeFakeListStatementsResponse(
-      hasNextPage: boolean,
-      statementCount: number,
-    ): SqlV1StatementList {
-      const statements: SqlV1StatementListDataInner[] = [];
-
-      for (let i = 0; i < statementCount; i++) {
+    /** Create fake Flink statements for testing. */
+    function makeFakeStatements(count: number): FlinkStatementApi[] {
+      const statements: FlinkStatementApi[] = [];
+      for (let i = 0; i < count; i++) {
         statements.push({
-          api_version: SqlV1StatementListDataInnerApiVersionEnum.SqlV1,
-          kind: SqlV1StatementListDataInnerKindEnum.Statement,
-          metadata: {
-            self: `https://api.${CCLOUD_BASE_PATH}/v1/sql/statements`,
-            created_at: new Date(),
-            updated_at: new Date(),
-            uid: "12345",
-            resource_version: "67890",
-            labels: {},
-          },
+          api_version: "sql/v1",
+          kind: "Statement",
           name: `statement-${i}`,
-          organization_id: "01234",
-          environment_id: "56789",
+          organization_id: TEST_CCLOUD_ORGANIZATION.id,
+          environment_id: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
           spec: {
-            authorized_principals: [],
-            // Only some statements will have compute pool designation.
-            compute_pool_id: i % 2 === 0 ? "lfcp-1m68g66" : undefined,
-            principal: "u-n9dfg06",
-            properties: {
-              "sql.current-catalog": "custom-data-env",
-              "sql.current-database": "Custom Data Dedicated Replica",
-              "sql.local-time-zone": "GMT-04:00",
-            },
-            statement:
-              "select when_reported, tempf, solarradiation from WeatherData\nwhere solarradiation > 600\n  order by tempf desc\nlimit 20",
-            stopped: false,
+            compute_pool_id: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+            statement: `SELECT * FROM table_${i}`,
+            properties: {},
           },
           status: {
-            phase: "STOPPED",
-            scaling_status: {
-              scaling_state: "OK",
-              last_updated: new Date("2025-04-10T20:28:45.000Z"),
-            },
-            detail:
-              "This statement was automatically stopped since no client has consumed the results for 5 minutes or more.",
+            phase: "RUNNING",
             traits: {
               sql_kind: "SELECT",
-              is_bounded: false,
-              is_append_only: true,
-              schema: {
-                columns: [
-                  {
-                    name: "when_reported",
-                    type: {
-                      type: "TIMESTAMP_WITH_LOCAL_TIME_ZONE",
-                      nullable: false,
-                      precision: 6,
-                    },
-                  },
-                  {
-                    name: "solarradiation",
-                    type: {
-                      type: "DOUBLE",
-                      nullable: false,
-                    },
-                  },
-                ],
-              },
             },
-            latest_offsets: {
-              high_sun_2023:
-                "partition:0,offset:-2;partition:1,offset:-2;partition:2,offset:-2;partition:3,offset:-2;partition:4,offset:-2;partition:5,offset:-2",
-            },
-            latest_offsets_timestamp: new Date("2025-04-10T20:39:29.000Z"),
+          },
+          metadata: {
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           },
         });
       }
-
-      const maybeNextPageLink: string = hasNextPage ? "https://foo.com/?page_token=foonly" : "";
-      return {
-        api_version: SqlV1StatementListApiVersionEnum.SqlV1,
-        kind: SqlV1StatementListKindEnum.StatementList,
-        metadata: {
-          self: `https://api.${CCLOUD_BASE_PATH}/v1/sql/statements`,
-          next: maybeNextPageLink,
-        },
-        data: new Set(statements),
-      };
+      return statements;
     }
   });
 
-  // TODO: Re-enable when getSidecarHandle is restored (sidecar removal migration)
-  describe.skip("refreshFlinkStatement()", () => {
-    let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
+  describe("refreshFlinkStatement()", () => {
+    let tokenManagerStub: sinon.SinonStubbedInstance<TokenManager>;
+    let getStatementStub: sinon.SinonStub;
 
     beforeEach(() => {
-      // stub the sidecar handle getFlinkSqlStatementsApi API
-      flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
-      // sandbox.stub(getSidecarHandle(), "getFlinkSqlStatementsApi").returns(flinkSqlStatementsApi);
+      // Stub TokenManager to return a data plane token
+      tokenManagerStub = sandbox.createStubInstance(TokenManager);
+      tokenManagerStub.getDataPlaneToken.resolves("test-data-plane-token");
+      sandbox.stub(TokenManager, "getInstance").returns(tokenManagerStub);
+
+      // Stub the CCloudDataPlaneProxy.prototype.getStatement method
+      getStatementStub = sandbox.stub(CCloudDataPlaneProxy.prototype, "getStatement");
     });
 
     it("should return the statement if found", async () => {
-      const responseString = loadFixtureFromFile(
-        "flink-statement-results-processing/create-statement-response.json",
-      );
-      const mockResponse = JSON.parse(responseString) as GetSqlv1Statement200Response;
+      // Create a mock API response
+      const mockApiStatement: FlinkStatementApi = {
+        api_version: "sql/v1",
+        kind: "Statement",
+        name: "test-statement",
+        organization_id: TEST_CCLOUD_ORGANIZATION.id,
+        environment_id: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
+        spec: {
+          compute_pool_id: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+          statement: "SELECT * FROM test_table",
+          properties: {},
+        },
+        status: {
+          phase: "RUNNING",
+          traits: {
+            sql_kind: "SELECT",
+          },
+        },
+        metadata: {
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      };
 
-      flinkSqlStatementsApi.getSqlv1Statement.resolves(mockResponse);
+      getStatementStub.resolves(mockApiStatement);
 
-      const expectedStatement = restFlinkStatementToModel(mockResponse, {
-        provider: "aws",
-        region: "us-west-2",
-      });
+      const inputStatement = createFlinkStatement({ name: "test-statement" });
+      const updatedStatement = await loader.refreshFlinkStatement(inputStatement);
 
-      const updatedStatement = await loader.refreshFlinkStatement(expectedStatement);
-      assert.deepStrictEqual(updatedStatement, expectedStatement);
+      assert.ok(updatedStatement);
+      assert.strictEqual(updatedStatement.name, "test-statement");
+      sinon.assert.calledOnce(getStatementStub);
     });
 
     it("should return null if statement is not found", async () => {
-      // Simulate a 404 error from the API
-      flinkSqlStatementsApi.getSqlv1Statement.rejects(
-        createResponseError(404, "Not Found", "test"),
-      );
+      // Simulate a 404 error from the proxy
+      // HttpError constructor: (message, status, statusText, data?, headers?)
+      getStatementStub.rejects(new HttpError("Statement not found", 404, "Not Found"));
 
       const shouldBeNull = await loader.refreshFlinkStatement(createFlinkStatement());
       assert.strictEqual(shouldBeNull, null);
     });
 
     it("Should raise if non-404 error occurs", async () => {
-      // Simulate a 500 error from the API
-      const error = createResponseError(500, "Internal Server Error", "test");
-      flinkSqlStatementsApi.getSqlv1Statement.rejects(error);
+      // Simulate a 500 error from the proxy
+      getStatementStub.rejects(new HttpError("Server error", 500, "Internal Server Error"));
+
       const statement = createFlinkStatement();
       await assert.rejects(async () => {
         await loader.refreshFlinkStatement(statement);
@@ -704,35 +680,38 @@ describe("CCloudResourceLoader", () => {
     });
   });
 
-  // TODO: Re-enable when graphql modules are restored (sidecar removal migration)
-  describe.skip("doLoadCoarseResources", () => {
-    let getEnvironmentsStub: sinon.SinonStub;
+  describe("doLoadCoarseResources", () => {
+    let mockFetcher: { fetchEnvironments: sinon.SinonStub };
     let getCurrentOrganizationStub: sinon.SinonStub;
 
     beforeEach(() => {
-      // getEnvironmentsStub = sandbox.stub(graphqlCCloud, "getCCloudResources");
-      // getCurrentOrganizationStub = sandbox.stub(graphqlOrgs, "getCurrentOrganization");
-      getEnvironmentsStub = sandbox.stub();
-      getCurrentOrganizationStub = sandbox.stub();
+      // Create mock fetcher and stub createCCloudResourceFetcher
+      mockFetcher = {
+        fetchEnvironments: sandbox.stub(),
+      };
+      sandbox
+        .stub(ccloudResourceFetcher, "createCCloudResourceFetcher")
+        .returns(mockFetcher as any);
+      getCurrentOrganizationStub = sandbox.stub(organizationFetcher, "getCurrentOrganization");
     });
 
     it("does nothing when no CCloud org is available", async () => {
-      getEnvironmentsStub.resolves([]);
+      mockFetcher.fetchEnvironments.resolves([]);
       getCurrentOrganizationStub.resolves(undefined);
 
       await loader["doLoadCoarseResources"]();
-      sinon.assert.calledOnce(getEnvironmentsStub);
+      sinon.assert.calledOnce(mockFetcher.fetchEnvironments);
       sinon.assert.calledOnce(getCurrentOrganizationStub);
       assert.strictEqual(loader["organization"], null);
     });
 
     it("should set CCloud resources when available", async () => {
-      getEnvironmentsStub.resolves([TEST_CCLOUD_ENVIRONMENT]);
+      mockFetcher.fetchEnvironments.resolves([TEST_CCLOUD_ENVIRONMENT]);
       getCurrentOrganizationStub.resolves(TEST_CCLOUD_ORGANIZATION);
 
       await loader["doLoadCoarseResources"]();
 
-      sinon.assert.calledOnce(getEnvironmentsStub);
+      sinon.assert.calledOnce(mockFetcher.fetchEnvironments);
       sinon.assert.calledOnce(getCurrentOrganizationStub);
       assert.strictEqual(loader["organization"], TEST_CCLOUD_ORGANIZATION);
       sinon.assert.calledOnceWithExactly(
@@ -753,35 +732,91 @@ describe("CCloudResourceLoader", () => {
     });
   });
 
-  // TODO: Re-enable when getSidecarHandle is restored (sidecar removal migration)
-  describe.skip("loadArtifactsForProviderRegion", () => {
-    let stubbedFlinkArtifactsApi: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
-    // let sidecarHandle: SidecarHandle;
+  describe("loadArtifactsForProviderRegion", () => {
+    let tokenManagerStub: sinon.SinonStubbedInstance<TokenManager>;
+    let createCCloudArtifactsProxyStub: sinon.SinonStub;
+    let fetchAllArtifactsStub: sinon.SinonStub;
+
+    const testQueryable: IFlinkQueryable = {
+      organizationId: TEST_CCLOUD_ORGANIZATION.id,
+      environmentId: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
+      provider: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
+      region: TEST_CCLOUD_FLINK_COMPUTE_POOL.region,
+    };
+
     beforeEach(() => {
-      stubbedFlinkArtifactsApi = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
-      // sidecarHandle = getSidecarHandle();
+      // Stub TokenManager to return a data plane token
+      tokenManagerStub = sandbox.createStubInstance(TokenManager);
+      tokenManagerStub.getDataPlaneToken.resolves("test-data-plane-token");
+      sandbox.stub(TokenManager, "getInstance").returns(tokenManagerStub);
 
-      // sandbox.stub(sidecarHandle, "getFlinkArtifactsApi").returns(stubbedFlinkArtifactsApi);
-
-      sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+      // Stub the proxy creation and its methods
+      fetchAllArtifactsStub = sandbox.stub();
+      createCCloudArtifactsProxyStub = sandbox
+        .stub(ccloudArtifactsProxy, "createCCloudArtifactsProxy")
+        .returns({
+          fetchAllArtifacts: fetchAllArtifactsStub,
+        } as any);
     });
-    it("should return empty array if response from 'loadArtifactsForProviderRegion' returns null data", async () => {
-      const mockResponse = {
-        api_version: ArtifactV1FlinkArtifactListApiVersionEnum.ArtifactV1,
-        kind: ArtifactV1FlinkArtifactListKindEnum.FlinkArtifactList,
-        metadata: {
-          next: "",
-        },
-        data: null,
-      } satisfies ArtifactV1FlinkArtifactList;
 
-      stubbedFlinkArtifactsApi.listArtifactV1FlinkArtifacts.resolves(mockResponse);
+    it("should return empty array when API returns empty data", async () => {
+      fetchAllArtifactsStub.resolves([]);
+      const { loadArtifactsForProviderRegion } = await import("./ccloudResourceLoader");
 
-      // TODO(sidecar-removal): re-enable when loadArtifactsForProviderRegion is restored
-      const artifacts: any[] = []; // await loadArtifactsForProviderRegion(sidecarHandle, {...});
+      const artifacts = await loadArtifactsForProviderRegion(null, testQueryable);
+
       assert.ok(Array.isArray(artifacts));
       assert.strictEqual(artifacts.length, 0);
-      sinon.assert.calledOnce(stubbedFlinkArtifactsApi.listArtifactV1FlinkArtifacts);
+      sinon.assert.calledOnce(fetchAllArtifactsStub);
+    });
+
+    it("should return artifacts when API returns data", async () => {
+      const mockArtifactData: FlinkArtifactData[] = [
+        {
+          id: "artifact-1",
+          cloud: "aws",
+          region: "us-east-1",
+          environment: "env-12345",
+          display_name: "Test Artifact 1",
+          description: "Test description",
+          metadata: {
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        },
+      ];
+      fetchAllArtifactsStub.resolves(mockArtifactData);
+      const { loadArtifactsForProviderRegion } = await import("./ccloudResourceLoader");
+
+      const artifacts = await loadArtifactsForProviderRegion(null, testQueryable);
+
+      assert.strictEqual(artifacts.length, 1);
+      assert.strictEqual(artifacts[0].id, "artifact-1");
+      assert.strictEqual(artifacts[0].name, "Test Artifact 1");
+      sinon.assert.calledOnce(fetchAllArtifactsStub);
+    });
+
+    it("should return empty array when not authenticated", async () => {
+      tokenManagerStub.getDataPlaneToken.resolves(null);
+      const { loadArtifactsForProviderRegion } = await import("./ccloudResourceLoader");
+
+      const artifacts = await loadArtifactsForProviderRegion(null, testQueryable);
+
+      assert.strictEqual(artifacts.length, 0);
+      sinon.assert.notCalled(fetchAllArtifactsStub);
+    });
+
+    it("should pass correct parameters to proxy", async () => {
+      fetchAllArtifactsStub.resolves([]);
+      const { loadArtifactsForProviderRegion } = await import("./ccloudResourceLoader");
+
+      await loadArtifactsForProviderRegion(null, testQueryable);
+
+      sinon.assert.calledOnce(fetchAllArtifactsStub);
+      const args = fetchAllArtifactsStub.getCall(0).args[0];
+      assert.strictEqual(args.cloud, testQueryable.provider);
+      assert.strictEqual(args.region, testQueryable.region);
+      assert.strictEqual(args.environment, testQueryable.environmentId);
     });
   });
 
@@ -1314,69 +1349,60 @@ describe("CCloudResourceLoader", () => {
     });
   });
 
-  // TODO: Re-enable when getSidecarHandle is restored (sidecar removal migration)
-  describe.skip("getFlinkArtifacts", () => {
-    let flinkArtifactsApiStub: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
+  describe("getFlinkArtifacts", () => {
+    let tokenManagerStub: sinon.SinonStubbedInstance<TokenManager>;
+    let createCCloudArtifactsProxyStub: sinon.SinonStub;
+    let fetchAllArtifactsStub: sinon.SinonStub;
 
     beforeEach(() => {
-      flinkArtifactsApiStub = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
-      // sandbox.stub(getSidecarHandle(), "getFlinkArtifactsApi").returns(flinkArtifactsApiStub);
+      // Stub TokenManager to return a data plane token
+      tokenManagerStub = sandbox.createStubInstance(TokenManager);
+      tokenManagerStub.getDataPlaneToken.resolves("test-data-plane-token");
+      sandbox.stub(TokenManager, "getInstance").returns(tokenManagerStub);
 
       sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
 
       // By default, cache misses for Flink artifacts.
       stubbedResourceManager.getFlinkArtifacts.resolves(undefined);
+
+      // Stub the proxy creation and its methods
+      fetchAllArtifactsStub = sandbox.stub();
+      createCCloudArtifactsProxyStub = sandbox
+        .stub(ccloudArtifactsProxy, "createCCloudArtifactsProxy")
+        .returns({
+          fetchAllArtifacts: fetchAllArtifactsStub,
+        } as any);
     });
 
     it("should handle zero artifacts to list", async () => {
       // Simulate zero available artifacts.
-      const mockResponse = makeFakeListArtifactsResponse(false, 0);
-
-      flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
+      fetchAllArtifactsStub.resolves([]);
 
       const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
       assert.strictEqual(artifacts.length, 0);
-      sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+      sinon.assert.calledOnce(createCCloudArtifactsProxyStub);
+      sinon.assert.calledOnce(fetchAllArtifactsStub);
       sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
 
       // Test the args passed to the API.
-      const args = flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.getCall(0).args[0];
+      const args = fetchAllArtifactsStub.getCall(0).args[0];
       assert.ok(args, "Expected args to be defined");
-      assert.strictEqual(args.cloud, TEST_CCLOUD_FLINK_COMPUTE_POOL.provider);
-      assert.strictEqual(args.region, TEST_CCLOUD_FLINK_COMPUTE_POOL.region);
-      assert.strictEqual(args.environment, TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId);
-      assert.strictEqual(args.page_size, 100);
-      assert.strictEqual(args.page_token, "");
+      assert.strictEqual(args.cloud, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.provider);
+      assert.strictEqual(args.region, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.region);
+      assert.strictEqual(args.environment, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.environmentId);
     });
 
-    it("should handle one page of artifacts", async () => {
-      // Simulate one page of artifacts.
-      const mockResponse = makeFakeListArtifactsResponse(false, 3);
+    it("should handle artifacts returned from API", async () => {
+      // Simulate artifacts returned (the proxy handles pagination internally via fetchAllArtifacts)
+      const mockArtifacts = makeFakeArtifacts(3);
+      fetchAllArtifactsStub.resolves(mockArtifacts);
 
-      flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
       const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
       assert.strictEqual(artifacts.length, 3);
-      sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+      sinon.assert.calledOnce(fetchAllArtifactsStub);
     });
 
-    it("should handle multiple pages of artifacts", async () => {
-      // Simulate multiple pages of artifacts.
-      const mockResponse = makeFakeListArtifactsResponse(true, 3);
-      const mockResponse2 = makeFakeListArtifactsResponse(false, 2);
-      flinkArtifactsApiStub.listArtifactV1FlinkArtifacts
-        .onFirstCall()
-        .resolves(mockResponse)
-        .onSecondCall()
-        .resolves(mockResponse2);
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
-
-      assert.strictEqual(artifacts.length, 5);
-
-      sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
-      sinon.assert.calledTwice(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
-    });
-
-    it("should handle resourcemanager cache hit, then skipping the route call", async () => {
+    it("should handle resourcemanager cache hit, then skipping the API call", async () => {
       stubbedResourceManager.getFlinkArtifacts.resolves([]); // empty array is easy cache fodder.
 
       const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
@@ -1384,40 +1410,44 @@ describe("CCloudResourceLoader", () => {
       assert.strictEqual(artifacts.length, 0);
 
       sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
-      sinon.assert.notCalled(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+      sinon.assert.notCalled(fetchAllArtifactsStub);
     });
 
     it("should honor forceDeepRefresh=true to skip cache and reload", async () => {
-      const mockResponse = makeFakeListArtifactsResponse(false, 3);
-      flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
+      const mockArtifacts = makeFakeArtifacts(3);
+      fetchAllArtifactsStub.resolves(mockArtifacts);
       stubbedResourceManager.getFlinkArtifacts.resolves([]); // would be a cache hit, but...
 
       // call with forceDeepRefresh=true
       const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
       assert.strictEqual(artifacts.length, 3);
 
-      // Will have consulted the cache, but then ignored it, and called the API, then cached the results.
-      sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
-      sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+      // Will have skipped the cache and called the API, then cached the results.
+      sinon.assert.notCalled(stubbedResourceManager.getFlinkArtifacts);
+      sinon.assert.calledOnce(fetchAllArtifactsStub);
       sinon.assert.calledOnce(stubbedResourceManager.setFlinkArtifacts);
     });
 
-    /** Make a fake list flink artifacts API response with requested artifact count and indicating next page available. */
-    function makeFakeListArtifactsResponse(
-      hasNextPage: boolean,
-      artifactCount: number,
-    ): ArtifactV1FlinkArtifactList {
-      const artifacts: ArtifactV1FlinkArtifactListDataInner[] = [];
+    it("should return empty array when not authenticated", async () => {
+      tokenManagerStub.getDataPlaneToken.resolves(null);
 
-      for (let i = 0; i < artifactCount; i++) {
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+
+      assert.strictEqual(artifacts.length, 0);
+      sinon.assert.notCalled(fetchAllArtifactsStub);
+    });
+
+    /** Make fake artifact data for testing. */
+    function makeFakeArtifacts(count: number): FlinkArtifactData[] {
+      const artifacts: FlinkArtifactData[] = [];
+
+      for (let i = 0; i < count; i++) {
         artifacts.push({
-          api_version: ArtifactV1FlinkArtifactListDataInnerApiVersionEnum.ArtifactV1,
-          kind: ArtifactV1FlinkArtifactListDataInnerKindEnum.FlinkArtifact,
           id: `artifact-${i}`,
           metadata: {
-            created_at: new Date(),
-            updated_at: new Date(),
-            self: undefined, // self link is not used in tests
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            self: `https://api.confluent.cloud/artifact/v1/flink-artifacts/artifact-${i}`,
           },
           cloud: "aws",
           region: "us-east-1",
@@ -1429,125 +1459,122 @@ describe("CCloudResourceLoader", () => {
         });
       }
 
-      const maybeNextPageLink: string = hasNextPage ? "https://foo.com/?page_token=foonly" : "";
-      return {
-        api_version: ArtifactV1FlinkArtifactListApiVersionEnum.ArtifactV1,
-        kind: ArtifactV1FlinkArtifactListKindEnum.FlinkArtifactList,
-        metadata: {
-          next: maybeNextPageLink,
-        },
-        data: new Set(artifacts),
-      };
+      return artifacts;
     }
   });
 
-  // TODO: Re-enable when getSidecarHandle is restored (sidecar removal migration)
-  describe.skip("loadProviderRegions", () => {
-    let regionsApiStub: sinon.SinonStubbedInstance<RegionsFcpmV2Api>;
+  describe("loadProviderRegions", () => {
+    let tokenManagerStub: sinon.SinonStubbedInstance<TokenManager>;
+    let fetchAllFlinkRegionsStub: sinon.SinonStub;
 
     beforeEach(() => {
-      regionsApiStub = sandbox.createStubInstance(RegionsFcpmV2Api);
-      // sandbox.stub(getSidecarHandle(), "getRegionsFcpmV2Api").returns(regionsApiStub);
+      // Stub TokenManager to return a control plane token
+      tokenManagerStub = sandbox.createStubInstance(TokenManager);
+      tokenManagerStub.getControlPlaneToken.resolves("test-control-plane-token");
+      sandbox.stub(TokenManager, "getInstance").returns(tokenManagerStub);
+
+      // Stub the proxy's fetchAllFlinkRegions method
+      fetchAllFlinkRegionsStub = sandbox.stub(
+        CCloudControlPlaneProxy.prototype,
+        "fetchAllFlinkRegions",
+      );
     });
 
     it("should handle zero regions to list", async () => {
-      const mockResponse = makeFakeListRegionsResponse(false, 0);
-
-      regionsApiStub.listFcpmV2Regions.resolves(mockResponse);
+      fetchAllFlinkRegionsStub.resolves([]);
 
       const regions = await loadProviderRegions();
       assert.strictEqual(regions.length, 0);
-      sinon.assert.calledOnce(regionsApiStub.listFcpmV2Regions);
-
-      const args = regionsApiStub.listFcpmV2Regions.getCall(0).args[0];
-      assert.strictEqual(args?.page_size, 100);
-      assert.strictEqual(args?.page_token, undefined);
+      sinon.assert.calledOnce(fetchAllFlinkRegionsStub);
     });
 
-    it("should handle one page of regions", async () => {
-      // Simulate one page of regions.
-      const mockResponse = makeFakeListRegionsResponse(false, 3);
+    it("should handle regions returned from API", async () => {
+      // Simulate regions returned (the proxy handles pagination internally)
+      const mockRegions = makeFakeRegionData(3);
+      fetchAllFlinkRegionsStub.resolves(mockRegions);
 
-      regionsApiStub.listFcpmV2Regions.resolves(mockResponse);
       const regions = await loadProviderRegions();
       assert.strictEqual(regions.length, 3);
-      sinon.assert.calledOnce(regionsApiStub.listFcpmV2Regions);
+      sinon.assert.calledOnce(fetchAllFlinkRegionsStub);
     });
 
-    it("should handle multiple pages of regions", async () => {
-      const mockResponse = makeFakeListRegionsResponse(true, 3);
-      const mockResponse2 = makeFakeListRegionsResponse(false, 2);
-      regionsApiStub.listFcpmV2Regions
-        .onFirstCall()
-        .resolves(mockResponse)
-        .onSecondCall()
-        .resolves(mockResponse2);
+    it("should return empty array when not authenticated", async () => {
+      tokenManagerStub.getControlPlaneToken.resolves(null);
+
       const regions = await loadProviderRegions();
-      assert.strictEqual(regions.length, 5);
-      sinon.assert.calledTwice(regionsApiStub.listFcpmV2Regions);
+
+      assert.strictEqual(regions.length, 0);
+      sinon.assert.notCalled(fetchAllFlinkRegionsStub);
     });
 
-    it("should handle errors during region loading", async () => {
+    it("should return empty array on API error", async () => {
       const error = new Error("API request failed");
-      regionsApiStub.listFcpmV2Regions.rejects(error);
+      fetchAllFlinkRegionsStub.rejects(error);
 
-      await assert.rejects(async () => {
-        await loadProviderRegions();
-      }, error);
+      // Now returns empty array instead of throwing
+      const regions = await loadProviderRegions();
+      assert.strictEqual(regions.length, 0);
     });
 
-    it("should handle pagination correctly", async () => {
-      const mockResponse1 = makeFakeListRegionsResponse(true, 2);
-      const mockResponse2 = makeFakeListRegionsResponse(false, 1);
+    it("should pass cloud filter when provided", async () => {
+      fetchAllFlinkRegionsStub.resolves([]);
 
-      regionsApiStub.listFcpmV2Regions
-        .onFirstCall()
-        .resolves(mockResponse1)
-        .onSecondCall()
-        .resolves(mockResponse2);
+      await loadProviderRegions("aws");
+
+      sinon.assert.calledOnce(fetchAllFlinkRegionsStub);
+      sinon.assert.calledWith(fetchAllFlinkRegionsStub, "aws");
+    });
+
+    it("should correctly map API response to FcpmV2RegionListDataInner format", async () => {
+      const mockRegions: CCloudFlinkRegionData[] = [
+        {
+          id: "region-1",
+          api_version: "fcpm/v2",
+          kind: "Region",
+          metadata: { self: "https://api.confluent.cloud/fcpm/v2/regions/region-1" },
+          display_name: "US West 2",
+          cloud: "aws",
+          region_name: "us-west-2",
+          http_endpoint: "https://flink.us-west-2.aws.confluent.cloud",
+          private_http_endpoint: "https://private-flink.us-west-2.aws.confluent.cloud",
+        },
+      ];
+      fetchAllFlinkRegionsStub.resolves(mockRegions);
 
       const regions = await loadProviderRegions();
 
-      assert.strictEqual(regions.length, 3);
-      sinon.assert.calledTwice(regionsApiStub.listFcpmV2Regions);
-
-      const secondCallArgs = regionsApiStub.listFcpmV2Regions.getCall(1).args[0];
-      assert.strictEqual(secondCallArgs?.page_token, "test-page-token");
+      assert.strictEqual(regions.length, 1);
+      assert.strictEqual(regions[0].id, "region-1");
+      assert.strictEqual(regions[0].display_name, "US West 2");
+      assert.strictEqual(regions[0].cloud, "aws");
+      assert.strictEqual(regions[0].region_name, "us-west-2");
+      assert.strictEqual(regions[0].http_endpoint, "https://flink.us-west-2.aws.confluent.cloud");
+      assert.strictEqual(
+        regions[0].private_http_endpoint,
+        "https://private-flink.us-west-2.aws.confluent.cloud",
+      );
     });
 
-    function makeFakeListRegionsResponse(
-      hasNextPage: boolean,
-      regionCount: number,
-    ): FcpmV2RegionList {
-      const regions: FcpmV2RegionListDataInner[] = [];
+    /** Make fake region data for testing. */
+    function makeFakeRegionData(count: number): CCloudFlinkRegionData[] {
+      const regions: CCloudFlinkRegionData[] = [];
 
-      for (let i = 0; i < regionCount; i++) {
+      for (let i = 0; i < count; i++) {
         regions.push({
-          api_version: FcpmV2RegionListDataInnerApiVersionEnum.FcpmV2,
-          kind: FcpmV2RegionListDataInnerKindEnum.Region,
           id: `region-${i}`,
+          api_version: "fcpm/v2",
+          kind: "Region",
           metadata: {
             self: `https://api.confluent.cloud/fcpm/v2/regions/region-${i}`,
           },
           display_name: `Region ${i}`,
-          cloud: i % 2 === 0 ? "AWS" : "AZURE",
+          cloud: i % 2 === 0 ? "aws" : "azure",
           region_name: `region-${i}`,
           http_endpoint: `https://flink.region-${i}.confluent.cloud`,
         });
       }
 
-      const maybeNextPageLink: string = hasNextPage
-        ? "https://api.confluent.cloud/fcpm/v2/regions?page_token=test-page-token"
-        : "";
-
-      return {
-        api_version: FcpmV2RegionListApiVersionEnum.FcpmV2,
-        kind: FcpmV2RegionListKindEnum.RegionList,
-        metadata: {
-          next: maybeNextPageLink,
-        },
-        data: new Set(regions),
-      };
+      return regions;
     }
   });
 
@@ -1673,10 +1700,8 @@ describe("CCloudResourceLoader", () => {
     });
   });
 
-  // TODO: These tests have ES module stubbing issues - sinon stubs on the exported
-  // reference but the internal module call doesn't go through the export.
-  // Need to refactor to use dependency injection for proper testability.
-  describe.skip("executeBackgroundFlinkStatement", () => {
+  describe("executeBackgroundFlinkStatement", () => {
+    let mockDeps: StatementExecutionDeps;
     let submitFlinkStatementStub: sinon.SinonStub;
     let waitForStatementCompletionStub: sinon.SinonStub;
     let parseAllFlinkStatementResultsStub: sinon.SinonStub;
@@ -1687,13 +1712,18 @@ describe("CCloudResourceLoader", () => {
     }
 
     beforeEach(() => {
-      submitFlinkStatementStub = sandbox.stub(statementUtils, "submitFlinkStatement");
-      waitForStatementCompletionStub = sandbox.stub(statementUtils, "waitForStatementCompletion");
-      parseAllFlinkStatementResultsStub = sandbox.stub(
-        statementUtils,
-        "parseAllFlinkStatementResults",
-      );
-      sinon.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+      // Create stub implementations for the dependencies
+      submitFlinkStatementStub = sandbox.stub();
+      waitForStatementCompletionStub = sandbox.stub();
+      parseAllFlinkStatementResultsStub = sandbox.stub();
+
+      mockDeps = {
+        submitFlinkStatement: submitFlinkStatementStub,
+        waitForStatementCompletion: waitForStatementCompletionStub,
+        parseAllFlinkStatementResults: parseAllFlinkStatementResultsStub,
+      };
+
+      sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
       deleteStatementStub = sandbox.stub(loader, "deleteFlinkStatement");
     });
 
@@ -1705,9 +1735,12 @@ describe("CCloudResourceLoader", () => {
       });
 
       await assert.rejects(
-        loader.executeBackgroundFlinkStatement("SELECT 1", TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, {
-          computePool: differentCloudComputePool,
-        }),
+        loader.executeBackgroundFlinkStatement(
+          "SELECT 1",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          { computePool: differentCloudComputePool },
+          mockDeps,
+        ),
         /is not in the same cloud/,
       );
     });
@@ -1726,11 +1759,13 @@ describe("CCloudResourceLoader", () => {
       waitForStatementCompletionStub.resolves(completedStatement);
 
       const parseResults: Array<TestResult> = [{ EXPR0: 1 }];
-      parseAllFlinkStatementResultsStub.returns(parseResults);
+      parseAllFlinkStatementResultsStub.resolves(parseResults);
 
       const returnedResults = await loader.executeBackgroundFlinkStatement<TestResult>(
         "SELECT 1",
         TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        {},
+        mockDeps,
       );
 
       assert.deepStrictEqual(returnedResults, parseResults);
@@ -1758,7 +1793,7 @@ describe("CCloudResourceLoader", () => {
       waitForStatementCompletionStub.resolves(completedStatement);
 
       const parseResults: Array<TestResult> = [{ EXPR0: 1 }];
-      parseAllFlinkStatementResultsStub.returns(parseResults);
+      parseAllFlinkStatementResultsStub.resolves(parseResults);
 
       const deletionError = new Error("Simulated deletion failure");
       deleteStatementStub.rejects(deletionError);
@@ -1766,6 +1801,8 @@ describe("CCloudResourceLoader", () => {
       const returnedResults = await loader.executeBackgroundFlinkStatement<TestResult>(
         "SELECT 1",
         TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        {},
+        mockDeps,
       );
 
       assert.deepStrictEqual(returnedResults, parseResults);
@@ -1788,6 +1825,8 @@ describe("CCloudResourceLoader", () => {
         loader.executeBackgroundFlinkStatement<TestResult>(
           "SELECT 1",
           TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          {},
+          mockDeps,
         ),
         /did not complete successfully/,
       );
@@ -1806,7 +1845,7 @@ describe("CCloudResourceLoader", () => {
       waitForStatementCompletionStub.resolves(completedStatement);
 
       const parseResults: Array<TestResult> = [{ EXPR0: 1 }];
-      parseAllFlinkStatementResultsStub.returns(parseResults);
+      parseAllFlinkStatementResultsStub.resolves(parseResults);
 
       const customTimeout = 10;
 
@@ -1814,6 +1853,7 @@ describe("CCloudResourceLoader", () => {
         "SELECT 1",
         TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
         { timeout: customTimeout },
+        mockDeps,
       );
       sinon.assert.calledOnce(submitFlinkStatementStub);
       sinon.assert.calledOnce(waitForStatementCompletionStub);
@@ -1831,17 +1871,21 @@ describe("CCloudResourceLoader", () => {
         waitForStatementCompletionStub.resolves(completedStatement);
 
         const parseResults: Array<TestResult> = [{ EXPR0: 1 }];
-        parseAllFlinkStatementResultsStub.returns(parseResults);
+        parseAllFlinkStatementResultsStub.resolves(parseResults);
       });
 
       it("should return same promise if called multiple times concurrently", async () => {
         const promise1 = loader.executeBackgroundFlinkStatement<TestResult>(
           "SELECT 1",
           TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          {},
+          mockDeps,
         );
         const promise2 = loader.executeBackgroundFlinkStatement<TestResult>(
           "SELECT 1",
           TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          {},
+          mockDeps,
         );
 
         await Promise.all([promise1, promise2]);
@@ -1856,10 +1900,14 @@ describe("CCloudResourceLoader", () => {
         const promise1 = loader.executeBackgroundFlinkStatement<TestResult>(
           "SELECT 1",
           TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          {},
+          mockDeps,
         );
         const promise2 = loader.executeBackgroundFlinkStatement<TestResult>(
           "SELECT 2",
           TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          {},
+          mockDeps,
         );
 
         await Promise.all([promise1, promise2]);
@@ -1874,6 +1922,8 @@ describe("CCloudResourceLoader", () => {
         await loader.executeBackgroundFlinkStatement<TestResult>(
           "SELECT 1",
           TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          {},
+          mockDeps,
         );
 
         assert.strictEqual(
@@ -1890,6 +1940,8 @@ describe("CCloudResourceLoader", () => {
           await loader.executeBackgroundFlinkStatement<TestResult>(
             "SELECT 1",
             TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            {},
+            mockDeps,
           );
         });
 
@@ -1903,6 +1955,9 @@ describe("CCloudResourceLoader", () => {
 
     for (const skipKind of SKIP_RESULTS_SQL_KINDS) {
       it(`should skip fetching results for sqlKind=${skipKind} statements`, async () => {
+        const submittedStatement = createFlinkStatement({ phase: Phase.PENDING });
+        submitFlinkStatementStub.resolves(submittedStatement);
+
         const completedStatement = createFlinkStatement({
           phase: Phase.COMPLETED,
           sqlKind: skipKind,
@@ -1912,6 +1967,8 @@ describe("CCloudResourceLoader", () => {
         const results = await loader.executeBackgroundFlinkStatement<TestResult>(
           "STATEMENT THAT HAS NO RESULTS",
           TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          {},
+          mockDeps,
         );
 
         assert.deepStrictEqual(results, []);
@@ -1923,147 +1980,80 @@ describe("CCloudResourceLoader", () => {
     }
   });
 
-  // TODO: Re-enable when getSidecarHandle is restored (sidecar removal migration)
-  describe.skip("deleteFlinkStatement", () => {
-    let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
-    let flinkStatementDeletedFireStub: sinon.SinonStub;
+  describe("deleteFlinkStatement", () => {
+    let tokenManagerStub: sinon.SinonStubbedInstance<TokenManager>;
+    let deleteStatementStub: sinon.SinonStub;
 
     beforeEach(() => {
-      flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
-      // sandbox.stub(getSidecarHandle(), "getFlinkSqlStatementsApi").returns(flinkSqlStatementsApi);
+      // Stub TokenManager to return a data plane token
+      tokenManagerStub = sandbox.createStubInstance(TokenManager);
+      tokenManagerStub.getDataPlaneToken.resolves("test-data-plane-token");
+      sandbox.stub(TokenManager, "getInstance").returns(tokenManagerStub);
 
-      const emitterStubs = eventEmitterStubs(sandbox);
-
-      flinkStatementDeletedFireStub = emitterStubs.flinkStatementDeleted!.fire;
+      // Stub the CCloudDataPlaneProxy.prototype.deleteStatement method
+      deleteStatementStub = sandbox.stub(CCloudDataPlaneProxy.prototype, "deleteStatement");
     });
 
     it("should successfully delete a statement", async () => {
-      flinkSqlStatementsApi.deleteSqlv1Statement.resolves();
+      deleteStatementStub.resolves();
 
       const statementToDelete = createFlinkStatement();
       await loader.deleteFlinkStatement(statementToDelete);
 
-      sinon.assert.calledOnceWithExactly(flinkSqlStatementsApi.deleteSqlv1Statement, {
-        organization_id: TEST_CCLOUD_ORGANIZATION.id,
-        environment_id: statementToDelete.environmentId,
-        statement_name: statementToDelete.name,
-      });
-      sinon.assert.calledOnceWithExactly(flinkStatementDeletedFireStub, statementToDelete.id);
+      sinon.assert.calledOnceWithExactly(deleteStatementStub, statementToDelete.name);
     });
 
     it("should raise if deletion fails", async () => {
       const error = new Error("API request failed");
-      flinkSqlStatementsApi.deleteSqlv1Statement.rejects(error);
+      deleteStatementStub.rejects(error);
 
       const statementToDelete = createFlinkStatement();
       await assert.rejects(async () => {
         await loader.deleteFlinkStatement(statementToDelete);
       }, error);
 
-      sinon.assert.calledOnceWithExactly(flinkSqlStatementsApi.deleteSqlv1Statement, {
-        organization_id: TEST_CCLOUD_ORGANIZATION.id,
-        environment_id: statementToDelete.environmentId,
-        statement_name: statementToDelete.name,
-      });
-      // Should not have fired the deletion event.
-      sinon.assert.notCalled(flinkStatementDeletedFireStub);
+      sinon.assert.calledOnceWithExactly(deleteStatementStub, statementToDelete.name);
     });
   });
 
-  // TODO: Re-enable when getSidecarHandle is restored (sidecar removal migration)
-  describe.skip("stopFlinkStatement", () => {
-    let statementsApiStub: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
-    let refreshStub: sinon.SinonStub;
-
-    let original: FlinkStatement, refreshed: FlinkStatement;
+  describe("stopFlinkStatement", () => {
+    let tokenManagerStub: sinon.SinonStubbedInstance<TokenManager>;
+    let stopStatementStub: sinon.SinonStub;
 
     beforeEach(() => {
-      statementsApiStub = sandbox.createStubInstance(StatementsSqlV1Api);
-      // sandbox.stub(getSidecarHandle(), "getFlinkSqlStatementsApi").returns(statementsApiStub);
+      // Stub TokenManager to return a data plane token
+      tokenManagerStub = sandbox.createStubInstance(TokenManager);
+      tokenManagerStub.getDataPlaneToken.resolves("test-data-plane-token");
+      sandbox.stub(TokenManager, "getInstance").returns(tokenManagerStub);
 
-      original = createFlinkStatement({ phase: Phase.PENDING });
-      refreshed = createFlinkStatement({
-        name: original.name,
-        phase: Phase.RUNNING,
-      });
-
-      refreshStub = sandbox.stub(loader, "refreshFlinkStatement").resolves(refreshed);
+      // Stub the CCloudDataPlaneProxy.prototype.stopStatement method
+      stopStatementStub = sandbox.stub(CCloudDataPlaneProxy.prototype, "stopStatement");
     });
 
-    it("should successfully stop a stoppable statement", async () => {
-      statementsApiStub.updateSqlv1Statement.resolves();
+    it("should successfully stop a statement", async () => {
+      stopStatementStub.resolves();
 
-      await loader.stopFlinkStatement(original);
+      const statement = createFlinkStatement({ phase: Phase.RUNNING });
+      await loader.stopFlinkStatement(statement);
 
-      sinon.assert.calledOnce(refreshStub);
-      sinon.assert.calledOnce(statementsApiStub.updateSqlv1Statement);
-
-      const callArgs = statementsApiStub.updateSqlv1Statement.getCall(0).args[0];
-      assert.strictEqual(callArgs.organization_id, refreshed.organizationId);
-      assert.strictEqual(callArgs.environment_id, refreshed.environmentId);
-      assert.strictEqual(callArgs.statement_name, refreshed.name);
-      const calledWithSpec = callArgs.UpdateSqlv1StatementRequest!.spec! as Record<string, boolean>;
-      assert.strictEqual(
-        calledWithSpec["stopped"],
-        true,
-        "Expected stopped flag to be true in spec",
-      );
+      sinon.assert.calledOnceWithExactly(stopStatementStub, statement.name);
     });
 
-    it("should raise if refreshed statement is not found", async () => {
-      refreshStub.resolves(null);
+    it("should propagate API errors when stop fails", async () => {
+      const apiError = new Error("Stop failed");
+      stopStatementStub.rejects(apiError);
 
-      await assert.rejects(
-        async () => {
-          await loader.stopFlinkStatement(original);
-        },
-        {
-          message: `Could not find Flink statement ${original.id} to stop.`,
-        },
-      );
-
-      sinon.assert.calledOnce(refreshStub);
-      sinon.assert.notCalled(statementsApiStub.updateSqlv1Statement);
-    });
-
-    it("should raise if refreshed statement is not stoppable", async () => {
-      refreshed = createFlinkStatement({
-        name: original.name,
-        phase: Phase.STOPPED,
-      });
-      refreshStub.resolves(refreshed);
-
-      await assert.rejects(
-        async () => {
-          await loader.stopFlinkStatement(original);
-        },
-        {
-          message: `Statement ${original.id} is not in a stoppable state.`,
-        },
-      );
-
-      sinon.assert.calledOnce(refreshStub);
-      sinon.assert.notCalled(statementsApiStub.updateSqlv1Statement);
-    });
-
-    it("should propagate API errors when update fails", async () => {
-      const apiError = new Error("Update failed");
-      statementsApiStub.updateSqlv1Statement.rejects(apiError);
-
+      const statement = createFlinkStatement({ phase: Phase.RUNNING });
       await assert.rejects(async () => {
-        await loader.stopFlinkStatement(original);
+        await loader.stopFlinkStatement(statement);
       }, apiError);
 
-      sinon.assert.calledOnce(refreshStub);
-      sinon.assert.calledOnce(statementsApiStub.updateSqlv1Statement);
+      sinon.assert.calledOnceWithExactly(stopStatementStub, statement.name);
     });
   });
-  // TODO: Re-enable when getSidecarHandle is restored (sidecar removal migration)
-  describe.skip("getFlinkWorkspace", () => {
-    // let sidecarHandle: SidecarHandle;
-    let workspacesApiStub: sinon.SinonStubbedInstance<WorkspacesWsV1Api>;
-    let getCCloudAuthSessionStub: sinon.SinonStub;
-    let getFlinkWorkspacesWsV1ApiStub: sinon.SinonStub;
+  describe("getFlinkWorkspace", () => {
+    let tokenManagerStub: sinon.SinonStubbedInstance<TokenManager>;
+    let getWorkspaceStub: sinon.SinonStub;
 
     const testParams: FlinkWorkspaceParams = {
       environmentId: "env-12345",
@@ -2073,108 +2063,105 @@ describe("CCloudResourceLoader", () => {
       region: "us-west-2",
     };
 
-    const mockWorkspaceResponse: GetWsV1Workspace200Response = {
-      api_version: GetWsV1Workspace200ResponseApiVersionEnum.WsV1,
-      kind: GetWsV1Workspace200ResponseKindEnum.Workspace,
-      metadata: {
-        self: "https://api.confluent.cloud/ws/v1/workspaces/test-workspace",
-        created_at: new Date(),
-        updated_at: new Date(),
-      },
-      name: "test-workspace",
-      organization_id: "org-67890",
-      environment_id: "env-12345",
-      spec: {
-        display_name: "Test Workspace",
-      },
-    };
-
     beforeEach(() => {
-      // TODO: Re-enable when getSidecarHandle is restored
-      // sidecarHandle = getSidecarHandle();
-      workspacesApiStub = sandbox.createStubInstance(WorkspacesWsV1Api);
-      // getFlinkWorkspacesWsV1ApiStub = sandbox
-      //   .stub(sidecarHandle, "getFlinkWorkspacesWsV1Api")
-      //   .returns(workspacesApiStub);
-      getFlinkWorkspacesWsV1ApiStub = sandbox.stub();
+      // Stub TokenManager to return a data plane token
+      tokenManagerStub = sandbox.createStubInstance(TokenManager);
+      tokenManagerStub.getDataPlaneToken.resolves("test-data-plane-token");
+      sandbox.stub(TokenManager, "getInstance").returns(tokenManagerStub);
 
-      getCCloudAuthSessionStub = sandbox.stub(authnUtils, "getCCloudAuthSession");
+      // Stub the CCloudDataPlaneProxy.prototype.getWorkspace method
+      getWorkspaceStub = sandbox.stub(CCloudDataPlaneProxy.prototype, "getWorkspace");
     });
 
     it("should return the workspace when fetch succeeds", async () => {
-      workspacesApiStub.getWsV1Workspace.resolves(mockWorkspaceResponse);
+      const mockWorkspace = {
+        api_version: "ws/v1",
+        kind: "Workspace",
+        name: "test-workspace",
+        organization_id: "org-67890",
+        environment_id: "env-12345",
+        metadata: {
+          self: "https://flink.us-west-2.aws.confluent.cloud/ws/v1/workspaces/test-workspace",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        },
+        spec: {
+          name: "Test Workspace",
+          compute_pool: "lfcp-12345",
+          blocks: [{ content: "SELECT 1" }],
+        },
+        status: {
+          phase: "READY",
+        },
+      };
+      getWorkspaceStub.resolves(mockWorkspace);
 
       const result = await loader.getFlinkWorkspace(testParams);
 
-      assert.deepStrictEqual(result, mockWorkspaceResponse);
-      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, { createIfNone: true });
-      sinon.assert.calledOnce(getFlinkWorkspacesWsV1ApiStub);
-      sinon.assert.calledOnceWithExactly(workspacesApiStub.getWsV1Workspace, {
-        organization_id: testParams.organizationId,
-        environment_id: testParams.environmentId,
-        name: testParams.workspaceName,
-      });
+      assert.ok(result, "Expected workspace result");
+      assert.strictEqual(result.name, "test-workspace");
+      assert.strictEqual(result.organization_id, "org-67890");
+      assert.strictEqual(result.environment_id, "env-12345");
+      sinon.assert.calledOnceWithExactly(getWorkspaceStub, testParams.workspaceName);
     });
 
-    it("should return null when user does not consent to login", async () => {
-      const authError = new Error("User did not consent to login.");
-      getCCloudAuthSessionStub.rejects(authError);
+    it("should return null when not authenticated", async () => {
+      tokenManagerStub.getDataPlaneToken.resolves(null);
 
       const result = await loader.getFlinkWorkspace(testParams);
 
       assert.strictEqual(result, null);
-      sinon.assert.calledOnce(getCCloudAuthSessionStub);
-      sinon.assert.notCalled(workspacesApiStub.getWsV1Workspace);
-    });
-
-    it("should return null when CCloudConnectionError occurs", async () => {
-      const connectionError = new CCloudConnectionError("CCloud connection failed");
-      getCCloudAuthSessionStub.rejects(connectionError);
-
-      const result = await loader.getFlinkWorkspace(testParams);
-
-      assert.strictEqual(result, null);
-      sinon.assert.calledOnce(getCCloudAuthSessionStub);
-      sinon.assert.notCalled(workspacesApiStub.getWsV1Workspace);
-    });
-
-    it("should re-throw unexpected authentication errors", async () => {
-      const unexpectedError = new Error("Unexpected auth error");
-      getCCloudAuthSessionStub.rejects(unexpectedError);
-
-      await assert.rejects(async () => {
-        await loader.getFlinkWorkspace(testParams);
-      }, unexpectedError);
-
-      sinon.assert.calledOnce(getCCloudAuthSessionStub);
-      sinon.assert.notCalled(workspacesApiStub.getWsV1Workspace);
+      sinon.assert.notCalled(getWorkspaceStub);
     });
 
     it("should return null when workspace API call fails", async () => {
       const apiError = new Error("Workspace not found");
-      workspacesApiStub.getWsV1Workspace.rejects(apiError);
+      getWorkspaceStub.rejects(apiError);
 
       const result = await loader.getFlinkWorkspace(testParams);
 
       assert.strictEqual(result, null);
-      sinon.assert.calledOnce(getCCloudAuthSessionStub);
-      sinon.assert.calledOnce(workspacesApiStub.getWsV1Workspace);
+      sinon.assert.calledOnce(getWorkspaceStub);
     });
 
-    it("should build queryable with correct provider/region from params", async () => {
-      workspacesApiStub.getWsV1Workspace.resolves(mockWorkspaceResponse);
+    it("should correctly convert workspace spec with blocks to statements", async () => {
+      const mockWorkspace = {
+        name: "test-workspace",
+        organization_id: "org-67890",
+        environment_id: "env-12345",
+        spec: {
+          name: "My Workspace",
+          compute_pool: "lfcp-abc123",
+          blocks: [{ content: "SELECT 1" }, { content: "SELECT 2" }],
+        },
+      };
+      getWorkspaceStub.resolves(mockWorkspace);
 
-      await loader.getFlinkWorkspace(testParams);
+      const result = await loader.getFlinkWorkspace(testParams);
 
-      // TODO: Re-enable when getSidecarHandle is restored
-      // const getFlinkWorkspacesWsV1ApiCall = stubbedSidecar.getFlinkWorkspacesWsV1Api.getCall(0);
-      const getFlinkWorkspacesWsV1ApiCall = getFlinkWorkspacesWsV1ApiStub.getCall(0);
-      const queryable = getFlinkWorkspacesWsV1ApiCall.args[0] as IFlinkQueryable;
+      assert.ok(result, "Expected workspace result");
+      assert.strictEqual(result.spec.display_name, "My Workspace");
+      assert.strictEqual(result.spec.compute_pool, "lfcp-abc123");
+      assert.strictEqual(result.spec.statements?.length, 2);
+      assert.strictEqual(result.spec.statements?.[0].sql, "SELECT 1");
+      assert.strictEqual(result.spec.statements?.[1].sql, "SELECT 2");
+    });
 
-      assert.strictEqual(queryable.organizationId, testParams.organizationId);
-      assert.strictEqual(queryable.environmentId, testParams.environmentId);
-      assert.strictEqual(queryable.provider, testParams.provider);
-      assert.strictEqual(queryable.region, testParams.region);
+    it("should handle workspace with empty spec", async () => {
+      const mockWorkspace = {
+        name: "test-workspace",
+        organization_id: "org-67890",
+        environment_id: "env-12345",
+        metadata: {},
+        spec: {},
+      };
+      getWorkspaceStub.resolves(mockWorkspace);
+
+      const result = await loader.getFlinkWorkspace(testParams);
+
+      assert.ok(result, "Expected workspace result");
+      assert.strictEqual(result.name, "test-workspace");
+      assert.deepStrictEqual(result.spec.statements, []);
     });
   });
 });

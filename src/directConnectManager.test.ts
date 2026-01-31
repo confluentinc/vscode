@@ -168,10 +168,12 @@ describe("DirectConnectionManager behavior", () => {
     assert.equal(storedConnection.name, newName);
   });
 
-  // TODO: Re-enable after sidecar removal - need to mock DirectConnectionHandler validation failure
-  it.skip("updateConnection() should not store the updated connection spec if validation fails", async () => {
+  it("updateConnection() should not store the updated connection spec if validation fails", async () => {
     // preload a direct connection
     await getResourceManager().addDirectConnection(TEST_DIRECT_CONNECTION_FORM_SPEC);
+
+    // Make Schema Registry validation fail by throwing an error
+    mockSrProxy.listSubjects.rejects(new Error("Connection refused"));
 
     const newName = "Updated Connection";
     const updatedSpec: CustomConnectionSpec = {
@@ -188,6 +190,7 @@ describe("DirectConnectionManager behavior", () => {
       TEST_DIRECT_CONNECTION_FORM_SPEC.id,
     );
     assert.ok(storedConnection);
+    // The name should NOT be updated since validation failed
     assert.equal(storedConnection.name, TEST_DIRECT_CONNECTION.spec.name);
   });
 

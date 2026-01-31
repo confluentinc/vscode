@@ -45,8 +45,13 @@ import type {
 import type { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { createCCloudArtifactsProxy } from "../proxy/ccloudArtifactsProxy";
 import {
+  CCloudControlPlaneProxy,
+  type CCloudFlinkRegionData,
+} from "../proxy/ccloudControlPlaneProxy";
+import {
   CCloudDataPlaneProxy,
   type FlinkStatement as FlinkStatementApi,
+  type FlinkWorkspace,
 } from "../proxy/ccloudDataPlaneProxy";
 import { buildFlinkDataPlaneBaseUrl } from "../proxy/flinkDataPlaneUrlBuilder";
 import { WorkspaceStorageKeys } from "../storage/constants";
@@ -142,6 +147,22 @@ export interface ExecuteBackgroundStatementOptions {
   timeout?: number;
   nameSpice?: string;
 }
+
+/**
+ * Dependencies for statement execution, allowing injection for testing.
+ */
+export interface StatementExecutionDeps {
+  submitFlinkStatement: typeof submitFlinkStatement;
+  waitForStatementCompletion: typeof waitForStatementCompletion;
+  parseAllFlinkStatementResults: typeof parseAllFlinkStatementResults;
+}
+
+/** Default production dependencies for statement execution. */
+const defaultStatementDeps: StatementExecutionDeps = {
+  submitFlinkStatement,
+  waitForStatementCompletion,
+  parseAllFlinkStatementResults,
+};
 
 /**
  * Singleton class responsible for loading / caching CCloud resources into the resource manager.
@@ -861,6 +882,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * @param options.computePool The compute pool to use for execution, defaults to the first compute pool in the database's flinkPools array.
    * @param options.timeout Custom timeout for the statement execution.
    * @param options.nameSpice Additional spice parameter for extending statement name to prevent different statement operations from colliding when executed quickly in succession.
+   * @param deps Optional dependencies for testing (defaults to production implementations).
    * @returns Array of results, each of type RT (generic type parameter) corresponding to the result row structure from the query.
    *
    */
@@ -868,6 +890,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     sqlStatement: string,
     database: CCloudFlinkDbKafkaCluster,
     options: ExecuteBackgroundStatementOptions = {},
+    deps: StatementExecutionDeps = defaultStatementDeps,
   ): Promise<Array<RT>> {
     const organization = await this.getOrganization();
     if (!organization) {
@@ -905,12 +928,13 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     }
 
     // Create a new promise for this statement execution, and store it in the map of pending promises.
-    const statementPromise = this.doExecuteBackgroundFlinkStatement<RT>(statementParams).finally(
-      () => {
-        // When the promise settles (either resolves or rejects), remove it from the map of pending promises.
-        this.backgroundStatementPromises.delete(promiseKey);
-      },
-    );
+    const statementPromise = this.doExecuteBackgroundFlinkStatement<RT>(
+      statementParams,
+      deps,
+    ).finally(() => {
+      // When the promise settles (either resolves or rejects), remove it from the map of pending promises.
+      this.backgroundStatementPromises.delete(promiseKey);
+    });
 
     this.backgroundStatementPromises.set(promiseKey, statementPromise);
 
@@ -920,17 +944,18 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   /** Actual implementation of executeBackgroundFlinkStatement(), without deduplication logic. */
   private async doExecuteBackgroundFlinkStatement<RT>(
     statementParams: IFlinkStatementSubmitParameters,
+    deps: StatementExecutionDeps,
   ): Promise<Array<RT>> {
     const computePool = statementParams.computePool;
     logger.info(
       `Executing Flink statement on ${computePool?.provider}-${computePool?.region} in environment ${computePool?.environmentId} : ${statementParams.statement}`,
     );
 
-    let statement = await submitFlinkStatement(statementParams);
+    let statement = await deps.submitFlinkStatement(statementParams);
 
     // Refresh the statement at 150ms intervals for at most 10s until it is in a terminal phase.
     const timeout = statementParams.timeout ?? 10_000;
-    statement = await waitForStatementCompletion(statement, timeout, 150);
+    statement = await deps.waitForStatementCompletion(statement, timeout, 150);
 
     if (statement.phase !== Phase.COMPLETED) {
       logger.error(
@@ -947,7 +972,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
         `Skipping fetching results for statement ${statement.id} of kind ${statement.sqlKind}`,
       );
     } else {
-      resultRows = await parseAllFlinkStatementResults<RT>(statement);
+      resultRows = await deps.parseAllFlinkStatementResults<RT>(statement);
     }
 
     // Delete the now completed statement. Even though is a hidden statement and won't be displayed
@@ -991,23 +1016,76 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * Uses the provider/region from the params to query the region-scoped Workspaces API directly.
    *
    * @param params Workspace parameters containing environmentId, organizationId, workspaceName, provider, and region
-   * @returns The workspace response if found and validation succeeds, null otherwise
+   * @returns The workspace response if found, null otherwise
    */
   public async getFlinkWorkspace(
     params: FlinkWorkspaceParams,
   ): Promise<GetWsV1Workspace200Response | null> {
-    // TODO: Migrate to direct Flink Workspaces API calls (sidecar removal phase-6)
-    // This function previously used getSidecar() to fetch workspaces via the sidecar proxy.
-    // Needs implementation using direct HTTP client to CCloud Flink Workspaces API.
-    logger.warn(
-      "getFlinkWorkspace: Feature temporarily unavailable during sidecar removal migration",
+    const token = await TokenManager.getInstance().getDataPlaneToken();
+    if (!token) {
+      logger.warn("getFlinkWorkspace: Not authenticated to Confluent Cloud");
+      return null;
+    }
+
+    // Build the regional Flink Data Plane API base URL
+    const baseUrl = buildFlinkDataPlaneBaseUrl(
+      params.provider,
+      params.region,
+      params.environmentId,
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _params = params;
+    // Create the proxy instance
+    const proxy = new CCloudDataPlaneProxy({
+      baseUrl,
+      organizationId: params.organizationId,
+      environmentId: params.environmentId,
+      auth: {
+        type: "bearer",
+        token,
+      },
+    });
 
-    // Return null to indicate workspace not found
-    return null;
+    try {
+      const workspace = await proxy.getWorkspace(params.workspaceName);
+      // Convert the FlinkWorkspace to GetWsV1Workspace200Response format
+      return this.convertWorkspaceToResponse(workspace, params);
+    } catch (error) {
+      logger.error("getFlinkWorkspace: Failed to fetch workspace", {
+        workspaceName: params.workspaceName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Convert a FlinkWorkspace from the proxy to the GetWsV1Workspace200Response format.
+   */
+  private convertWorkspaceToResponse(
+    workspace: FlinkWorkspace,
+    params: FlinkWorkspaceParams,
+  ): GetWsV1Workspace200Response {
+    return {
+      api_version: "ws/v1" as any,
+      kind: "Workspace" as any,
+      name: workspace.name ?? params.workspaceName,
+      organization_id: workspace.organization_id ?? params.organizationId,
+      environment_id: workspace.environment_id ?? params.environmentId,
+      metadata: workspace.metadata ?? {},
+      spec: {
+        display_name: workspace.spec?.name,
+        compute_pool: workspace.spec?.compute_pool,
+        statements:
+          workspace.spec?.blocks?.map((block) => ({
+            sql: block.content,
+          })) ?? [],
+      },
+      status: workspace.status
+        ? {
+            phase: workspace.status.phase,
+          }
+        : undefined,
+    } as GetWsV1Workspace200Response;
   }
 }
 
@@ -1079,16 +1157,46 @@ export async function loadArtifactsForProviderRegion(
 
 /**
  * Load all available cloud provider/region combinations from the FCPM API.
- * @deprecated Temporarily stubbed during sidecar removal migration
+ * @param cloud Optional cloud provider filter (aws, azure, gcp).
+ * @returns Array of Flink region data from the API.
  */
-export async function loadProviderRegions(): Promise<FcpmV2RegionListDataInner[]> {
-  // TODO: Migrate to direct FCPM API calls (sidecar removal phase-6)
-  // This function previously used getSidecar() to fetch regions via the sidecar proxy.
-  // Needs implementation using direct HTTP client to CCloud FCPM API.
-  logger.warn(
-    "loadProviderRegions: Feature temporarily unavailable during sidecar removal migration",
-  );
-  return [];
+export async function loadProviderRegions(cloud?: string): Promise<FcpmV2RegionListDataInner[]> {
+  const token = await TokenManager.getInstance().getControlPlaneToken();
+  if (!token) {
+    logger.warn("loadProviderRegions: Not authenticated to Confluent Cloud");
+    return [];
+  }
+
+  const proxy = new CCloudControlPlaneProxy({
+    baseUrl: "https://api.confluent.cloud",
+    auth: {
+      type: "bearer",
+      token,
+    },
+  });
+
+  try {
+    const regions = await proxy.fetchAllFlinkRegions(cloud);
+    // Convert CCloudFlinkRegionData to FcpmV2RegionListDataInner for compatibility
+    return regions.map(
+      (region): FcpmV2RegionListDataInner => ({
+        id: region.id,
+        api_version: region.api_version as any,
+        kind: region.kind as any,
+        metadata: {
+          self: region.metadata?.self ?? "",
+        },
+        display_name: region.display_name ?? "",
+        cloud: region.cloud ?? "",
+        region_name: region.region_name ?? "",
+        http_endpoint: region.http_endpoint ?? "",
+        private_http_endpoint: region.private_http_endpoint,
+      }),
+    );
+  } catch (error) {
+    logger.error("loadProviderRegions: Failed to fetch regions from CCloud API", { error });
+    return [];
+  }
 }
 
 // TODO: restFlinkArtifactToModel removed during sidecar migration (phase-6)

@@ -418,10 +418,7 @@ describe("FlinkLanguageClientManager", () => {
   });
 
   describe("initializeLanguageClient", () => {
-    // TODO: These tests need updates for direct CCloud connections.
-    // They previously tested WebSocket connections through the sidecar
-    // which has been removed. The architecture now uses direct connections.
-    describe.skip("integration tests", function () {
+    describe("integration tests", function () {
       // These tests may take longer to run due to server startup
       this.timeout(5000);
 
@@ -429,6 +426,7 @@ describe("FlinkLanguageClientManager", () => {
       let serverUrl: string;
       let handleWebSocketDisconnectStub: sinon.SinonSpy;
       let mockAccessToken: string;
+      let getDataPlaneTokenStub: sinon.SinonStub;
 
       // stub out createLanguageClientFromWebsocket().
       let createLanguageClientFromWebsocketStub: sinon.SinonStub;
@@ -436,6 +434,13 @@ describe("FlinkLanguageClientManager", () => {
       // @ts-expect-error obviously wrong type, but we are stubbing this out as the return
       // result from createLanguageClientFromWebsocketStub.
       const fakeLanguageClient = { fake_language_client: true } as LanguageClient;
+
+      const mockPoolInfo = {
+        organizationId: TEST_CCLOUD_ORGANIZATION.id,
+        environmentId: TEST_CCLOUD_ENVIRONMENT.id,
+        region: TEST_CCLOUD_FLINK_COMPUTE_POOL.region,
+        provider: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
+      };
 
       beforeEach(async () => {
         // Set up WebSocket server
@@ -452,6 +457,12 @@ describe("FlinkLanguageClientManager", () => {
 
         // Set up mock access token
         mockAccessToken = "mock-access-token";
+
+        // Stub TokenManager prototype method (before getInstance is called)
+        const { TokenManager } = await import("../auth/oauth2/tokenManager");
+        getDataPlaneTokenStub = sandbox
+          .stub(TokenManager.prototype, "getDataPlaneToken")
+          .resolves(mockAccessToken);
 
         // Stub for on disconnect callback passed to initializeLanguageClient()
         handleWebSocketDisconnectStub = sandbox.stub(
@@ -470,60 +481,62 @@ describe("FlinkLanguageClientManager", () => {
         }
       });
 
-      it("should successfully connect and create language client when server sends 'OK'", async () => {
-        // Set up connection handler to validate token and send "OK" message
-        wss.on("connection", (ws, req) => {
-          const authHeader = req.headers.authorization;
-          assert.strictEqual(
-            authHeader,
-            `Bearer ${mockAccessToken}`,
-            "WebSocket connection should include correct authorization header",
-          );
+      it("should return null if no data plane token is available", async () => {
+        getDataPlaneTokenStub.resolves(null);
 
-          // After 100s, send the "OK" message to trigger language client creation as if
-          // sidecar had made the peer connection to ccloud.
-          // Then 1000s after that,close the connection normally.
-          setTimeout(() => {
-            ws.send("OK");
+        // @ts-expect-error calling private method for testing
+        const client = await flinkManager.initializeLanguageClient(serverUrl, mockPoolInfo);
 
-            // After a brief delay, simulate normal close from the server side.
-            setTimeout(() => {
-              ws.close(1000, "Test completed successfully");
-            }, 1000);
-          }, 100);
+        assert.strictEqual(client, null, "Expected null when no token available");
+        sinon.assert.notCalled(createLanguageClientFromWebsocketStub);
+      });
+
+      it("should successfully connect and create language client after sending auth message", async () => {
+        // Set up connection handler to validate auth header and receive auth message
+        const authMessageReceived = new Promise<unknown>((resolve) => {
+          wss.on("connection", (ws, req) => {
+            const authHeader = req.headers.authorization;
+            assert.strictEqual(
+              authHeader,
+              `Bearer ${mockAccessToken}`,
+              "WebSocket connection should include correct authorization header",
+            );
+
+            // Listen for the auth message
+            ws.on("message", (data) => {
+              resolve(JSON.parse(data.toString()));
+            });
+          });
         });
 
-        // Wait for the client to be created. Should go through the 'OK' handshaking with
-        // the fake WebSocket server.
         // @ts-expect-error calling private method for testing
-        const client = await flinkManager.initializeLanguageClient(serverUrl);
+        const client = await flinkManager.initializeLanguageClient(serverUrl, mockPoolInfo);
+
+        // Wait for the auth message with a timeout
+        const receivedAuthMessage = await Promise.race([
+          authMessageReceived,
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Timeout waiting for auth message")), 2000),
+          ),
+        ]);
 
         assert.deepEqual(client, fakeLanguageClient, "Expected client to be created successfully");
         sinon.assert.calledOnce(createLanguageClientFromWebsocketStub);
 
-        // flinkManager.initializeLanguageClient() should have returned what
-        // createLanguageClientFromWebsocket() resolved to.
-        assert.deepEqual(client, fakeLanguageClient);
-
-        // The disconnect callback will not have been called for a normal close
-        // since the handler wasn't wired in until real LanguageClient creation
-        // (which we've mocked out for these tests, but perhaps should have been
-        // wired in regardless). Perhps this behavior needs reconsideration in
-        // future branches --- if we get a close before the 'OK' handling, when
-        // does the overall behavior cause FlinkLanguageClientManager to
-        // reconnect / try again?
-        sinon.assert.notCalled(handleWebSocketDisconnectStub);
+        // Verify auth message was sent with correct content
+        assert.deepStrictEqual(receivedAuthMessage, {
+          Token: mockAccessToken,
+          EnvironmentId: mockPoolInfo.environmentId,
+          OrganizationId: mockPoolInfo.organizationId,
+        });
       });
 
       it("should reject and log error if createLanguageClientFromWebsocket rejects", async () => {
-        // Set up connection handler to send "OK" message
+        // Set up connection handler to accept the auth message
         wss.on("connection", (ws) => {
-          setTimeout(() => {
-            ws.send("OK");
-            setTimeout(() => {
-              ws.close(1000, "Test completed with createLanguageClientFromWebsocket rejection");
-            }, 100);
-          }, 100);
+          ws.on("message", () => {
+            // Auth message received, but client creation will fail
+          });
         });
 
         // Make createLanguageClientFromWebsocket reject
@@ -531,7 +544,7 @@ describe("FlinkLanguageClientManager", () => {
         createLanguageClientFromWebsocketStub.rejects(rejectionError);
 
         // @ts-expect-error calling private method for testing
-        const resultPromise = flinkManager.initializeLanguageClient(serverUrl);
+        const resultPromise = flinkManager.initializeLanguageClient(serverUrl, mockPoolInfo);
 
         await assert.rejects(
           resultPromise,
@@ -540,55 +553,23 @@ describe("FlinkLanguageClientManager", () => {
         );
       });
 
-      it("should reject and log error if server does not send 'OK' as first message", async () => {
-        // Set up connection handler to send a non-OK message
-        wss.on("connection", (ws) => {
-          // Send the client a message that is not "OK"
-          setTimeout(() => {
-            ws.send("NOT_OK");
-            // Then close the connection
-            setTimeout(() => {
-              ws.close(1000, "Test completed with NOT_OK");
-            }, 100);
-          }, 100);
-        });
+      it("should reject if WebSocket connection fails with error", async () => {
+        // Use an invalid URL that will fail to connect
+        const invalidUrl = "ws://localhost:1"; // Port 1 is reserved and should fail
 
         // @ts-expect-error calling private method for testing
-        const resultPromise = flinkManager.initializeLanguageClient(serverUrl);
-
-        // Should reject with an error
-        await assert.rejects(
-          resultPromise,
-          (err: Error) =>
-            err.message.includes("Unexpected message received from WebSocket instead of OK"),
-          "Expected rejection due to missing OK message",
-        );
-
-        sinon.assert.notCalled(createLanguageClientFromWebsocketStub);
-        sinon.assert.notCalled(handleWebSocketDisconnectStub);
-      });
-
-      it("should reject and log error if server closes connection with non-1000 code before OK", async () => {
-        // Set up connection handler to close with non-1000 code before sending "OK"
-        wss.on("connection", (ws) => {
-          setTimeout(() => {
-            ws.close(4001, "Abnormal closure for test");
-          }, 100);
-        });
-
-        // @ts-expect-error calling private method for testing
-        const resultPromise = flinkManager.initializeLanguageClient(serverUrl);
+        const resultPromise = flinkManager.initializeLanguageClient(invalidUrl, mockPoolInfo);
 
         await assert.rejects(
           resultPromise,
           (err: Error) =>
-            err.message.includes("WebSocket closed before initialization") ||
-            err.message.includes("Abnormal closure for test"),
-          "Expected rejection due to abnormal WebSocket closure",
+            err.message.includes("WebSocket") ||
+            err.message.includes("ECONNREFUSED") ||
+            err.message.includes("connect"),
+          "Expected rejection due to WebSocket connection failure",
         );
 
         sinon.assert.notCalled(createLanguageClientFromWebsocketStub);
-        sinon.assert.notCalled(handleWebSocketDisconnectStub);
       });
     });
   });

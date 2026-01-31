@@ -5,18 +5,29 @@ import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
-import { TEST_CCLOUD_SCHEMA_REGISTRY } from "../../tests/unit/testResources";
+import {
+  TEST_CCLOUD_KAFKA_TOPIC,
+  TEST_CCLOUD_SCHEMA_REGISTRY,
+} from "../../tests/unit/testResources";
 import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources/kafkaCluster";
+import * as topicsAuthz from "../authz/topics";
 import { ClusterSelectSyncOption, SYNC_ON_KAFKA_SELECT } from "../extensionSettings/constants";
+import { KafkaAdminError, KafkaAdminErrorCategory, type TopicService } from "../kafka";
+import * as topicServiceFactory from "../kafka/topicServiceFactory";
 import type { CCloudResourceLoader } from "../loaders";
+import { ResourceLoader } from "../loaders/resourceLoader";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
-import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { KafkaTopic } from "../models/topic";
 import * as kafkaClusterQuickpicks from "../quickpicks/kafkaClusters";
+import { TopicViewProvider } from "../viewProviders/topics";
 import {
   copyBootstrapServers,
+  createTopicCommand,
+  deleteTopicCommand,
   selectFlinkDatabaseViewKafkaClusterCommand,
   selectTopicsViewKafkaClusterCommand,
 } from "./kafkaClusters";
@@ -245,29 +256,298 @@ describe("commands/kafkaClusters.ts", () => {
     });
   });
 
-  // TODO(sidecar-removal): These tests require getSidecarHandle which was removed during
-  // sidecar migration. Re-implement once direct API client is available.
-  describe.skip("createTopicCommand", () => {
-    it("should return false if no cluster is available", async () => {});
-    it("should return false if user cancels out the topic name input box", async () => {});
-    it("should fire the topicChanged event after successful creation", async () => {});
-    it("should use the cluster from TopicViewProvider if no cluster is provided", async () => {});
-    it("should return false and show an error notification when an unexpected error occurs", async () => {});
-    it("should return false and show a permission error notification when a 40301 error code occurs", async () => {});
-    it("should return false and show a generic error notification when a non-40301 error code occurs", async () => {});
-    it("should return false when ResponseError response.json() fails to parse", async () => {});
+  describe("createTopicCommand", () => {
+    let showInputBoxStub: sinon.SinonStub;
+    let showErrorMessageStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+    let kafkaClusterQuickPickStub: sinon.SinonStub;
+    let mockTopicService: TopicService;
+    let createTopicStub: sinon.SinonStub;
+    let deleteTopicStub: sinon.SinonStub;
+    let getTopicServiceStub: sinon.SinonStub;
+    let topicViewProviderRefreshStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage");
+      showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
+      kafkaClusterQuickPickStub = sandbox.stub(kafkaClusterQuickpicks, "kafkaClusterQuickPick");
+
+      // Create stub methods
+      createTopicStub = sandbox.stub();
+      deleteTopicStub = sandbox.stub();
+
+      // Create a mock TopicService with stubs
+      mockTopicService = {
+        listTopics: sandbox.stub().resolves([]),
+        describeTopic: sandbox.stub().resolves({}),
+        topicExists: sandbox.stub().resolves(false),
+        createTopic: createTopicStub,
+        deleteTopic: deleteTopicStub,
+      };
+
+      // Stub getTopicService to return our mock
+      getTopicServiceStub = sandbox
+        .stub(topicServiceFactory, "getTopicService")
+        .returns(mockTopicService);
+
+      // Stub the TopicViewProvider refresh
+      topicViewProviderRefreshStub = sandbox.stub(TopicViewProvider.getInstance(), "refresh");
+    });
+
+    it("should return false if no cluster is available", async () => {
+      kafkaClusterQuickPickStub.resolves(undefined);
+      // Clear the TopicViewProvider's cluster
+      sandbox.stub(TopicViewProvider.getInstance(), "kafkaCluster").value(null);
+
+      const result = await createTopicCommand();
+
+      assert.strictEqual(result, false);
+      sinon.assert.calledOnce(kafkaClusterQuickPickStub);
+      sinon.assert.notCalled(showInputBoxStub);
+    });
+
+    it("should return false if user cancels out the topic name input box", async () => {
+      showInputBoxStub.resolves(undefined);
+
+      const result = await createTopicCommand(TEST_CCLOUD_KAFKA_CLUSTER);
+
+      assert.strictEqual(result, false);
+      sinon.assert.calledOnce(showInputBoxStub);
+      sinon.assert.notCalled(mockTopicService.createTopic);
+    });
+
+    it("should fire the topicChanged event after successful creation", async () => {
+      showInputBoxStub
+        .onFirstCall()
+        .resolves("new-topic") // topic name
+        .onSecondCall()
+        .resolves("3") // partitions
+        .onThirdCall()
+        .resolves("3"); // replication
+      createTopicStub.resolves();
+      topicViewProviderRefreshStub.resolves();
+
+      const result = await createTopicCommand(TEST_CCLOUD_KAFKA_CLUSTER);
+
+      assert.strictEqual(result, true);
+      sinon.assert.calledOnce(createTopicStub);
+      sinon.assert.calledOnce(topicViewProviderRefreshStub);
+      sinon.assert.calledOnce(showInformationMessageStub);
+    });
+
+    it("should use the cluster from TopicViewProvider if no cluster is provided", async () => {
+      sandbox
+        .stub(TopicViewProvider.getInstance(), "kafkaCluster")
+        .value(TEST_CCLOUD_KAFKA_CLUSTER);
+      showInputBoxStub
+        .onFirstCall()
+        .resolves("new-topic")
+        .onSecondCall()
+        .resolves("3")
+        .onThirdCall()
+        .resolves("3");
+      createTopicStub.resolves();
+      topicViewProviderRefreshStub.resolves();
+
+      const result = await createTopicCommand();
+
+      assert.strictEqual(result, true);
+      sinon.assert.notCalled(kafkaClusterQuickPickStub);
+      sinon.assert.calledOnce(createTopicStub);
+    });
+
+    it("should return false and show an error notification when an unexpected error occurs", async () => {
+      showInputBoxStub
+        .onFirstCall()
+        .resolves("new-topic")
+        .onSecondCall()
+        .resolves("3")
+        .onThirdCall()
+        .resolves("3");
+      createTopicStub.rejects(new Error("Unexpected error"));
+
+      const result = await createTopicCommand(TEST_CCLOUD_KAFKA_CLUSTER);
+
+      assert.strictEqual(result, false);
+    });
+
+    it("should return false and show a permission error notification when a 40301 error code occurs", async () => {
+      showInputBoxStub
+        .onFirstCall()
+        .resolves("new-topic")
+        .onSecondCall()
+        .resolves("3")
+        .onThirdCall()
+        .resolves("3");
+      createTopicStub.rejects(
+        new KafkaAdminError("Permission denied", KafkaAdminErrorCategory.AUTH),
+      );
+
+      const result = await createTopicCommand(TEST_CCLOUD_KAFKA_CLUSTER);
+
+      assert.strictEqual(result, false);
+    });
+
+    it("should return false and show a generic error notification when a non-40301 error code occurs", async () => {
+      showInputBoxStub
+        .onFirstCall()
+        .resolves("new-topic")
+        .onSecondCall()
+        .resolves("3")
+        .onThirdCall()
+        .resolves("3");
+      createTopicStub.rejects(
+        new KafkaAdminError("Cluster unavailable", KafkaAdminErrorCategory.TRANSIENT),
+      );
+
+      const result = await createTopicCommand(TEST_CCLOUD_KAFKA_CLUSTER);
+
+      assert.strictEqual(result, false);
+    });
+
+    it("should return false when ResponseError response.json() fails to parse", async () => {
+      showInputBoxStub
+        .onFirstCall()
+        .resolves("new-topic")
+        .onSecondCall()
+        .resolves("3")
+        .onThirdCall()
+        .resolves("3");
+      createTopicStub.rejects(
+        new KafkaAdminError("Invalid response", KafkaAdminErrorCategory.UNKNOWN),
+      );
+
+      const result = await createTopicCommand(TEST_CCLOUD_KAFKA_CLUSTER);
+
+      assert.strictEqual(result, false);
+    });
   });
 
-  // TODO(sidecar-removal): These tests require getSidecarHandle which was removed during
-  // sidecar migration. Re-implement once direct API client is available.
-  describe.skip("deleteTopicCommand", () => {
-    it("should fire the topicChanged event after successful deletion", async () => {});
-    it("should not fire the topicChanged event if the user cancels", async () => {});
-    it("should not fire the topicChanged event if the user doesn't have DELETE permission", async () => {});
-    it("should return early if the provided argument is not a KafkaTopic instance", async () => {});
-    it("should show an error notification if wrong topic name entered", async () => {});
-    it("should show an error notification when the deletion API call fails", async () => {});
-    it("should not fire the topicChanged event if the cluster is not found after deletion", async () => {});
+  describe("deleteTopicCommand", () => {
+    let showInputBoxStub: sinon.SinonStub;
+    let showErrorMessageStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+    let mockTopicService: TopicService;
+    let createTopicStub: sinon.SinonStub;
+    let deleteTopicStub: sinon.SinonStub;
+    let getTopicServiceStub: sinon.SinonStub;
+    let topicViewProviderRefreshStub: sinon.SinonStub;
+    let fetchTopicAuthorizedOperationsStub: sinon.SinonStub;
+    let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+
+    const testTopic = TEST_CCLOUD_KAFKA_TOPIC;
+
+    beforeEach(() => {
+      showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage");
+      showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
+      fetchTopicAuthorizedOperationsStub = sandbox.stub(
+        topicsAuthz,
+        "fetchTopicAuthorizedOperations",
+      );
+
+      // Create stub methods
+      createTopicStub = sandbox.stub();
+      deleteTopicStub = sandbox.stub();
+
+      // Create a mock TopicService with stubs
+      mockTopicService = {
+        listTopics: sandbox.stub().resolves([]),
+        describeTopic: sandbox.stub().resolves({}),
+        topicExists: sandbox.stub().resolves(false),
+        createTopic: createTopicStub,
+        deleteTopic: deleteTopicStub,
+      };
+
+      // Stub getTopicService to return our mock
+      getTopicServiceStub = sandbox
+        .stub(topicServiceFactory, "getTopicService")
+        .returns(mockTopicService);
+
+      // Stub the TopicViewProvider refresh
+      topicViewProviderRefreshStub = sandbox.stub(TopicViewProvider.getInstance(), "refresh");
+
+      // Stub the ResourceLoader
+      stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
+    });
+
+    it("should fire the topicChanged event after successful deletion", async () => {
+      fetchTopicAuthorizedOperationsStub.resolves(["READ", "WRITE", "DELETE"]);
+      showInputBoxStub.resolves(testTopic.name);
+      stubbedLoader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
+      deleteTopicStub.resolves();
+      topicViewProviderRefreshStub.resolves();
+
+      await deleteTopicCommand(testTopic);
+
+      sinon.assert.calledOnce(deleteTopicStub);
+      sinon.assert.calledOnce(topicViewProviderRefreshStub);
+      sinon.assert.calledOnce(showInformationMessageStub);
+    });
+
+    it("should not fire the topicChanged event if the user cancels", async () => {
+      fetchTopicAuthorizedOperationsStub.resolves(["READ", "WRITE", "DELETE"]);
+      showInputBoxStub.resolves(undefined);
+
+      await deleteTopicCommand(testTopic);
+
+      sinon.assert.notCalled(deleteTopicStub);
+      sinon.assert.notCalled(topicViewProviderRefreshStub);
+    });
+
+    it("should not fire the topicChanged event if the user doesn't have DELETE permission", async () => {
+      fetchTopicAuthorizedOperationsStub.resolves(["READ", "WRITE"]);
+
+      await deleteTopicCommand(testTopic);
+
+      sinon.assert.calledOnce(showErrorMessageStub);
+      sinon.assert.notCalled(showInputBoxStub);
+      sinon.assert.notCalled(deleteTopicStub);
+    });
+
+    it("should return early if the provided argument is not a KafkaTopic instance", async () => {
+      await deleteTopicCommand({} as any);
+
+      sinon.assert.notCalled(fetchTopicAuthorizedOperationsStub);
+      sinon.assert.notCalled(showInputBoxStub);
+      sinon.assert.notCalled(deleteTopicStub);
+    });
+
+    it("should show an error notification if wrong topic name entered", async () => {
+      fetchTopicAuthorizedOperationsStub.resolves(["READ", "WRITE", "DELETE"]);
+      showInputBoxStub.resolves("wrong-topic-name");
+
+      await deleteTopicCommand(testTopic);
+
+      sinon.assert.calledOnce(showErrorMessageStub);
+      sinon.assert.notCalled(deleteTopicStub);
+    });
+
+    it("should show an error notification when the deletion API call fails", async () => {
+      fetchTopicAuthorizedOperationsStub.resolves(["READ", "WRITE", "DELETE"]);
+      showInputBoxStub.resolves(testTopic.name);
+      stubbedLoader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
+      deleteTopicStub.rejects(
+        new KafkaAdminError("Deletion failed", KafkaAdminErrorCategory.TRANSIENT),
+      );
+
+      await deleteTopicCommand(testTopic);
+
+      sinon.assert.calledOnce(deleteTopicStub);
+      // Error notification shown via showErrorNotificationWithButtons
+    });
+
+    it("should not fire the topicChanged event if the cluster is not found after deletion", async () => {
+      fetchTopicAuthorizedOperationsStub.resolves(["READ", "WRITE", "DELETE"]);
+      showInputBoxStub.resolves(testTopic.name);
+      stubbedLoader.getKafkaClustersForEnvironmentId.resolves([]);
+
+      await deleteTopicCommand(testTopic);
+
+      sinon.assert.notCalled(deleteTopicStub);
+      sinon.assert.notCalled(topicViewProviderRefreshStub);
+    });
   });
 
   describe("copyBootstrapServers", () => {

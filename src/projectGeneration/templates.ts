@@ -51,13 +51,15 @@ export function sanitizeTemplateOptions(template: ScaffoldV1Template): ScaffoldV
  *
  * @param collection - The template collection name (default: "vscode")
  * @param sanitizeOptions - Whether to filter sensitive keys from template options
+ * @param apiFactory - Optional factory function to create the API client (for testing)
  * @returns Promise resolving to an array of templates
  */
 export async function getTemplatesList(
   collection?: string,
   sanitizeOptions: boolean = false,
+  apiFactory: () => TemplatesScaffoldV1Api = createScaffoldingApi,
 ): Promise<ScaffoldV1Template[]> {
-  const api = createScaffoldingApi();
+  const api = apiFactory();
   const response = await api.listScaffoldV1Templates({
     template_collection_name: collection ?? "vscode",
   });

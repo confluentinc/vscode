@@ -16,9 +16,6 @@ import type { CustomConnectionSpec } from "./storage/resourceManager";
 import { ResourceManager } from "./storage/resourceManager";
 
 describe("directConnect.ts", () => {
-  // TODO: Many tests in this describe need to be updated - the form field names changed from
-  // snake_case (e.g., "kafka_cluster.credentials.api_key") to camelCase
-  // (e.g., "kafka_cluster.credentials.apiKey") as part of the sidecar removal migration.
   describe("getConnectionSpecFromFormData", () => {
     it("should not include `schema_registry` if uri not provided", async () => {
       const formData = {
@@ -88,8 +85,7 @@ describe("directConnect.ts", () => {
       // @ts-expect-error - incomplete types from OpenAPI
       assert.strictEqual(spec.schemaRegistry?.credentials?.password, "pass");
     });
-    // TODO: Update form field names from snake_case to camelCase
-    it.skip("should return a valid CustomConnectionSpec with API key credentials", () => {
+    it("should return a valid CustomConnectionSpec with API key credentials", () => {
       const formData = {
         name: "Test Connection",
         formConnectionType: "Kafka",
@@ -109,9 +105,9 @@ describe("directConnect.ts", () => {
       assert.strictEqual(spec.kafkaCluster.bootstrapServers, "localhost:9092");
       assert.ok(spec.kafkaCluster.credentials);
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.kafkaCluster?.credentials?.api_key, "key");
+      assert.strictEqual(spec.kafkaCluster?.credentials?.apiKey, "key");
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.kafkaCluster?.credentials?.api_secret, "secret");
+      assert.strictEqual(spec.kafkaCluster?.credentials?.apiSecret, "secret");
       assert.ok(spec.schemaRegistry);
       assert.ok(spec.schemaRegistry.uri);
       assert.strictEqual(spec.schemaRegistry.uri, "http://localhost:8081");
@@ -121,12 +117,11 @@ describe("directConnect.ts", () => {
       // @ts-expect-error - incomplete types from OpenAPI
       assert.ok(!spec.schemaRegistry?.credentials?.password);
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.schemaRegistry?.credentials?.api_key, "key");
+      assert.strictEqual(spec.schemaRegistry?.credentials?.apiKey, "key");
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.schemaRegistry?.credentials?.api_secret, "secret");
+      assert.strictEqual(spec.schemaRegistry?.credentials?.apiSecret, "secret");
     });
-    // TODO: Update form field names from snake_case to camelCase
-    it.skip("should return a valid CustomConnectionSpec with SCRAM credentials", () => {
+    it("should return a valid CustomConnectionSpec with SCRAM credentials", () => {
       const formData = {
         name: "Test Connection",
         formConnectionType: "Kafka",
@@ -144,18 +139,17 @@ describe("directConnect.ts", () => {
       assert.strictEqual(spec.kafkaCluster.bootstrapServers, "localhost:9092");
       assert.ok(spec.kafkaCluster.credentials);
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.kafkaCluster?.credentials?.hash_algorithm, "SCRAM_SHA_512");
+      assert.strictEqual(spec.kafkaCluster?.credentials?.hashAlgorithm, "SCRAM_SHA_512");
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.kafkaCluster?.credentials?.scram_username, "user");
+      assert.strictEqual(spec.kafkaCluster?.credentials?.scramUsername, "user");
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.kafkaCluster?.credentials?.scram_password, "pass");
+      assert.strictEqual(spec.kafkaCluster?.credentials?.scramPassword, "pass");
       assert.ok(spec.schemaRegistry);
       assert.ok(spec.schemaRegistry.uri);
       assert.strictEqual(spec.schemaRegistry.uri, "http://localhost:8081");
       assert.strictEqual(spec.schemaRegistry.credentials, undefined);
     });
-    // TODO: Update form field names from snake_case to camelCase
-    it.skip("should return a valid CustomConnectionSpec with OAuth credentials", () => {
+    it("should return a valid CustomConnectionSpec with OAuth credentials", () => {
       const formData = {
         name: "Test Connection",
         formConnectionType: "Kafka",
@@ -180,29 +174,28 @@ describe("directConnect.ts", () => {
 
       assert.strictEqual(
         // @ts-expect-error - incomplete types from OpenAPI
-        spec.kafkaCluster?.credentials?.tokens_url,
+        spec.kafkaCluster?.credentials?.tokensUrl,
         "http://localhost:8080/token",
       );
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.kafkaCluster?.credentials?.client_id, "clientid");
+      assert.strictEqual(spec.kafkaCluster?.credentials?.clientId, "clientid");
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.kafkaCluster?.credentials?.client_secret, "clientsecret");
+      assert.strictEqual(spec.kafkaCluster?.credentials?.clientSecret, "clientsecret");
       // @ts-expect-error - incomplete types from OpenAPI
       assert.strictEqual(spec.kafkaCluster?.credentials?.scope, "read write");
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.kafkaCluster?.credentials?.connect_timeout_millis, "5000");
+      assert.strictEqual(spec.kafkaCluster?.credentials?.connectTimeoutMillis, "5000");
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.kafkaCluster?.credentials?.ccloud_logical_cluster_id, "lkc-123456");
+      assert.strictEqual(spec.kafkaCluster?.credentials?.ccloudLogicalClusterId, "lkc-123456");
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.kafkaCluster?.credentials?.ccloud_identity_pool_id, "pool-12345");
+      assert.strictEqual(spec.kafkaCluster?.credentials?.ccloudIdentityPoolId, "pool-12345");
 
       assert.ok(spec.schemaRegistry);
       assert.ok(spec.schemaRegistry.uri);
       assert.strictEqual(spec.schemaRegistry.uri, "http://localhost:8081");
       assert.strictEqual(spec.schemaRegistry.credentials, undefined);
     });
-    // TODO: Update form field names from snake_case to camelCase
-    it.skip("should return a valid CustomConnectionSpec with Kerberos credentials", () => {
+    it("should return a valid CustomConnectionSpec with Kerberos credentials", () => {
       const formData = {
         name: "Test Connection",
         formConnectionType: "Kafka",
@@ -224,9 +217,9 @@ describe("directConnect.ts", () => {
       // @ts-expect-error - incomplete types from OpenAPI
       assert.strictEqual(spec.kafkaCluster?.credentials?.principal, "user@EXAMPLE.COM");
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.kafkaCluster?.credentials?.keytab_path, "/path/to/keytab");
+      assert.strictEqual(spec.kafkaCluster?.credentials?.keytabPath, "/path/to/keytab");
       // @ts-expect-error - incomplete types from OpenAPI
-      assert.strictEqual(spec.kafkaCluster?.credentials?.service_name, "kafka");
+      assert.strictEqual(spec.kafkaCluster?.credentials?.serviceName, "kafka");
       assert.ok(spec.schemaRegistry);
       assert.ok(spec.schemaRegistry.uri);
       assert.strictEqual(spec.schemaRegistry.uri, "http://localhost:8081");

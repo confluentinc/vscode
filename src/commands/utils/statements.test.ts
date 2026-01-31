@@ -5,8 +5,15 @@ import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceCon
 import { TEST_CCLOUD_FLINK_STATEMENT } from "../../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import { STATEMENT_RESULTS_LOCATION } from "../../extensionSettings/constants";
+import * as flinkSqlApiProviderModule from "../../flinkSql/flinkSqlApiProvider";
+import type { FlinkSqlApiProvider } from "../../flinkSql/flinkStatementResultsManager";
 import { FlinkStatementResultsPanelProvider } from "../../panelProviders/flinkStatementResults";
-import { confirmActionOnStatement, openFlinkStatementResultsView } from "./statements";
+import * as webviewCommsModule from "../../webview/comms/comms";
+import {
+  confirmActionOnStatement,
+  openFlinkStatementResultsView,
+  statementResultsViewCache,
+} from "./statements";
 
 describe("src/commands/utils/statements.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -50,9 +57,48 @@ describe("src/commands/utils/statements.ts", () => {
       sinon.assert.notCalled(stubbedPanelProvider.showStatementResults);
     });
 
-    // TODO(sidecar-removal): Re-enable test after implementing FlinkStatementResultsManager without sidecar
-    it.skip(`should call into openFlinkStatementResultsInEditor when "${STATEMENT_RESULTS_LOCATION.id}" is 'editor'`, async () => {
-      // This test requires sidecar stub for FlinkStatementResultsManager
+    it(`should call into openFlinkStatementResultsInEditor when "${STATEMENT_RESULTS_LOCATION.id}" is 'editor'`, async () => {
+      stubbedConfigs.stubGet(STATEMENT_RESULTS_LOCATION, "editor");
+
+      // Mock the panel returned by statementResultsViewCache
+      const mockWebview = {
+        postMessage: sandbox.stub().resolves(),
+        onDidReceiveMessage: sandbox.stub(),
+      };
+      const mockPanel = {
+        webview: mockWebview,
+        reveal: sandbox.stub(),
+        onDidDispose: sandbox.stub(),
+      } as unknown as vscode.WebviewPanel;
+      const getPanelForStatementStub = sandbox
+        .stub(statementResultsViewCache, "getPanelForStatement")
+        .returns([mockPanel, true]); // isNew = true
+
+      // Mock getFlinkSqlApiProvider
+      const mockFlinkApiProvider: FlinkSqlApiProvider = {
+        getFlinkSqlStatementResultsApi: sandbox.stub().returns({} as any),
+        getFlinkSqlStatementsApi: sandbox.stub().returns({} as any),
+      };
+      sandbox
+        .stub(flinkSqlApiProviderModule, "getFlinkSqlApiProvider")
+        .returns(mockFlinkApiProvider);
+
+      // Mock handleWebviewMessage to return a disposable
+      const mockMessageHandler = { dispose: sandbox.stub() };
+      sandbox.stub(webviewCommsModule, "handleWebviewMessage").returns(mockMessageHandler);
+
+      await openFlinkStatementResultsView(TEST_CCLOUD_FLINK_STATEMENT);
+
+      // Verify the panel was fetched/created
+      sinon.assert.calledOnce(getPanelForStatementStub);
+      sinon.assert.calledWithExactly(getPanelForStatementStub, TEST_CCLOUD_FLINK_STATEMENT);
+
+      // Verify the panel was revealed (since isNew = true)
+      sinon.assert.calledOnce(mockPanel.reveal);
+      sinon.assert.calledWithExactly(mockPanel.reveal, vscode.ViewColumn.One);
+
+      // Verify the panel provider (for panel mode) was NOT accessed
+      sinon.assert.notCalled(stubbedPanelProvider.showStatementResults);
     });
 
     it(`should call into openFlinkStatementResultsInPanel when "${STATEMENT_RESULTS_LOCATION.id}" is 'panel'`, async () => {
@@ -69,10 +115,79 @@ describe("src/commands/utils/statements.ts", () => {
     });
   });
 
-  // TODO(sidecar-removal): Re-enable openFlinkStatementResultsInEditor tests after implementing without sidecar
   describe("openFlinkStatementResultsInEditor", () => {
-    it.skip("tests skipped pending sidecar removal refactor", () => {
-      // These tests require sidecar stub for FlinkStatementResultsManager
+    let stubbedConfigs: StubbedWorkspaceConfiguration;
+    let getPanelForStatementStub: sinon.SinonStub;
+    let getFlinkSqlApiProviderStub: sinon.SinonStub;
+    let handleWebviewMessageStub: sinon.SinonStub;
+    let mockPanel: vscode.WebviewPanel;
+    let mockWebview: { postMessage: sinon.SinonStub; onDidReceiveMessage: sinon.SinonStub };
+    let mockFlinkApiProvider: FlinkSqlApiProvider;
+    let mockMessageHandler: { dispose: sinon.SinonStub };
+
+    beforeEach(() => {
+      stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+      stubbedConfigs.stubGet(STATEMENT_RESULTS_LOCATION, "editor");
+
+      // Mock the webview and panel
+      mockWebview = {
+        postMessage: sandbox.stub().resolves(),
+        onDidReceiveMessage: sandbox.stub(),
+      };
+      mockPanel = {
+        webview: mockWebview,
+        reveal: sandbox.stub(),
+        onDidDispose: sandbox.stub(),
+      } as unknown as vscode.WebviewPanel;
+      getPanelForStatementStub = sandbox.stub(statementResultsViewCache, "getPanelForStatement");
+
+      // Mock getFlinkSqlApiProvider
+      mockFlinkApiProvider = {
+        getFlinkSqlStatementResultsApi: sandbox.stub().returns({} as any),
+        getFlinkSqlStatementsApi: sandbox.stub().returns({} as any),
+      };
+      getFlinkSqlApiProviderStub = sandbox
+        .stub(flinkSqlApiProviderModule, "getFlinkSqlApiProvider")
+        .returns(mockFlinkApiProvider);
+
+      // Mock handleWebviewMessage to return a disposable
+      mockMessageHandler = { dispose: sandbox.stub() };
+      handleWebviewMessageStub = sandbox
+        .stub(webviewCommsModule, "handleWebviewMessage")
+        .returns(mockMessageHandler);
+    });
+
+    it("should reveal an existing panel if found in cache", async () => {
+      // Return an existing panel (isNew = false)
+      getPanelForStatementStub.returns([mockPanel, false]);
+
+      await openFlinkStatementResultsView(TEST_CCLOUD_FLINK_STATEMENT);
+
+      // Verify the panel was fetched
+      sinon.assert.calledOnce(getPanelForStatementStub);
+
+      // Verify reveal was NOT called (isNew = false)
+      sinon.assert.notCalled(mockPanel.reveal);
+
+      // Verify FlinkSqlApiProvider was still called (to set up results manager)
+      sinon.assert.calledOnce(getFlinkSqlApiProviderStub);
+    });
+
+    it("should create a new panel and reveal it if not in cache", async () => {
+      // Return a new panel (isNew = true)
+      getPanelForStatementStub.returns([mockPanel, true]);
+
+      await openFlinkStatementResultsView(TEST_CCLOUD_FLINK_STATEMENT);
+
+      // Verify the panel was fetched
+      sinon.assert.calledOnce(getPanelForStatementStub);
+
+      // Verify reveal was called (isNew = true)
+      sinon.assert.calledOnce(mockPanel.reveal);
+      sinon.assert.calledWithExactly(mockPanel.reveal, vscode.ViewColumn.One);
+
+      // Verify message handler was set up
+      sinon.assert.calledOnce(handleWebviewMessageStub);
     });
   });
 

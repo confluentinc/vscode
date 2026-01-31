@@ -284,6 +284,42 @@ export interface ListFlinkComputePoolsOptions extends ListResourcesOptions {
 }
 
 /**
+ * Options for listing Flink regions.
+ */
+export interface ListFlinkRegionsOptions extends ListResourcesOptions {
+  /** Filter by cloud provider (aws, azure, gcp). */
+  cloud?: string;
+  /** Filter by region name. */
+  regionName?: string;
+}
+
+/**
+ * Flink region information from CCloud.
+ */
+export interface CCloudFlinkRegionData {
+  /** API version. */
+  api_version?: string;
+  /** Resource kind. */
+  kind?: string;
+  /** Region ID. */
+  id: string;
+  /** Region metadata. */
+  metadata?: {
+    self?: string;
+  };
+  /** Display name. */
+  display_name?: string;
+  /** Cloud provider (aws, azure, gcp). */
+  cloud?: string;
+  /** Region name. */
+  region_name?: string;
+  /** HTTP endpoint for Flink API. */
+  http_endpoint?: string;
+  /** Private HTTP endpoint for Flink API. */
+  private_http_endpoint?: string;
+}
+
+/**
  * CCloud Control Plane API Proxy.
  *
  * Provides methods for interacting with CCloud Control Plane API.
@@ -489,6 +525,28 @@ export class CCloudControlPlaneProxy {
   }
 
   /**
+   * Lists all Flink regions.
+   * @param options List options.
+   * @returns List of Flink regions.
+   */
+  async listFlinkRegions(
+    options?: ListFlinkRegionsOptions,
+  ): Promise<CCloudListResponse<CCloudFlinkRegionData>> {
+    const params = this.buildPaginationParams(options);
+    if (options?.cloud) {
+      params["cloud"] = options.cloud;
+    }
+    if (options?.regionName) {
+      params["region_name"] = options.regionName;
+    }
+    const response = await this.client.get<CCloudListResponse<CCloudFlinkRegionData>>(
+      "/fcpm/v2/regions",
+      { params },
+    );
+    return response.data;
+  }
+
+  /**
    * Fetches all resources across all pages.
    * @param fetchFn Function to fetch a single page.
    * @returns All resources from all pages.
@@ -556,6 +614,15 @@ export class CCloudControlPlaneProxy {
    */
   async fetchAllFlinkComputePools(environmentId: string): Promise<CCloudFlinkComputePoolData[]> {
     return this.fetchAllPages((opts) => this.listFlinkComputePools({ ...opts, environmentId }));
+  }
+
+  /**
+   * Fetches all Flink regions across all pages.
+   * @param cloud Optional cloud provider filter.
+   * @returns All Flink regions.
+   */
+  async fetchAllFlinkRegions(cloud?: string): Promise<CCloudFlinkRegionData[]> {
+    return this.fetchAllPages((opts) => this.listFlinkRegions({ ...opts, cloud }));
   }
 
   /**
