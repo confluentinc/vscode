@@ -1,9 +1,13 @@
 import { ObservableScope } from "inertial";
 import { applyBindings } from "./bindings/bindings";
+import { installWebviewLogForwarding } from "./comms/comms";
 import { FlinkStatementResultsViewModel } from "./flink-statement-results";
 import { Timer } from "./timer/timer";
 
 customElements.define("flink-timer", Timer);
+
+// Install console log forwarding to extension output channel
+installWebviewLogForwarding();
 
 addEventListener("DOMContentLoaded", () => {
   const os = ObservableScope(queueMicrotask);

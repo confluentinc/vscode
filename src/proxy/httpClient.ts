@@ -8,6 +8,10 @@
  * - Response error handling
  */
 
+import { Logger } from "../logging";
+
+const logger = new Logger("proxy.httpClient");
+
 /**
  * HTTP methods supported by the client.
  */
@@ -293,9 +297,12 @@ export class HttpClient {
     const url = this.buildUrl(path, options.params);
     const headers = this.buildHeaders(options);
     const timeout = options.timeout ?? this.timeout;
+    const method = options.method ?? "GET";
+
+    logger.debug(`${method} ${url}`);
 
     const fetchOptions: RequestInit = {
-      method: options.method ?? "GET",
+      method,
       headers,
     };
 
@@ -329,7 +336,10 @@ export class HttpClient {
       // Parse response body
       const data = await this.parseResponse<T>(response);
 
+      logger.debug(`${method} ${url} -> ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
+        logger.warn(`HTTP error response`, { status: response.status, data });
         throw new HttpError(
           `HTTP ${response.status}: ${response.statusText}`,
           response.status,
@@ -354,9 +364,16 @@ export class HttpClient {
       }
 
       if (error instanceof Error && error.name === "AbortError") {
+        logger.warn(`Request timed out after ${timeout}ms: ${method} ${url}`);
         throw new TimeoutError(`Request timed out after ${timeout}ms`, timeout);
       }
 
+      // Extract error details since Error objects don't serialize well to JSON
+      const errorDetails =
+        error instanceof Error
+          ? { name: error.name, message: error.message, cause: error.cause }
+          : { value: String(error) };
+      logger.error(`Request failed: ${method} ${url}`, errorDetails);
       throw error;
     }
   }

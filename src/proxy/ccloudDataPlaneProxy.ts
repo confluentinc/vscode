@@ -7,7 +7,10 @@
  * - Flink workspace management
  */
 
+import { Logger } from "../logging";
 import { createHttpClient, type AuthConfig, type HttpClient } from "./httpClient";
+
+const logger = new Logger("proxy.ccloudDataPlane");
 
 /**
  * CCloud Data Plane proxy configuration.
@@ -235,8 +238,10 @@ export interface CreateStatementOptions {
   statement: string;
   /** Compute pool ID. */
   computePoolId?: string;
-  /** Statement properties. */
+  /** Statement properties (SQL session config options). */
   properties?: Record<string, string>;
+  /** Statement labels (metadata). */
+  labels?: Record<string, string>;
 }
 
 /**
@@ -299,6 +304,12 @@ export class CCloudDataPlaneProxy {
     this.organizationId = config.organizationId;
     this.environmentId = config.environmentId;
 
+    logger.debug("CCloudDataPlaneProxy initialized", {
+      baseUrl: config.baseUrl,
+      organizationId: config.organizationId,
+      environmentId: config.environmentId,
+    });
+
     this.client = createHttpClient({
       baseUrl: config.baseUrl,
       timeout: config.timeout ?? 30000,
@@ -331,6 +342,7 @@ export class CCloudDataPlaneProxy {
   async createStatement(options: CreateStatementOptions): Promise<FlinkStatement> {
     const body = {
       name: options.name,
+      labels: options.labels,
       spec: {
         statement: options.statement,
         compute_pool_id: options.computePoolId,
@@ -364,10 +376,15 @@ export class CCloudDataPlaneProxy {
       params.label_selector = options.labelSelector;
     }
 
-    const response = await this.client.get<FlinkListResponse<FlinkStatement>>(
-      this.statementsPath(),
-      { params },
-    );
+    const path = this.statementsPath();
+    logger.debug(`listStatements: GET ${this.baseUrl}${path}`, { params });
+
+    const response = await this.client.get<FlinkListResponse<FlinkStatement>>(path, { params });
+
+    logger.debug(`listStatements: received ${response.data.data?.length ?? 0} statements`, {
+      hasNext: !!response.data.metadata?.next,
+    });
+
     return response.data;
   }
 
@@ -547,10 +564,17 @@ export class CCloudDataPlaneProxy {
   async fetchAllStatements(
     options?: Omit<ListStatementsOptions, "pageToken">,
   ): Promise<FlinkStatement[]> {
+    logger.debug("fetchAllStatements: starting", {
+      computePoolId: options?.computePoolId,
+      labelSelector: options?.labelSelector,
+    });
+
     const allStatements: FlinkStatement[] = [];
     let pageToken: string | undefined;
+    let pageCount = 0;
 
     do {
+      pageCount++;
       const response = await this.listStatements({ ...options, pageToken });
       allStatements.push(...response.data);
 
@@ -562,6 +586,10 @@ export class CCloudDataPlaneProxy {
         pageToken = undefined;
       }
     } while (pageToken);
+
+    logger.debug(`fetchAllStatements: completed with ${allStatements.length} statements`, {
+      pageCount,
+    });
 
     return allStatements;
   }

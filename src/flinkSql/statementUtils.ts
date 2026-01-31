@@ -151,10 +151,9 @@ export async function submitFlinkStatement(
       statementProperties[key] = value;
     }
   }
-  // Add hidden label if applicable
-  if (hidden) {
-    statementProperties["user.confluent.io/hidden"] = "true";
-  }
+
+  // Build labels if hidden (metadata, not SQL config options)
+  const labels = hidden ? { "user.confluent.io/hidden": "true" } : undefined;
 
   // Create the statement
   const createdStatement = await proxy.createStatement({
@@ -162,6 +161,7 @@ export async function submitFlinkStatement(
     statement,
     computePoolId: computePool.id,
     properties: statementProperties,
+    labels,
   });
 
   // Convert API response to our model

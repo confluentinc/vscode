@@ -390,7 +390,9 @@ export async function performFullTokenExchange(
   });
 
   if (!refreshToken) {
-    logger.warn("No refresh token available after token exchange - session will not be refreshable");
+    logger.warn(
+      "No refresh token available after token exchange - session will not be refreshable",
+    );
   }
 
   return {

@@ -1,7 +1,6 @@
 import type { Disposable } from "vscode";
 
 import { TokenManager } from "../auth/oauth2/tokenManager";
-import { getCCloudAuthSession } from "../authn/utils";
 // ArtifactV1FlinkArtifactListDataInner import removed - sidecar migration (phase-6)
 import type { FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
 import type { GetSqlv1Statement200Response } from "../clients/flinkSql";
@@ -22,12 +21,6 @@ import {
   waitForStatementCompletion,
 } from "../flinkSql/statementUtils";
 import { Logger } from "../logging";
-import { createCCloudArtifactsProxy } from "../proxy/ccloudArtifactsProxy";
-import {
-  CCloudDataPlaneProxy,
-  type FlinkStatement as FlinkStatementApi,
-} from "../proxy/ccloudDataPlaneProxy";
-import { buildFlinkDataPlaneBaseUrl } from "../proxy/flinkDataPlaneUrlBuilder";
 import type { CCloudEnvironment } from "../models/environment";
 import type { FlinkAIAgent } from "../models/flinkAiAgent";
 import type { FlinkAIConnection } from "../models/flinkAiConnection";
@@ -50,6 +43,12 @@ import type {
   IProviderRegion,
 } from "../models/resource";
 import type { CCloudSchemaRegistry } from "../models/schemaRegistry";
+import { createCCloudArtifactsProxy } from "../proxy/ccloudArtifactsProxy";
+import {
+  CCloudDataPlaneProxy,
+  type FlinkStatement as FlinkStatementApi,
+} from "../proxy/ccloudDataPlaneProxy";
+import { buildFlinkDataPlaneBaseUrl } from "../proxy/flinkDataPlaneUrlBuilder";
 import { WorkspaceStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
@@ -458,9 +457,14 @@ export class CCloudResourceLoader extends CachingResourceLoader<
           allStatements.push(statement);
         }
       } catch (error) {
+        // Extract error details since Error objects don't serialize well to JSON
+        const errorDetails =
+          error instanceof Error
+            ? { name: error.name, message: error.message, cause: error.cause }
+            : { value: String(error) };
         logger.error(
           `Failed to fetch Flink statements for ${queryable.provider}-${queryable.region}`,
-          { error },
+          errorDetails,
         );
         // Continue with other regions even if one fails
       }

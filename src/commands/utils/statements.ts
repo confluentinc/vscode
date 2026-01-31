@@ -1,17 +1,14 @@
 import { ObservableScope, type Scope } from "inertial";
 import * as vscode from "vscode";
-import { logError } from "../../errors";
 import { STATEMENT_RESULTS_LOCATION } from "../../extensionSettings/constants";
 import { DEFAULT_RESULTS_LIMIT } from "../../flinkSql/flinkStatementResults";
 import { getFlinkSqlApiProvider } from "../../flinkSql/flinkSqlApiProvider";
-import {
-  FlinkStatementResultsManager,
-  type MessageType,
-} from "../../flinkSql/flinkStatementResultsManager";
+import { FlinkStatementResultsManager } from "../../flinkSql/flinkStatementResultsManager";
 import { FlinkStatementWebviewPanelCache } from "../../flinkSql/statementUtils";
 import { Logger } from "../../logging";
 import { FlinkStatement } from "../../models/flinkStatement";
 import { FlinkStatementResultsPanelProvider } from "../../panelProviders/flinkStatementResults";
+import { handleWebviewMessage } from "../../webview/comms/comms";
 
 /** Cache of statement result webviews by env/statement name. */
 export const statementResultsViewCache = new FlinkStatementWebviewPanelCache();
@@ -69,8 +66,9 @@ async function openFlinkStatementResultsInEditor(statement: FlinkStatement) {
     statement,
     flinkApiProvider,
     () => {
-      // Notify the webview of state changes
-      panel.webview.postMessage({ type: "StateChanged" });
+      // Notify the webview of state changes by updating the timestamp signal
+      // The webview listens for ["Timestamp"] messages to trigger reactive updates
+      panel.webview.postMessage(["Timestamp"]);
     },
     DEFAULT_RESULTS_LIMIT,
   );
@@ -78,21 +76,10 @@ async function openFlinkStatementResultsInEditor(statement: FlinkStatement) {
   // Store the manager for cleanup
   editorResultsManagers.set(panelKey, { manager: resultsManager, scope });
 
-  // Set up message handling
-  const messageHandler = panel.webview.onDidReceiveMessage(
-    async (message: { type: MessageType; body: Record<string, unknown> }) => {
-      try {
-        const result = await resultsManager.handleMessage(message.type, message.body);
-        panel.webview.postMessage({
-          type: `${message.type}Response`,
-          body: result,
-          timestamp: message.body?.timestamp,
-        });
-      } catch (error) {
-        logError(error, "Error handling editor webview message", { extra: { type: message.type } });
-      }
-    },
-  );
+  // Set up message handling using the standard [id, type, body] protocol
+  const messageHandler = handleWebviewMessage(panel.webview, (type, body) => {
+    return resultsManager.handleMessage(type, body);
+  });
 
   // Clean up when panel is disposed
   panel.onDidDispose(() => {

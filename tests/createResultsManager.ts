@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { ObservableScope } from "inertial";
+import { TokenManager } from "../src/auth/oauth2/tokenManager";
 import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "../src/clients/flinkSql";
 import { DEFAULT_RESULTS_LIMIT } from "../src/flinkSql/flinkStatementResults";
 import type {
@@ -37,6 +38,8 @@ export interface FlinkStatementResultsManagerTestContext {
   notifyUIStub: sinon.SinonStub;
   resourceLoader: CCloudResourceLoader;
   sandbox: sinon.SinonSandbox;
+  /** Stub for globalThis.fetch, used by the CCloudDataPlaneProxy for results fetching. */
+  fetchStub: sinon.SinonStub;
 }
 
 /**
@@ -95,13 +98,51 @@ export async function createTestResultsManagerContext(
   // Update the refreshFlinkStatement stub to return the mock statement
   refreshFlinkStatementStub.returns(Promise.resolve(statement));
 
-  let callCount = 0;
+  // Stub TokenManager to return a mock data plane token
+  sandbox.stub(TokenManager, "getInstance").returns({
+    getDataPlaneToken: sandbox.stub().resolves("test-data-plane-token"),
+  } as unknown as TokenManager);
+
+  // Stub globalThis.fetch to return the fixture data when called for statement results
+  let fetchCallCount = 0;
+  const fetchStub = sandbox
+    .stub(globalThis, "fetch")
+    .callsFake(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+      // Check if this is a statement results request
+      if (url.includes("/results")) {
+        const response =
+          fetchCallCount < stmtResults.length
+            ? stmtResults[fetchCallCount++]
+            : stmtResults[stmtResults.length - 1];
+        return {
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          headers: new Headers({ "content-type": "application/json" }),
+          json: () => Promise.resolve(response),
+          text: () => Promise.resolve(JSON.stringify(response)),
+        } as Response;
+      }
+      // For other requests, return an empty response
+      return {
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        headers: new Headers({ "content-type": "application/json" }),
+        json: () => Promise.resolve({}),
+        text: () => Promise.resolve("{}"),
+      } as Response;
+    });
+
+  // Also keep the old API stub for tests that still use it directly
+  let legacyCallCount = 0;
   flinkSqlStatementResultsApi.getSqlv1StatementResult.callsFake(() => {
     // Returns 1...stmtResults.length and then returns the last
     // statement result forever.
     const response =
-      callCount < stmtResults.length
-        ? stmtResults[callCount++]
+      legacyCallCount < stmtResults.length
+        ? stmtResults[legacyCallCount++]
         : stmtResults[stmtResults.length - 1];
     return Promise.resolve(response);
   });
@@ -161,6 +202,7 @@ export async function createTestResultsManagerContext(
       notifyUIStub,
       resourceLoader,
       sandbox,
+      fetchStub,
     },
     vm,
     storage,

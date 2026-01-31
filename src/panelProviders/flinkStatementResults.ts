@@ -11,16 +11,14 @@ import {
 } from "vscode";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
-import { ExtensionContextNotSetError, logError } from "../errors";
+import { ExtensionContextNotSetError } from "../errors";
 import { DEFAULT_RESULTS_LIMIT } from "../flinkSql/flinkStatementResults";
 import { getFlinkSqlApiProvider } from "../flinkSql/flinkSqlApiProvider";
-import {
-  FlinkStatementResultsManager,
-  type MessageType,
-} from "../flinkSql/flinkStatementResultsManager";
+import { FlinkStatementResultsManager } from "../flinkSql/flinkStatementResultsManager";
 import { Logger } from "../logging";
 import { type FlinkStatement } from "../models/flinkStatement";
 import { DisposableCollection } from "../utils/disposables";
+import { handleWebviewLogs, handleWebviewMessage } from "../webview/comms/comms";
 import flinkStatementResultsHtml from "../webview/flink-statement-results.html";
 
 const logger = new Logger("panelProviders.flinkStatementResults");
@@ -142,10 +140,11 @@ export class FlinkStatementResultsPanelProvider
     this.view.show(true);
   }
 
-  /** Notify the webview UI of state changes. */
+  /** Notify the webview UI of state changes by updating the timestamp signal. */
   private notifyUI(): void {
     if (this.view) {
-      this.view.webview.postMessage({ type: "StateChanged" });
+      // The webview listens for ["Timestamp"] messages to trigger reactive updates
+      this.view.webview.postMessage(["Timestamp"]);
     }
   }
 
@@ -166,34 +165,24 @@ export class FlinkStatementResultsPanelProvider
     });
   }
 
-  /** Set up message handler for webview communication. */
+  /** Set up message handler for webview communication using the standard protocol. */
   private setupMessageHandler(): void {
     if (!this.view) {
       return;
     }
 
-    const messageHandler = this.view.webview.onDidReceiveMessage(
-      async (message: { type: MessageType; body: Record<string, unknown> }) => {
-        if (!this.resultsManager) {
-          logger.warn("No results manager available to handle message", { type: message.type });
-          return;
-        }
+    // Forward webview console logs to extension output channel
+    const logHandler = handleWebviewLogs(this.view.webview, logger);
+    this.disposables.push(logHandler);
 
-        try {
-          const result = await this.resultsManager.handleMessage(message.type, message.body);
-          // Post the result back to the webview
-          if (this.view) {
-            this.view.webview.postMessage({
-              type: `${message.type}Response`,
-              body: result,
-              timestamp: message.body?.timestamp,
-            });
-          }
-        } catch (error) {
-          logError(error, "Error handling webview message", { extra: { type: message.type } });
-        }
-      },
-    );
+    // Use handleWebviewMessage for proper [id, type, body] protocol compatibility
+    const messageHandler = handleWebviewMessage(this.view.webview, (type, body) => {
+      if (!this.resultsManager) {
+        logger.warn("No results manager available to handle message", { type });
+        return null;
+      }
+      return this.resultsManager.handleMessage(type, body);
+    });
     this.disposables.push(messageHandler);
   }
 

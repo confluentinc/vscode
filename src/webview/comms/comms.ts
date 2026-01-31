@@ -1,4 +1,17 @@
-import { type Webview } from "vscode";
+import { type Disposable, type Webview } from "vscode";
+
+/**
+ * Interface for a logger that can receive webview log messages.
+ * Compatible with the extension's Logger class.
+ * @remark this interface is used in the host environment.
+ */
+export interface WebviewLogReceiver {
+  trace(message: string, ...args: unknown[]): void;
+  debug(message: string, ...args: unknown[]): void;
+  info(message: string, ...args: unknown[]): void;
+  warn(message: string, ...args: unknown[]): void;
+  error(message: string, ...args: unknown[]): void;
+}
 
 /**
  * Handles messages coming from a webview in special format, uses processing
@@ -19,6 +32,30 @@ export function handleWebviewMessage(
     } catch (error) {
       const message = error instanceof Error ? error.message : JSON.stringify(error);
       return webview.postMessage([id, "Failure", message]);
+    }
+  });
+}
+
+/**
+ * Sets up forwarding of webview console logs to an extension-side logger.
+ * Call this in addition to handleWebviewMessage to receive log messages.
+ *
+ * @param webview - The webview to receive logs from
+ * @param logger - A logger instance (e.g., new Logger("webview.myComponent"))
+ * @returns A disposable to stop listening for log messages
+ * @remark this function should be used in the host environment.
+ */
+export function handleWebviewLogs(webview: Webview, logger: WebviewLogReceiver): Disposable {
+  return webview.onDidReceiveMessage((event) => {
+    // Log messages use the format: ["__log__", level, message, args]
+    if (!Array.isArray(event) || event[0] !== "__log__") {
+      return; // Not a log message, ignore
+    }
+
+    const [, level, message] = event as [string, string, string, unknown[]];
+    const logMethod = logger[level as keyof WebviewLogReceiver];
+    if (typeof logMethod === "function") {
+      logMethod.call(logger, `[webview] ${message}`);
     }
   });
 }
@@ -74,4 +111,76 @@ function api() {
   // @ts-expect-error 2304 this thing is coming from vscode parent host
   if (vscode == null) vscode = acquireVsCodeApi();
   return vscode;
+}
+
+/**
+ * Log levels that can be sent from webview to extension.
+ * @remark this type is used in both webview and extension environments.
+ */
+export type WebviewLogLevel = "trace" | "debug" | "info" | "warn" | "error";
+
+/**
+ * Sends a log message from the webview to the extension.
+ * This is fire-and-forget - no response is expected.
+ *
+ * @remark this function should be used in the webview environment.
+ */
+export function sendWebviewLog(level: WebviewLogLevel, message: string, ...args: unknown[]): void {
+  const vscode = api();
+  // Use a special message format that won't be confused with request/response messages
+  vscode.postMessage(["__log__", level, message, args]);
+}
+
+/**
+ * Installs console method overrides that forward logs to the extension.
+ * Original console methods are preserved and still called.
+ *
+ * @remark this function should be used in the webview environment.
+ */
+export function installWebviewLogForwarding(): void {
+  const originalConsole = {
+    log: console.log.bind(console),
+    debug: console.debug.bind(console),
+    info: console.info.bind(console),
+    warn: console.warn.bind(console),
+    error: console.error.bind(console),
+  };
+
+  const formatArgs = (...args: unknown[]): string => {
+    return args
+      .map((arg) => {
+        if (typeof arg === "string") return arg;
+        try {
+          return JSON.stringify(arg, null, 2);
+        } catch {
+          return String(arg);
+        }
+      })
+      .join(" ");
+  };
+
+  console.log = (...args: unknown[]) => {
+    originalConsole.log(...args);
+    sendWebviewLog("info", formatArgs(...args));
+  };
+
+  console.debug = (...args: unknown[]) => {
+    originalConsole.debug(...args);
+    sendWebviewLog("debug", formatArgs(...args));
+  };
+
+  console.info = (...args: unknown[]) => {
+    originalConsole.info(...args);
+    sendWebviewLog("info", formatArgs(...args));
+  };
+
+  console.warn = (...args: unknown[]) => {
+    originalConsole.warn(...args);
+    sendWebviewLog("warn", formatArgs(...args));
+  };
+
+  console.error = (...args: unknown[]) => {
+    originalConsole.error(...args);
+    sendWebviewLog("error", formatArgs(...args));
+  };
 }

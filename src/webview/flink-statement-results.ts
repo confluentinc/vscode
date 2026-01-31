@@ -108,9 +108,16 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     });
 
     /** Schema information for the current statement */
-    this.schema = this.resolve(() => this.post("GetSchema", { timestamp: this.timestamp() }), {
-      columns: [],
-    } as SqlV1ResultSchema);
+    this.schema = this.resolve(
+      async () => {
+        const schema = await this.post("GetSchema", { timestamp: this.timestamp() });
+        console.debug("Schema loaded:", schema);
+        return schema;
+      },
+      {
+        columns: [],
+      } as SqlV1ResultSchema,
+    );
 
     /** Initial state of results collection. Stored separately so we can use to reset state. */
     this.emptySnapshot = { results: [] as any[] };
@@ -265,7 +272,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
           return Array(columnsLength).fill(8 * 16); // Default 8rem width for each column (1rem = 16px)
         }
 
-        // If view mode was toggled
+        // If view mode was toggled (difference of exactly 1 column)
         if (Math.abs(columnsLength - storedWidths.length) === 1) {
           if (this.viewMode() === "changelog") {
             // Set default width for the extra "Operation" column
@@ -275,6 +282,12 @@ export class FlinkStatementResultsViewModel extends ViewModel {
             // when we're in table view mode
             return storedWidths.slice(1);
           }
+        }
+
+        // If stored widths don't match current column count (e.g., different statement/schema),
+        // return default widths to avoid undefined values
+        if (storedWidths.length !== columnsLength) {
+          return Array(columnsLength).fill(8 * 16);
         }
 
         return storedWidths;
@@ -289,7 +302,15 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       const columnNames = this.allColumns();
       const flags = this.columnVisibilityFlags();
       const cssValue = this.buildGridTemplateColumns(widths, columnNames, flags);
-      return `--grid-template-columns: ${cssValue}`;
+      const styleValue = `--grid-template-columns: ${cssValue}`;
+      console.debug("gridTemplateColumns:", {
+        widths,
+        columnNames,
+        flags,
+        cssValue,
+        styleValue,
+      });
+      return styleValue;
     });
 
     /** Whether the stop button has been clicked */

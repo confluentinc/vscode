@@ -1,19 +1,25 @@
 import type { Scope, Signal } from "inertial";
 import * as vscode from "vscode";
-import type {
-  GetSqlv1StatementResult200Response,
-  SqlV1ResultSchema,
-  SqlV1StatementResultResults,
-  StatementResultsSqlV1Api,
-  StatementsSqlV1Api,
+import { TokenManager } from "../auth/oauth2/tokenManager";
+import {
+  GetSqlv1StatementResult200ResponseApiVersionEnum,
+  GetSqlv1StatementResult200ResponseKindEnum,
+  type GetSqlv1StatementResult200Response,
+  type SqlV1ResultSchema,
+  type SqlV1StatementResultResults,
+  type StatementResultsSqlV1Api,
+  type StatementsSqlV1Api,
 } from "../clients/flinkSql";
 import { FetchError } from "../clients/flinkSql";
 import { showJsonPreview } from "../documentProviders/message";
-import { isResponseError, isResponseErrorWithStatus, logError } from "../errors";
+import { isResponseErrorWithStatus, logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
 import { Logger } from "../logging";
 import type { FlinkStatement } from "../models/flinkStatement";
 import { showErrorNotificationWithButtons } from "../notifications";
+import { CCloudDataPlaneProxy, type FlinkStatementResult } from "../proxy/ccloudDataPlaneProxy";
+import { buildFlinkDataPlaneBaseUrl } from "../proxy/flinkDataPlaneUrlBuilder";
+import { HttpError } from "../proxy/httpClient";
 import type { ViewMode } from "./flinkStatementResultColumns";
 import type { StatementResultsRow } from "./flinkStatementResults";
 import { parseResults } from "./flinkStatementResults";
@@ -236,21 +242,47 @@ export class FlinkStatementResultsManager {
         const priorRawResults = this._rawResults();
         const pageToken = extractPageToken(this._latestResult()?.metadata?.next);
 
-        const response = await this.retry(async () => {
-          return await this._flinkStatementResultsSqlApi.getSqlv1StatementResult(
-            {
-              environment_id: this.statement.environmentId,
-              organization_id: this.statement.organizationId,
-              name: this.statement.name,
-              page_token: pageToken,
-            },
-            {
-              signal: this._getResultsAbortController.signal,
-            },
-          );
+        // Get auth token for data plane API
+        const tokenManager = TokenManager.getInstance();
+        const dataPlaneToken = await tokenManager.getDataPlaneToken();
+        if (!dataPlaneToken) {
+          throw new Error("Failed to get data plane token for Flink SQL API");
+        }
+
+        // Build the Flink Data Plane API base URL
+        const baseUrl = buildFlinkDataPlaneBaseUrl(
+          this.statement.provider,
+          this.statement.region,
+          this.statement.environmentId,
+        );
+
+        // Create the proxy instance with Bearer token auth
+        const proxy = new CCloudDataPlaneProxy({
+          baseUrl,
+          organizationId: this.statement.organizationId,
+          environmentId: this.statement.environmentId,
+          auth: {
+            type: "bearer",
+            token: dataPlaneToken,
+          },
+        });
+
+        const response: FlinkStatementResult = await this.retry(async () => {
+          return await proxy.getStatementResults(this.statement.name, pageToken);
         }, "fetch statement results");
 
         const resultsData: SqlV1StatementResultResults = response.results ?? {};
+
+        // Convert proxy response to client format for _latestResult signal
+        const clientFormatResponse: GetSqlv1StatementResult200Response = {
+          api_version: GetSqlv1StatementResult200ResponseApiVersionEnum.SqlV1,
+          kind: GetSqlv1StatementResult200ResponseKindEnum.StatementResult,
+          metadata: {
+            self: "",
+            next: response.metadata?.next,
+          },
+          results: response.results as SqlV1StatementResultResults,
+        };
 
         this.os.batch(() => {
           // Store raw changelog data in order
@@ -272,7 +304,7 @@ export class FlinkStatementResultsManager {
             this._state("completed");
           }
           this._latestError(null);
-          this._latestResult(response);
+          this._latestResult(clientFormatResponse);
           this.notifyUI();
         });
       } catch (error) {
@@ -281,43 +313,38 @@ export class FlinkStatementResultsManager {
           return;
         }
 
-        if (isResponseError(error)) {
-          const payload = await error.response.json();
-          if (!payload?.aborted) {
-            const status = error.response.status;
-            shouldComplete = status >= 400;
-            switch (status) {
-              case 401: {
-                reportable = { message: "Authentication required." };
-                break;
-              }
-              case 403: {
-                reportable = { message: "Insufficient permissions to read statement results." };
-                break;
-              }
-              case 404: {
-                reportable = { message: "Statement not found." };
-                break;
-              }
-              case 429: {
-                reportable = { message: "Too many requests. Try again later." };
-                break;
-              }
-              default: {
-                reportable = { message: "Something went wrong." };
-                logError(error, "flink statement results", {
-                  extra: { status: status.toString(), payload },
-                });
-                void showErrorNotificationWithButtons(
-                  "Error response while fetching statement results.",
-                );
-                break;
-              }
+        if (error instanceof HttpError) {
+          const status = error.status;
+          shouldComplete = status >= 400;
+          switch (status) {
+            case 401: {
+              reportable = { message: "Authentication required." };
+              break;
             }
-            logger.error(
-              `An error occurred during statement results fetching. Status ${error.response.status}`,
-            );
+            case 403: {
+              reportable = { message: "Insufficient permissions to read statement results." };
+              break;
+            }
+            case 404: {
+              reportable = { message: "Statement not found." };
+              break;
+            }
+            case 429: {
+              reportable = { message: "Too many requests. Try again later." };
+              break;
+            }
+            default: {
+              reportable = { message: "Something went wrong." };
+              logError(error, "flink statement results", {
+                extra: { status: status.toString() },
+              });
+              void showErrorNotificationWithButtons(
+                "Error response while fetching statement results.",
+              );
+              break;
+            }
           }
+          logger.error(`An error occurred during statement results fetching. Status ${status}`);
         } else if (error instanceof Error) {
           logger.error(error.message);
           reportable = { message: "An internal error occurred." };
@@ -367,6 +394,21 @@ export class FlinkStatementResultsManager {
   }
 
   /**
+   * Checks if the error is a 409 Conflict error.
+   */
+  private is409ConflictError(err: unknown): boolean {
+    // Check for HttpError (from CCloudDataPlaneProxy)
+    if (err instanceof HttpError && err.status === 409) {
+      return true;
+    }
+    // Check for OpenAPI client ResponseError (legacy)
+    if (isResponseErrorWithStatus(err, 409)) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Retries {@link maxRetries} times with a constant backoff delay of
    * {@link backoffMs}. Nothing fancy.
    */
@@ -382,7 +424,7 @@ export class FlinkStatementResultsManager {
         return await operation();
       } catch (err) {
         lastErr = err as Error;
-        if (isResponseErrorWithStatus(err, 409)) {
+        if (this.is409ConflictError(err)) {
           if (attempt < maxRetries - 1) {
             logger.debug(
               `Retrying ${operationName} after 409 conflict. Attempt ${attempt + 1}/${maxRetries}. Waiting ${backoffMs}ms`,
