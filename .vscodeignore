@@ -20,3 +20,4 @@ sonar-project.properties
 *openapi.json
 *openapi.yaml
 openapitools.json
+resources/tests-readme-*.png
