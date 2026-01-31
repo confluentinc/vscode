@@ -74,7 +74,7 @@ class MessageViewerViewModel extends ViewModel {
   async updateHistogramFilter(timestamps: [number, number] | null) {
     // throttle events slightly, since a lot of selection changes are transient
     this.histogramTimer ??= setTimeout(() => {
-      post("TimestampFilterChange", { timestamps: this.peek(this.selection) });
+      void post("TimestampFilterChange", { timestamps: this.peek(this.selection) });
       this.histogramTimer = null;
     }, 10);
     this.selection(timestamps);
@@ -414,13 +414,13 @@ class MessageViewerViewModel extends ViewModel {
     if (event.key === "Enter") {
       // when user hits Enter, search query submitted immediately
       const value = target.value.trim();
-      this.submitSearch(value);
+      void this.submitSearch(value);
     } else {
       // otherwise, we keep debouncing search submittion until the user stops typing
       if (this.searchTimer != null) clearTimeout(this.searchTimer);
       this.searchTimer = setTimeout(async () => {
         const value = target.value.trim();
-        this.submitSearch(value);
+        void this.submitSearch(value);
       }, this.searchDebounceTime);
     }
   }
@@ -662,10 +662,10 @@ class MessageViewerViewModel extends ViewModel {
         if (!signal.aborted) result(value);
       }
       function handle(event: MessageEvent<any[]>) {
-        if (event.data[0] === "Refresh") update();
+        if (event.data[0] === "Refresh") void update();
       }
       addEventListener("message", handle, { signal });
-      update();
+      void update();
     });
   }
 }

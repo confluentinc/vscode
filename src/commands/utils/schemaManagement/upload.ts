@@ -168,7 +168,7 @@ export async function uploadSchema(
     // Refresh the schemas view
     const schemasView = getSchemasViewProvider();
     if (schemasView) {
-      schemasView.refresh();
+      void schemasView.refresh();
     }
   } catch (error) {
     if (error instanceof HttpError) {

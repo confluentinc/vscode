@@ -67,11 +67,11 @@ describe("SchemasViewProvider", () => {
     it("Should set the parent resource to the given schema registry", () => {
       assert.strictEqual(provider.resource, null);
 
-      provider.setParentResource(TEST_CCLOUD_SCHEMA_REGISTRY);
+      void provider.setParentResource(TEST_CCLOUD_SCHEMA_REGISTRY);
       assert.strictEqual(provider.resource, TEST_CCLOUD_SCHEMA_REGISTRY);
       assert.strictEqual(provider.schemaRegistry, TEST_CCLOUD_SCHEMA_REGISTRY);
 
-      provider.setParentResource(null);
+      void provider.setParentResource(null);
       assert.strictEqual(provider.resource, null);
       assert.strictEqual(provider.schemaRegistry, null);
     });

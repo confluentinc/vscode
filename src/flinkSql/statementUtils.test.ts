@@ -22,7 +22,6 @@ import { getResourceManager } from "../storage/resourceManager";
 import {
   determineFlinkStatementName,
   FlinkStatementWebviewPanelCache,
-  MAX_WAIT_TIME_MS,
   parseAllFlinkStatementResults,
   refreshFlinkStatement,
   setFlinkDocumentMetadata,
@@ -492,7 +491,11 @@ describe("flinkSql/statementUtils.ts", function () {
 
     it("should parse results with no following page token", async () => {
       const statement = createFlinkStatement({
-        schemaColumns: [{ name: "id" }, { name: "name" }, { name: "value" }],
+        schemaColumns: [
+          { name: "id", type: { type: "INT", nullable: false } },
+          { name: "name", type: { type: "STRING", nullable: false } },
+          { name: "value", type: { type: "INT", nullable: false } },
+        ],
       });
 
       getStatementResultsStub.resolves({
@@ -523,7 +526,10 @@ describe("flinkSql/statementUtils.ts", function () {
 
     it("should parse results with multiple pages", async () => {
       const statement = createFlinkStatement({
-        schemaColumns: [{ name: "id" }, { name: "data" }],
+        schemaColumns: [
+          { name: "id", type: { type: "INT", nullable: false } },
+          { name: "data", type: { type: "STRING", nullable: false } },
+        ],
       });
 
       // First call returns page 1 with a next token

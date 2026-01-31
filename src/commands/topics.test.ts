@@ -745,8 +745,7 @@ describe("commands/topics.ts produceMessage()", function () {
     produceRecordStub.rejects(error400);
 
     await assert.rejects(
-      async () =>
-        produceMessage({ key: "test", value: { data: "test" } }, TEST_CCLOUD_KAFKA_TOPIC, {}),
+      async () => produceMessage({ key: "test", value: "test" }, TEST_CCLOUD_KAFKA_TOPIC, {}),
       (err: Error) => {
         assert.ok(err instanceof ProduceMessageBadRequestError);
         return true;
@@ -761,8 +760,7 @@ describe("commands/topics.ts produceMessage()", function () {
     produceRecordStub.rejects(error400);
 
     await assert.rejects(
-      async () =>
-        produceMessage({ key: "test", value: { data: "test" } }, TEST_CCLOUD_KAFKA_TOPIC, {}),
+      async () => produceMessage({ key: "test", value: "test" }, TEST_CCLOUD_KAFKA_TOPIC, {}),
       (err: Error) => {
         assert.ok(err instanceof ProduceMessageBadRequestError);
         return true;
@@ -777,8 +775,7 @@ describe("commands/topics.ts produceMessage()", function () {
     produceRecordStub.rejects(error400);
 
     await assert.rejects(
-      async () =>
-        produceMessage({ key: "test", value: { data: "test" } }, TEST_CCLOUD_KAFKA_TOPIC, {}),
+      async () => produceMessage({ key: "test", value: "test" }, TEST_CCLOUD_KAFKA_TOPIC, {}),
       (err: Error) => {
         assert.ok(err instanceof ProduceMessageBadRequestError);
         return true;
@@ -792,8 +789,7 @@ describe("commands/topics.ts produceMessage()", function () {
     produceRecordStub.rejects(error500);
 
     await assert.rejects(
-      async () =>
-        produceMessage({ key: "test", value: { data: "test" } }, TEST_CCLOUD_KAFKA_TOPIC, {}),
+      async () => produceMessage({ key: "test", value: "test" }, TEST_CCLOUD_KAFKA_TOPIC, {}),
       (err: Error) => {
         assert.ok(!(err instanceof ProduceMessageBadRequestError));
         assert.ok(err instanceof HttpError);
@@ -808,8 +804,7 @@ describe("commands/topics.ts produceMessage()", function () {
     produceRecordStub.rejects(genericError);
 
     await assert.rejects(
-      async () =>
-        produceMessage({ key: "test", value: { data: "test" } }, TEST_CCLOUD_KAFKA_TOPIC, {}),
+      async () => produceMessage({ key: "test", value: "test" }, TEST_CCLOUD_KAFKA_TOPIC, {}),
       (err: Error) => {
         assert.ok(!(err instanceof ProduceMessageBadRequestError));
         assert.strictEqual(err.message, "Network connection failed");
@@ -826,8 +821,7 @@ describe("commands/topics.ts produceMessage()", function () {
     produceRecordStub.rejects(proxyError);
 
     await assert.rejects(
-      async () =>
-        produceMessage({ key: "test", value: { data: "test" } }, TEST_CCLOUD_KAFKA_TOPIC, {}),
+      async () => produceMessage({ key: "test", value: "test" }, TEST_CCLOUD_KAFKA_TOPIC, {}),
       (err: Error) => {
         // Should not be wrapped as BadRequestError since it's not a 400
         assert.ok(!(err instanceof ProduceMessageBadRequestError));
@@ -845,7 +839,7 @@ describe("commands/topics.ts produceMessage()", function () {
     await assert.rejects(
       async () =>
         produceMessage(
-          { key: "test-key", value: { data: "test-value" }, partition_id: 3 },
+          { key: "test-key", value: "test-value", partition_id: 3 },
           TEST_CCLOUD_KAFKA_TOPIC,
           {},
         ),
@@ -866,8 +860,7 @@ describe("commands/topics.ts produceMessage()", function () {
     produceRecordStub.rejects(error400);
 
     await assert.rejects(
-      async () =>
-        produceMessage({ key: "test", value: { data: "test" } }, TEST_CCLOUD_KAFKA_TOPIC, {}),
+      async () => produceMessage({ key: "test", value: "test" }, TEST_CCLOUD_KAFKA_TOPIC, {}),
       (err: Error) => {
         assert.ok(err instanceof ProduceMessageBadRequestError);
         return true;

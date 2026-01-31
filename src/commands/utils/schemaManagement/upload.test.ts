@@ -246,7 +246,6 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       let showInformationMessageStub: sinon.SinonStub;
       let showErrorMessageStub: sinon.SinonStub;
       let tokenManagerStub: sinon.SinonStubbedInstance<TokenManager>;
-      let getResourceManagerStub: sinon.SinonStub;
       let getSchemasViewProviderStub: sinon.SinonStub;
       let schemaSubjectChangedStub: sinon.SinonStub;
       let schemaVersionsChangedStub: sinon.SinonStub;
@@ -302,7 +301,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
         sandbox.stub(TokenManager, "getInstance").returns(tokenManagerStub);
 
         // Stub getResourceManager for Direct connection credentials
-        getResourceManagerStub = sandbox.stub(resourceManagerModule, "getResourceManager").returns({
+        sandbox.stub(resourceManagerModule, "getResourceManager").returns({
           getDirectConnection: sandbox.stub().resolves(null),
         } as any);
 

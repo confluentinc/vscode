@@ -63,7 +63,7 @@ export class EventListener {
     this.poller = new IntervalPoller(
       "pollDockerEvents",
       () => {
-        this.listenForEvents();
+        void this.listenForEvents();
       },
       15_000,
       1_000,

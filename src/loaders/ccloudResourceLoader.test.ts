@@ -693,7 +693,6 @@ describe("CCloudResourceLoader", () => {
 
   describe("loadArtifactsForProviderRegion", () => {
     let tokenManagerStub: sinon.SinonStubbedInstance<TokenManager>;
-    let createCCloudArtifactsProxyStub: sinon.SinonStub;
     let fetchAllArtifactsStub: sinon.SinonStub;
 
     const testQueryable: IFlinkQueryable = {
@@ -711,11 +710,9 @@ describe("CCloudResourceLoader", () => {
 
       // Stub the proxy creation and its methods
       fetchAllArtifactsStub = sandbox.stub();
-      createCCloudArtifactsProxyStub = sandbox
-        .stub(ccloudArtifactsProxy, "createCCloudArtifactsProxy")
-        .returns({
-          fetchAllArtifacts: fetchAllArtifactsStub,
-        } as any);
+      sandbox.stub(ccloudArtifactsProxy, "createCCloudArtifactsProxy").returns({
+        fetchAllArtifacts: fetchAllArtifactsStub,
+      } as any);
     });
 
     it("should return empty array when API returns empty data", async () => {
@@ -2101,9 +2098,11 @@ describe("CCloudResourceLoader", () => {
       assert.ok(result, "Expected workspace result");
       assert.strictEqual(result.spec.display_name, "My Workspace");
       assert.strictEqual(result.spec.compute_pool, "lfcp-abc123");
-      assert.strictEqual(result.spec.statements?.length, 2);
-      assert.strictEqual(result.spec.statements?.[0].sql, "SELECT 1");
-      assert.strictEqual(result.spec.statements?.[1].sql, "SELECT 2");
+      // The spec includes a runtime-added `statements` property (not in generated types)
+      const spec = result.spec as { statements?: { sql: string }[] };
+      assert.strictEqual(spec.statements?.length, 2);
+      assert.strictEqual(spec.statements?.[0].sql, "SELECT 1");
+      assert.strictEqual(spec.statements?.[1].sql, "SELECT 2");
     });
 
     it("should handle workspace with empty spec", async () => {
@@ -2120,7 +2119,9 @@ describe("CCloudResourceLoader", () => {
 
       assert.ok(result, "Expected workspace result");
       assert.strictEqual(result.name, "test-workspace");
-      assert.deepStrictEqual(result.spec.statements, []);
+      // The spec includes a runtime-added `statements` property (not in generated types)
+      const spec = result.spec as { statements?: { sql: string }[] };
+      assert.deepStrictEqual(spec.statements, []);
     });
   });
 });

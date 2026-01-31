@@ -65,9 +65,10 @@ describe("src/commands/utils/statements.ts", () => {
         postMessage: sandbox.stub().resolves(),
         onDidReceiveMessage: sandbox.stub(),
       };
+      const revealStub = sandbox.stub();
       const mockPanel = {
         webview: mockWebview,
-        reveal: sandbox.stub(),
+        reveal: revealStub,
         onDidDispose: sandbox.stub(),
       } as unknown as vscode.WebviewPanel;
       const getPanelForStatementStub = sandbox
@@ -94,8 +95,8 @@ describe("src/commands/utils/statements.ts", () => {
       sinon.assert.calledWithExactly(getPanelForStatementStub, TEST_CCLOUD_FLINK_STATEMENT);
 
       // Verify the panel was revealed (since isNew = true)
-      sinon.assert.calledOnce(mockPanel.reveal);
-      sinon.assert.calledWithExactly(mockPanel.reveal, vscode.ViewColumn.One);
+      sinon.assert.calledOnce(revealStub);
+      sinon.assert.calledWithExactly(revealStub, vscode.ViewColumn.One);
 
       // Verify the panel provider (for panel mode) was NOT accessed
       sinon.assert.notCalled(stubbedPanelProvider.showStatementResults);
@@ -124,6 +125,7 @@ describe("src/commands/utils/statements.ts", () => {
     let mockWebview: { postMessage: sinon.SinonStub; onDidReceiveMessage: sinon.SinonStub };
     let mockFlinkApiProvider: FlinkSqlApiProvider;
     let mockMessageHandler: { dispose: sinon.SinonStub };
+    let revealStub: sinon.SinonStub;
 
     beforeEach(() => {
       stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
@@ -134,9 +136,10 @@ describe("src/commands/utils/statements.ts", () => {
         postMessage: sandbox.stub().resolves(),
         onDidReceiveMessage: sandbox.stub(),
       };
+      revealStub = sandbox.stub();
       mockPanel = {
         webview: mockWebview,
-        reveal: sandbox.stub(),
+        reveal: revealStub,
         onDidDispose: sandbox.stub(),
       } as unknown as vscode.WebviewPanel;
       getPanelForStatementStub = sandbox.stub(statementResultsViewCache, "getPanelForStatement");
@@ -167,7 +170,7 @@ describe("src/commands/utils/statements.ts", () => {
       sinon.assert.calledOnce(getPanelForStatementStub);
 
       // Verify reveal was NOT called (isNew = false)
-      sinon.assert.notCalled(mockPanel.reveal);
+      sinon.assert.notCalled(revealStub);
 
       // Verify FlinkSqlApiProvider was still called (to set up results manager)
       sinon.assert.calledOnce(getFlinkSqlApiProviderStub);
@@ -183,8 +186,8 @@ describe("src/commands/utils/statements.ts", () => {
       sinon.assert.calledOnce(getPanelForStatementStub);
 
       // Verify reveal was called (isNew = true)
-      sinon.assert.calledOnce(mockPanel.reveal);
-      sinon.assert.calledWithExactly(mockPanel.reveal, vscode.ViewColumn.One);
+      sinon.assert.calledOnce(revealStub);
+      sinon.assert.calledWithExactly(revealStub, vscode.ViewColumn.One);
 
       // Verify message handler was set up
       sinon.assert.calledOnce(handleWebviewMessageStub);

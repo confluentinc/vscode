@@ -44,10 +44,7 @@ import type {
 } from "../models/resource";
 import type { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { createCCloudArtifactsProxy } from "../proxy/ccloudArtifactsProxy";
-import {
-  CCloudControlPlaneProxy,
-  type CCloudFlinkRegionData,
-} from "../proxy/ccloudControlPlaneProxy";
+import { CCloudControlPlaneProxy } from "../proxy/ccloudControlPlaneProxy";
 import {
   CCloudDataPlaneProxy,
   type FlinkStatement as FlinkStatementApi,

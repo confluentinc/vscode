@@ -180,7 +180,7 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
     }
   } else {
     // Handle promise asynchronously
-    (async () => {
+    void (async () => {
       quickPick.busy = true;
       quickPick.items = await items;
       quickPick.busy = false;
@@ -213,7 +213,7 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
 
   if (options?.onItemButtonClicked) {
     const onItemButtonClickedSub: Disposable = quickPick.onDidTriggerItemButton((event) => {
-      options.onItemButtonClicked?.({
+      void options.onItemButtonClicked?.({
         button: event.button,
         item: event.item as T,
         quickPick,
@@ -224,7 +224,7 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
 
   if (options?.onButtonClicked) {
     const onButtonClickedSub: Disposable = quickPick.onDidTriggerButton((button) => {
-      options.onButtonClicked?.(button, quickPick);
+      void options.onButtonClicked?.(button, quickPick);
     });
     disposables.push(onButtonClickedSub);
   }
@@ -237,7 +237,7 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
   const onDidAcceptSub: Disposable = quickPick.onDidAccept(() => {
     if (options?.onDidAccept) {
       // handle any additional behavior before hiding, if a custom onDidAccept is provided
-      options.onDidAccept(quickPick);
+      void options.onDidAccept(quickPick);
     }
     selectedItems.push(...quickPick.selectedItems);
     quickPick.hide();

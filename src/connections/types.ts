@@ -3,6 +3,8 @@
  * These types replace the sidecar-generated models in `src/clients/sidecar/models/`.
  */
 
+import type { ConnectionSpec } from "./spec";
+
 /** Unique identifier for a connection. */
 export type ConnectionId = string & { readonly __brand: "ConnectionId" };
 
@@ -161,7 +163,7 @@ export interface AuthErrors {
  */
 export interface Connection {
   /** Connection specification (configuration). */
-  spec: import("./spec").ConnectionSpec;
+  spec: ConnectionSpec;
   /** Current connection status. */
   status: ConnectionStatus;
   /** Read-only metadata about the connection. */
@@ -190,7 +192,7 @@ export function ConnectionFromJSON(json: unknown): Connection {
   }
   const obj = json as Record<string, unknown>;
   return {
-    spec: obj.spec as import("./spec").ConnectionSpec,
+    spec: obj.spec as ConnectionSpec,
     status: obj.status as ConnectionStatus,
     metadata: obj.metadata as ConnectionMetadata,
   };

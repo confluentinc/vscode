@@ -1027,7 +1027,7 @@ function messageViewerStartPollingCommand(
         // use a single-instance provider to display a read-only document buffer with the message
         // content
         const filename = `${topic.name}-message-${index}.json`;
-        showJsonPreview(filename, payload, {
+        void showJsonPreview(filename, payload, {
           partition: payload.partition_id,
           offset: payload.offset,
         });
@@ -1055,7 +1055,7 @@ function messageViewerStartPollingCommand(
 
         const content = `[\n${records.join(",\n")}\n]`;
         const filename = `${topic.name}-messages-${new Date().getTime()}.json`;
-        showJsonPreview(filename, content);
+        void showJsonPreview(filename, content);
         return null satisfies MessageResponse<"PreviewJSON">;
       }
       case "SearchMessages": {

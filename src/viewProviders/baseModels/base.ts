@@ -177,7 +177,7 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
     this.itemSearchString = searchString;
     if (this.searchContextValue) {
       // set context value to toggle between "search" and "clear search" actions
-      setContextValue(this.searchContextValue, searchString !== null);
+      void setContextValue(this.searchContextValue, searchString !== null);
     }
 
     if (searchString) {

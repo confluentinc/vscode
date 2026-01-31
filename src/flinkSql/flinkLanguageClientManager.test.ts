@@ -424,7 +424,6 @@ describe("FlinkLanguageClientManager", () => {
 
       let wss: WebSocketServer;
       let serverUrl: string;
-      let handleWebSocketDisconnectStub: sinon.SinonSpy;
       let mockAccessToken: string;
       let getDataPlaneTokenStub: sinon.SinonStub;
 
@@ -465,10 +464,7 @@ describe("FlinkLanguageClientManager", () => {
           .resolves(mockAccessToken);
 
         // Stub for on disconnect callback passed to initializeLanguageClient()
-        handleWebSocketDisconnectStub = sandbox.stub(
-          flinkManager as any,
-          "handleWebSocketDisconnect",
-        );
+        sandbox.stub(flinkManager as any, "handleWebSocketDisconnect");
 
         createLanguageClientFromWebsocketStub = sandbox
           .stub(languageClient, "createLanguageClientFromWebsocket")

@@ -76,7 +76,7 @@ class ScaffoldFormViewModel extends ViewModel {
     const key = input.name;
     const value = input.value;
     input.classList.remove("error"); // reset error state, will be re-evaluated on blur
-    post("SetOptionValue", { key, value });
+    void post("SetOptionValue", { key, value });
   }
 
   validateInput(event: Event) {

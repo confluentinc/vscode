@@ -88,7 +88,7 @@ export class MedusaWorkflow extends LocalResourceWorkflow {
     // create the Medusa container
     const container: LocalResourceContainer | undefined = await this.createMedusaContainer();
     if (!container) {
-      showErrorNotificationWithButtons(`Failed to create ${this.resourceKind} container.`);
+      void showErrorNotificationWithButtons(`Failed to create ${this.resourceKind} container.`);
       return;
     }
     this.sendTelemetryEvent(UserEvent.LocalDockerAction, {

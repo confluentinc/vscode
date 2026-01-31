@@ -2,7 +2,6 @@ import assert from "assert";
 import * as sinon from "sinon";
 
 import {
-  TEST_DIRECT_ENVIRONMENT,
   TEST_DIRECT_ENVIRONMENT_ID,
   TEST_DIRECT_KAFKA_CLUSTER,
   TEST_DIRECT_SCHEMA_REGISTRY,
@@ -12,14 +11,12 @@ import {
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { DirectEnvironment } from "../models/environment";
 import type { EnvironmentId } from "../models/resource";
 import * as resourceManagerModule from "../storage/resourceManager";
 import type { CustomConnectionSpec } from "../storage/resourceManager";
 import { DirectResourceLoader } from "./directResourceLoader";
 
 describe("DirectResourceLoader", () => {
-  let myEnvironment: DirectEnvironment;
   let connectionSpec: CustomConnectionSpec;
 
   let sandbox: sinon.SinonSandbox;
@@ -32,15 +29,6 @@ describe("DirectResourceLoader", () => {
 
   beforeEach(async () => {
     sandbox = sinon.createSandbox();
-
-    // Use the test fixture with Kafka cluster and Schema Registry configured
-    myEnvironment = new DirectEnvironment({
-      ...TEST_DIRECT_ENVIRONMENT,
-      kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
-      kafkaConfigured: true,
-      schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
-      schemaRegistryConfigured: false,
-    });
 
     // Create a connection spec that matches our test environment
     connectionSpec = {

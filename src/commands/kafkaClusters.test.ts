@@ -18,10 +18,8 @@ import { ClusterSelectSyncOption, SYNC_ON_KAFKA_SELECT } from "../extensionSetti
 import { KafkaAdminError, KafkaAdminErrorCategory, type TopicService } from "../kafka";
 import * as topicServiceFactory from "../kafka/topicServiceFactory";
 import type { CCloudResourceLoader } from "../loaders";
-import { ResourceLoader } from "../loaders/resourceLoader";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
-import { KafkaTopic } from "../models/topic";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import * as kafkaClusterQuickpicks from "../quickpicks/kafkaClusters";
 import { TopicViewProvider } from "../viewProviders/topics";
 import {
@@ -258,18 +256,16 @@ describe("commands/kafkaClusters.ts", () => {
 
   describe("createTopicCommand", () => {
     let showInputBoxStub: sinon.SinonStub;
-    let showErrorMessageStub: sinon.SinonStub;
     let showInformationMessageStub: sinon.SinonStub;
     let kafkaClusterQuickPickStub: sinon.SinonStub;
     let mockTopicService: TopicService;
     let createTopicStub: sinon.SinonStub;
     let deleteTopicStub: sinon.SinonStub;
-    let getTopicServiceStub: sinon.SinonStub;
     let topicViewProviderRefreshStub: sinon.SinonStub;
 
     beforeEach(() => {
       showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
-      showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage");
+      sandbox.stub(vscode.window, "showErrorMessage");
       showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
       kafkaClusterQuickPickStub = sandbox.stub(kafkaClusterQuickpicks, "kafkaClusterQuickPick");
 
@@ -287,9 +283,7 @@ describe("commands/kafkaClusters.ts", () => {
       };
 
       // Stub getTopicService to return our mock
-      getTopicServiceStub = sandbox
-        .stub(topicServiceFactory, "getTopicService")
-        .returns(mockTopicService);
+      sandbox.stub(topicServiceFactory, "getTopicService").returns(mockTopicService);
 
       // Stub the TopicViewProvider refresh
       topicViewProviderRefreshStub = sandbox.stub(TopicViewProvider.getInstance(), "refresh");
@@ -314,7 +308,7 @@ describe("commands/kafkaClusters.ts", () => {
 
       assert.strictEqual(result, false);
       sinon.assert.calledOnce(showInputBoxStub);
-      sinon.assert.notCalled(mockTopicService.createTopic);
+      sinon.assert.notCalled(createTopicStub);
     });
 
     it("should fire the topicChanged event after successful creation", async () => {
@@ -431,7 +425,6 @@ describe("commands/kafkaClusters.ts", () => {
     let mockTopicService: TopicService;
     let createTopicStub: sinon.SinonStub;
     let deleteTopicStub: sinon.SinonStub;
-    let getTopicServiceStub: sinon.SinonStub;
     let topicViewProviderRefreshStub: sinon.SinonStub;
     let fetchTopicAuthorizedOperationsStub: sinon.SinonStub;
     let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
@@ -461,9 +454,7 @@ describe("commands/kafkaClusters.ts", () => {
       };
 
       // Stub getTopicService to return our mock
-      getTopicServiceStub = sandbox
-        .stub(topicServiceFactory, "getTopicService")
-        .returns(mockTopicService);
+      sandbox.stub(topicServiceFactory, "getTopicService").returns(mockTopicService);
 
       // Stub the TopicViewProvider refresh
       topicViewProviderRefreshStub = sandbox.stub(TopicViewProvider.getInstance(), "refresh");

@@ -53,7 +53,7 @@ class ConfigFormViewModel extends ViewModel {
     this.hasChanges(true);
     const input = event.target as HTMLInputElement;
     this.updateLocalValue(input.name, input.value);
-    this.validateChange(event);
+    void this.validateChange(event);
   }
 
   /** Validate changes one input at a time on blur or ui change

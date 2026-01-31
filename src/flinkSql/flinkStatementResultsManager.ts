@@ -506,7 +506,7 @@ export class FlinkStatementResultsManager {
         const filename = `flink-statement-result${body?.result === undefined ? "s" : ""}-${new Date().getTime()}.json`;
         const content = body?.result ?? this._filteredResults();
 
-        showJsonPreview(filename, content);
+        void showJsonPreview(filename, content);
 
         // Return value used in tests
         return {

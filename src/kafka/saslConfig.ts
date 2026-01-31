@@ -8,12 +8,10 @@ import type { SASLOptions } from "kafkajs";
 import {
   CredentialType,
   ScramHashAlgorithm,
-  type ApiKeyCredentials,
   type BasicCredentials,
   type Credentials,
   type KerberosCredentials,
   type OAuthCredentials,
-  type ScramCredentials,
 } from "../connections";
 import { getCredentialsType } from "../directConnections/credentials";
 import type { SupportedAuthTypes } from "../directConnections/types";
@@ -101,18 +99,6 @@ function toPlainSasl(credentials: BasicCredentials): SASLOptions {
 }
 
 /**
- * Converts ApiKeyCredentials to PLAIN SASL options.
- * API keys use the same PLAIN mechanism with the key as username and secret as password.
- */
-function toApiKeySasl(credentials: ApiKeyCredentials): SASLOptions {
-  return {
-    mechanism: "plain",
-    username: credentials.apiKey,
-    password: credentials.apiSecret,
-  };
-}
-
-/**
  * Converts API key credentials to PLAIN SASL options.
  * Handles both camelCase (apiKey/apiSecret) and snake_case (api_key/api_secret) property names.
  */
@@ -122,21 +108,6 @@ function toApiKeySaslFromAny(credentials: Credentials): SASLOptions {
     mechanism: "plain",
     username: ((creds.apiKey ?? creds.api_key) as string) ?? "",
     password: ((creds.apiSecret ?? creds.api_secret) as string) ?? "",
-  };
-}
-
-/**
- * Converts ScramCredentials to SCRAM SASL options.
- * Supports both SCRAM-SHA-256 and SCRAM-SHA-512 algorithms.
- */
-function toScramSasl(credentials: ScramCredentials): SASLOptions {
-  const mechanism =
-    credentials.hashAlgorithm === ScramHashAlgorithm.SHA_512 ? "scram-sha-512" : "scram-sha-256";
-
-  return {
-    mechanism,
-    username: credentials.username,
-    password: credentials.password,
   };
 }
 
