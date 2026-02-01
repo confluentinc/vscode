@@ -559,7 +559,11 @@ export class CCloudControlPlaneProxy {
 
     do {
       const response = await fetchFn({ pageToken, pageSize: 100 });
-      allData.push(...response.data);
+
+      // Handle null/undefined data (can happen with unexpected API responses)
+      if (response.data != null && Array.isArray(response.data)) {
+        allData.push(...response.data);
+      }
 
       // Extract page token from next URL if present
       if (response.metadata?.next) {

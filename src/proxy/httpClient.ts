@@ -281,13 +281,49 @@ export class HttpClient {
           throw error;
         }
 
-        // Calculate backoff delay
-        const delay = this.calculateBackoff(attempt);
+        // Calculate backoff delay, respecting Retry-After header for 429 responses
+        const retryAfterSeconds = this.getRetryAfterSeconds(error);
+        const delay = this.calculateBackoff(attempt, retryAfterSeconds);
+        logger.debug(
+          `Retrying request after ${delay}ms (attempt ${attempt + 1}/${maxRetries})`,
+          retryAfterSeconds ? { retryAfterHeader: retryAfterSeconds } : undefined,
+        );
         await this.sleep(delay);
       }
     }
 
     throw lastError;
+  }
+
+  /**
+   * Extracts the Retry-After value from an HttpError if present.
+   * @param error The error to extract from.
+   * @returns The retry-after value in seconds, or undefined if not present.
+   */
+  private getRetryAfterSeconds(error: unknown): number | undefined {
+    if (!(error instanceof HttpError) || error.status !== 429) {
+      return undefined;
+    }
+
+    const retryAfterHeader = error.headers?.get("retry-after");
+    if (!retryAfterHeader) {
+      return undefined;
+    }
+
+    // Retry-After can be either seconds (integer) or an HTTP-date
+    const seconds = parseInt(retryAfterHeader, 10);
+    if (!isNaN(seconds)) {
+      return seconds;
+    }
+
+    // Try parsing as HTTP-date
+    const date = new Date(retryAfterHeader);
+    if (!isNaN(date.getTime())) {
+      const delayMs = date.getTime() - Date.now();
+      return Math.max(0, Math.ceil(delayMs / 1000));
+    }
+
+    return undefined;
   }
 
   /**
@@ -487,12 +523,23 @@ export class HttpClient {
 
   /**
    * Calculates exponential backoff delay.
+   * @param attempt The current retry attempt (0-indexed).
+   * @param retryAfterSeconds Optional server-specified retry delay (from Retry-After header).
+   * @returns The delay in milliseconds before the next retry.
    */
-  private calculateBackoff(attempt: number): number {
+  private calculateBackoff(attempt: number, retryAfterSeconds?: number): number {
     // Exponential backoff with jitter
     const exponentialDelay = this.retryDelay * Math.pow(2, attempt);
     const jitter = Math.random() * 0.3 * exponentialDelay;
-    return Math.min(exponentialDelay + jitter, 30000); // Max 30 seconds
+    let delay = exponentialDelay + jitter;
+
+    // If server specified Retry-After, use it as the minimum delay
+    if (retryAfterSeconds !== undefined && retryAfterSeconds > 0) {
+      const retryAfterMs = retryAfterSeconds * 1000;
+      delay = Math.max(delay, retryAfterMs);
+    }
+
+    return Math.min(delay, 30000); // Max 30 seconds
   }
 
   /**

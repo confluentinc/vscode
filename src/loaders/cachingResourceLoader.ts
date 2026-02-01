@@ -1,5 +1,6 @@
 import type { SimpleTopicData } from "../kafka";
 import { Logger } from "../logging";
+import { HttpError } from "../proxy/httpClient";
 import type { Environment, EnvironmentType } from "../models/environment";
 import type { KafkaCluster, KafkaClusterType } from "../models/kafkaCluster";
 import type { EnvironmentId } from "../models/resource";
@@ -132,8 +133,18 @@ export abstract class CachingResourceLoader<
       // If made it to this point, all the coarse resources have been fetched and cached and can be trusted.
       this.coarseLoadingComplete = true;
     } catch (error) {
-      // Perhaps the user logged out of CCloud while the preloading was in progress, or some other API-level error.
-      logger.error(`Error while preloading ${this.connectionId} resources`, { error });
+      // Don't log 401 errors as errors - they're expected during sign-out
+      // when the auth session is invalidated before API calls complete
+      const isAuthError = error instanceof HttpError && error.status === 401;
+      if (isAuthError) {
+        logger.debug(
+          `Auth error while preloading ${this.connectionId} resources (expected during sign-out)`,
+          { error },
+        );
+      } else {
+        // Perhaps the user logged out of CCloud while the preloading was in progress, or some other API-level error.
+        logger.error(`Error while preloading ${this.connectionId} resources`, { error });
+      }
       throw error;
     } finally {
       // Regardless of success or failure, clear the currently loading promise so that the next call to

@@ -1,5 +1,6 @@
 import type { Disposable } from "vscode";
 
+import { hasCCloudAuthSession } from "../authn/ccloudSession";
 import { TokenManager } from "../authn/oauth2/tokenManager";
 // ArtifactV1FlinkArtifactListDataInner import removed - sidecar migration (phase-6)
 import type { FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
@@ -215,8 +216,10 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   public async ccloudConnectedHandler(connected: boolean): Promise<void> {
     await this.reset();
 
-    if (connected) {
-      // Start the coarse preloading process if we think we have a ccloud connection.
+    // Only preload if we think we're connected AND actually have a valid session.
+    // This guards against race conditions during sign-out where the event fires
+    // before the context value is fully updated.
+    if (connected && hasCCloudAuthSession()) {
       await this.ensureCoarseResourcesLoaded();
     }
   }

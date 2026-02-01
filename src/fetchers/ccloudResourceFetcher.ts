@@ -22,6 +22,7 @@ import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { EnvironmentId } from "../models/resource";
 import { Logger } from "../logging";
+import { executeInWorkerPool, isErrorResult, type ExecutionResult } from "../utils/workerPool";
 
 const logger = new Logger("ccloudResourceFetcher");
 
@@ -101,6 +102,7 @@ class CCloudResourceFetcherImpl implements CCloudResourceFetcher {
 
   /**
    * Fetch all environments with their nested resources.
+   * Uses a worker pool to limit concurrent API calls and avoid rate limiting (429 errors).
    */
   async fetchEnvironments(): Promise<CCloudEnvironment[]> {
     logger.debug("fetching CCloud environments");
@@ -111,8 +113,27 @@ class CCloudResourceFetcherImpl implements CCloudResourceFetcher {
     const envData = await proxy.fetchAllEnvironments();
     logger.debug(`fetched ${envData.length} environment(s) from CCloud`);
 
-    // For each environment, fetch its nested resources concurrently
-    const environments = await Promise.all(envData.map((env) => this.buildEnvironment(proxy, env)));
+    // Use worker pool to limit concurrent API calls when fetching nested resources.
+    // Each environment requires 3 API calls (clusters, schema registries, compute pools),
+    // so maxWorkers=5 means up to 15 concurrent API calls, which stays under rate limits.
+    const results: ExecutionResult<CCloudEnvironment>[] = await executeInWorkerPool(
+      (env) => this.buildEnvironment(proxy, env),
+      envData,
+      { maxWorkers: 5, taskName: "fetchEnvironmentResources" },
+    );
+
+    // Collect successful results and log any errors
+    const environments: CCloudEnvironment[] = [];
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (isErrorResult(result)) {
+        logger.error(`Failed to fetch resources for environment ${envData[i].id}`, {
+          error: result.error.message,
+        });
+      } else if (result.result) {
+        environments.push(result.result);
+      }
+    }
 
     // Sort by name
     environments.sort((a, b) => a.name.localeCompare(b.name));
