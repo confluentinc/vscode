@@ -14,6 +14,7 @@ import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatem
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { CCLOUD_CONNECTION_ID } from "../constants";
+import * as contextValues from "../context/values";
 import * as ccloudResourceFetcher from "../fetchers/ccloudResourceFetcher";
 import * as organizationFetcher from "../fetchers/organizationFetcher";
 import { CCloudEnvironment } from "../models/environment";
@@ -144,11 +145,15 @@ describe("CCloudResourceLoader", () => {
   describe("ccloudConnectedHandler", () => {
     let resetStub: sinon.SinonStub;
     let ensureCoarseResourcesLoadedStub: sinon.SinonStub;
+    let getContextValueStub: sinon.SinonStub;
+
     beforeEach(() => {
       resetStub = sandbox.stub(loader, "reset").resolves();
       ensureCoarseResourcesLoadedStub = sandbox
         .stub(loader as any, "ensureCoarseResourcesLoaded")
         .resolves();
+      // Stub getContextValue to return true for ccloudConnectionAvailable by default
+      getContextValueStub = sandbox.stub(contextValues, "getContextValue").returns(true);
     });
 
     for (const connected of [true, false]) {
@@ -164,6 +169,12 @@ describe("CCloudResourceLoader", () => {
     it("should call ensureCoarseResourcesLoaded when connected is true", async () => {
       await loader.ccloudConnectedHandler(true);
       sinon.assert.calledOnce(ensureCoarseResourcesLoadedStub);
+    });
+
+    it("should not call ensureCoarseResourcesLoaded when connected is true but no auth session", async () => {
+      getContextValueStub.returns(false);
+      await loader.ccloudConnectedHandler(true);
+      sinon.assert.notCalled(ensureCoarseResourcesLoadedStub);
     });
   });
 
