@@ -72,20 +72,13 @@
           <template data-if="this.statementMeta().detail || this.hasWarnings()">
             <details class="detail-section" open data-testid="statement-execution-details">
               <summary>
-                <span class="detail-title">Statement execution details</span>
+                <span class="detail-title">Statement details</span>
               </summary>
               <div class="detail-section-content">
                 <template data-if="this.statementMeta().failed && this.statementMeta().detail">
                   <div
                     data-testid="statement-detail-error"
                     class="detail-content error"
-                    data-html="this.detailText()"
-                  ></div>
-                </template>
-                <template data-if="!this.statementMeta().failed && this.statementMeta().detail">
-                  <div
-                    data-testid="statement-detail-info"
-                    class="detail-content info"
                     data-html="this.detailText()"
                   ></div>
                 </template>
@@ -100,6 +93,13 @@
                       </div>
                     </template>
                   </div>
+                </template>
+                <template data-if="!this.statementMeta().failed && this.statementMeta().detail">
+                  <div
+                    data-testid="statement-detail-info"
+                    class="detail-content info"
+                    data-html="this.detailText()"
+                  ></div>
                 </template>
               </div>
             </details>
@@ -608,8 +608,7 @@
       .detail-content.info {
         padding: 0.5rem;
         border-radius: 4px;
-        background: var(--vscode-inputValidation-infoBackground);
-        border-left: 3px solid var(--vscode-editorInfo-foreground);
+        border-left: 3px solid var(--vscode-inputValidation-infoForeground);
         color: var(--vscode-inputValidation-infoForeground);
       }
 
