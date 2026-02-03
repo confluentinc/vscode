@@ -69,48 +69,41 @@
               </div>
             </template>
           </div>
-          <template data-if="this.statementMeta().failed && this.statementMeta().detail">
-            <details class="detail-section error" open>
+          <template data-if="this.statementMeta().detail || this.hasWarnings()">
+            <details class="detail-section" open data-testid="statement-execution-details">
               <summary>
-                <span class="detail-title">Something went wrong</span>
+                <span class="detail-title">Statement execution details</span>
               </summary>
-              <div
-                data-testid="statement-detail-error"
-                class="detail-content"
-                data-html="this.detailText()"
-              ></div>
-            </details>
-          </template>
-          <template data-if="!this.statementMeta().failed && this.statementMeta().detail">
-            <details class="detail-section info" open>
-              <summary>
-                <span class="detail-title">Info</span>
-              </summary>
-              <div
-                data-testid="statement-detail-info"
-                class="detail-content"
-                data-html="this.detailText()"
-              ></div>
-            </details>
-          </template>
-          <template data-if="this.hasWarnings()">
-            <details class="detail-section warning" open data-testid="statement-warnings">
-              <summary>
-                <span class="codicon codicon-warning"></span>
-                <span class="detail-title">Warnings</span>
-              </summary>
-              <div class="warnings-list">
-                <template data-for="warning of this.formattedWarnings()">
+              <div class="detail-section-content">
+                <template data-if="this.statementMeta().failed && this.statementMeta().detail">
                   <div
-                    class="warning-item"
-                    data-attr-class="'warning-item ' + (this.warning().isCritical ? 'critical' : 'moderate')"
-                  >
-                    <span
-                      class="warning-severity-badge"
-                      data-attr-class="'warning-severity-badge ' + (this.warning().isCritical ? 'critical' : 'moderate')"
-                      data-text="this.warning().severity"
-                    ></span>
-                    <div class="warning-message" data-text="this.warning().message"></div>
+                    data-testid="statement-detail-error"
+                    class="detail-content error"
+                    data-html="this.detailText()"
+                  ></div>
+                </template>
+                <template data-if="!this.statementMeta().failed && this.statementMeta().detail">
+                  <div
+                    data-testid="statement-detail-info"
+                    class="detail-content info"
+                    data-html="this.detailText()"
+                  ></div>
+                </template>
+                <template data-if="this.hasWarnings()">
+                  <div class="warnings-list" data-testid="statement-warnings">
+                    <template data-for="warning of this.formattedWarnings()">
+                      <div
+                        class="warning-item"
+                        data-attr-class="'warning-item ' + this.warning().severity.toLowerCase()"
+                      >
+                        <span
+                          class="warning-severity-badge"
+                          data-attr-class="'warning-severity-badge ' + this.warning().severity.toLowerCase()"
+                          data-text="this.warning().severity"
+                        ></span>
+                        <div class="warning-message" data-text="this.warning().message"></div>
+                      </div>
+                    </template>
                   </div>
                 </template>
               </div>
@@ -593,54 +586,42 @@
         padding: 5px;
       }
 
-      .detail-section.error[open] {
-        background: var(--vscode-inputValidation-errorBackground);
-        border-color: var(--vscode-inputValidation-errorBorder);
-      }
-
-      .detail-section.info[open] {
-        background: var(--vscode-inputValidation-infoBackground);
-        border-color: var(--vscode-inputValidation-infoBorder);
-      }
-
       .detail-title {
         font-weight: 600;
       }
 
-      .detail-content {
-        padding: 0 12px 12px 12px;
-        font-size: 95%;
-        line-height: 1.5;
+      .detail-section[open] {
+        background: var(--vscode-editor-background);
+        border-color: var(--vscode-panel-border);
       }
 
-      .detail-section.error .detail-content {
-        color: var(--vscode-inputValidation-errorForeground);
-      }
-
-      .detail-section.info .detail-content {
-        color: var(--vscode-inputValidation-infoForeground);
-      }
-
-      .detail-section.warning[open] {
-        background: var(--vscode-inputValidation-warningBackground);
-        border-color: var(--vscode-inputValidation-warningBorder);
-      }
-
-      .detail-section.warning summary {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-      }
-
-      .detail-section.warning .codicon-warning {
-        color: var(--vscode-editorWarning-foreground);
-      }
-
-      .warnings-list {
-        padding: 0 12px 12px 12px;
+      .detail-section-content {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
+        padding: 0 12px 12px 12px;
+      }
+
+      .detail-content.error {
+        padding: 0.5rem;
+        border-radius: 4px;
+        background: var(--vscode-inputValidation-errorBackground);
+        border-left: 3px solid var(--vscode-editorError-foreground);
+        color: var(--vscode-inputValidation-errorForeground);
+      }
+
+      .detail-content.info {
+        padding: 0.5rem;
+        border-radius: 4px;
+        background: var(--vscode-inputValidation-infoBackground);
+        border-left: 3px solid var(--vscode-editorInfo-foreground);
+        color: var(--vscode-inputValidation-infoForeground);
+      }
+
+      .warnings-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
       }
 
       .warning-item {
@@ -662,6 +643,11 @@
         background: rgba(255, 170, 0, 0.1);
       }
 
+      .warning-item.low {
+        border-left-color: var(--vscode-editorInfo-foreground);
+        background: var(--vscode-inputValidation-infoBackground);
+      }
+
       .warning-severity-badge {
         font-size: 0.7rem;
         font-weight: 600;
@@ -681,10 +667,14 @@
         color: var(--vscode-editor-background);
       }
 
+      .warning-severity-badge.low {
+        background: var(--vscode-editorInfo-foreground);
+        color: var(--vscode-editor-background);
+      }
+
       .warning-message {
         font-size: 95%;
         line-height: 1.5;
-        color: var(--vscode-inputValidation-warningForeground);
       }
 
       .toggle-actions {
