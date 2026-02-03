@@ -595,6 +595,8 @@
         flex-direction: column;
         gap: 0.75rem;
         padding: 0 12px 12px 12px;
+        font-size: 95%;
+        line-height: 1.5;
       }
 
       .detail-content.error {
@@ -608,8 +610,8 @@
       .detail-content.info {
         padding: 0.5rem;
         border-radius: 4px;
-        border-left: 3px solid var(--vscode-inputValidation-infoForeground);
-        color: var(--vscode-inputValidation-infoForeground);
+        border-left: 3px solid var(--vscode-editor-foreground);
+        color: var(--vscode-editor-foreground);
       }
 
       .warnings-list {
@@ -629,22 +631,17 @@
 
       .warning-item.critical {
         border-left-color: var(--vscode-editorError-foreground);
-        background: rgba(255, 85, 85, 0.1);
+        background: color-mix(in srgb, var(--vscode-editorError-foreground) 10%, transparent);
       }
 
       .warning-item.moderate {
         border-left-color: var(--vscode-editorWarning-foreground);
-        background: rgba(255, 170, 0, 0.1);
+        background: color-mix(in srgb, var(--vscode-editorWarning-foreground) 10%, transparent);
       }
 
       .warning-item.low {
         border-left-color: var(--vscode-editorInfo-foreground);
-        background: var(--vscode-inputValidation-infoBackground);
-      }
-
-      .warning-message {
-        font-size: 95%;
-        line-height: 1.5;
+        background: color-mix(in srgb, var(--vscode-editorInfo-foreground) 10%, transparent);
       }
 
       .toggle-actions {
