@@ -96,11 +96,6 @@
                         class="warning-item"
                         data-attr-class="'warning-item ' + this.warning().severity.toLowerCase()"
                       >
-                        <span
-                          class="warning-severity-badge"
-                          data-attr-class="'warning-severity-badge ' + this.warning().severity.toLowerCase()"
-                          data-text="this.warning().severity"
-                        ></span>
                         <div class="warning-message" data-text="this.warning().message"></div>
                       </div>
                     </template>
@@ -646,30 +641,6 @@
       .warning-item.low {
         border-left-color: var(--vscode-editorInfo-foreground);
         background: var(--vscode-inputValidation-infoBackground);
-      }
-
-      .warning-severity-badge {
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        padding: 2px 6px;
-        border-radius: 3px;
-        width: fit-content;
-      }
-
-      .warning-severity-badge.critical {
-        background: var(--vscode-editorError-foreground);
-        color: var(--vscode-editor-background);
-      }
-
-      .warning-severity-badge.moderate {
-        background: var(--vscode-editorWarning-foreground);
-        color: var(--vscode-editor-background);
-      }
-
-      .warning-severity-badge.low {
-        background: var(--vscode-editorInfo-foreground);
-        color: var(--vscode-editor-background);
       }
 
       .warning-message {
