@@ -93,6 +93,29 @@
               ></div>
             </details>
           </template>
+          <template data-if="this.hasWarnings()">
+            <details class="detail-section warning" open data-testid="statement-warnings">
+              <summary>
+                <span class="codicon codicon-warning"></span>
+                <span class="detail-title">Warnings</span>
+              </summary>
+              <div class="warnings-list">
+                <template data-for="warning of this.formattedWarnings()">
+                  <div
+                    class="warning-item"
+                    data-attr-class="'warning-item ' + (this.warning().isCritical ? 'critical' : 'moderate')"
+                  >
+                    <span
+                      class="warning-severity-badge"
+                      data-attr-class="'warning-severity-badge ' + (this.warning().isCritical ? 'critical' : 'moderate')"
+                      data-text="this.warning().severity"
+                    ></span>
+                    <div class="warning-message" data-text="this.warning().message"></div>
+                  </div>
+                </template>
+              </div>
+            </details>
+          </template>
         </section>
 
         <section>
@@ -596,6 +619,72 @@
 
       .detail-section.info .detail-content {
         color: var(--vscode-inputValidation-infoForeground);
+      }
+
+      .detail-section.warning[open] {
+        background: var(--vscode-inputValidation-warningBackground);
+        border-color: var(--vscode-inputValidation-warningBorder);
+      }
+
+      .detail-section.warning summary {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .detail-section.warning .codicon-warning {
+        color: var(--vscode-editorWarning-foreground);
+      }
+
+      .warnings-list {
+        padding: 0 12px 12px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .warning-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        border-radius: 4px;
+        border-left: 3px solid transparent;
+      }
+
+      .warning-item.critical {
+        border-left-color: var(--vscode-editorError-foreground);
+        background: rgba(255, 85, 85, 0.1);
+      }
+
+      .warning-item.moderate {
+        border-left-color: var(--vscode-editorWarning-foreground);
+        background: rgba(255, 170, 0, 0.1);
+      }
+
+      .warning-severity-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        padding: 2px 6px;
+        border-radius: 3px;
+        width: fit-content;
+      }
+
+      .warning-severity-badge.critical {
+        background: var(--vscode-editorError-foreground);
+        color: var(--vscode-editor-background);
+      }
+
+      .warning-severity-badge.moderate {
+        background: var(--vscode-editorWarning-foreground);
+        color: var(--vscode-editor-background);
+      }
+
+      .warning-message {
+        font-size: 95%;
+        line-height: 1.5;
+        color: var(--vscode-inputValidation-warningForeground);
       }
 
       .toggle-actions {
