@@ -89,6 +89,19 @@
                         class="warning-item"
                         data-attr-class="'warning-item ' + this.warning().severity.toLowerCase()"
                       >
+                        <div class="warning-header">
+                          <span
+                            class="warning-severity"
+                            data-attr-class="'warning-severity ' + this.warning().severity.toLowerCase()"
+                            data-text="this.warning().severity"
+                          ></span>
+                          <template data-if="this.warning().reason">
+                            <span class="warning-reason" data-text="'[' + this.warning().reason + ']'"></span>
+                          </template>
+                          <template data-if="this.warning().createdAt">
+                            <span class="warning-timestamp" data-text="'(' + this.warning().createdAt + ')'"></span>
+                          </template>
+                        </div>
                         <div class="warning-message" data-text="this.warning().message"></div>
                       </div>
                     </template>
@@ -642,6 +655,41 @@
       .warning-item.low {
         border-left-color: var(--vscode-editorInfo-foreground);
         background: color-mix(in srgb, var(--vscode-editorInfo-foreground) 10%, transparent);
+      }
+
+      .warning-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 90%;
+      }
+
+      .warning-severity {
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .warning-severity.critical {
+        color: var(--vscode-editorError-foreground);
+      }
+
+      .warning-severity.moderate {
+        color: var(--vscode-editorWarning-foreground);
+      }
+
+      .warning-severity.low {
+        color: var(--vscode-editorInfo-foreground);
+      }
+
+      .warning-reason {
+        font-family: var(--vscode-editor-font-family, monospace);
+        color: var(--vscode-descriptionForeground);
+      }
+
+      .warning-timestamp {
+        color: var(--vscode-descriptionForeground);
+        font-size: 90%;
       }
 
       .toggle-actions {
