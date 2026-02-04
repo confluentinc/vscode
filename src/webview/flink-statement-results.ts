@@ -77,6 +77,14 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       isCritical: boolean;
     }>
   >;
+  readonly detailItems: Signal<
+    Array<{
+      severity: "ERROR" | "CRITICAL" | "MODERATE" | "LOW" | "INFO";
+      message: string;
+      reason?: string;
+      createdAt?: string;
+    }>
+  >;
   readonly pagePersistWatcher: () => void;
 
   /**
@@ -209,6 +217,50 @@ export class FlinkStatementResultsViewModel extends ViewModel {
         createdAt: w.created_at,
         isCritical: w.severity === "CRITICAL",
       }));
+    });
+
+    /**
+     * Unified list of all detail items (errors, warnings, info) for display.
+     * Ordered by severity: ERROR > CRITICAL > MODERATE > LOW > INFO
+     */
+    this.detailItems = this.derive(() => {
+      const items: Array<{
+        severity: "ERROR" | "CRITICAL" | "MODERATE" | "LOW" | "INFO";
+        message: string;
+        reason?: string;
+        createdAt?: string;
+      }> = [];
+
+      const meta = this.statementMeta();
+      const detail = this.detailText();
+
+      // Add error message if statement failed
+      if (meta.failed && detail) {
+        items.push({
+          severity: "ERROR",
+          message: detail,
+        });
+      }
+
+      // Add warnings
+      for (const warning of this.formattedWarnings()) {
+        items.push({
+          severity: warning.severity,
+          message: warning.message,
+          reason: warning.reason,
+          createdAt: warning.createdAt,
+        });
+      }
+
+      // Add info message if not failed
+      if (!meta.failed && detail) {
+        items.push({
+          severity: "INFO",
+          message: detail,
+        });
+      }
+
+      return items;
     });
 
     /**
