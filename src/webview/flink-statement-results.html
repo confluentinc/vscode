@@ -69,57 +69,39 @@
               </div>
             </template>
           </div>
-          <template data-if="this.statementMeta().detail || this.hasWarnings()">
+          <template data-if="this.detailItems().length > 0">
             <details class="detail-section" open data-testid="statement-execution-details">
               <summary>
                 <span class="detail-title">Details and warning messages</span>
               </summary>
               <div class="detail-section-content">
-                <template data-if="this.statementMeta().failed && this.detailText()">
-                  <div data-testid="statement-detail-error" class="detail-content error">
-                    <div class="error-header">
-                      <span class="error-severity">ERROR</span>
-                    </div>
-                    <div class="error-message" data-html="this.detailText()"></div>
-                  </div>
-                </template>
-                <template data-if="this.hasWarnings()">
-                  <div class="warnings-list" data-testid="statement-warnings">
-                    <template data-for="warning of this.formattedWarnings()">
-                      <div
-                        class="warning-item"
-                        data-attr-class="'warning-item ' + this.warning().severity.toLowerCase()"
-                      >
-                        <div class="warning-header">
-                          <span
-                            class="warning-severity"
-                            data-attr-class="'warning-severity ' + this.warning().severity.toLowerCase()"
-                            data-text="this.warning().severity"
-                          ></span>
-                          <template data-if="this.warning().reason">
-                            <span
-                              class="warning-reason"
-                              data-text="'[' + this.warning().reason + ']'"
-                            ></span>
-                          </template>
-                          <template data-if="this.warning().createdAt">
-                            <span
-                              class="warning-timestamp"
-                              data-text="'(' + this.warning().createdAt + ')'"
-                            ></span>
-                          </template>
-                        </div>
-                        <div class="warning-message" data-text="this.warning().message"></div>
-                      </div>
-                    </template>
-                  </div>
-                </template>
-                <template data-if="!this.statementMeta().failed && this.detailText()">
+                <template data-for="item of this.detailItems()">
                   <div
-                    data-testid="statement-detail-info"
-                    class="detail-content info"
-                    data-html="this.detailText()"
-                  ></div>
+                    class="detail-item"
+                    data-attr-class="'detail-item ' + this.item().severity.toLowerCase()"
+                    data-attr-data-testid="'statement-detail-' + this.item().severity.toLowerCase()"
+                  >
+                    <div class="detail-header">
+                      <span
+                        class="detail-severity"
+                        data-attr-class="'detail-severity ' + this.item().severity.toLowerCase()"
+                        data-text="this.item().severity"
+                      ></span>
+                      <template data-if="this.item().reason">
+                        <span
+                          class="detail-reason"
+                          data-text="'[' + this.item().reason + ']'"
+                        ></span>
+                      </template>
+                      <template data-if="this.item().createdAt">
+                        <span
+                          class="detail-timestamp"
+                          data-text="'(' + this.item().createdAt + ')'"
+                        ></span>
+                      </template>
+                    </div>
+                    <div class="detail-message" data-html="this.item().message"></div>
+                  </div>
                 </template>
               </div>
             </details>
@@ -619,47 +601,7 @@
         line-height: 1.5;
       }
 
-      .detail-content.error {
-        padding: 0.5rem;
-        border-radius: 4px;
-        background: color-mix(in srgb, var(--vscode-editorError-foreground) 10%, transparent);
-        border-left: 3px solid var(--vscode-editorError-foreground);
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-      }
-
-      .error-header {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 90%;
-      }
-
-      .error-severity {
-        font-weight: 600;
-        text-transform: uppercase;
-        color: var(--vscode-editorError-foreground);
-      }
-
-      .error-message {
-        line-height: 1.5;
-      }
-
-      .detail-content.info {
-        padding: 0.5rem;
-        border-radius: 4px;
-        border-left: 3px solid var(--vscode-editor-foreground);
-        color: var(--vscode-editor-foreground);
-      }
-
-      .warnings-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-
-      .warning-item {
+      .detail-item {
         display: flex;
         flex-direction: column;
         gap: 0.25rem;
@@ -668,22 +610,32 @@
         border-left: 3px solid transparent;
       }
 
-      .warning-item.critical {
+      .detail-item.error {
         border-left-color: var(--vscode-editorError-foreground);
         background: color-mix(in srgb, var(--vscode-editorError-foreground) 10%, transparent);
       }
 
-      .warning-item.moderate {
+      .detail-item.critical {
+        border-left-color: var(--vscode-editorError-foreground);
+        background: color-mix(in srgb, var(--vscode-editorError-foreground) 10%, transparent);
+      }
+
+      .detail-item.moderate {
         border-left-color: var(--vscode-editorWarning-foreground);
         background: color-mix(in srgb, var(--vscode-editorWarning-foreground) 10%, transparent);
       }
 
-      .warning-item.low {
+      .detail-item.low {
         border-left-color: var(--vscode-editorInfo-foreground);
         background: color-mix(in srgb, var(--vscode-editorInfo-foreground) 10%, transparent);
       }
 
-      .warning-header {
+      .detail-item.info {
+        border-left-color: var(--vscode-editor-foreground);
+        background: transparent;
+      }
+
+      .detail-header {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -691,31 +643,43 @@
         font-size: 90%;
       }
 
-      .warning-severity {
+      .detail-severity {
         font-weight: 600;
         text-transform: uppercase;
       }
 
-      .warning-severity.critical {
+      .detail-severity.error {
         color: var(--vscode-editorError-foreground);
       }
 
-      .warning-severity.moderate {
+      .detail-severity.critical {
+        color: var(--vscode-editorError-foreground);
+      }
+
+      .detail-severity.moderate {
         color: var(--vscode-editorWarning-foreground);
       }
 
-      .warning-severity.low {
+      .detail-severity.low {
         color: var(--vscode-editorInfo-foreground);
       }
 
-      .warning-reason {
+      .detail-severity.info {
+        color: var(--vscode-editor-foreground);
+      }
+
+      .detail-reason {
         font-family: var(--vscode-editor-font-family, monospace);
         color: var(--vscode-descriptionForeground);
       }
 
-      .warning-timestamp {
+      .detail-timestamp {
         color: var(--vscode-descriptionForeground);
         font-size: 90%;
+      }
+
+      .detail-message {
+        line-height: 1.5;
       }
 
       .toggle-actions {
