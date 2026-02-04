@@ -1,5 +1,5 @@
 import assert from "assert";
-import { extractWarnings, parseLegacyWarnings, type StatementWarning } from "./warningParser";
+import { extractWarnings, parseLegacyWarnings, stripWarningsFromDetail, type StatementWarning } from "./warningParser";
 
 describe("flinkSql/warningParser", () => {
   describe("parseLegacyWarnings", () => {
@@ -61,6 +61,15 @@ describe("flinkSql/warningParser", () => {
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].message, "lowercase warning message.");
     });
+
+    it("should handle brackets within warning messages", () => {
+      const detail =
+        "[Warning] Please revisit the query (upsert key: [customer_name]) or provide a primary key.";
+      const result = parseLegacyWarnings(detail);
+
+      assert.strictEqual(result.length, 1);
+      assert.ok(result[0].message.includes("[customer_name]"));
+    });
   });
 
   describe("extractWarnings", () => {
@@ -104,6 +113,30 @@ describe("flinkSql/warningParser", () => {
     it("should return empty array when detail has no warnings", () => {
       const result = extractWarnings(undefined, "Statement running successfully.");
       assert.deepStrictEqual(result, []);
+    });
+  });
+
+  describe("stripWarningsFromDetail", () => {
+    it("should return null for undefined input", () => {
+      const result = stripWarningsFromDetail(undefined);
+      assert.strictEqual(result, null);
+    });
+
+    it("should return null when detail contains only warnings", () => {
+      const result = stripWarningsFromDetail("[Warning] First. [Warning] Second.");
+      assert.strictEqual(result, null);
+    });
+
+    it("should preserve non-warning content before warnings", () => {
+      const detail = "Statement running. [Warning] Some warning message.";
+      const result = stripWarningsFromDetail(detail);
+      assert.strictEqual(result, "Statement running.");
+    });
+
+    it("should handle detail with no warnings", () => {
+      const detail = "Statement completed successfully.";
+      const result = stripWarningsFromDetail(detail);
+      assert.strictEqual(result, "Statement completed successfully.");
     });
   });
 });
