@@ -72,15 +72,16 @@
           <template data-if="this.statementMeta().detail || this.hasWarnings()">
             <details class="detail-section" open data-testid="statement-execution-details">
               <summary>
-                <span class="detail-title">Statement details</span>
+                <span class="detail-title">Details and warning messages</span>
               </summary>
               <div class="detail-section-content">
                 <template data-if="this.statementMeta().failed && this.detailText()">
-                  <div
-                    data-testid="statement-detail-error"
-                    class="detail-content error"
-                    data-html="this.detailText()"
-                  ></div>
+                  <div data-testid="statement-detail-error" class="detail-content error">
+                    <div class="error-header">
+                      <span class="error-severity">ERROR</span>
+                    </div>
+                    <div class="error-message" data-html="this.detailText()"></div>
+                  </div>
                 </template>
                 <template data-if="this.hasWarnings()">
                   <div class="warnings-list" data-testid="statement-warnings">
@@ -96,10 +97,16 @@
                             data-text="this.warning().severity"
                           ></span>
                           <template data-if="this.warning().reason">
-                            <span class="warning-reason" data-text="'[' + this.warning().reason + ']'"></span>
+                            <span
+                              class="warning-reason"
+                              data-text="'[' + this.warning().reason + ']'"
+                            ></span>
                           </template>
                           <template data-if="this.warning().createdAt">
-                            <span class="warning-timestamp" data-text="'(' + this.warning().createdAt + ')'"></span>
+                            <span
+                              class="warning-timestamp"
+                              data-text="'(' + this.warning().createdAt + ')'"
+                            ></span>
                           </template>
                         </div>
                         <div class="warning-message" data-text="this.warning().message"></div>
@@ -615,9 +622,28 @@
       .detail-content.error {
         padding: 0.5rem;
         border-radius: 4px;
-        background: var(--vscode-inputValidation-errorBackground);
+        background: color-mix(in srgb, var(--vscode-editorError-foreground) 10%, transparent);
         border-left: 3px solid var(--vscode-editorError-foreground);
-        color: var(--vscode-inputValidation-errorForeground);
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .error-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 90%;
+      }
+
+      .error-severity {
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--vscode-editorError-foreground);
+      }
+
+      .error-message {
+        line-height: 1.5;
       }
 
       .detail-content.info {
