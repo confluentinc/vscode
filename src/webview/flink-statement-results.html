@@ -75,7 +75,7 @@
                 <span class="detail-title">Statement details</span>
               </summary>
               <div class="detail-section-content">
-                <template data-if="this.statementMeta().failed && this.statementMeta().detail">
+                <template data-if="this.statementMeta().failed && this.detailText()">
                   <div
                     data-testid="statement-detail-error"
                     class="detail-content error"
@@ -94,7 +94,7 @@
                     </template>
                   </div>
                 </template>
-                <template data-if="!this.statementMeta().failed && this.statementMeta().detail">
+                <template data-if="!this.statementMeta().failed && this.detailText()">
                   <div
                     data-testid="statement-detail-info"
                     class="detail-content info"
