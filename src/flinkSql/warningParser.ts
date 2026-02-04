@@ -25,7 +25,7 @@ export function parseLegacyWarnings(detail: string | undefined): StatementWarnin
   const warnings: StatementWarning[] = [];
   // Split on [Warning] but keep the delimiter context
   // The pattern matches [Warning] followed by text until the next [Warning] or end
-  const warningPattern = /\[Warning\]\s*([^[]+?)(?=\[Warning\]|$)/gi;
+  const warningPattern = /\[Warning\]\s*([\s\S]*?)(?=\s*\[Warning\]|$)/gi;
   let match: RegExpExecArray | null;
 
   while ((match = warningPattern.exec(detail)) !== null) {
@@ -60,4 +60,19 @@ export function extractWarnings(
 
   // Fall back to legacy parsing
   return parseLegacyWarnings(detail);
+}
+
+/**
+ * Strip [Warning] sections from a detail string.
+ * Used to avoid duplication when API warnings are displayed separately.
+ * @param detail The detail string that may contain legacy warnings
+ * @returns The detail string with [Warning] sections removed, or null if only warnings remain
+ */
+export function stripWarningsFromDetail(detail: string | undefined): string | null {
+  if (!detail) {
+    return null;
+  }
+  const warningPattern = /\[Warning\]\s*[\s\S]*?(?=\s*\[Warning\]|$)/gi;
+  const stripped = detail.replace(warningPattern, "").trim();
+  return stripped.length > 0 ? stripped : null;
 }
