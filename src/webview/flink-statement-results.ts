@@ -7,7 +7,7 @@ import type {
   ResultCount,
   StreamState,
 } from "../flinkSql/flinkStatementResultsManager";
-import type { StatementWarning } from "../flinkSql/warningParser";
+import { stripWarningsFromDetail, type StatementWarning } from "../flinkSql/warningParser";
 import { ViewModel } from "./bindings/view-model";
 import type { WebviewStorage } from "./comms/comms";
 import { createWebviewStorage, sendWebviewMessage } from "./comms/comms";
@@ -179,8 +179,15 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       return filter != null ? filter > 0 : total > 0;
     });
     this.detailText = this.derive(() => {
-      const detail = this.statementMeta().detail;
-      return detail ? detail.replace(/\n/g, "<br>") : null;
+      const meta = this.statementMeta();
+      const detail = meta.detail;
+      if (!detail) {
+        return null;
+      }
+      // Strip warnings from detail when API warnings are displayed separately
+      const hasApiWarnings = meta.warnings.length > 0;
+      const processedDetail = hasApiWarnings ? stripWarningsFromDetail(detail) : detail;
+      return processedDetail ? processedDetail.replace(/\n/g, "<br>") : null;
     });
 
     /** Whether the statement has any warnings */
