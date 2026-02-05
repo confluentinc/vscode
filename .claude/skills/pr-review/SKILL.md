@@ -168,7 +168,94 @@ Look for:
 - [ ] No `.only` left in test files
 - [ ] Stubs are set up correctly (functions to stub are in separate modules)
 
-### Step 6: Check PR Hygiene
+### Step 6: Verify VS Code API Usage
+
+When changes involve VS Code APIs, use the `/vscode-api` skill to verify correct usage:
+
+**When to use:**
+
+- New event subscriptions (`onDid*`, `onWill*`)
+- Tree view implementations (`TreeDataProvider`, `TreeItem`)
+- Webview usage (`WebviewPanel`, `WebviewView`)
+- Command registration and context
+- Configuration API usage
+- File system or workspace APIs
+- Diagnostic or language feature APIs
+
+**What to check:**
+
+- [ ] API used correctly per official documentation
+- [ ] No deprecated APIs introduced (check for `@deprecated` tags)
+- [ ] Correct disposal patterns for the specific API
+- [ ] Event return types handled properly
+- [ ] Optional parameters used appropriately
+
+**Example usage during review:**
+
+```
+/vscode-api TreeDataProvider getChildren
+```
+
+This verifies the implementation matches official VS Code patterns and catches subtle issues like:
+
+- Missing optional method implementations
+- Incorrect return types (e.g., `Thenable` vs `Promise`)
+- Deprecated patterns that still compile but should be avoided
+
+### Step 7: Check for Idiomatic VS Code Solutions
+
+Beyond correct usage, check if there's a simpler, more VS Code-native approach. Use `/vscode-api` to
+explore alternatives when you see custom implementations that VS Code might handle natively.
+
+**Common opportunities for simplification:**
+
+| Custom Implementation             | VS Code-Native Alternative                               |
+| --------------------------------- | -------------------------------------------------------- |
+| Custom input dialogs              | `vscode.window.showInputBox` with `validateInput`        |
+| Custom selection UI               | `vscode.window.showQuickPick` with `QuickPickItem`       |
+| Manual file watching              | `vscode.workspace.createFileSystemWatcher`               |
+| Custom progress indicators        | `vscode.window.withProgress`                             |
+| Manual tree item state            | `TreeItem.checkboxState`, `collapsibleState`             |
+| Custom context tracking           | `vscode.commands.executeCommand('setContext', ...)`      |
+| Manual command enablement         | `when` clause in `package.json` contribution             |
+| Custom status indicators          | `vscode.window.createStatusBarItem`                      |
+| Custom file decorations           | `FileDecorationProvider`                                 |
+| Custom tooltip rendering          | `MarkdownString` with `supportHtml`                      |
+| Manual workspace state            | `context.workspaceState` / `context.globalState`         |
+| Custom multi-step wizards         | `vscode.window.createQuickPick` with back button support |
+| Re-implementing standard commands | Built-in commands via `vscode.commands.executeCommand`   |
+| Custom diff views                 | `vscode.commands.executeCommand('vscode.diff', ...)`     |
+| Custom output handling            | `vscode.window.createOutputChannel`                      |
+
+**What to look for:**
+
+- [ ] Is there a built-in VS Code command that does this?
+- [ ] Does VS Code provide a standard UI component for this interaction?
+- [ ] Is the custom implementation duplicating VS Code's built-in behavior?
+- [ ] Could `when` clauses replace manual visibility/enablement logic?
+- [ ] Are there UX guidelines recommending a different approach?
+
+**Example questions to ask:**
+
+```
+/vscode-api QuickPick back button multi-step
+/vscode-api TreeItem contextValue when clause
+/vscode-api built-in commands list
+```
+
+**When custom is appropriate:**
+
+Not all custom implementations are wrong. Custom solutions are justified when:
+
+- VS Code's built-in doesn't meet specific UX requirements
+- Performance requires optimization beyond standard APIs
+- The feature is genuinely novel with no VS Code equivalent
+- Webview is needed for rich interactive content
+
+When suggesting simplification, verify the alternative actually meets the requirements before
+recommending changes.
+
+### Step 8: Check PR Hygiene
 
 - [ ] PR description explains the changes clearly
 - [ ] Checklist items in PR template are addressed
@@ -287,3 +374,7 @@ Look for:
 - Check if changes align with existing patterns in similar files
 - When in doubt, compare with existing implementations
 - Use `Task` tool with Explore agent for deeper codebase context if needed
+- Use `/vscode-api` to verify VS Code API usage against official docs - catches deprecated APIs and
+  incorrect patterns that still compile
+- Ask "is there a VS Code-native way to do this?" for any custom UI or state management - simpler
+  solutions often exist via built-in APIs, commands, or `when` clause contributions
