@@ -684,7 +684,7 @@ export async function testBuild() {
       coverage({
         enabled: reportCoverage,
         include: ["src/**/*.ts"],
-        exclude: [/node_modules/, /\.test.ts$/, /src\/clients/],
+        exclude: [/node_modules/, /\.test.ts$/, /\.spec.ts$/, /src\/clients/, /src\/testing\.ts$/],
       }),
       copy({
         copyOnce: true,
