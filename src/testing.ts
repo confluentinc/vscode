@@ -2,7 +2,7 @@ import { writeFile } from "fs/promises";
 import { globSync } from "glob";
 import Mocha from "mocha";
 import { join, resolve } from "path";
-import { getTestExtensionContext } from "../tests/unit/testUtils";
+import { mochaGlobalSetup } from "../tests/unit/globalSetup";
 
 export async function run() {
   // Unix cwd is ___/vscode, but on Windows it's ___/vscode/.vscode-test/<archive>/
@@ -39,8 +39,7 @@ export async function run() {
     mocha.fgrep(process.env.FGREP);
   }
 
-  mocha.suite.beforeAll("Global suite setup", globalBeforeAll);
-  // mocha.suite.beforeEach("Global individual setup", globalBeforeEach);
+  mocha.suite.beforeAll("Global suite setup", mochaGlobalSetup);
 
   const failures = await new Promise<number>((resolve) => mocha.run(resolve));
   // @ts-expect-error __coverage__ is what istanbul uses for storing coverage data
@@ -51,22 +50,4 @@ export async function run() {
     await writeFile(coverageFilePath, JSON.stringify(coverageData));
   }
   if (failures > 0) throw new Error(`${failures} tests failed.`);
-}
-
-async function globalBeforeAll() {
-  console.log("Global test suite setup");
-
-  // smoke-test to make sure we can set up the environment for tests by activating the extension:
-  // - set the extension context
-  // - start the sidecar process
-  console.log(
-    "Activating the extension, setting extension context, and attempting to start the sidecar...",
-  );
-  await getTestExtensionContext();
-  // if this fails, it will throw and we'll see something like:
-  // 1) "before all" hook: Global suite setup in "{root}":
-  //    Activating extension 'confluentinc.vscode-confluent' failed: ...
-
-  // otherwise, we should see this log line and tests should continue:
-  console.log("✅ Test environment is ready. Running tests...");
 }
