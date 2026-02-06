@@ -366,6 +366,8 @@ components:
         credentials:
           description: "The credentials for the Kafka cluster, or null if no authentication\
             \ is required"
+          enum:
+          - null
           oneOf:
           - $ref: "#/components/schemas/BasicCredentials"
           - $ref: "#/components/schemas/ApiKeyAndSecret"
@@ -432,6 +434,8 @@ components:
         schema_id:
           format: int32
           type: integer
+        schema_guid:
+          $ref: "#/components/schemas/UUID"
         data_format:
           $ref: "#/components/schemas/DataFormat"
     KeyStore:
@@ -737,6 +741,8 @@ components:
         credentials:
           description: "The credentials for the Schema Registry, or null if no authentication\
             \ is required"
+          enum:
+          - null
           oneOf:
           - $ref: "#/components/schemas/BasicCredentials"
           - $ref: "#/components/schemas/ApiKeyAndSecret"
@@ -921,6 +927,10 @@ components:
           allOf:
           - $ref: "#/components/schemas/StoreType"
           nullable: true
+    UUID:
+      format: uuid
+      pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+      type: string
     UserInfo:
       type: object
       properties:
@@ -939,27 +949,27 @@ components:
     HealthResponse:
       type: object
       properties:
-        status:
-          enum:
-          - UP
-          - DOWN
-          type: string
         checks:
           type: array
           items:
             $ref: "#/components/schemas/HealthCheck"
-    HealthCheck:
-      type: object
-      properties:
         status:
           enum:
           - UP
           - DOWN
           type: string
+    HealthCheck:
+      type: object
+      properties:
         data:
           type: object
           nullable: true
         name:
+          type: string
+        status:
+          enum:
+          - UP
+          - DOWN
           type: string
 paths:
   /:
@@ -1425,9 +1435,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+tags:
+- name: MicroProfile Health
+  description: Check the health of the application
 info:
   title: Confluent ide-sidecar API
-  version: 0.254.0
+  version: 0.257.0
   description: "API for the Confluent ide-sidecar, part of Confluent for VS Code"
   termsOfService: Your terms here
   contact:
