@@ -4,7 +4,7 @@ description:
   Use when the user asks about VS Code API definitions, methods, interfaces, events, types, or wants
   to understand what VS Code APIs are available. Triggers on questions like "what does vscode.X do",
   "how to use VS Code API", "VS Code type definition", or checking API compatibility.
-tools: [Read, Bash, WebFetch]
+allowed-tools: Read, Bash, WebFetch, WebSearch
 ---
 
 # VS Code API Lookup
