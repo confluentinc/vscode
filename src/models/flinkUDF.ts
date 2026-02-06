@@ -147,6 +147,7 @@ export class FlinkUdfTreeItem extends TreeItem {
     this.id = resource.id;
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-udf`;
+    this.accessibilityInformation = { label: `Flink UDF: ${resource.name}` };
 
     this.description = `${resource.parametersSignature} → ${formatSqlType(resource.returnType)}`;
     this.tooltip = createFlinkUdfToolTip(resource);
