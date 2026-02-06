@@ -4,7 +4,7 @@ description:
   Reviews pull requests for this VS Code extension. Use when reviewing PRs, doing self-review before
   sharing with the team, or when user mentions "review PR", "review changes", "self-review", or
   "check my PR". Focuses on project-specific patterns and critical requirements.
-tools: [Read, Bash, Grep, Glob, Task]
+allowed-tools: Read, Bash, Grep, Glob, Task
 ---
 
 # PR Review Skill
