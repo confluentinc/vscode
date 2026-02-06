@@ -48,6 +48,16 @@ export class FlinkDatabaseView extends SearchableView {
     return this.treeItems.and(this.page.locator('[aria-label^="Flink Artifact: "]'));
   }
 
+  /** Get the UDFs container item. */
+  get udfsContainer(): Locator {
+    return this.treeItems.filter({ hasText: "UDFs" }).first();
+  }
+
+  /** UDF items based on their accessibilityInformation label. */
+  get udfs(): Locator {
+    return this.treeItems.and(this.page.locator('[aria-label^="Flink UDF: "]'));
+  }
+
   /**
    * Load the Flink Artifacts view by selecting a Kafka cluster as the Flink database,
    * using the specified entrypoint.
