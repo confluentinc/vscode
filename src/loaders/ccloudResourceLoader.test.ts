@@ -15,7 +15,7 @@ import {
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
-import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
+import { createResponseError } from "../../tests/unit/testUtils";
 import type {
   ArtifactV1FlinkArtifactList,
   ArtifactV1FlinkArtifactListDataInner,
@@ -108,10 +108,6 @@ describe("CCloudResourceLoader", () => {
   let loader: CCloudResourceLoader;
 
   let stubbedResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

@@ -25,7 +25,6 @@ import {
   makeStatus,
   TEST_CCLOUD_FLINK_STATEMENT,
 } from "../../../tests/unit/testResources/flinkStatement";
-import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import { ConnectionType } from "../../clients/sidecar";
 import * as contextValues from "../../context/values";
 import { ContextValues } from "../../context/values";
@@ -99,10 +98,6 @@ class TestParentedViewProvider extends ParentedBaseViewProvider<
 describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
   let sandbox: sinon.SinonSandbox;
   let provider: TestParentedViewProvider;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

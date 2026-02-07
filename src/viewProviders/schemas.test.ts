@@ -10,7 +10,6 @@ import {
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type {
   EnvironmentChangeEvent,
   SchemaVersionChangeEvent,
@@ -27,10 +26,6 @@ describe("SchemasViewProvider", () => {
   let stubbedCCloudResourceLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
   let onDidChangeTreeDataFireStub: sinon.SinonStub;
   let subjectsInTreeView: Map<string, Subject>;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

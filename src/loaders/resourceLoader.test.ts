@@ -16,11 +16,7 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
-import {
-  createTestSubject,
-  createTestTopicData,
-  getTestExtensionContext,
-} from "../../tests/unit/testUtils";
+import { createTestSubject, createTestTopicData } from "../../tests/unit/testUtils";
 import type { TopicData } from "../clients/kafkaRest";
 import { SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
@@ -30,7 +26,6 @@ import type { Subject } from "../models/schema";
 import { Schema } from "../models/schema";
 import * as notifications from "../notifications";
 import type { SidecarHandle } from "../sidecar";
-import type { ResourceManager } from "../storage/resourceManager";
 import { getResourceManager } from "../storage/resourceManager";
 import { clearWorkspaceState } from "../storage/utils";
 import { CCloudResourceLoader } from "./ccloudResourceLoader";
@@ -44,7 +39,6 @@ import * as loaderUtils from "./utils/loaderUtils";
 // The LocalKafkaClusterLoader is concrete and doesn't override these base class methods.
 
 describe("ResourceLoader::getSubjects()", () => {
-  let resourceManager: ResourceManager;
   let loaderInstance: ResourceLoader;
   let sandbox: sinon.SinonSandbox;
 
@@ -53,11 +47,6 @@ describe("ResourceLoader::getSubjects()", () => {
 
   let rmGetSubjectsStub: sinon.SinonStub;
   let rmSetSubjectsStub: sinon.SinonStub;
-
-  before(async () => {
-    await getTestExtensionContext();
-    resourceManager = getResourceManager();
-  });
 
   beforeEach(async () => {
     sandbox = sinon.createSandbox();
@@ -73,6 +62,7 @@ describe("ResourceLoader::getSubjects()", () => {
       .resolves(TEST_LOCAL_SCHEMA_REGISTRY);
 
     // Stub these out for test to then provide the return values.
+    const resourceManager = getResourceManager();
     rmGetSubjectsStub = sandbox.stub(resourceManager, "getSubjects");
     rmSetSubjectsStub = sandbox.stub(resourceManager, "setSubjects");
   });
@@ -266,9 +256,6 @@ describe("instance ResourceLoader::getEnvironment", () => {
   let loaderInstance: ResourceLoader;
   let sandbox: sinon.SinonSandbox;
 
-  before(async () => {
-    await getTestExtensionContext();
-  });
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     loaderInstance = LocalResourceLoader.getInstance();
@@ -293,9 +280,6 @@ describe("static ResourceLoader::getEnvironment", () => {
   let stubbedLoader: sinon.SinonStubbedInstance<LocalResourceLoader>;
   let sandbox: sinon.SinonSandbox;
 
-  before(async () => {
-    await getTestExtensionContext();
-  });
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
@@ -336,10 +320,6 @@ describe("ResourceLoader::clearCache()", () => {
   let loaderInstance: ResourceLoader;
   let sandbox: sinon.SinonSandbox;
   let rmSetSubjectsStub: sinon.SinonStub;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -739,10 +719,6 @@ describe("ResourceLoader::deleteSchemaSubject()", () => {
 
 describe("ResourceLoader::getInstance()", () => {
   const directConnectionId = "direct-connection-id" as ConnectionId;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     // Register a DirectResourceLoader instance for the directConnectionId test.

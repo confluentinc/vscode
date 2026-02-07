@@ -6,7 +6,6 @@ import {
   TEST_DIRECT_CONNECTION,
   TEST_DIRECT_CONNECTION_FORM_SPEC,
 } from "../tests/unit/testResources/connection";
-import { getTestExtensionContext } from "../tests/unit/testUtils";
 import type { ConnectionSpec, ConnectionsList } from "./clients/sidecar";
 import { ConnectionSpecFromJSON, ConnectionsResourceApi, ResponseError } from "./clients/sidecar";
 import { DirectConnectionManager } from "./directConnectManager";
@@ -46,11 +45,6 @@ describe("DirectConnectionManager behavior", () => {
   let waitForConnectionToBeStableStub: sinon.SinonStub;
 
   let manager: DirectConnectionManager;
-
-  before(async () => {
-    // DirectConnectionManager requires the extension context to be set
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

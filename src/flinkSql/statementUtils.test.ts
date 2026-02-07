@@ -12,7 +12,7 @@ import {
   TEST_CCLOUD_FLINK_STATEMENT,
 } from "../../tests/unit/testResources/flinkStatement";
 import { TEST_CCLOUD_ORGANIZATION_ID } from "../../tests/unit/testResources/organization";
-import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
+import { createResponseError } from "../../tests/unit/testUtils";
 import type {
   GetSqlv1Statement200Response,
   GetSqlv1StatementResult200Response,
@@ -43,10 +43,6 @@ import {
 
 describe("flinkSql/statementUtils.ts", function () {
   let sandbox: sinon.SinonSandbox;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

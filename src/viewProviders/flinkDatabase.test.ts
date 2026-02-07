@@ -17,7 +17,6 @@ import {
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources/kafkaCluster";
 import { TEST_CCLOUD_SUBJECT_WITH_SCHEMAS } from "../../tests/unit/testResources/schema";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResponseError } from "../clients/flinkArtifacts";
 import type { EventChangeType } from "../emitters";
 import type { CCloudResourceLoader } from "../loaders";
@@ -40,10 +39,6 @@ import { FlinkDatabaseViewProvider } from "./flinkDatabase";
 
 describe("viewProviders/flinkDatabase.ts", () => {
   let sandbox: sinon.SinonSandbox;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

@@ -10,7 +10,6 @@ import {
   TEST_CCLOUD_SUBJECT,
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResponseError } from "../clients/sidecar";
 import * as schemaDocumentProvider from "../documentProviders/schema";
 import type { CCloudResourceLoader } from "../loaders";
@@ -32,10 +31,6 @@ import * as schemaManagementUpload from "./utils/schemaManagement/upload";
 
 describe("commands/schemas.ts", function () {
   let sandbox: sinon.SinonSandbox;
-
-  before(async function () {
-    await getTestExtensionContext();
-  });
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();

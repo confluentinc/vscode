@@ -18,7 +18,6 @@ import {
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import * as contextValues from "../context/values";
@@ -61,10 +60,6 @@ import * as viewProvidersSearch from "./utils/search";
 
 describe("viewProviders/resources.ts", () => {
   let sandbox: sinon.SinonSandbox;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

@@ -3,7 +3,6 @@ import sinon from "sinon";
 import type { ConfigurationChangeEvent } from "vscode";
 import { workspace } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
 import { FlinkLanguageClientManager } from "../flinkSql/flinkLanguageClientManager";
 import * as telemetryEvents from "../telemetry/events";
@@ -26,10 +25,6 @@ describe("extensionSettings/listener.ts", function () {
   let logUsageStub: sinon.SinonStub;
 
   let setContextValueStub: sinon.SinonStub;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();

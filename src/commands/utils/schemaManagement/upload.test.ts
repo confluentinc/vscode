@@ -26,7 +26,6 @@ import {
   TEST_LOCAL_SUBJECT,
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../../../tests/unit/testResources";
-import { getTestExtensionContext } from "../../../../tests/unit/testUtils";
 import type { Configuration, RegisterRequest } from "../../../clients/schemaRegistryRest";
 import { ResponseError, SchemasV1Api, SubjectsV1Api } from "../../../clients/schemaRegistryRest";
 import { ConnectionType } from "../../../clients/sidecar";
@@ -63,10 +62,6 @@ import {
 
 describe("commands/utils/schemaManagement/upload.ts", function () {
   let sandbox: sinon.SinonSandbox;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

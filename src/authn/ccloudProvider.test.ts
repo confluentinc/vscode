@@ -12,7 +12,6 @@ import {
   TEST_AUTHENTICATED_CCLOUD_CONNECTION,
   TEST_CCLOUD_CONNECTION,
 } from "../../tests/unit/testResources/connection";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type { Connection } from "../clients/sidecar";
 import { ConnectedState, ConnectionFromJSON } from "../clients/sidecar";
 import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
@@ -33,10 +32,6 @@ import type { AuthCallbackEvent } from "./types";
 
 describe("authn/ccloudProvider.ts", () => {
   let sandbox: sinon.SinonSandbox;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -713,10 +708,6 @@ describe("authn/ccloudProvider.ts", () => {
 });
 
 describe("CCloud auth flow", () => {
-  before(async () => {
-    await getTestExtensionContext();
-  });
-
   beforeEach(async () => {
     await clearWorkspaceState();
     // make sure we don't have a lingering CCloud connection from other tests

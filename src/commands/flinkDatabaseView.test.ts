@@ -17,7 +17,6 @@ import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type { CCloudResourceLoader } from "../loaders";
 import {
   FlinkDatabaseContainerLabel,
@@ -27,10 +26,6 @@ import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 
 describe("commands/flinkDatabaseView.ts", () => {
   let sandbox: sinon.SinonSandbox;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

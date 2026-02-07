@@ -9,7 +9,6 @@ import {
   getStubbedSecretStorage,
   getStubbedWorkspaceState,
 } from "../../tests/stubs/extensionStorage";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { DURABLE_STORAGE_VERSION_KEY, MigrationStorageType } from "./constants";
 import {
   CODEBASE_STORAGE_VERSION,
@@ -23,10 +22,6 @@ describe("storage/migrationManager", () => {
   let sandbox: sinon.SinonSandbox;
 
   let executeMigrationsStub: sinon.SinonStub;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

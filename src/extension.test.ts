@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { getAndActivateExtension, getTestExtensionContext } from "../tests/unit/testUtils";
+import { getAndActivateExtension } from "../tests/unit/testUtils";
 import { ConfluentCloudAuthProvider } from "./authn/ccloudProvider";
 import {
   clearExtensionContext,
@@ -52,8 +52,9 @@ describe("ExtensionContext", () => {
       assertThrowsExtensionContextNotSetError(callable, source);
     });
 
-    // activate the extension and setExtensionContext()
-    await getTestExtensionContext();
+    // (re)activate the extension and setExtensionContext()
+    const ext = await getAndActivateExtension();
+    setExtensionContext(ext.exports);
 
     extensionContextSingletons.forEach(({ callable, source }) => {
       assertDoesNotThrowExtensionContextNotSetError(callable, source);
@@ -83,10 +84,6 @@ describe("Refreshable views tests", () => {
    * When a new one is added, its `kind` attribute value should be added to this list.
    */
   const expectedKinds = ["resources", "topics", "schemas", "statements", "flinkdatabase"];
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   it("getRefreshableViewProviders returns the expected unique view providers / kinds", () => {
     const seenKinds = new Set<string>();
@@ -141,7 +138,7 @@ describe("Extension manifest tests", () => {
   let extensionCommands: string[];
 
   before(async () => {
-    context = await getTestExtensionContext();
+    context = getExtensionContext();
     packageJSON = context.extension.packageJSON;
 
     const allRegisteredCommands = await vscode.commands.getCommands();
@@ -289,8 +286,8 @@ describe("Extension manifest tests", () => {
 describe("ExtensionContext subscription tests", () => {
   let context: vscode.ExtensionContext;
 
-  before(async () => {
-    context = await getTestExtensionContext();
+  before(() => {
+    context = getExtensionContext();
   });
 
   it("should have at least one subscription", async () => {

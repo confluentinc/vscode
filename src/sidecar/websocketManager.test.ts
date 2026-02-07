@@ -2,7 +2,6 @@ import assert from "assert";
 import * as sinon from "sinon";
 import { getSidecar } from ".";
 import { GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE } from "../../tests/unit/testResources/websocketMessages";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type { Message, WorkspacesChangedBody } from "../ws/messageTypes";
 import { MessageType, newMessageHeaders } from "../ws/messageTypes";
 import { constructMessageRouter, WebsocketManager } from "./websocketManager";
@@ -76,10 +75,6 @@ describe("WebsocketManager disconnected tests", () => {
 });
 
 describe("WebsocketManager connected tests", () => {
-  before(async () => {
-    await getTestExtensionContext();
-  });
-
   it("Should smell connected when websocket is open", async () => {
     const websocketManager = WebsocketManager.getInstance();
     assert.equal(true, websocketManager.isConnected());
@@ -99,11 +94,6 @@ describe("WebsocketManager connected tests", () => {
 });
 
 describe("WebsocketManager dispose tests", () => {
-  before(async () => {
-    // Will ensure that at onset of these tests, the websocket is connected
-    await getTestExtensionContext();
-  });
-
   it("WebsocketManager.dispose() should close websocket", async () => {
     const websocketManager = WebsocketManager.getInstance();
     assert.equal(true, websocketManager.isConnected());

@@ -3,7 +3,6 @@ import * as sinon from "sinon";
 import type { Disposable } from "vscode";
 import { EventEmitter, TreeItem, Uri, window } from "vscode";
 import { createTestResource } from "../../../tests/unit/testResources/base";
-import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import * as contextValues from "../../context/values";
 import { ContextValues } from "../../context/values";
 import { SEARCH_DECORATION_URI_SCHEME } from "../utils/search";
@@ -52,11 +51,6 @@ class TestViewProvider extends BaseViewProvider<BaseViewProviderData> {
 describe("viewProviders/base.ts BaseViewProvider", () => {
   let sandbox: sinon.SinonSandbox;
   let provider: TestViewProvider;
-
-  before(async () => {
-    // required for all subclasses of BaseViewProvider since they deal with extension storage
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
