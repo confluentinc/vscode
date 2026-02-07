@@ -3,11 +3,11 @@ import { homedir } from "os";
 import sinon from "sinon";
 import * as vscode from "vscode";
 import { TEST_LOCAL_SCHEMA } from "../../tests/unit/testResources";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
 import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Schema } from "../models/schema";
 import { WorkspaceStorageKeys } from "../storage/constants";
+import { getWorkspaceState } from "../storage/utils";
 import * as diffs from "./diffs";
 
 describe("commands/diffs.ts", () => {
@@ -16,15 +16,12 @@ describe("commands/diffs.ts", () => {
   let setContextValueStub: sinon.SinonStub;
   let workspaceState: vscode.Memento;
 
-  before(async () => {
-    const context: vscode.ExtensionContext = await getTestExtensionContext();
-    workspaceState = context.workspaceState;
-  });
-
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     executeCommandStub = sandbox.stub(vscode.commands, "executeCommand");
     setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+
+    workspaceState = getWorkspaceState();
   });
 
   afterEach(async () => {

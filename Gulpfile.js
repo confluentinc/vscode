@@ -684,7 +684,7 @@ export async function testBuild() {
       coverage({
         enabled: reportCoverage,
         include: ["src/**/*.ts"],
-        exclude: [/node_modules/, /\.test.ts$/, /src\/clients/],
+        exclude: [/node_modules/, /\.test.ts$/, /\.spec.ts$/, /src\/clients/, /src\/testing\.ts$/],
       }),
       copy({
         copyOnce: true,
@@ -720,7 +720,7 @@ export async function testBuild() {
   return 0;
 }
 
-testRun.description = "Run tests using @vscode/test-cli. Use --coverage for coverage report.";
+testRun.description = "Run tests using @vscode/test-electron. Use --coverage for coverage report.";
 export async function testRun() {
   const reportCoverage = IS_CI || process.argv.indexOf("--coverage", 2) >= 0;
   // argv array is something like ['gulp', 'test', '-t', 'something'], we look for the one after -t

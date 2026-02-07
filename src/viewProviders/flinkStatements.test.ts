@@ -8,7 +8,6 @@ import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfig
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
 import {
   STATEMENT_POLLING_CONCURRENCY,
@@ -26,11 +25,6 @@ describe("FlinkStatementsViewProvider", () => {
   let sandbox: sinon.SinonSandbox;
   let viewProvider: FlinkStatementsViewProvider;
   let resourcesInTreeView: Map<string, FlinkStatement>;
-
-  before(async () => {
-    // required for all subclasses of BaseViewProvider since they deal with extension storage
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

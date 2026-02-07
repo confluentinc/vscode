@@ -8,7 +8,7 @@ export const test = testBase.extend<RollwrightFixtures>({
         ? false
         : {
             extensions: coverage?.extensions ?? [],
-            include: coverage?.include ?? ["**/*.ts"],
+            include: coverage?.include ?? ["src/**/*.ts"],
             exclude: [
               ...(coverage?.exclude ?? []),
               "src/clients/**/*",

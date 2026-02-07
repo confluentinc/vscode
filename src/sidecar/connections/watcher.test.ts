@@ -10,7 +10,6 @@ import {
   TEST_DIRECT_CONNECTION_ID,
   TEST_LOCAL_CONNECTION,
 } from "../../../tests/unit/testResources/connection";
-import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import type { Connection } from "../../clients/sidecar";
 import {
   ConnectedState,
@@ -327,10 +326,6 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
 
   const fakeDirectConnectionButtonLabel = "View Connection Details";
 
-  before(async () => {
-    await getTestExtensionContext();
-  });
-
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
@@ -499,10 +494,6 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
   let sandbox: sinon.SinonSandbox;
 
   let getDirectConnectionStub: sinon.SinonStub;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

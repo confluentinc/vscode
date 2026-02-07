@@ -8,7 +8,6 @@ import {
   TEST_DIRECT_SCHEMA,
   TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type { SchemaString } from "../clients/schemaRegistryRest";
 import { SchemasV1Api } from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
@@ -131,11 +130,6 @@ describe("documentProviders/schema.ts", function () {
     let stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle>;
     let stubbedSchemasV1Api: sinon.SinonStubbedInstance<SchemasV1Api>;
     let testSchema: Schema;
-
-    before(async function () {
-      // activate to make sure we register the SchemaDocumentProvider URI scheme
-      await getTestExtensionContext();
-    });
 
     beforeEach(function () {
       stubbedSidecar = getSidecarStub(sandbox);

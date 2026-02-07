@@ -7,7 +7,6 @@ import {
   TEST_CANCELLATION_TOKEN,
   TEST_KAFKA_CONTAINERS,
 } from "../../../tests/unit/testResources/docker";
-import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import type {
   ContainerCreateOperationRequest,
   ContainerCreateResponse,
@@ -61,12 +60,9 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
   let updateLocalConnectionStub: sinon.SinonStub;
   let showErrorNotificationStub: sinon.SinonStub;
 
-  before(async () => {
-    registerLocalResourceWorkflows();
-    await getTestExtensionContext();
-  });
-
   beforeEach(() => {
+    registerLocalResourceWorkflows();
+
     sandbox = sinon.createSandbox();
 
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();

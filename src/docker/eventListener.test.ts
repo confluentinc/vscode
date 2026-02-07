@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type { ApiResponse, EventMessage } from "../clients/docker";
 import {
   ContainerApi,
@@ -42,8 +41,6 @@ describe("docker/eventListener.ts EventListener methods", function () {
   let stubbedConfigs: StubbedWorkspaceConfiguration;
 
   before(async function () {
-    await getTestExtensionContext();
-
     // Stop any running instance of the event listener before starting tests to minimize hilarious interference.
     const existingInstance = EventListener.getInstance();
     existingInstance.stop();

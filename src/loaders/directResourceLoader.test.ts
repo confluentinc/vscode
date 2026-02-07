@@ -8,7 +8,6 @@ import {
   TEST_DIRECT_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { TEST_DIRECT_CONNECTION_ID } from "../../tests/unit/testResources/connection";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as directGraphQl from "../graphql/direct";
 import { DirectEnvironment } from "../models/environment";
 import type { EnvironmentId } from "../models/resource";
@@ -20,10 +19,6 @@ describe("DirectResourceLoader", () => {
   let sandbox: sinon.SinonSandbox;
   let loader: DirectResourceLoader;
   let getDirectResourcesStub: sinon.SinonStub;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(async () => {
     loader = new DirectResourceLoader(TEST_DIRECT_CONNECTION_ID);

@@ -7,7 +7,6 @@ import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfig
 import { TEST_DIRECT_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_AUTH_SESSION } from "../../tests/unit/testResources/ccloudAuth";
 import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../tests/unit/testResources/connection";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { CCloudConnectionError } from "../authn/errors";
 import * as authnUtils from "../authn/utils";
 import { EXTENSION_VERSION } from "../constants";
@@ -27,10 +26,6 @@ import * as connections from "./connections";
 
 describe("commands/connections.ts", function () {
   let sandbox: sinon.SinonSandbox;
-
-  before(async function () {
-    await getTestExtensionContext();
-  });
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();

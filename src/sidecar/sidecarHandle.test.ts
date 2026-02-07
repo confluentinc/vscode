@@ -3,7 +3,6 @@ import { graphql } from "gql.tada";
 import "mocha";
 import sinon from "sinon";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { BASE_PATH as SCAFFOLDING_SERVICE_BASE_PATH } from "../clients/scaffoldingService";
 import { MicroProfileHealthApi, ResponseError } from "../clients/sidecar";
 import * as constants from "../constants";
@@ -103,10 +102,6 @@ describe("getSidecarPid() tests", () => {
 });
 
 describe("sidecarHandle websocket tests", () => {
-  before(async () => {
-    await getTestExtensionContext();
-  });
-
   describe("wsSend() tests", () => {
     it("wsSend() hates messages with wrong originator", async () => {
       const badOriginatorMessage: Message<MessageType.WORKSPACE_HELLO> = {
@@ -194,10 +189,6 @@ describe("sidecarHandle websocket tests", () => {
 describe("sidecarHandle sandbox tests", () => {
   let handle: sidecar.SidecarHandle;
   let sandbox: sinon.SinonSandbox;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(async () => {
     sandbox = sinon.createSandbox();

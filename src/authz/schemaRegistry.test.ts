@@ -10,7 +10,6 @@ import {
   TEST_DIRECT_KAFKA_TOPIC,
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
@@ -25,9 +24,6 @@ describe("authz.schemaRegistry", function () {
   let ccloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
   beforeEach(async function () {
-    // preload the schema registry in extension state
-    await getTestExtensionContext();
-
     sandbox = sinon.createSandbox();
     // create the stubs for the sidecar + service client
     const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);

@@ -5,7 +5,6 @@ import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_SCHEMA_REGISTRY,
 } from "../../../tests/unit/testResources";
-import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import { ContextValues, setContextValue } from "../../context/values";
 import { schemasViewResourceChanged, topicsViewResourceChanged } from "../../emitters";
 import { SchemasViewProvider } from "../../viewProviders/schemas";
@@ -24,9 +23,6 @@ describe("sidecar/connections/ccloud.ts", () => {
   });
 
   it("clearCurrentCCloudResources() should clear resources and fire events", async () => {
-    // just needed for this test, otherwise we'd put this in the before() block
-    await getTestExtensionContext();
-
     const mockedCCLoudLoader = getStubbedCCloudResourceLoader(sandbox);
 
     const currentKafkaClusterChangedFireStub = sandbox.stub(topicsViewResourceChanged, "fire");

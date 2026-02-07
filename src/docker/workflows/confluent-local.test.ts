@@ -7,7 +7,6 @@ import {
   TEST_BROKER_CONFIGS,
   TEST_CANCELLATION_TOKEN,
 } from "../../../tests/unit/testResources/docker";
-import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import type {
   ContainerCreateResponse,
   ContainerInspectResponse,
@@ -52,12 +51,9 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   let stopContainerStub: sinon.SinonStub;
   let waitForLocalResourceEventChangeStub: sinon.SinonStub;
 
-  before(async () => {
-    registerLocalResourceWorkflows();
-    await getTestExtensionContext();
-  });
-
   beforeEach(() => {
+    registerLocalResourceWorkflows();
+
     sandbox = sinon.createSandbox();
 
     showInputBoxStub = sandbox.stub(window, "showInputBox").resolves("1");

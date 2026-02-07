@@ -6,7 +6,6 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/f
 import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, // reuse base fixture
 } from "../../tests/unit/testResources/kafkaCluster";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type { FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
 import {
   FcpmV2RegionListDataInnerApiVersionEnum,
@@ -57,9 +56,6 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
   };
 
   const testRegions: FcpmV2RegionListDataInner[] = [testRegionDataAWS, testRegionDataAzure];
-  before(async () => {
-    await getTestExtensionContext();
-  });
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     ccloudLoaderStub = getStubbedCCloudResourceLoader(sandbox);

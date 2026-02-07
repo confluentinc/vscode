@@ -1,35 +1,30 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import type { ExtensionContext } from "vscode";
 import {
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../../tests/unit/testResources";
 import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../../tests/unit/testResources/connection";
-import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import type { FormConnectionType } from "../../directConnections/types";
 import type { ConnectionId } from "../../models/resource";
 import type { CustomConnectionSpec, DirectConnectionsById } from "../resourceManager";
 import { mapToString } from "../resourceManager";
+import { getSecretStorage } from "../utils";
 import { MigrationV2 } from "./v2";
 
 describe("storage/migrations/v2", () => {
   let sandbox: sinon.SinonSandbox;
   let secretsGetStub: sinon.SinonStub;
   let secretsStoreStub: sinon.SinonStub;
-  let context: ExtensionContext;
   let migration: MigrationV2;
-
-  before(async () => {
-    context = await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     // only stub the methods we need to test so we aren't interfering with SecretStorage; just test
     // the call arguments for `store()` based on returned `get()` values
-    secretsGetStub = sandbox.stub(context.secrets, "get");
-    secretsStoreStub = sandbox.stub(context.secrets, "store");
+    const secretStorage = getSecretStorage();
+    secretsGetStub = sandbox.stub(secretStorage, "get");
+    secretsStoreStub = sandbox.stub(secretStorage, "store");
 
     migration = new MigrationV2();
   });

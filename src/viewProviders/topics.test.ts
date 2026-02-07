@@ -15,7 +15,6 @@ import {
   TEST_LOCAL_ENVIRONMENT_ID,
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type { EventChangeType, SubjectChangeEvent } from "../emitters";
 import type { CCloudResourceLoader } from "../loaders";
 import { TopicFetchError } from "../loaders/utils/loaderUtils";
@@ -30,10 +29,6 @@ const testTopicWithSchema = new KafkaTopic({
 
 describe("viewProviders/topics.ts", () => {
   let sandbox: sinon.SinonSandbox;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

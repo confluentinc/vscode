@@ -111,7 +111,16 @@ semaphore:
           description: The test tag(s) (pipe-separated, e.g. `@smoke|@topic-message-viewer`) to run. By default, runs the smoke tests and critical user flow tests.
           default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts"
 sonarqube:
-  enable: false
+  enable: true
+  coverage_exclusions:
+    - "src/testing.ts"
+    - "src/**/*.test.ts"
+    - "src/clients/**/*"
+    - "src/**/*.spec.ts"
+  coverage_reports:
+    - "coverage/lcov-functional.info"
+    - "coverage/lcov.info"
+  main_branch: main
 make:
   enable: false
 renovatebot:

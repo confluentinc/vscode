@@ -1,5 +1,4 @@
 import sinon from "sinon";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type { RequestContext } from "../clients/sidecar";
 import { ConnectedState } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
@@ -30,10 +29,6 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
   let handleCCloudAuthStatusSpy: sinon.SinonSpy;
   let handleProblematicStatusStub: sinon.SinonStub;
   let ccloudAuthSessionInvalidatedStub: sinon.SinonStub;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
