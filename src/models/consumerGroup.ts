@@ -19,23 +19,6 @@ export enum ConsumerGroupState {
   Unknown = "Unknown",
 }
 
-export function parseConsumerGroupState(state: string): ConsumerGroupState {
-  switch (state) {
-    case "Dead":
-      return ConsumerGroupState.Dead;
-    case "Empty":
-      return ConsumerGroupState.Empty;
-    case "PreparingRebalance":
-      return ConsumerGroupState.PreparingRebalance;
-    case "CompletingRebalance":
-      return ConsumerGroupState.CompletingRebalance;
-    case "Stable":
-      return ConsumerGroupState.Stable;
-    default:
-      return ConsumerGroupState.Unknown;
-  }
-}
-
 /** Main class representing a Kafka consumer group. */
 export class ConsumerGroup implements IResourceBase, ISearchable, IdItem {
   connectionId: ConnectionId;
