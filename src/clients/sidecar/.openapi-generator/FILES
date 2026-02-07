@@ -33,6 +33,7 @@ models/HealthResponse.ts
 models/JsonNode.ts
 models/JsonNodeType.ts
 models/KafkaClusterConfig.ts
+models/KafkaClusterConfigCredentials.ts
 models/KafkaClusterStatus.ts
 models/KerberosCredentials.ts
 models/KeyOrValueMetadata.ts
@@ -53,6 +54,7 @@ models/ProduceResponse.ts
 models/ProduceResponseData.ts
 models/RecordMetadata.ts
 models/SchemaRegistryConfig.ts
+models/SchemaRegistryConfigCredentials.ts
 models/SchemaRegistryStatus.ts
 models/ScramCredentials.ts
 models/SidecarAccessToken.ts

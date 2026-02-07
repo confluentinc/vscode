@@ -20,6 +20,13 @@ import {
   TLSConfigToJSON,
   TLSConfigToJSONTyped,
 } from "./TLSConfig";
+import type { KafkaClusterConfigCredentials } from "./KafkaClusterConfigCredentials";
+import {
+  KafkaClusterConfigCredentialsFromJSON,
+  KafkaClusterConfigCredentialsFromJSONTyped,
+  KafkaClusterConfigCredentialsToJSON,
+  KafkaClusterConfigCredentialsToJSONTyped,
+} from "./KafkaClusterConfigCredentials";
 
 /**
  * Kafka cluster configuration.
@@ -34,11 +41,11 @@ export interface KafkaClusterConfig {
    */
   bootstrap_servers: string;
   /**
-   * The credentials for the Kafka cluster, or null if no authentication is required
-   * @type {string}
+   *
+   * @type {KafkaClusterConfigCredentials}
    * @memberof KafkaClusterConfig
    */
-  credentials?: KafkaClusterConfigCredentialsEnum | null;
+  credentials?: KafkaClusterConfigCredentials;
   /**
    * The SSL configuration for connecting to the Kafka cluster. To disable, set `enabled` to false. To use the default SSL settings, set `enabled` to true and leave the `truststore` and `keystore` fields unset.
    * @type {TLSConfig}
@@ -52,12 +59,6 @@ export interface KafkaClusterConfig {
    */
   client_id_suffix?: string | null;
 }
-
-/**
- * @export
- * @enum {string}
- */
-export enum KafkaClusterConfigCredentialsEnum {}
 
 /**
  * Check if a given object implements the KafkaClusterConfig interface.
@@ -80,7 +81,10 @@ export function KafkaClusterConfigFromJSONTyped(
   }
   return {
     bootstrap_servers: json["bootstrap_servers"],
-    credentials: json["credentials"] == null ? undefined : json["credentials"],
+    credentials:
+      json["credentials"] == null
+        ? undefined
+        : KafkaClusterConfigCredentialsFromJSON(json["credentials"]),
     ssl: json["ssl"] == null ? undefined : TLSConfigFromJSON(json["ssl"]),
     client_id_suffix: json["client_id_suffix"] == null ? undefined : json["client_id_suffix"],
   };
@@ -100,7 +104,7 @@ export function KafkaClusterConfigToJSONTyped(
 
   return {
     bootstrap_servers: value["bootstrap_servers"],
-    credentials: value["credentials"],
+    credentials: KafkaClusterConfigCredentialsToJSON(value["credentials"]),
     ssl: TLSConfigToJSON(value["ssl"]),
     client_id_suffix: value["client_id_suffix"],
   };

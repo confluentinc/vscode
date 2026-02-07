@@ -20,6 +20,13 @@ import {
   TLSConfigToJSON,
   TLSConfigToJSONTyped,
 } from "./TLSConfig";
+import type { SchemaRegistryConfigCredentials } from "./SchemaRegistryConfigCredentials";
+import {
+  SchemaRegistryConfigCredentialsFromJSON,
+  SchemaRegistryConfigCredentialsFromJSONTyped,
+  SchemaRegistryConfigCredentialsToJSON,
+  SchemaRegistryConfigCredentialsToJSONTyped,
+} from "./SchemaRegistryConfigCredentials";
 
 /**
  * Schema Registry configuration.
@@ -40,11 +47,11 @@ export interface SchemaRegistryConfig {
    */
   uri: string;
   /**
-   * The credentials for the Schema Registry, or null if no authentication is required
-   * @type {string}
+   *
+   * @type {SchemaRegistryConfigCredentials}
    * @memberof SchemaRegistryConfig
    */
-  credentials?: SchemaRegistryConfigCredentialsEnum | null;
+  credentials?: SchemaRegistryConfigCredentials;
   /**
    * The SSL configuration for connecting to Schema Registry. If null, the connection will use SSL with the default settings. To disable, set `enabled` to false.
    * @type {TLSConfig}
@@ -52,12 +59,6 @@ export interface SchemaRegistryConfig {
    */
   ssl?: TLSConfig | null;
 }
-
-/**
- * @export
- * @enum {string}
- */
-export enum SchemaRegistryConfigCredentialsEnum {}
 
 /**
  * Check if a given object implements the SchemaRegistryConfig interface.
@@ -81,7 +82,10 @@ export function SchemaRegistryConfigFromJSONTyped(
   return {
     id: json["id"] == null ? undefined : json["id"],
     uri: json["uri"],
-    credentials: json["credentials"] == null ? undefined : json["credentials"],
+    credentials:
+      json["credentials"] == null
+        ? undefined
+        : SchemaRegistryConfigCredentialsFromJSON(json["credentials"]),
     ssl: json["ssl"] == null ? undefined : TLSConfigFromJSON(json["ssl"]),
   };
 }
@@ -101,7 +105,7 @@ export function SchemaRegistryConfigToJSONTyped(
   return {
     id: value["id"],
     uri: value["uri"],
-    credentials: value["credentials"],
+    credentials: SchemaRegistryConfigCredentialsToJSON(value["credentials"]),
     ssl: TLSConfigToJSON(value["ssl"]),
   };
 }
