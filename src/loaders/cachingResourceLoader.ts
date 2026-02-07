@@ -1,6 +1,7 @@
 import type { ConsumerGroupData, TopicData } from "../clients/kafkaRest";
 import { Logger } from "../logging";
-import { Consumer, ConsumerGroup, parseConsumerGroupState } from "../models/consumerGroup";
+import type { ConsumerGroupState } from "../models/consumerGroup";
+import { Consumer, ConsumerGroup } from "../models/consumerGroup";
 import type { Environment, EnvironmentType } from "../models/environment";
 import type { KafkaCluster, KafkaClusterType } from "../models/kafkaCluster";
 import type { EnvironmentId } from "../models/resource";
@@ -308,7 +309,7 @@ export abstract class CachingResourceLoader<
           environmentId: cluster.environmentId,
           clusterId: cluster.id,
           consumerGroupId: data.consumer_group_id,
-          state: parseConsumerGroupState(data.state),
+          state: data.state as ConsumerGroupState,
           isSimple: data.is_simple,
           partitionAssignor: data.partition_assignor,
           coordinatorId: data.coordinator?.related ? parseInt(data.coordinator.related, 10) : null,
