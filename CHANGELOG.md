@@ -17,6 +17,7 @@ All notable changes to this extension will be documented in this file.
   - `flinkDatabase`: sync the Flink Database view if the selected (CCloud) Kafka cluster has any
     associated Flink compute pools
   - `all`: sync both views as described above
+- Support for consuming messages with schema ID headers
 
 ### Changed
 
