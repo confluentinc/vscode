@@ -1,10 +1,9 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import * as vscode from "vscode";
 import type { ConfigurationChangeEvent } from "vscode";
+import * as vscode from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
 import {
   STATEMENT_POLLING_CONCURRENCY,
@@ -21,13 +20,6 @@ import type { MonitoredStatement } from "./flinkStatementManager";
 import { FlinkStatementManager, MonitoredStatements } from "./flinkStatementManager";
 
 describe("flinkStatementManager.ts", () => {
-  before(async () => {
-    // otherwise logging calls when debugging will fail
-    // due to not having determined writeable tmpdir
-    // yet. Sigh.
-    await getTestExtensionContext();
-  });
-
   describe("FlinkStatementManager", () => {
     let sandbox: sinon.SinonSandbox;
 

@@ -26,7 +26,6 @@ import { createFlinkAIModel } from "../../tests/unit/testResources/flinkAIModel"
 import { createFlinkAITool } from "../../tests/unit/testResources/flinkAITool";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type { ArtifactV1FlinkArtifactMetadata } from "../clients/flinkArtifacts";
 import type { ConnectionSpec } from "../clients/sidecar";
 import {
@@ -69,10 +68,6 @@ import { clearWorkspaceState, getWorkspaceState } from "./utils";
 
 describe("storage/resourceManager", () => {
   let rm: ResourceManager;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     rm = getResourceManager();

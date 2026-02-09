@@ -2,8 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceConfiguration";
 import { TEST_CANCELLATION_TOKEN } from "../../../tests/unit/testResources/docker";
-import { getTestExtensionContext } from "../../../tests/unit/testUtils";
-import {
+import type {
   ContainerCreateResponse,
   ContainerInspectResponse,
   ContainerSummary,
@@ -19,7 +18,7 @@ import { DEFAULT_UNIX_SOCKET_PATH } from "../configs";
 import * as dockerContainers from "../containers";
 import * as dockerNetworks from "../networks";
 import * as ports from "../ports";
-import { LocalResourceContainer } from "./base";
+import type { LocalResourceContainer } from "./base";
 import { CONTAINER_NAME, MedusaWorkflow } from "./medusa";
 import { registerLocalResourceWorkflows } from "./workflowInitialization";
 
@@ -46,12 +45,9 @@ describe("docker/workflows/medusa.ts MedusaWorkflow", () => {
   let stopContainerStub: sinon.SinonStub;
   let waitForLocalResourceEventChangeStub: sinon.SinonStub;
 
-  before(async () => {
-    registerLocalResourceWorkflows();
-    await getTestExtensionContext();
-  });
-
   beforeEach(() => {
+    registerLocalResourceWorkflows();
+
     sandbox = sinon.createSandbox();
 
     stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);

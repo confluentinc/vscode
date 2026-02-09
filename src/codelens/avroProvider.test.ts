@@ -2,7 +2,6 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { CodeLens, Position, Range, TextDocument, Uri } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { COMMANDS } from "../commands/medusaCodeLens";
 import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import { AvroCodelensProvider } from "./avroProvider";
@@ -12,10 +11,6 @@ const testUri = Uri.parse("file:///test/schema.avsc");
 describe("codelens/avroProvider.ts", () => {
   let sandbox: sinon.SinonSandbox;
   let stubbedConfigs: StubbedWorkspaceConfiguration;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

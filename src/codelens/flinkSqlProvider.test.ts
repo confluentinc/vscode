@@ -10,7 +10,6 @@ import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfig
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
@@ -45,10 +44,6 @@ describe("codelens/flinkSqlProvider.ts", () => {
   let sandbox: sinon.SinonSandbox;
   let ccloudLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
   let hasCCloudAuthSessionStub: sinon.SinonStub;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

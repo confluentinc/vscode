@@ -14,7 +14,6 @@ import {
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import type { CCloudResourceLoader, LocalResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import type { KafkaCluster } from "../models/kafkaCluster";
@@ -27,11 +26,6 @@ import type { QuickPickItemWithValue } from "./types";
 describe("quickpicks/kafkaClusters", () => {
   let sandbox: sinon.SinonSandbox;
   let showQuickPickStub: sinon.SinonStub;
-
-  before(async () => {
-    // Set up the test environment
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

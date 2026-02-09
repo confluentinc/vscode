@@ -4,17 +4,12 @@ import { commands } from "vscode";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { StubbedWebviewView } from "../../tests/stubs/webviews";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
 import { Phase } from "../models/flinkStatement";
 import { FlinkStatementResultsPanelProvider } from "../panelProviders/flinkStatementResults";
 
 describe("panelProviders/flinkStatementResults.ts", () => {
   let sandbox: sinon.SinonSandbox;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

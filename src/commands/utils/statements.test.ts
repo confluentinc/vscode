@@ -5,7 +5,6 @@ import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import { StubbedWebviewPanel } from "../../../tests/stubs/webviews";
 import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_FLINK_STATEMENT } from "../../../tests/unit/testResources/flinkStatement";
-import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import { STATEMENT_RESULTS_LOCATION } from "../../extensionSettings/constants";
 import * as resultManager from "../../flinkSql/flinkStatementResultsManager";
 import { FlinkStatementWebviewPanelCache } from "../../flinkSql/statementUtils";
@@ -14,10 +13,6 @@ import { confirmActionOnStatement, openFlinkStatementResultsView } from "./state
 
 describe("src/commands/utils/statements.ts", () => {
   let sandbox: sinon.SinonSandbox;
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
