@@ -115,13 +115,14 @@ sonarqube:
   languages:
     - javascript
     - typescript
+  coverage_sources:
+    - "src"
   # only affects sonar.exclusions in sonar-project.properties
   coverage_exclusions:
     - "src/testing.ts"
     - "src/**/*.test.ts"
     - "src/clients/**/*"
     - "src/**/*.spec.ts"
-    - "tests/**"
   coverage_reports:
     - "coverage/lcov-functional.info"
     - "coverage/lcov.info"
