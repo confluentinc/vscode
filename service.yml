@@ -112,6 +112,12 @@ semaphore:
           default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts"
 sonarqube:
   enable: true
+  languages:
+    - javascript
+    - typescript
+  coverage_sources:
+    - "src"
+  # only affects sonar.exclusions in sonar-project.properties
   coverage_exclusions:
     - "src/testing.ts"
     - "src/**/*.test.ts"
