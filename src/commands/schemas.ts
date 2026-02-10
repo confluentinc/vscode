@@ -532,7 +532,7 @@ export async function uploadSchemaFromFileCommand(
   // prompt for the editor/file first via the URI quickpick, only allowing a subset of URI schemes,
   // editor languages, and file extensions
   const uriSchemes = ["file", "untitled", SCHEMA_URI_SCHEME];
-  const languageIds = ["plaintext", "avroavsc", "protobuf", "proto3", "json"];
+  const languageIds = ["plaintext", "avroavsc", "protobuf", "proto3", "json", "proto", "textproto"];
   const fileFilters = {
     "Schema files": ["avsc", "avro", "json", "proto"],
   };
