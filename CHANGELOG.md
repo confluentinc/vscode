@@ -33,10 +33,6 @@ All notable changes to this extension will be documented in this file.
   name of the focused resource (Kafka cluster, Flink compute pool) first, followed by the cloud
   provider/region (if using a CCloud resource), followed by the environment name.
 
-### Removed
-
-### Fixed
-
 ## 2.1.0
 
 ### Added
