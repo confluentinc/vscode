@@ -1436,7 +1436,7 @@ tags:
   description: Check the health of the application
 info:
   title: Confluent ide-sidecar API
-  version: 0.259.0
+  version: 0.261.0
   description: "API for the Confluent ide-sidecar, part of Confluent for VS Code"
   termsOfService: Your terms here
   contact:
