@@ -320,7 +320,7 @@ export class AuthCredentials extends HTMLElement {
                 data-on-input="this.updateValue(event)"
                 max="60000"
                 min="0"
-                step="1000"
+                step="1"
                 placeholder="0"
                 title="The timeout in milliseconds when connecting to your identity provider."
               />
