@@ -1,0 +1,8 @@
+# auto-generated code from openapi-generator-cli
+src/clients/
+
+# copied from ide-sidecar
+src/graphql/sidecarGraphQL.d.ts
+
+# build output
+out/
