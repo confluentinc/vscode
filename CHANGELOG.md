@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 2.2.0
+
 ### Added
 
 - A new
@@ -30,10 +32,6 @@ All notable changes to this extension will be documented in this file.
 - The descriptions of the Topics, Schemas, Flink Statements, and Flink Database views now show the
   name of the focused resource (Kafka cluster, Flink compute pool) first, followed by the cloud
   provider/region (if using a CCloud resource), followed by the environment name.
-
-### Removed
-
-### Fixed
 
 ## 2.1.0
 
