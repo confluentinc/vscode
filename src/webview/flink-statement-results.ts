@@ -7,6 +7,7 @@ import type {
   ResultCount,
   StreamState,
 } from "../flinkSql/flinkStatementResultsManager";
+import { stripWarningsFromDetail, type StatementWarning } from "../flinkSql/warningParser";
 import { ViewModel } from "./bindings/view-model";
 import type { WebviewStorage } from "./comms/comms";
 import { createWebviewStorage, sendWebviewMessage } from "./comms/comms";
@@ -47,6 +48,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     failed: boolean;
     areResultsViewable: boolean;
     isForeground: boolean;
+    warnings: StatementWarning[];
   }>;
   readonly waitingForResults: Signal<boolean>;
   readonly emptyFilterResult: Signal<boolean>;
@@ -64,6 +66,25 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly gridTemplateColumns: Signal<string>;
   readonly pageButtons: Signal<(number | "ldot" | "rdot")[]>;
   readonly detailText: Signal<string | null>;
+  readonly hasWarnings: Signal<boolean>;
+  readonly hasCriticalWarnings: Signal<boolean>;
+  readonly formattedWarnings: Signal<
+    Array<{
+      severity: "CRITICAL" | "MODERATE" | "LOW";
+      message: string;
+      reason: string;
+      createdAt: string;
+      isCritical: boolean;
+    }>
+  >;
+  readonly detailItems: Signal<
+    Array<{
+      severity: "ERROR" | "CRITICAL" | "MODERATE" | "LOW" | "INFO";
+      message: string;
+      reason?: string;
+      createdAt?: string;
+    }>
+  >;
   readonly pagePersistWatcher: () => void;
 
   /**
@@ -149,6 +170,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
         failed: false,
         areResultsViewable: true,
         isForeground: false,
+        warnings: [],
       },
     );
 
@@ -165,9 +187,82 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       return filter != null ? filter > 0 : total > 0;
     });
     this.detailText = this.derive(() => {
-      const detail = this.statementMeta().detail;
-      return detail ? detail.replace(/\n/g, "<br>") : null;
+      const meta = this.statementMeta();
+      const detail = meta.detail;
+      if (!detail) {
+        return null;
+      }
+      // Strip warnings from detail when API warnings are displayed separately
+      const hasApiWarnings = meta.warnings.length > 0;
+      const processedDetail = hasApiWarnings ? stripWarningsFromDetail(detail) : detail;
+      return processedDetail ? processedDetail.replace(/\n/g, "<br>") : null;
     });
+
+    /** Whether the statement has any warnings */
+    this.hasWarnings = this.derive(() => {
+      return this.statementMeta().warnings.length > 0;
+    });
+
+    /** Whether the statement has any CRITICAL severity warnings */
+    this.hasCriticalWarnings = this.derive(() => {
+      return this.statementMeta().warnings.some((w) => w.severity === "CRITICAL");
+    });
+
+    /** Warnings formatted for display in the UI */
+    this.formattedWarnings = this.derive(() => {
+      return this.statementMeta().warnings.map((w) => ({
+        severity: w.severity,
+        message: w.message,
+        reason: w.reason,
+        createdAt: w.created_at,
+        isCritical: w.severity === "CRITICAL",
+      }));
+    });
+
+    /**
+     * Unified list of all detail items (errors, warnings, info) for display.
+     * Ordered by severity: ERROR > CRITICAL > MODERATE > LOW > INFO
+     */
+    this.detailItems = this.derive(() => {
+      const items: Array<{
+        severity: "ERROR" | "CRITICAL" | "MODERATE" | "LOW" | "INFO";
+        message: string;
+        reason?: string;
+        createdAt?: string;
+      }> = [];
+
+      const meta = this.statementMeta();
+      const detail = this.detailText();
+
+      // Add error message if statement failed
+      if (meta.failed && detail) {
+        items.push({
+          severity: "ERROR",
+          message: detail,
+        });
+      }
+
+      // Add warnings
+      for (const warning of this.formattedWarnings()) {
+        items.push({
+          severity: warning.severity,
+          message: warning.message,
+          reason: warning.reason,
+          createdAt: warning.createdAt,
+        });
+      }
+
+      // Add info message if not failed
+      if (!meta.failed && detail) {
+        items.push({
+          severity: "INFO",
+          message: detail,
+        });
+      }
+
+      return items;
+    });
+
     /**
      * Short list of pages generated based on current results count and current
      * page. Always shows first and last page, current page with two siblings.
