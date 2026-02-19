@@ -1,6 +1,15 @@
 import { createHash } from "crypto";
 import { toKafkaTopicOperations } from "../../authz/types";
-import type { TopicData, TopicDataList, TopicV3Api } from "../../clients/kafkaRest";
+import type {
+  ConsumerData,
+  ConsumerDataList,
+  ConsumerGroupData,
+  ConsumerGroupDataList,
+  ConsumerGroupV3Api,
+  TopicData,
+  TopicDataList,
+  TopicV3Api,
+} from "../../clients/kafkaRest";
 import type { Schema as ResponseSchema, SubjectsV1Api } from "../../clients/schemaRegistryRest";
 import { isResponseError } from "../../errors";
 import type { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";
@@ -80,6 +89,53 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
   topicsResp.data = topicsResp.data.filter((topic) => topic.replication_factor! > 0);
 
   return topicsResp.data;
+}
+
+/** Fetch all consumer groups for a given Kafka cluster. */
+export async function fetchConsumerGroups(cluster: KafkaCluster): Promise<ConsumerGroupData[]> {
+  logger.debug(
+    `fetching consumer groups for ${cluster.connectionType} Kafka cluster ${cluster.id}`,
+  );
+
+  const sidecar = await getSidecar();
+  const client: ConsumerGroupV3Api = sidecar.getConsumerGroupV3Api(
+    cluster.id,
+    cluster.connectionId,
+  );
+  const response: ConsumerGroupDataList = await client.listKafkaConsumerGroups({
+    cluster_id: cluster.id,
+  });
+  const consumerGroups: ConsumerGroupData[] = response.data;
+
+  logger.debug(
+    `fetched ${consumerGroups.length} consumer group(s) for ${cluster.connectionType} Kafka cluster ${cluster.id}`,
+  );
+  return consumerGroups;
+}
+
+/** Fetch the members (consumers) of a given Kafka cluster's consumer group ID. */
+export async function fetchConsumerGroupMembers(
+  cluster: KafkaCluster,
+  consumerGroupId: string,
+): Promise<ConsumerData[]> {
+  logger.debug(
+    `fetching members for consumer group ${consumerGroupId} in ${cluster.connectionType} Kafka cluster ${cluster.id}`,
+  );
+
+  const sidecar = await getSidecar();
+  const client: ConsumerGroupV3Api = sidecar.getConsumerGroupV3Api(
+    cluster.id,
+    cluster.connectionId,
+  );
+  const response: ConsumerDataList = await client.listKafkaConsumers({
+    cluster_id: cluster.id,
+    consumer_group_id: consumerGroupId,
+  });
+
+  logger.debug(
+    `fetched ${response.data.length} member(s) for consumer group ${consumerGroupId} in ${cluster.connectionType} Kafka cluster ${cluster.id}`,
+  );
+  return response.data;
 }
 
 /**
