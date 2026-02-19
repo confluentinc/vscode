@@ -131,11 +131,12 @@ export async function fetchConsumerGroupMembers(
     cluster_id: cluster.id,
     consumer_group_id: consumerGroupId,
   });
+  const members: ConsumerData[] = response.data;
 
   logger.debug(
-    `fetched ${response.data.length} member(s) for consumer group ${consumerGroupId} in ${cluster.connectionType} Kafka cluster ${cluster.id}`,
+    `fetched ${members.length} member(s) for consumer group ${consumerGroupId} in ${cluster.connectionType} Kafka cluster ${cluster.id}`,
   );
-  return response.data;
+  return members;
 }
 
 /**
