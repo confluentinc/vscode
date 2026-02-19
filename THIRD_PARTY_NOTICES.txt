@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2026-1-17
+Date generated: 2026-2-19
 
-Revision ID: 184063daab068f275fe7752ef3cc445ed40d16eb
+Revision ID: 3fee66998b3a7f44565f38d66b41bd73d9266d57
 
 ================================================================================
 ================================================================================
@@ -71,7 +71,7 @@ No licenses found
 - @babel/types (7.26.10) [MIT]
 - @colors/colors (1.6.0) [MIT]
 - @dabh/diagnostics (2.0.3) [MIT]
-- @gql.tada/cli-utils (1.5.2) [ISC, MIT]
+- @gql.tada/cli-utils (1.5.2) [MIT, ISC]
 - @gql.tada/internal (1.0.5) [MIT]
 - @isaacs/cliui (8.0.2) [ISC]
 - @jridgewell/gen-mapping (0.3.5) [MIT]
@@ -120,7 +120,7 @@ No licenses found
 - @opentelemetry/semantic-conventions (1.28.0) [Apache-2.0]
 - @opentelemetry/semantic-conventions (1.30.0) [Apache-2.0]
 - @opentelemetry/sql-common (0.40.1) [Apache-2.0]
-- @pkgjs/parseargs (0.11.0) [Apache-2.0, MIT]
+- @pkgjs/parseargs (0.11.0) [MIT, Apache-2.0]
 - @prisma/instrumentation (6.4.1) [Apache-2.0]
 - @rollup/rollup-android-arm-eabi (4.24.0) [MIT]
 - @rollup/rollup-android-arm64 (4.24.0) [MIT]
@@ -343,7 +343,7 @@ No licenses found
 - locate-character (3.0.0) [MIT]
 - locate-path (6.0.0) [MIT]
 - lockfile (1.0.4) [ISC]
-- lodash (4.17.21) [MIT, CC0-1.0]
+- lodash (4.17.23) [MIT, CC0-1.0]
 - logform (2.7.0) [MIT]
 - loose-envify (1.4.0) [MIT]
 - lower-case (2.0.2) [MIT]
@@ -452,7 +452,7 @@ No licenses found
 - tslib (1.14.1) [0BSD]
 - tslib (2.8.1) [0BSD]
 - typescript (5.4.5) [Apache-2.0]
-- undici (6.21.2) [MIT]
+- undici (6.23.0) [MIT]
 - undici-types (6.21.0) [MIT]
 - unplugin (1.0.1) [MIT]
 - unzipit (1.4.3) [MIT]
@@ -545,7 +545,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-LICENSE
+package.json
 --------------------------------------------------------------------------------
 
 MIT License
@@ -1729,7 +1729,35 @@ Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
-ISC, MIT
+MIT, ISC
+
+* MIT *
+--------------------------------------------------------------------------------
+File matches:
+dist/chunks/index-chunk.js
+dist/chunks/index-chunk.mjs
+LICENSE.md
+package.json
+--------------------------------------------------------------------------------
+
+Copyright (c)  0no.co
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 * ISC *
 --------------------------------------------------------------------------------
@@ -2097,34 +2125,6 @@ MIT License
 
 Copyright (c) 0no.co
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-* MIT *
---------------------------------------------------------------------------------
-File matches:
-dist/chunks/index-chunk.js
-dist/chunks/index-chunk.mjs
-LICENSE.md
-package.json
---------------------------------------------------------------------------------
-
-Copyright (c)  0no.co
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -11461,7 +11461,33 @@ Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
-Apache-2.0, MIT
+MIT, Apache-2.0
+
+* MIT *
+--------------------------------------------------------------------------------
+File matches:
+internal/primordials.js
+package.json
+--------------------------------------------------------------------------------
+
+Copyright (c)  Node.js contributors. All rights reserved.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 * Apache-2.0 *
 --------------------------------------------------------------------------------
@@ -11671,32 +11697,6 @@ LICENSE
    See the License for the specific language governing permissions and
    limitations under the License.
 
-
-* MIT *
---------------------------------------------------------------------------------
-File matches:
-internal/primordials.js
-package.json
---------------------------------------------------------------------------------
-
-Copyright (c)  Node.js contributors. All rights reserved.
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 
 
 --------------------------------------------------------------------------------
@@ -13230,7 +13230,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-build/types/proxy/helpers.d.ts
+package.json
 --------------------------------------------------------------------------------
 
 MIT License
@@ -13338,7 +13338,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-LICENSE
+package.json
 --------------------------------------------------------------------------------
 
 MIT License
@@ -15488,10 +15488,6 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
---------------------------------------------------------------------------------
-File matches:
-package.json
---------------------------------------------------------------------------------
 
 Copyright (c) 2010-2018 Caolan McMahon
 
@@ -15827,6 +15823,10 @@ Package Depth: Transitive
 * Declared Licenses *
 Apache-2.0
 
+--------------------------------------------------------------------------------
+File matches:
+package.json
+--------------------------------------------------------------------------------
 
                                  Apache License
                            Version 2.0, January 2004
@@ -16386,7 +16386,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-LICENSE
+README.md
 --------------------------------------------------------------------------------
 
 MIT License
@@ -18010,6 +18010,10 @@ Package Depth: Direct
 * Declared Licenses *
 ISC
 
+--------------------------------------------------------------------------------
+File matches:
+package.json
+--------------------------------------------------------------------------------
 
 Copyright 2010-2023 Mike Bostock
 
@@ -18167,7 +18171,7 @@ ISC
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE
 --------------------------------------------------------------------------------
 
 Copyright 2010-2022 Mike Bostock
@@ -18822,10 +18826,6 @@ Package Depth: Transitive
 ISC, Apache-2.0
 
 * ISC *
---------------------------------------------------------------------------------
-File matches:
-package.json
---------------------------------------------------------------------------------
 
 Copyright (c) 2010-2024 Mike Bostock
 Permission to use, copy, modify, and distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
@@ -20257,6 +20257,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
 
 The MIT License (MIT)
 
@@ -22735,7 +22739,7 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 File matches:
-LICENSE.txt
+contract-tests/package.json
 --------------------------------------------------------------------------------
 
 Copyright 2019 Catamorphic, Co.
@@ -22907,9 +22911,9 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 --------------------------------------------------------------------------------
-Package Title: lodash (4.17.21)
+Package Title: lodash (4.17.23)
 
-Package Locator: npm+lodash$4.17.21
+Package Locator: npm+lodash$4.17.23
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -23424,7 +23428,7 @@ ISC
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE
 --------------------------------------------------------------------------------
 
 The ISC License
@@ -25366,6 +25370,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+lib/_stream_writable.js
+--------------------------------------------------------------------------------
 
 Node.js is licensed for use as follows:
 
@@ -28403,7 +28411,7 @@ Package Depth: Transitive
 
 --------------------------------------------------------------------------------
 File matches:
-CopyrightNotice.txt
+package.json
 --------------------------------------------------------------------------------
 
 Copyright (c) Microsoft Corporation.
@@ -28627,9 +28635,9 @@ END OF TERMS AND CONDITIONS
 
 
 --------------------------------------------------------------------------------
-Package Title: undici (6.21.2)
+Package Title: undici (6.23.0)
 
-Package Locator: npm+undici$6.21.2
+Package Locator: npm+undici$6.23.0
 
 Package Depth: Direct
 --------------------------------------------------------------------------------
@@ -28639,7 +28647,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE
 --------------------------------------------------------------------------------
 
 MIT License
@@ -46413,13 +46421,13 @@ Copyright (c) 2019 David Pershouse
 
 Copyright (c) 2019 Functional Software, Inc. dba Sentry
 
-Copyright (c) 2021 Sergio Xalambrí
-
-Copyright (c)  Joyent, Inc.and other Node contributors.
-
 Copyright (c) 2012-2014 Roman Shtylman <shtylman@gmail.com>
 
 Copyright (c) 2015 Douglas Christopher Wilson <doug@somethingdoug.com>
+
+Copyright (c)  Joyent, Inc.and other Node contributors.
+
+Copyright (c) 2021 Sergio Xalambrí
 
 Copyright (c) 2021 PRESENT Nuxt Contrib
 
@@ -46434,8 +46442,6 @@ Copyright (c) 2022 Inspect JS
 Copyright (c) 2022 present Johnson Chu
 
 Copyright (c) 2023 Functional Software, Inc. dba Sentry
-
-Copyright (c) 2013 Nathan Rajlich <nathan@tootallnate.net>*
 
 Copyright (c) 2023 Sven Sauleau
 
@@ -46454,6 +46460,8 @@ Copyright (c) Jordan Harband and contributors
 Copyright (c)  Jordan Harband and contributors
 
 Copyright (c) Matteo Collina and Undici contributors
+
+Copyright (c)  Matteo Collina and Undici contributors
 
 Copyright (c) Marak Squires
 
@@ -46871,4 +46879,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2026-1-17
+Report Generated by FOSSA on 2026-2-19
