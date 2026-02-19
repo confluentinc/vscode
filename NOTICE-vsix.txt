@@ -750,7 +750,7 @@ Other developers who have contributed code are:
 ## Copyright
 
 Copyright 2007-, Tatu Saloranta (tatu.saloranta@iki.fi)
-============ com.fasterxml.jackson.core.jackson-annotations-2.18.2 ============
+============ com.fasterxml.jackson.core.jackson-annotations-2.19.2 ============
 
 # Jackson JSON processor
 
@@ -774,7 +774,7 @@ A list of contributors may be found from CREDITS(-2.x) file, which is included
 in some artifacts (usually source distributions); but is always available
 from the source code management (SCM) system project uses.
 
-============ com.fasterxml.jackson.core.jackson-core-2.18.2 ============
+============ com.fasterxml.jackson.core.jackson-core-2.19.2 ============
 
 # Jackson JSON processor
 
@@ -809,7 +809,7 @@ Copyright © 2023 Werner Randelshofer, Switzerland. MIT License.
 See FastDoubleParser-NOTICE for details of other source code included in FastDoubleParser
 and the licenses and copyrights that apply to that code.
 
-============ com.fasterxml.jackson.core.jackson-databind-2.18.2 ============
+============ com.fasterxml.jackson.core.jackson-databind-2.19.2 ============
 
 # Jackson JSON processor
 
@@ -857,7 +857,7 @@ A list of contributors may be found from CREDITS file, which is included
 in some artifacts (usually source distributions); but is always available
 from the source code management (SCM) system project uses.
 
-============ com.fasterxml.jackson.dataformat.jackson-dataformat-csv-2.18.2 ============
+============ com.fasterxml.jackson.dataformat.jackson-dataformat-csv-2.19.2 ============
 
 # Jackson JSON processor
 
@@ -881,7 +881,7 @@ A list of contributors may be found from CREDITS file, which is included
 in some artifacts (usually source distributions); but is always available
 from the source code management (SCM) system project uses.
 
-============ com.fasterxml.jackson.dataformat.jackson-dataformat-yaml-2.18.2 ============
+============ com.fasterxml.jackson.dataformat.jackson-dataformat-yaml-2.19.2 ============
 
 # Jackson JSON processor
 
@@ -905,7 +905,7 @@ A list of contributors may be found from CREDITS file, which is included
 in some artifacts (usually source distributions); but is always available
 from the source code management (SCM) system project uses.
 
-============ com.fasterxml.jackson.datatype.jackson-datatype-jdk8-2.18.2 ============
+============ com.fasterxml.jackson.datatype.jackson-datatype-jdk8-2.19.2 ============
 
 # Jackson JSON processor
 
@@ -925,7 +925,7 @@ A list of contributors may be found from CREDITS file, which is included
 in some artifacts (usually source distributions); but is always available
 from the source code management (SCM) system project uses.
 
-============ com.fasterxml.jackson.datatype.jackson-datatype-jsr310-2.18.2 ============
+============ com.fasterxml.jackson.datatype.jackson-datatype-jsr310-2.19.2 ============
 
 # Jackson JSON processor
 
@@ -945,7 +945,7 @@ A list of contributors may be found from CREDITS file, which is included
 in some artifacts (usually source distributions); but is always available
 from the source code management (SCM) system project uses.
 
-============ com.fasterxml.jackson.module.jackson-module-parameter-names-2.18.2 ============
+============ com.fasterxml.jackson.module.jackson-module-parameter-names-2.19.2 ============
 
 # Jackson JSON processor
 
@@ -989,7 +989,7 @@ Copyright 2001-2010 The Apache Software Foundation
 This product includes software developed by
 The Apache Software Foundation (http://www.apache.org/).
 
-============ commons-io.commons-io-2.18.0 ============
+============ commons-io.commons-io-2.16.0 ============
 
 Apache Commons IO
 Copyright 2002-2024 The Apache Software Foundation
@@ -997,21 +997,28 @@ Copyright 2002-2024 The Apache Software Foundation
 This product includes software developed at
 The Apache Software Foundation (https://www.apache.org/).
 
-============ commons-logging.commons-logging-1.3.2 ============
+============ commons-logging.commons-logging-1.3.5 ============
 
 Apache Commons Logging
-Copyright 2001-2024 The Apache Software Foundation
+Copyright 2001-2025 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (https://www.apache.org/).
 
-============ commons-validator.commons-validator-1.9.0 ============
+============ commons-validator.commons-validator-1.10.0 ============
 
 Apache Commons Validator
-Copyright 2002-2024 The Apache Software Foundation
+Copyright 2002-2025 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (https://www.apache.org/).
+
+============ io.swagger.core.v3.swagger-annotations-2.2.29 ============
+
+Swagger Core - swagger-annotations
+Copyright (c) 2015. SmartBear Software Inc.
+Swagger Core - swagger-annotations  is licensed under Apache 2.0 license.
+Copy of the Apache 2.0 license can be found in `LICENSE` file.
 
 ============ jakarta.activation.jakarta.activation-api-2.1.3 ============
 
@@ -1151,7 +1158,7 @@ please check the country's laws, regulations and policies concerning the import,
 possession, or use, and re-export of encryption software, to see if this is
 permitted.
 
-============ jakarta.el.jakarta.el-api-5.0.1 ============
+============ jakarta.el.jakarta.el-api-6.0.1 ============
 
 # Notices for Jakarta Expression Language
 
@@ -1796,7 +1803,7 @@ please check the country's laws, regulations and policies concerning the import,
 possession, or use, and re-export of encryption software, to see if this is
 permitted.
 
-============ joda-time.joda-time-2.13.1 ============
+============ joda-time.joda-time-2.14.0 ============
 
 =============================================================================
 = NOTICE file corresponding to section 4d of the Apache License Version 2.0 =
@@ -1813,7 +1820,7 @@ Copyright 2009-2024 The Apache Software Foundation
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
 
-============ org.apache.commons.commons-compress-1.27.1 ============
+============ org.apache.commons.commons-compress-1.26.1 ============
 
 Apache Commons Compress
 Copyright 2002-2024 The Apache Software Foundation
@@ -1821,13 +1828,46 @@ Copyright 2002-2024 The Apache Software Foundation
 This product includes software developed at
 The Apache Software Foundation (https://www.apache.org/).
 
-============ org.apache.commons.commons-lang3-3.17.0 ============
+============ org.apache.commons.commons-lang3-3.18.0 ============
 
 Apache Commons Lang
-Copyright 2001-2024 The Apache Software Foundation
+Copyright 2001-2025 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (https://www.apache.org/).
+
+============ org.apache.httpcomponents.client5.httpclient5-5.4.4 ============
+
+
+Apache HttpClient
+Copyright 1999-2021 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+
+============ org.apache.httpcomponents.core5.httpcore5-5.3.5 ============
+
+
+Apache HttpComponents Core HTTP/1.1
+Copyright 2005-2021 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+
+============ org.apache.httpcomponents.core5.httpcore5-h2-5.3.5 ============
+
+
+Apache HttpComponents Core HTTP/2
+Copyright 2005-2021 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
 
 ============ org.apache.maven.shared.maven-shared-utils-3.4.2 ============
 
