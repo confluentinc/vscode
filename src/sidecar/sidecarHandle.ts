@@ -21,6 +21,7 @@ import {
 import {
   ConfigsV3Api,
   Configuration as KafkaRestConfiguration,
+  ConsumerGroupV3Api,
   PartitionV3Api,
   RecordsV3Api,
   TopicV3Api,
@@ -267,6 +268,22 @@ export class SidecarHandle {
       },
     });
     return new TopicV3Api(config);
+  }
+
+  /**
+   * Creates and returns a (Kafka v3 REST OpenAPI spec) {@link ConsumerGroupV3Api} client instance
+   * with a preconfigured {@link KafkaRestConfiguration}.
+   */
+  public getConsumerGroupV3Api(clusterId: string, connectionId: ConnectionId): ConsumerGroupV3Api {
+    const config = new KafkaRestConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: {
+        ...this.defaultClientConfigParams.headers,
+        [CLUSTER_ID_HEADER]: clusterId,
+        [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
+      },
+    });
+    return new ConsumerGroupV3Api(config);
   }
 
   public getConfigsV3Api(clusterId: string, connectionId: ConnectionId): ConfigsV3Api {
