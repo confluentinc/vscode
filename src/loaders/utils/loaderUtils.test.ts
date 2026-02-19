@@ -10,8 +10,15 @@ import {
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION_ID } from "../../../tests/unit/testResources/organization";
 import { createResponseError, createTestTopicData } from "../../../tests/unit/testUtils";
-import { TopicV3Api } from "../../clients/kafkaRest";
-import type { TopicData } from "../../clients/kafkaRest/models";
+import { ConsumerGroupV3Api, TopicV3Api } from "../../clients/kafkaRest";
+import type {
+  ConsumerData,
+  ConsumerDataList,
+  ConsumerGroupData,
+  ConsumerGroupDataList,
+  Relationship,
+  TopicData,
+} from "../../clients/kafkaRest/models";
 import type {
   GetSchemaByVersionRequest,
   Schema as ResponseSchema,
@@ -31,6 +38,9 @@ export const topicsResponseData: TopicData[] = [
   createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic3", ["READ", "WRITE"]),
   createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic4", ["READ", "WRITE"]),
 ];
+// required for ConsumerGroupData/ConsumerGroupDataList but will be unused in the associated tests
+const testMetadata = { self: "", resource_name: null };
+const testRelationship: Relationship = { related: "" };
 
 describe("loaderUtils.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -322,6 +332,147 @@ describe("loaderUtils.ts", () => {
         );
 
         sinon.assert.notCalled(showPrivateNetworkingHelpNotificationStub);
+      });
+    });
+  });
+
+  describe("fetchConsumerGroups()", () => {
+    let stubbedSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
+    let stubbedClient: sinon.SinonStubbedInstance<ConsumerGroupV3Api>;
+
+    beforeEach(() => {
+      stubbedSidecar = getSidecarStub(sandbox);
+      stubbedClient = sandbox.createStubInstance(ConsumerGroupV3Api);
+      stubbedSidecar.getConsumerGroupV3Api.returns(stubbedClient);
+    });
+
+    it("should return a ConsumerGroupData array from listKafkaConsumerGroups", async () => {
+      const testGroups: ConsumerGroupData[] = [
+        {
+          kind: "KafkaConsumerGroup",
+          cluster_id: TEST_LOCAL_KAFKA_CLUSTER.id,
+          consumer_group_id: "group-1",
+          is_simple: false,
+          partition_assignor: "range",
+          state: "Stable",
+          metadata: testMetadata,
+          coordinator: testRelationship,
+          lag_summary: testRelationship,
+        },
+        {
+          kind: "KafkaConsumerGroup",
+          cluster_id: TEST_LOCAL_KAFKA_CLUSTER.id,
+          consumer_group_id: "group-2",
+          is_simple: false,
+          partition_assignor: "range",
+          state: "Empty",
+          metadata: testMetadata,
+          coordinator: testRelationship,
+          lag_summary: testRelationship,
+        },
+      ];
+      const testResponse: ConsumerGroupDataList = {
+        kind: "KafkaConsumerGroupList",
+        data: testGroups,
+        metadata: testMetadata,
+      };
+      stubbedClient.listKafkaConsumerGroups.resolves(testResponse);
+
+      const result = await loaderUtils.fetchConsumerGroups(TEST_LOCAL_KAFKA_CLUSTER);
+
+      assert.strictEqual(result.length, 2);
+      assert.deepStrictEqual(result[0], testGroups[0]);
+      assert.deepStrictEqual(result[1], testGroups[1]);
+      sinon.assert.calledOnceWithExactly(stubbedClient.listKafkaConsumerGroups, {
+        cluster_id: TEST_LOCAL_KAFKA_CLUSTER.id,
+      });
+    });
+
+    it("should return an empty array when no consumer groups exist", async () => {
+      stubbedClient.listKafkaConsumerGroups.resolves({
+        kind: "KafkaConsumerGroupList",
+        data: [],
+        metadata: testMetadata,
+      });
+
+      const result = await loaderUtils.fetchConsumerGroups(TEST_LOCAL_KAFKA_CLUSTER);
+
+      assert.strictEqual(result.length, 0);
+    });
+  });
+
+  describe("fetchConsumerGroupMembers()", () => {
+    let stubbedSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
+    let stubbedClient: sinon.SinonStubbedInstance<ConsumerGroupV3Api>;
+
+    const testGroupId = "test-group";
+
+    beforeEach(() => {
+      stubbedSidecar = getSidecarStub(sandbox);
+      stubbedClient = sandbox.createStubInstance(ConsumerGroupV3Api);
+      stubbedSidecar.getConsumerGroupV3Api.returns(stubbedClient);
+    });
+
+    it("should return a ConsumerData array from listKafkaConsumers", async () => {
+      const testConsumers: ConsumerData[] = [
+        {
+          kind: "KafkaConsumer",
+          cluster_id: TEST_LOCAL_KAFKA_CLUSTER.id,
+          consumer_group_id: testGroupId,
+          consumer_id: "consumer-1",
+          client_id: "client-1",
+          instance_id: "instance-1",
+          metadata: testMetadata,
+          assignments: testRelationship,
+        },
+        {
+          kind: "KafkaConsumer",
+          cluster_id: TEST_LOCAL_KAFKA_CLUSTER.id,
+          consumer_group_id: testGroupId,
+          consumer_id: "consumer-2",
+          client_id: "client-2",
+          instance_id: "instance-2",
+          metadata: testMetadata,
+          assignments: testRelationship,
+        },
+      ];
+      const testResponse: ConsumerDataList = {
+        kind: "KafkaConsumerList",
+        data: testConsumers,
+        metadata: testMetadata,
+      };
+      stubbedClient.listKafkaConsumers.resolves(testResponse);
+
+      const result = await loaderUtils.fetchConsumerGroupMembers(
+        TEST_LOCAL_KAFKA_CLUSTER,
+        testGroupId,
+      );
+
+      assert.strictEqual(result.length, 2);
+      assert.deepStrictEqual(result[0], testConsumers[0]);
+      assert.deepStrictEqual(result[1], testConsumers[1]);
+      sinon.assert.calledOnceWithExactly(stubbedClient.listKafkaConsumers, {
+        cluster_id: TEST_LOCAL_KAFKA_CLUSTER.id,
+        consumer_group_id: testGroupId,
+      });
+    });
+
+    it("should return an empty array when a consumer group has no (active) consumers/members", async () => {
+      stubbedClient.listKafkaConsumers.resolves({
+        kind: "KafkaConsumerList",
+        metadata: testMetadata,
+        data: [],
+      });
+
+      const result = await loaderUtils.fetchConsumerGroupMembers(
+        TEST_LOCAL_KAFKA_CLUSTER,
+        testGroupId,
+      );
+
+      assert.strictEqual(result.length, 0);
+      sinon.assert.calledOnceWithExactly(stubbedClient.listKafkaConsumers, {
+        cluster_id: TEST_LOCAL_KAFKA_CLUSTER.id,
+        consumer_group_id: testGroupId,
       });
     });
   });
