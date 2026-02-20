@@ -163,8 +163,8 @@ Look for:
 #### Testing
 
 - [ ] New functionality has corresponding tests
-- [ ] Unit tests use Mocha/Sinon patterns
-- [ ] E2E tests follow Page Object Model
+- [ ] Unit tests use Mocha/Sinon patterns (use `/mocha` and `/sinon` skills to verify)
+- [ ] E2E tests follow Page Object Model (use `/playwright` skill to verify)
 - [ ] No `.only` left in test files
 - [ ] Stubs are set up correctly (functions to stub are in separate modules)
 
@@ -376,5 +376,7 @@ recommending changes.
 - Use `Task` tool with Explore agent for deeper codebase context if needed
 - Use `/vscode-api` to verify VS Code API usage against official docs - catches deprecated APIs and
   incorrect patterns that still compile
+- Use `/mocha`, `/sinon`, and `/playwright` to verify test patterns against official docs when
+  reviewing test changes
 - Ask "is there a VS Code-native way to do this?" for any custom UI or state management - simpler
   solutions often exist via built-in APIs, commands, or `when` clause contributions
