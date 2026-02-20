@@ -46,6 +46,8 @@ Determine whether the user needs:
 
 Before fetching external docs, review the project's stubbing conventions from CLAUDE.md:
 
+- **Always use a sandbox**: create via `sinon.createSandbox()`, restore in `afterEach`. The project
+  uses sandboxes in virtually all test files — never use bare `sinon.stub()` or `sinon.spy()`
 - Design for stubbing: avoid calling same-module functions you need to stub — Sinon can only stub
   module exports, not internal calls within the same file
 - Extract dependencies to separate modules or pass them as parameters
@@ -135,17 +137,24 @@ When the user asks about a specific API (e.g., `stub.resolves()`, `sandbox.creat
 
 ## Common Lookup Patterns
 
+### Sandbox (project default)
+
+Always create stubs and spies through a sandbox for automatic cleanup:
+
+- **Create**: `const sandbox = sinon.createSandbox()`
+- **Stubs**: `sandbox.stub(obj, 'method')`, `sandbox.stub()` (anonymous)
+- **Spies**: `sandbox.spy(obj, 'method')`, `sandbox.spy()` (anonymous)
+- **Cleanup**: `sandbox.restore()` in `afterEach` (restores all fakes created through the sandbox)
+
 ### Stubs
 
-- **Create**: `sinon.stub()`, `sinon.stub(obj, 'method')`
 - **Behavior**: `stub.returns(val)`, `stub.resolves(val)`, `stub.rejects(err)`,
   `stub.callsFake(fn)`, `stub.throws(err)`
 - **Conditional**: `stub.withArgs(arg).returns(val)`, `stub.onFirstCall().returns(val)`
-- **Reset**: `stub.restore()`, `stub.reset()`, `stub.resetBehavior()`, `stub.resetHistory()`
+- **Reset**: `stub.reset()`, `stub.resetBehavior()`, `stub.resetHistory()`
 
 ### Spies
 
-- **Create**: `sinon.spy()`, `sinon.spy(obj, 'method')`
 - **Inspect**: `spy.calledOnce`, `spy.calledWith(arg)`, `spy.returnValues`, `spy.args`
 - **Count**: `spy.callCount`, `spy.firstCall`, `spy.secondCall`, `spy.lastCall`
 
@@ -157,17 +166,11 @@ When the user asks about a specific API (e.g., `stub.resolves()`, `sandbox.creat
 - `sinon.assert.notCalled(spy)`
 - `sinon.assert.callOrder(spy1, spy2)`
 
-### Sandbox
-
-- **Create**: `sinon.createSandbox()`
-- **Use**: `sandbox.stub(obj, 'method')`, `sandbox.spy(obj, 'method')`
-- **Cleanup**: `sandbox.restore()` (restores all fakes created through the sandbox)
-
 ### Fake Timers
 
-- **Create**: `sinon.useFakeTimers()`, `sinon.useFakeTimers({ now: timestamp })`
+- **Create**: `sandbox.useFakeTimers()`, `sandbox.useFakeTimers({ now: timestamp })`
 - **Control**: `clock.tick(ms)`, `clock.tickAsync(ms)`, `clock.next()`, `clock.runAll()`
-- **Cleanup**: `clock.restore()`
+- **Cleanup**: handled by `sandbox.restore()`
 
 ### Matchers
 
@@ -177,6 +180,9 @@ When the user asks about a specific API (e.g., `stub.resolves()`, `sandbox.creat
 
 ## Tips
 
+- **Always use sandbox** — the project convention is `sinon.createSandbox()` with
+  `sandbox.restore()` in `afterEach`. Never suggest bare `sinon.stub()` or `sinon.spy()` — always
+  use `sandbox.stub()` and `sandbox.spy()` instead
 - Sinon docs are organized by feature — fetch the specific section page rather than the overview for
   API details
 - When the user asks "how do I stub X", first check whether the function is an export from another
@@ -184,8 +190,6 @@ When the user asks about a specific API (e.g., `stub.resolves()`, `sandbox.creat
   project convention
 - The project uses Node.js `assert` (not Chai) — adapt any Chai-based examples from docs to use
   `assert.strictEqual`, `assert.deepStrictEqual`, `assert.ok`, etc.
-- `sandbox.restore()` in `afterEach` is the standard cleanup pattern — ensure the user sets this up
-  to avoid test pollution
 - `stub.resolves()` / `stub.rejects()` are the async-friendly counterparts to `stub.returns()` /
   `stub.throws()` — use these for Promise-based code
 - When stubbing VS Code APIs (like `vscode.window.showErrorMessage`), the stub target must be the
