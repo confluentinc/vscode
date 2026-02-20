@@ -1695,7 +1695,7 @@ describe("CCloudResourceLoader", () => {
         statementUtils,
         "parseAllFlinkStatementResults",
       );
-      sinon.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+      sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
       deleteStatementStub = sandbox.stub(loader, "deleteFlinkStatement");
     });
 
