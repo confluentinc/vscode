@@ -236,68 +236,10 @@ The extension supports three connection types, each with different resource load
 Each connection type has its own ResourceLoader implementation managing the specific connection
 details and API calls.
 
-## Development Setup
+## Code Style
 
-### Prerequisites
-
-- Node.js 22.17.0 or later
-- Visual Studio Code 1.96.2 or later
-- Git 2.40.0 or later
-- Optional: NVM for Node version management
-- Optional: Global Gulp CLI (`npm install -g gulp`)
-
-### First-Time Setup
-
-```bash
-# Clone and install dependencies
-git clone <your-fork>
-cd vscode
-npm ci
-
-# Build the extension
-npx gulp build
-
-# Run tests
-npx gulp test
-```
-
-### Running the Extension
-
-Use VS Code's Run and Debug tab with configurations from `.vscode/` folder, or press F5 to launch
-Extension Development Host.
-
-## Code References
-
-When referencing code in comments or documentation, use the pattern `file_path:line_number` to help
-others navigate to the source location.
-
-Example: The connectToServer function marks clients as failed in `src/services/process.ts:712`.
-
-## Local Development with Claude Code
-
-When working with Claude Code during development:
-
-### Code Generation Requests
-
-- Reference existing patterns from the codebase (ResourceLoader, ViewProvider, DisposableCollection)
-- Specify which connection type (CCloud, Direct, Local) when working with Kafka resources
-- Request examples that follow the established testing patterns (Mocha/Sinon for units, Playwright
-  for E2E)
-- Ask for proper disposable management in any new classes or event listeners
-- Request TypeScript interfaces for complex data structures rather than inline types
-
-### Refactoring Assistance
-
-- Preserve all existing comments when refactoring code
-- Maintain the established architectural patterns (sidecar communication, view providers, resource
-  loaders)
-- Ensure refactored code follows the three critical requirements (disposables, type safety, single
-  responsibility)
-- Request TypeScript interfaces for complex data structures rather than inline types
-- Don't introduce unnecessary abstractions or backwards compatibility shims
-
-### Before Writing New Code
-
+- **Preserve comments**: When refactoring code, keep all existing comments. Update them if the code
+  changes, but don't remove them.
 - **No decorative comment blocks**: Do not add large comment separators like `// ======...` or
   `// ------...` to divide sections of code. Readability should come from code structure itself
   (well-named functions, logical grouping, small files), not formatting.
