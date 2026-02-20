@@ -151,8 +151,8 @@ describe("utils/privateNetworking.ts showPrivateNetworkingHelpNotification()", (
 
   it("should include default error notification buttons", () => {
     sandbox.stub(notifications, "DEFAULT_ERROR_NOTIFICATION_BUTTONS").value({
-      "Open Logs": sinon.stub(),
-      "File Issue": sinon.stub(),
+      "Open Logs": sandbox.stub(),
+      "File Issue": sandbox.stub(),
     });
 
     const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
