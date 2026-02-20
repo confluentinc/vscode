@@ -89,6 +89,7 @@ import type { FlinkRelation } from "../models/flinkRelation";
 import type { FlinkUdf } from "../models/flinkUDF";
 import * as notifications from "../notifications";
 import * as connections from "../sidecar/connections";
+import * as watcher from "../sidecar/connections/watcher";
 import { WorkspaceStorageKeys } from "../storage/constants";
 import {
   CCloudResourceLoader,
@@ -2053,7 +2054,6 @@ describe("CCloudResourceLoader", () => {
     let getCurrentOrganizationStub: sinon.SinonStub;
     let tryToUpdateConnectionStub: sinon.SinonStub;
     let resetStub: sinon.SinonStub;
-    let getCCloudResourcesStub: sinon.SinonStub;
     let ccloudOrganizationChangedFireStub: sinon.SinonStub;
     let showErrorNotificationStub: sinon.SinonStub;
     let showInformationMessageStub: sinon.SinonStub;
@@ -2091,10 +2091,12 @@ describe("CCloudResourceLoader", () => {
       getCurrentOrganizationStub = sandbox.stub(graphqlOrgs, "getCurrentOrganization");
       tryToUpdateConnectionStub = sandbox.stub(connections, "tryToUpdateConnection");
       resetStub = sandbox.stub(loader, "reset").resolves();
-      getCCloudResourcesStub = sandbox.stub(graphqlCCloud, "getCCloudResources");
       ccloudOrganizationChangedFireStub = sandbox.stub(emitters.ccloudOrganizationChanged, "fire");
       showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
       showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
+      sandbox.stub(watcher, "waitForConnectionToBeStable");
+      // slightly different setup for stubbing protected/private methods:
+      loader["ensureCoarseResourcesLoaded"] = sandbox.stub();
     });
 
     it("should return the workspace when fetch succeeds", async () => {
@@ -2197,13 +2199,11 @@ describe("CCloudResourceLoader", () => {
       });
       showInformationMessageStub.resolves("Switch Organization");
       tryToUpdateConnectionStub.resolves({});
-      getCCloudResourcesStub.resolves([]);
 
       const result = await loader.getFlinkWorkspace(testParams);
 
       assert.deepStrictEqual(result, mockWorkspaceResponse);
-      // Called twice: once to check if org switch needed, once during ensureCoarseResourcesLoaded
-      sinon.assert.calledTwice(getCurrentOrganizationStub);
+      sinon.assert.calledOnce(getCurrentOrganizationStub);
       sinon.assert.calledOnce(tryToUpdateConnectionStub);
       sinon.assert.calledOnceWithExactly(tryToUpdateConnectionStub, {
         ...CCLOUD_CONNECTION_SPEC,
@@ -2214,7 +2214,6 @@ describe("CCloudResourceLoader", () => {
       });
       sinon.assert.calledOnce(resetStub);
       sinon.assert.calledOnce(ccloudOrganizationChangedFireStub);
-      sinon.assert.calledOnce(getCCloudResourcesStub);
     });
 
     it("should not switch organizations when no current org exists", async () => {
@@ -2239,7 +2238,6 @@ describe("CCloudResourceLoader", () => {
       });
       showInformationMessageStub.resolves("Switch Organization");
       tryToUpdateConnectionStub.resolves({});
-      getCCloudResourcesStub.resolves([]);
 
       await loader.getFlinkWorkspace(testParams);
 
@@ -2248,7 +2246,6 @@ describe("CCloudResourceLoader", () => {
         tryToUpdateConnectionStub,
         resetStub,
         ccloudOrganizationChangedFireStub,
-        getCCloudResourcesStub,
         workspacesApiStub.getWsV1Workspace,
       );
     });
