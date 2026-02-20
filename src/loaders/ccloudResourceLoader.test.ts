@@ -180,9 +180,9 @@ describe("CCloudResourceLoader", () => {
     let ensureCoarseResourcesLoadedStub: sinon.SinonStub;
     beforeEach(() => {
       resetStub = sandbox.stub(loader, "reset").resolves();
-      ensureCoarseResourcesLoadedStub = sandbox
-        .stub(loader as any, "ensureCoarseResourcesLoaded")
-        .resolves();
+      // slightly different setup for stubbing protected/private methods:
+      ensureCoarseResourcesLoadedStub = sandbox.stub();
+      loader["ensureCoarseResourcesLoaded"] = ensureCoarseResourcesLoadedStub;
     });
 
     for (const connected of [true, false]) {
@@ -679,9 +679,8 @@ describe("CCloudResourceLoader", () => {
 
   describe("getKafkaClustersForEnvironmentId", () => {
     beforeEach(() => {
-      // Make ensureCoarseResourcesLoaded seem completed already
-      // (private method)
-      sandbox.stub(loader as any, "ensureCoarseResourcesLoaded").resolves();
+      // slightly different setup for stubbing protected/private methods:
+      loader["ensureCoarseResourcesLoaded"] = sandbox.stub();
     });
 
     it("should downcall to resource manager", async () => {
