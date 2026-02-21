@@ -4,7 +4,7 @@ description:
   Use when the user asks about Playwright APIs, selectors, assertions, or patterns for E2E or
   functional tests. Triggers on questions like "how to click a button in Playwright", "Playwright
   locator", "page.waitFor", "expect toBeVisible", "Playwright test fixtures", or E2E test patterns.
-allowed-tools: Read, Bash, WebFetch, WebSearch
+allowed-tools: Read, Bash, Glob, Grep, WebFetch, WebSearch
 ---
 
 # Playwright Documentation Lookup
@@ -55,63 +55,15 @@ coverage config) — not the E2E `baseTest.ts`.
 ### Page Object Model (POM)
 
 All E2E tests use page objects under `tests/e2e/objects/`. Always extend or reuse existing page
-objects rather than writing raw locator logic in test files.
-
-**View hierarchy:**
-
-```
-View (tests/e2e/objects/views/View.ts)
-  └── SearchableView (same file)
-      ├── ResourcesView    — environments, clusters, registries
-      ├── TopicsView        — topics within selected Kafka cluster
-      ├── SchemasView       — schemas within selected Schema Registry
-      ├── FlinkDatabaseView — Flink databases and tables
-      └── HelpCenterView
-```
-
-**View items** (`tests/e2e/objects/views/viewItems/`):
-
-```
-ViewItem (ViewItem.ts) — base for all tree items
-  ├── CCloudConnectionItem
-  ├── DirectConnectionItem
-  ├── LocalConnectionItem
-  ├── KafkaClusterItem
-  ├── SchemaRegistryItem
-  ├── TopicItem
-  ├── SubjectItem
-  └── FlinkComputePoolItem
-```
-
-**Webviews** (`tests/e2e/objects/webviews/`):
-
-```
-Webview (Webview.ts) — handles nested iframe access
-  ├── MessageViewerWebview
-  ├── ProjectScaffoldWebview
-  └── DirectConnectionFormWebview
-```
-
-**Other page objects**: `ActivityBarItem`, `ViewContainer`, `FileExplorer`, `InputBox`, `Quickpick`,
-`Notification`, `NotificationArea`, `TextDocument`
+objects rather than writing raw locator logic in test files. Browse the directory to discover
+available page objects — key subdirectories are `views/`, `views/viewItems/`, `webviews/`,
+`quickInputs/`, `notifications/`, and `editor/`.
 
 ### Custom Fixtures (baseTest.ts)
 
 E2E tests import `test` from `tests/e2e/baseTest.ts` (not from `@playwright/test`). This provides
-custom fixtures:
-
-| Fixture                  | Type                      | Default                    | Description                                       |
-| ------------------------ | ------------------------- | -------------------------- | ------------------------------------------------- |
-| `testTempDir`            | `string`                  | auto                       | Unique temp directory per test                    |
-| `electronApp`            | `ElectronApplication`     | auto                       | Launched VS Code Electron instance                |
-| `page`                   | `Page`                    | auto                       | Main VS Code window                               |
-| `openExtensionSidebar`   | `void`                    | **auto**                   | Opens Confluent sidebar (runs for all tests)      |
-| `connectionType`         | `ConnectionType`          | `undefined`                | Set via `test.use()` — required for connections   |
-| `directConnectionConfig` | `DirectConnectionOptions` | env vars                   | Bootstrap servers, auth creds from env            |
-| `localConnectionConfig`  | `LocalConnectionOptions`  | `{ schemaRegistry: true }` | Schema registry enabled by default                |
-| `connectionItem`         | Connection item union     | auto-setup                 | Sets up connection, returns typed connection item |
-| `topicConfig`            | `TopicConfig`             | `undefined`                | Set via `test.use()` — required for topics        |
-| `topic`                  | `string`                  | auto-create                | Creates topic on setup, deletes on teardown       |
+custom fixtures for Electron app launch, connection setup/teardown, topic lifecycle, and more. Read
+the file for available fixtures and their types.
 
 Usage pattern:
 
@@ -127,43 +79,16 @@ test("my test", async ({ page, connectionItem, topic }) => {
 });
 ```
 
-### Test Tags (tags.ts)
+### Test Tags
 
-Tags are used instead of conditionals for filtering test dimensions (conditionals within E2E tests
-violate ESLint rules). Defined in `tests/e2e/tags.ts`:
+Tags are used instead of conditionals for filtering test dimensions. See `tests/e2e/tags.ts` for
+available tags. Run by tag: `npx gulp e2e -t "@smoke"`
 
-| Tag                         | Purpose                                         |
-| --------------------------- | ----------------------------------------------- |
-| `@smoke`                    | Fast smoke tests (extension activation, signin) |
-| `@ccloud`                   | Requires Confluent Cloud connection             |
-| `@direct`                   | Requires direct connection                      |
-| `@local`                    | Requires local Docker Kafka/SR                  |
-| `@requires-topic`           | Needs topic fixture                             |
-| `@topic-message-viewer`     | Topic listing and message viewing               |
-| `@produce-message-to-topic` | Message production tests                        |
-| `@evolve-schema`            | Schema CRUD operations                          |
-| `@project-scaffolding`      | Project template generation                     |
-| `@flink-statements`         | Flink SQL statement tests                       |
-| `@flink-artifacts`          | Flink artifact upload/delete                    |
-| `@direct-connection-crud`   | Direct connection lifecycle                     |
+### Utility Functions
 
-Run by tag: `npx gulp e2e -t "@smoke"`
-
-### Utility Functions (tests/e2e/utils/)
-
-| File                   | Key Exports                                                                                                 |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `connections.ts`       | `setupCCloudConnection()`, `setupDirectConnection()`, `setupLocalConnection()`, `teardownLocalConnection()` |
-| `commands.ts`          | `executeVSCodeCommand()`                                                                                    |
-| `settings.ts`          | `configureVSCodeSettings()`                                                                                 |
-| `sidebarNavigation.ts` | `openConfluentSidebar()`                                                                                    |
-| `producer.ts`          | `produceMessages()`                                                                                         |
-| `documents.ts`         | `openNewUntitledDocument()`                                                                                 |
-| `clipboard.ts`         | Clipboard read/write utilities                                                                              |
-| `strings.ts`           | `randomHexString()`                                                                                         |
-| `scaffold.ts`          | Project generation utilities                                                                                |
-| `flinkStatement.ts`    | Flink SQL execution                                                                                         |
-| `flinkDatabase.ts`     | Flink database operations                                                                                   |
+Reuse utility functions from `tests/e2e/utils/` for common operations (connection setup, VS Code
+commands, settings, sidebar navigation, message production, etc.). Browse the directory before
+writing new helpers.
 
 ## Sources
 
@@ -302,88 +227,10 @@ When the user asks about a specific API (e.g., `locator.click()`, `expect().toBe
 4. Cross-reference with project usage if applicable
 5. Note any Electron-specific caveats if the API behaves differently outside a browser
 
-## Output Format
+When answering, include the API signature, a code example adapted to project patterns, and any
+Electron-specific caveats.
 
-### API Reference
-
-```markdown
-## Playwright: [method/feature]
-
-### API
-
-[Method signature and description from docs]
-
-### Parameters
-
-[Parameter table if applicable]
-
-### Example
-
-[Code example from docs or adapted to project patterns]
-
-### Project Usage
-
-[How this is typically used in the project, with file references if found]
-
-### Electron Note (if applicable)
-
-[Any caveats for Electron vs browser usage]
-```
-
-### Pattern Guidance
-
-```markdown
-## Pattern: [description]
-
-### From the Docs
-
-[Official recommended approach]
-
-### In This Project
-
-[How the project implements this pattern, with examples from existing tests]
-
-### Key Points
-
-- [Important considerations]
-- [Common pitfalls to avoid]
-```
-
-## Common Lookup Patterns
-
-### Locators
-
-- **Role**: `page.getByRole('button', { name: 'Submit' })`
-- **Text**: `page.getByText('Hello')`, `page.getByText(/pattern/)`
-- **Label**: `page.getByLabel('Username')`
-- **Placeholder**: `page.getByPlaceholder('Enter email')`
-- **Test ID**: `page.getByTestId('submit-btn')`
-- **CSS/XPath**: `page.locator('.class')`, `page.locator('xpath=...')` (last resort)
-- **Filtering**: `locator.filter({ hasText: 'foo' })`, `locator.filter({ has: childLocator })`
-- **Chaining**: `page.getByRole('list').getByRole('listitem')`
-
-### Actions
-
-- **Click**: `locator.click()`, `locator.dblclick()`, `locator.click({ button: 'right' })`
-- **Type**: `locator.fill('text')`, `locator.type('text')`, `locator.press('Enter')`
-- **Select**: `locator.selectOption('value')`, `locator.selectOption({ label: 'Text' })`
-- **Check**: `locator.check()`, `locator.uncheck()`, `locator.setChecked(true)`
-- **Hover**: `locator.hover()`
-- **Upload**: `locator.setInputFiles('path/to/file')`
-
-### Assertions
-
-- **Visibility**: `expect(locator).toBeVisible()`, `expect(locator).toBeHidden()`
-- **Text**: `expect(locator).toHaveText('text')`, `expect(locator).toContainText('partial')`
-- **Value**: `expect(locator).toHaveValue('val')`, `expect(locator).toHaveAttribute('attr', 'val')`
-- **State**: `expect(locator).toBeEnabled()`, `expect(locator).toBeChecked()`
-- **Count**: `expect(locator).toHaveCount(3)`
-
-### Waiting
-
-- **Auto-wait**: Most actions auto-wait for actionability (no manual waits needed)
-- **Explicit**: `locator.waitFor()`, `locator.waitFor({ state: 'hidden' })`
-- **Load state**: `page.waitForLoadState('domcontentloaded')` (used in Electron startup)
+## Electron-Specific Patterns
 
 ### Webview Iframe Access
 
@@ -398,7 +245,7 @@ get webview() {
 this.webview.locator(".my-element");
 ```
 
-### Dialog Stubbing (Electron-specific)
+### Dialog Stubbing
 
 ```typescript
 import { stubAllDialogs, stubMultipleDialogs } from "electron-playwright-helpers";
