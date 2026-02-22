@@ -242,16 +242,11 @@ export class ConsumerTreeItem extends vscode.TreeItem {
     this.collapsibleState = vscode.TreeItemCollapsibleState.None;
 
     this.iconPath = new vscode.ThemeIcon(resource.iconName);
-    this.tooltip = createConsumerGroupMemberTooltip(resource);
+    this.tooltip = createConsumerTooltip(resource);
   }
 }
 
-/**
- * Create a tooltip for a consumer group member.
- * @param resource The consumer group member resource.
- * @returns A CustomMarkdownString with formatted tooltip content.
- */
-function createConsumerGroupMemberTooltip(resource: Consumer): CustomMarkdownString {
+function createConsumerTooltip(resource: Consumer): CustomMarkdownString {
   const tooltip = new CustomMarkdownString()
     .addHeader("Consumer", IconNames.PLACEHOLDER)
     .addField("Consumer ID", resource.consumerId)
