@@ -2054,6 +2054,7 @@ describe("CCloudResourceLoader", () => {
     let getCurrentOrganizationStub: sinon.SinonStub;
     let tryToUpdateConnectionStub: sinon.SinonStub;
     let resetStub: sinon.SinonStub;
+    let waitForConnectionToBeStableStub: sinon.SinonStub;
     let ccloudOrganizationChangedFireStub: sinon.SinonStub;
     let showErrorNotificationStub: sinon.SinonStub;
     let showInformationMessageStub: sinon.SinonStub;
@@ -2094,7 +2095,7 @@ describe("CCloudResourceLoader", () => {
       ccloudOrganizationChangedFireStub = sandbox.stub(emitters.ccloudOrganizationChanged, "fire");
       showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
       showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
-      sandbox.stub(watcher, "waitForConnectionToBeStable");
+      waitForConnectionToBeStableStub = sandbox.stub(watcher, "waitForConnectionToBeStable");
       // slightly different setup for stubbing protected/private methods:
       loader["ensureCoarseResourcesLoaded"] = sandbox.stub();
     });
@@ -2186,6 +2187,7 @@ describe("CCloudResourceLoader", () => {
       assert.deepStrictEqual(result, mockWorkspaceResponse);
       sinon.assert.calledOnce(getCurrentOrganizationStub);
       sinon.assert.notCalled(tryToUpdateConnectionStub);
+      sinon.assert.notCalled(waitForConnectionToBeStableStub);
       sinon.assert.notCalled(resetStub);
       sinon.assert.notCalled(ccloudOrganizationChangedFireStub);
     });
@@ -2212,6 +2214,7 @@ describe("CCloudResourceLoader", () => {
           ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
         },
       });
+      sinon.assert.calledOnce(waitForConnectionToBeStableStub);
       sinon.assert.calledOnce(resetStub);
       sinon.assert.calledOnce(ccloudOrganizationChangedFireStub);
     });
@@ -2225,6 +2228,7 @@ describe("CCloudResourceLoader", () => {
       assert.deepStrictEqual(result, mockWorkspaceResponse);
       sinon.assert.calledOnce(getCurrentOrganizationStub);
       sinon.assert.notCalled(tryToUpdateConnectionStub);
+      sinon.assert.notCalled(waitForConnectionToBeStableStub);
       sinon.assert.notCalled(resetStub);
       sinon.assert.notCalled(ccloudOrganizationChangedFireStub);
     });
@@ -2244,6 +2248,7 @@ describe("CCloudResourceLoader", () => {
       // Verify the order: org switch happens before workspace fetch
       sinon.assert.callOrder(
         tryToUpdateConnectionStub,
+        waitForConnectionToBeStableStub,
         resetStub,
         ccloudOrganizationChangedFireStub,
         workspacesApiStub.getWsV1Workspace,
@@ -2268,6 +2273,7 @@ describe("CCloudResourceLoader", () => {
         showErrorNotificationStub,
         sinon.match.string.and(sinon.match(/unable to switch to organization/)),
       );
+      sinon.assert.notCalled(waitForConnectionToBeStableStub);
       sinon.assert.notCalled(resetStub);
       sinon.assert.notCalled(ccloudOrganizationChangedFireStub);
       sinon.assert.notCalled(workspacesApiStub.getWsV1Workspace);
