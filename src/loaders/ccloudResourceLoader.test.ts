@@ -2047,6 +2047,7 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.calledOnce(statementsApiStub.updateSqlv1Statement);
     });
   });
+
   describe("getFlinkWorkspace", () => {
     let stubbedSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
     let workspacesApiStub: sinon.SinonStubbedInstance<WorkspacesWsV1Api>;
@@ -2055,6 +2056,7 @@ describe("CCloudResourceLoader", () => {
     let tryToUpdateConnectionStub: sinon.SinonStub;
     let resetStub: sinon.SinonStub;
     let waitForConnectionToBeStableStub: sinon.SinonStub;
+    let ensureCoarseResourcesLoadedStub: sinon.SinonStub;
     let ccloudOrganizationChangedFireStub: sinon.SinonStub;
     let showErrorNotificationStub: sinon.SinonStub;
     let showInformationMessageStub: sinon.SinonStub;
@@ -2097,7 +2099,8 @@ describe("CCloudResourceLoader", () => {
       showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
       waitForConnectionToBeStableStub = sandbox.stub(watcher, "waitForConnectionToBeStable");
       // slightly different setup for stubbing protected/private methods:
-      loader["ensureCoarseResourcesLoaded"] = sandbox.stub();
+      ensureCoarseResourcesLoadedStub = sandbox.stub();
+      loader["ensureCoarseResourcesLoaded"] = ensureCoarseResourcesLoadedStub;
     });
 
     it("should return the workspace when fetch succeeds", async () => {
@@ -2190,6 +2193,7 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.notCalled(waitForConnectionToBeStableStub);
       sinon.assert.notCalled(resetStub);
       sinon.assert.notCalled(ccloudOrganizationChangedFireStub);
+      sinon.assert.notCalled(ensureCoarseResourcesLoadedStub);
     });
 
     it("should switch organizations when current org differs from params", async () => {
@@ -2217,6 +2221,7 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.calledOnce(waitForConnectionToBeStableStub);
       sinon.assert.calledOnce(resetStub);
       sinon.assert.calledOnce(ccloudOrganizationChangedFireStub);
+      sinon.assert.calledOnce(ensureCoarseResourcesLoadedStub);
     });
 
     it("should not switch organizations when no current org exists", async () => {
@@ -2231,6 +2236,7 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.notCalled(waitForConnectionToBeStableStub);
       sinon.assert.notCalled(resetStub);
       sinon.assert.notCalled(ccloudOrganizationChangedFireStub);
+      sinon.assert.notCalled(ensureCoarseResourcesLoadedStub);
     });
 
     it("should switch organizations before fetching workspace", async () => {
@@ -2251,6 +2257,7 @@ describe("CCloudResourceLoader", () => {
         waitForConnectionToBeStableStub,
         resetStub,
         ccloudOrganizationChangedFireStub,
+        ensureCoarseResourcesLoadedStub,
         workspacesApiStub.getWsV1Workspace,
       );
     });
@@ -2276,6 +2283,7 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.notCalled(waitForConnectionToBeStableStub);
       sinon.assert.notCalled(resetStub);
       sinon.assert.notCalled(ccloudOrganizationChangedFireStub);
+      sinon.assert.notCalled(ensureCoarseResourcesLoadedStub);
       sinon.assert.notCalled(workspacesApiStub.getWsV1Workspace);
     });
   });
