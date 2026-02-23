@@ -4,8 +4,8 @@ import { setFlinkDocumentMetadata } from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
-import type { FlinkDatabaseResourceContainer } from "../models/flinkDatabaseResourceContainer";
-import { FlinkDatabaseContainerLabel } from "../models/flinkDatabaseResourceContainer";
+import type { FlinkDatabaseResourceContainer } from "../models/containers/flinkDatabaseResourceContainer";
+import { FlinkDatabaseContainerLabel } from "../models/containers/flinkDatabaseResourceContainer";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 
 const logger = new Logger("FlinkDatabaseViewCommands");
