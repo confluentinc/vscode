@@ -22,7 +22,7 @@ import type { FlinkAIResource, FlinkDatabaseResource } from "../models/flinkData
 import {
   FlinkDatabaseContainerLabel,
   FlinkDatabaseResourceContainer,
-} from "../models/flinkDatabaseResourceContainer";
+} from "../models/containers/flinkDatabaseResourceContainer";
 import { FlinkRelation, FlinkRelationColumn } from "../models/flinkRelation";
 import { FlinkUdf, FlinkUdfTreeItem } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
