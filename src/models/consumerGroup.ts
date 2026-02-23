@@ -33,6 +33,11 @@ export class ConsumerGroup implements IResourceBase, ISearchable, IdItem {
   consumerGroupId: string;
   state: ConsumerGroupState;
   members: Consumer[] = [];
+  /**
+   * Whether the group uses manual partition assignment (`assign()`) rather than dynamic
+   * group coordination (`subscribe()`). Simple groups only use Kafka for offset storage.
+   * @see https://kafka.apache.org/26/javadoc/org/apache/kafka/clients/consumer/KafkaConsumer.html
+   */
   isSimple: boolean;
 
   iconName: IconNames = IconNames.CONSUMER_GROUP;
@@ -102,6 +107,10 @@ export class Consumer implements IResourceBase, ISearchable, IdItem {
 
   consumerId: string;
   clientId: string;
+  /**
+   * Static group membership identifier (`group.instance.id`), or null if not configured.
+   * @see https://kafka.apache.org/26/javadoc/org/apache/kafka/clients/consumer/KafkaConsumer.html
+   */
   instanceId: string | null;
 
   // https://github.com/confluentinc/vscode/issues/3233
