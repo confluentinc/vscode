@@ -1,55 +1,35 @@
-import { ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
-import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
-import { IconNames } from "../icons";
-import { Logger } from "../logging";
-import type { FlinkArtifact } from "./flinkArtifact";
-import type { FlinkDatabaseResource } from "./flinkDatabaseResource";
-import type { ConnectionId, ISearchable } from "./resource";
-
-/** Labels for the top-level containers in the Flink Database view. */
-export enum FlinkDatabaseContainerLabel {
-  RELATIONS = "Tables and Views",
-  ARTIFACTS = "Artifacts",
-  UDFS = "UDFs",
-  AI_CONNECTIONS = "Connections",
-  AI_TOOLS = "AI Tools",
-  AI_MODELS = "AI Models",
-  AI_AGENTS = "AI Agents",
-}
-
-/** Error icon to use for Flink Database resource containers items if fetching resources fails. */
-export const ERROR_ICON = new ThemeIcon("warning", new ThemeColor("problemsErrorIcon.foreground"));
+import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { ERROR_ICON, IconNames } from "../../icons";
+import { Logger } from "../../logging";
+import type { ISearchable } from "../resource";
 
 /** Poll interval to use when waiting for a container to finish loading. */
 export const LOADING_POLL_INTERVAL_MS = 100;
 
-/** A container {@link TreeItem} for resources to display in the Flink Database view. */
-export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | FlinkArtifact>
+/**
+ * Abstract base class for container {@link TreeItem tree items} that manage an array of resources
+ * with shared loading, error, and children state.
+ */
+export abstract class ResourceContainer<T extends ISearchable>
   extends TreeItem
   implements ISearchable
 {
-  readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
-  readonly connectionType: ConnectionType = ConnectionType.Ccloud;
+  // enforce string so subclasses set this after super()
+  declare id: string;
 
-  // `id` is string|undefined in TreeItem, but only string in IdItem so we need to specify it here
-  id: string;
+  abstract loggerName: string;
 
   private _children: T[];
 
   private _isLoading: boolean = false;
   private _hasError: boolean = false;
-  private readonly _defaultContextValue: string | undefined;
-  private readonly _defaultIcon: ThemeIcon | undefined;
+  protected readonly _defaultContextValue: string | undefined;
+  protected readonly _defaultIcon: ThemeIcon | undefined;
 
-  private logger: Logger;
-
-  constructor(label: string, children: T[], contextValue?: string, icon?: ThemeIcon) {
-    const collapsibleState = TreeItemCollapsibleState.Collapsed;
-    super(label, collapsibleState);
+  protected constructor(label: string, children: T[], contextValue?: string, icon?: ThemeIcon) {
+    super(label, TreeItemCollapsibleState.Collapsed);
 
     this._children = children;
-    this.id = `${this.connectionId}-${label}`;
 
     this._defaultContextValue = contextValue;
     if (contextValue) {
@@ -57,12 +37,19 @@ export class FlinkDatabaseResourceContainer<T extends FlinkDatabaseResource | Fl
     }
     this._defaultIcon = icon;
     this.iconPath = this._defaultIcon;
+  }
 
-    this.logger = new Logger(`models.FlinkDatabaseResourceContainer(${this.label})`);
+  // lazy because loggerName is abstract and not available during super() / constructor time
+  private _logger?: Logger;
+  private get logger(): Logger {
+    if (!this._logger) {
+      this._logger = new Logger(this.loggerName);
+    }
+    return this._logger;
   }
 
   /**
-   * Flink Database resources belonging to this container.
+   * Child resources belonging to this container.
    * Setting this will clear the internal {@linkcode isLoading} state.
    * If the children array has items, this will also set {@linkcode hasError} to `false`.
    */
