@@ -139,4 +139,34 @@ export class MessageViewerWebview extends Webview {
   async doubleClickMessageRow(rowIndex: number): Promise<void> {
     await this.messagesGrid.locator("tbody tr").nth(rowIndex).dblclick();
   }
+
+  /** Returns all visible message rows in the grid. */
+  get messageRows(): Locator {
+    return this.messagesGrid.locator("tbody tr");
+  }
+
+  /** The page stat label showing message count info (e.g. "Showing 1..10 of 10 messages."). */
+  get pageStatLabel(): Locator {
+    return this.paginationControls.locator("#pageOutput");
+  }
+
+  /**
+   * Waits for messages to appear in the grid within the given timeout.
+   * @param minCount - Minimum number of rows expected
+   * @param timeout - Max wait time in ms (default 30000)
+   */
+  async waitForMessages(minCount: number, timeout = 30000): Promise<void> {
+    await this.messagesGrid
+      .locator("tbody tr")
+      .nth(minCount - 1)
+      .waitFor({ timeout });
+  }
+
+  /**
+   * Sets the consume mode via the dropdown.
+   * @param mode - The consume mode to select ("beginning", "latest", or "timestamp")
+   */
+  async setConsumeMode(mode: string): Promise<void> {
+    await this.consumeModeDropdown.selectOption(mode);
+  }
 }

@@ -22,6 +22,107 @@ import { ConnectionType } from "../types/connection";
  * 5. View should open with basic webview components, even if messages aren't (yet) available
  */
 
+test.describe("Message Viewer Consumption & Filtering", { tag: [Tag.TopicMessageViewer] }, () => {
+  // use LOCAL connection for consumption tests to avoid CCloud auth complexity
+  for (const connectionType of [ConnectionType.Local, ConnectionType.Direct] as const) {
+    const connectionTag = connectionType === ConnectionType.Local ? Tag.Local : Tag.Direct;
+    const clusterLabel =
+      connectionType === ConnectionType.Ccloud ? process.env.E2E_KAFKA_CLUSTER_NAME! : undefined;
+
+    test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
+      test.use({
+        connectionType,
+        topicConfig: {
+          clusterLabel,
+          name: `e2e-mv-consume-${connectionType}`,
+          produce: { numMessages: 10, keyPrefix: "key", valuePrefix: "value" },
+        },
+      });
+
+      test(
+        "should consume and display messages from beginning",
+        { tag: [Tag.RequiresTopic] },
+        async ({ page, topic: topicName }) => {
+          const topicsView = new TopicsView(page);
+          await topicsView.loadTopics(
+            connectionType,
+            SelectKafkaCluster.FromResourcesView,
+            clusterLabel,
+          );
+
+          const topicItem = await topicsView.getTopicItem(topicName);
+          const messageViewer = await topicItem.clickViewMessages();
+
+          // wait for messages to appear in the grid
+          await messageViewer.waitForMessages(1);
+
+          // verify messages are displayed
+          const rowCount = await messageViewer.messageRows.count();
+          expect(rowCount).toBeGreaterThanOrEqual(1);
+        },
+      );
+
+      test(
+        "should filter messages via text search",
+        { tag: [Tag.RequiresTopic] },
+        async ({ page, topic: topicName }) => {
+          const topicsView = new TopicsView(page);
+          await topicsView.loadTopics(
+            connectionType,
+            SelectKafkaCluster.FromResourcesView,
+            clusterLabel,
+          );
+
+          const topicItem = await topicsView.getTopicItem(topicName);
+          const messageViewer = await topicItem.clickViewMessages();
+          await messageViewer.waitForMessages(1);
+
+          // search for a specific key that should match a single message
+          await messageViewer.searchMessages("key-0");
+
+          // wait for the page stat label to update with filter info
+          await expect(messageViewer.pageStatLabel).toContainText("messages", { timeout: 10000 });
+
+          // clear search and verify all messages return
+          await messageViewer.clearSearch();
+        },
+      );
+
+      test(
+        "should pause and resume consumption",
+        { tag: [Tag.RequiresTopic] },
+        async ({ page, topic: topicName }) => {
+          const topicsView = new TopicsView(page);
+          await topicsView.loadTopics(
+            connectionType,
+            SelectKafkaCluster.FromResourcesView,
+            clusterLabel,
+          );
+
+          const topicItem = await topicsView.getTopicItem(topicName);
+          const messageViewer = await topicItem.clickViewMessages();
+          await messageViewer.waitForMessages(1);
+
+          // the stream toggle button should show "Pause" when running
+          await expect(messageViewer.streamToggleButton).toBeVisible();
+
+          // click to pause
+          await messageViewer.streamToggleButton.click();
+          // button text should change to "Resume"
+          await expect(messageViewer.streamToggleButton).toContainText("Resume", {
+            timeout: 5000,
+          });
+
+          // click to resume
+          await messageViewer.streamToggleButton.click();
+          // button text should change back to "Pause"
+          await expect(messageViewer.streamToggleButton).toContainText("Pause", { timeout: 5000 });
+        },
+      );
+    });
+  }
+});
+
 test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer] }, () => {
   // test dimensions:
   const connectionTypes: Array<[ConnectionType, Tag]> = [
