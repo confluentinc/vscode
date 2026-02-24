@@ -23,17 +23,15 @@ import { ConnectionType } from "../types/connection";
  */
 
 test.describe("Message Viewer Consumption & Filtering", { tag: [Tag.TopicMessageViewer] }, () => {
-  // use LOCAL connection for consumption tests to avoid CCloud auth complexity
-  for (const connectionType of [ConnectionType.Local, ConnectionType.Direct] as const) {
-    const connectionTag = connectionType === ConnectionType.Local ? Tag.Local : Tag.Direct;
-    const clusterLabel =
-      connectionType === ConnectionType.Ccloud ? process.env.E2E_KAFKA_CLUSTER_NAME! : undefined;
-
+  // use LOCAL and DIRECT connections for consumption tests to avoid CCloud auth complexity
+  for (const [connectionType, connectionTag] of [
+    [ConnectionType.Local, Tag.Local],
+    [ConnectionType.Direct, Tag.Direct],
+  ] as const) {
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
       test.use({
         connectionType,
         topicConfig: {
-          clusterLabel,
           name: `e2e-mv-consume-${connectionType}`,
           produce: { numMessages: 10, keyPrefix: "key", valuePrefix: "value" },
         },
@@ -44,11 +42,7 @@ test.describe("Message Viewer Consumption & Filtering", { tag: [Tag.TopicMessage
         { tag: [Tag.RequiresTopic] },
         async ({ page, topic: topicName }) => {
           const topicsView = new TopicsView(page);
-          await topicsView.loadTopics(
-            connectionType,
-            SelectKafkaCluster.FromResourcesView,
-            clusterLabel,
-          );
+          await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
 
           const topicItem = await topicsView.getTopicItem(topicName);
           const messageViewer = await topicItem.clickViewMessages();
@@ -67,24 +61,30 @@ test.describe("Message Viewer Consumption & Filtering", { tag: [Tag.TopicMessage
         { tag: [Tag.RequiresTopic] },
         async ({ page, topic: topicName }) => {
           const topicsView = new TopicsView(page);
-          await topicsView.loadTopics(
-            connectionType,
-            SelectKafkaCluster.FromResourcesView,
-            clusterLabel,
-          );
+          await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
 
           const topicItem = await topicsView.getTopicItem(topicName);
           const messageViewer = await topicItem.clickViewMessages();
           await messageViewer.waitForMessages(1);
 
-          // search for a specific key that should match a single message
+          const rowCountBefore = await messageViewer.messageRows.count();
+
+          // search for a specific key that should match a subset of messages
           await messageViewer.searchMessages("key-0");
 
-          // wait for the page stat label to update with filter info
-          await expect(messageViewer.pageStatLabel).toContainText("messages", { timeout: 10000 });
+          // verify the filtered row count is less than before
+          await expect(async () => {
+            const rowCountAfter = await messageViewer.messageRows.count();
+            expect(rowCountAfter).toBeLessThan(rowCountBefore);
+            expect(rowCountAfter).toBeGreaterThanOrEqual(1);
+          }).toPass({ timeout: 10000 });
 
-          // clear search and verify all messages return
+          // clear search and verify all messages are restored
           await messageViewer.clearSearch();
+          await expect(async () => {
+            const rowCountRestored = await messageViewer.messageRows.count();
+            expect(rowCountRestored).toBe(rowCountBefore);
+          }).toPass({ timeout: 10000 });
         },
       );
 
@@ -93,11 +93,7 @@ test.describe("Message Viewer Consumption & Filtering", { tag: [Tag.TopicMessage
         { tag: [Tag.RequiresTopic] },
         async ({ page, topic: topicName }) => {
           const topicsView = new TopicsView(page);
-          await topicsView.loadTopics(
-            connectionType,
-            SelectKafkaCluster.FromResourcesView,
-            clusterLabel,
-          );
+          await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
 
           const topicItem = await topicsView.getTopicItem(topicName);
           const messageViewer = await topicItem.clickViewMessages();
