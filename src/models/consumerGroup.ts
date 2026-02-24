@@ -10,12 +10,12 @@ import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./
  * @see https://kafka.apache.org/20/javadoc/org/apache/kafka/common/ConsumerGroupState.html
  */
 export enum ConsumerGroupState {
-  Dead = "Dead",
-  Empty = "Empty",
-  PreparingRebalance = "PreparingRebalance",
-  CompletingRebalance = "CompletingRebalance",
-  Stable = "Stable",
-  Unknown = "Unknown",
+  Dead = "DEAD",
+  Empty = "EMPTY",
+  PreparingRebalance = "PREPARING_REBALANCE",
+  CompletingRebalance = "COMPLETING_REBALANCE",
+  Stable = "STABLE",
+  Unknown = "UNKNOWN",
 }
 
 /** States where the consumer group has no active consumers and offsets can be reset. */
