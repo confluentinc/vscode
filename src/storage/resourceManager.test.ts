@@ -17,6 +17,10 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import {
+  TEST_CCLOUD_CONSUMER_GROUP,
+  TEST_LOCAL_CONSUMER_GROUP,
+} from "../../tests/unit/testResources/consumerGroup";
+import {
   TEST_DIRECT_CONNECTION_FORM_SPEC,
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
@@ -34,6 +38,7 @@ import {
   KafkaClusterConfigToJSON,
 } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
+import { Consumer, ConsumerGroup } from "../models/consumerGroup";
 import { CCloudEnvironment } from "../models/environment";
 import { FlinkAIAgent } from "../models/flinkAiAgent";
 import { FlinkAIConnection } from "../models/flinkAiConnection";
@@ -392,6 +397,66 @@ describe("storage/resourceManager", () => {
       assert.ok(retrievedSchemas);
       assert.ok(retrievedSchemas[0] instanceof Schema);
       assert.strictEqual(retrievedSchemas[0].id, TEST_CCLOUD_SUBJECT_WITH_SCHEMA.schemas![0].id);
+    });
+  });
+
+  describe("ResourceManager setConsumerGroupsForCluster() / getConsumerGroupsForCluster()", function () {
+    it("setConsumerGroupsForCluster() should throw an error if given mixed cluster IDs", async () => {
+      const mixedGroups = [TEST_CCLOUD_CONSUMER_GROUP, TEST_LOCAL_CONSUMER_GROUP];
+
+      await assert.rejects(
+        getResourceManager().setConsumerGroupsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, mixedGroups),
+        (err) => {
+          return (
+            err instanceof Error && err.message.includes("Cluster ID mismatch in consumer groups")
+          );
+        },
+        "Expected error when setting mixed cluster IDs",
+      );
+    });
+
+    it("getConsumerGroupsForCluster() should return undefined if no cached consumer groups", async () => {
+      const groups =
+        await getResourceManager().getConsumerGroupsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+      assert.deepStrictEqual(groups, undefined);
+    });
+
+    it("getConsumerGroupsForCluster() should return empty array if empty array is set", async () => {
+      const manager = getResourceManager();
+      await manager.setConsumerGroupsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, []);
+      const groups = await manager.getConsumerGroupsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+      assert.deepStrictEqual(groups, []);
+    });
+
+    it("should round-trip consumer groups through set/get with correct types", async () => {
+      const manager = getResourceManager();
+      await manager.setConsumerGroupsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, [
+        TEST_CCLOUD_CONSUMER_GROUP,
+      ]);
+
+      const groups = await manager.getConsumerGroupsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+
+      assert.ok(groups);
+      assert.strictEqual(groups.length, 1);
+      assert.ok(groups[0] instanceof ConsumerGroup);
+      assert.strictEqual(groups[0].consumerGroupId, TEST_CCLOUD_CONSUMER_GROUP.consumerGroupId);
+    });
+
+    it("should rehydrate Consumer members when reading from storage", async () => {
+      const manager = getResourceManager();
+      await manager.setConsumerGroupsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, [
+        TEST_CCLOUD_CONSUMER_GROUP,
+      ]);
+
+      const groups = await manager.getConsumerGroupsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+
+      assert.ok(groups);
+      assert.ok(groups[0].members.length > 0);
+      assert.ok(groups[0].members[0] instanceof Consumer);
+      assert.strictEqual(
+        groups[0].members[0].consumerId,
+        TEST_CCLOUD_CONSUMER_GROUP.members[0].consumerId,
+      );
     });
   });
 
