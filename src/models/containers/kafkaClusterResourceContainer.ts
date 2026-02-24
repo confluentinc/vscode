@@ -4,7 +4,6 @@ import type { ConnectionId, EnvironmentId, ISearchable } from "../resource";
 import { ResourceContainer } from "./resourceContainer";
 
 /** A container {@link TreeItem} for resources to display in the Topics view. */
-
 export class KafkaClusterResourceContainer<T extends ISearchable> extends ResourceContainer<T> {
   readonly connectionId: ConnectionId;
   readonly connectionType: ConnectionType;
