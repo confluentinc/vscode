@@ -14,22 +14,22 @@ unit tests.
 
 ## Sources
 
-### Sinon.JS Documentation (v20)
+### Sinon.JS Documentation (v18)
 
-The official docs organized by feature at `https://sinonjs.org/releases/v20/`:
+The official docs organized by feature at `https://sinonjs.org/releases/v18/`:
 
 | Section     | URL                                                     | Use For                                         |
 | ----------- | ------------------------------------------------------- | ----------------------------------------------- |
-| Overview    | `https://sinonjs.org/releases/v20/`                     | General concepts, what's new                    |
-| Spies       | `https://sinonjs.org/releases/v20/spies/`               | Observing function calls without changing them  |
-| Stubs       | `https://sinonjs.org/releases/v20/stubs/`               | Replacing functions with controlled behavior    |
-| Mocks       | `https://sinonjs.org/releases/v20/mocks/`               | Pre-programmed expectations (use sparingly)     |
-| Fakes       | `https://sinonjs.org/releases/v20/fakes/`               | Immutable spies with optional behavior          |
-| Sandbox     | `https://sinonjs.org/releases/v20/sandbox/`             | Automatic cleanup of stubs/spies/mocks          |
-| Fake Timers | `https://sinonjs.org/releases/v20/fake-timers/`         | Controlling `setTimeout`, `setInterval`, `Date` |
-| Fake XHR    | `https://sinonjs.org/releases/v20/fake-xhr-and-server/` | Faking HTTP requests                            |
-| Assertions  | `https://sinonjs.org/releases/v20/assertions/`          | Sinon-specific assertion helpers                |
-| Matchers    | `https://sinonjs.org/releases/v20/matchers/`            | Argument matching for assertions                |
+| Overview    | `https://sinonjs.org/releases/v18/`                     | General concepts, what's new                    |
+| Spies       | `https://sinonjs.org/releases/v18/spies/`               | Observing function calls without changing them  |
+| Stubs       | `https://sinonjs.org/releases/v18/stubs/`               | Replacing functions with controlled behavior    |
+| Mocks       | `https://sinonjs.org/releases/v18/mocks/`               | Pre-programmed expectations (use sparingly)     |
+| Fakes       | `https://sinonjs.org/releases/v18/fakes/`               | Immutable spies with optional behavior          |
+| Sandbox     | `https://sinonjs.org/releases/v18/sandbox/`             | Automatic cleanup of stubs/spies/mocks          |
+| Fake Timers | `https://sinonjs.org/releases/v18/fake-timers/`         | Controlling `setTimeout`, `setInterval`, `Date` |
+| Fake XHR    | `https://sinonjs.org/releases/v18/fake-xhr-and-server/` | Faking HTTP requests                            |
+| Assertions  | `https://sinonjs.org/releases/v18/assertions/`          | Sinon-specific assertion helpers                |
+| Matchers    | `https://sinonjs.org/releases/v18/matchers/`            | Argument matching for assertions                |
 
 ## Process
 
@@ -59,7 +59,7 @@ Before fetching external docs, review the project's stubbing conventions from CL
 Sinon docs are organized by feature — fetch the specific section page:
 
 ```
-WebFetch: https://sinonjs.org/releases/v20/stubs/
+WebFetch: https://sinonjs.org/releases/v18/stubs/
 Prompt: "Find the API documentation for [specific method like stub.resolves, stub.callsFake, etc.]"
 ```
 
