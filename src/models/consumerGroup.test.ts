@@ -99,12 +99,12 @@ describe("models/consumerGroup.ts", () => {
         const group = TEST_CCLOUD_CONSUMER_GROUP;
         const expected = `https://confluent.cloud/environments/${group.environmentId}/clusters/${group.clusterId}/clients/consumer-lag/${group.consumerGroupId}`;
 
-        assert.strictEqual(group.ccloudUrl(), expected);
+        assert.strictEqual(group.ccloudUrl, expected);
       });
 
       it("should return empty string for non-CCloud groups", () => {
-        assert.strictEqual(TEST_DIRECT_CONSUMER_GROUP.ccloudUrl(), "");
-        assert.strictEqual(TEST_LOCAL_CONSUMER_GROUP.ccloudUrl(), "");
+        assert.strictEqual(TEST_DIRECT_CONSUMER_GROUP.ccloudUrl, "");
+        assert.strictEqual(TEST_LOCAL_CONSUMER_GROUP.ccloudUrl, "");
       });
     });
   });
@@ -135,12 +135,12 @@ describe("models/consumerGroup.ts", () => {
         const consumer = TEST_CCLOUD_CONSUMER;
         const expected = `https://confluent.cloud/environments/${consumer.environmentId}/clusters/${consumer.clusterId}/clients/consumers/${consumer.clientId}`;
 
-        assert.strictEqual(consumer.ccloudUrl(), expected);
+        assert.strictEqual(consumer.ccloudUrl, expected);
       });
 
       it("should return empty string for non-CCloud consumers", () => {
-        assert.strictEqual(TEST_DIRECT_CONSUMER.ccloudUrl(), "");
-        assert.strictEqual(TEST_LOCAL_CONSUMER.ccloudUrl(), "");
+        assert.strictEqual(TEST_DIRECT_CONSUMER.ccloudUrl, "");
+        assert.strictEqual(TEST_LOCAL_CONSUMER.ccloudUrl, "");
       });
     });
 

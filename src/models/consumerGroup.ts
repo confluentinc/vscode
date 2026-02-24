@@ -18,6 +18,12 @@ export enum ConsumerGroupState {
   Unknown = "Unknown",
 }
 
+/** States where the consumer group has no active consumers and offsets can be reset. */
+const INACTIVE_STATES: readonly ConsumerGroupState[] = [
+  ConsumerGroupState.Empty,
+  ConsumerGroupState.Dead,
+];
+
 /** Main class representing a Kafka consumer group. */
 export class ConsumerGroup implements IResourceBase, ISearchable, IdItem {
   connectionId: ConnectionId;
@@ -81,15 +87,14 @@ export class ConsumerGroup implements IResourceBase, ISearchable, IdItem {
 
   /** Whether the consumer group is in a state that allows offset resets. */
   get canResetOffsets(): boolean {
-    const resettableStates = [ConsumerGroupState.Empty, ConsumerGroupState.Dead];
-    return resettableStates.includes(this.state);
+    return INACTIVE_STATES.includes(this.state);
   }
 
   searchableText(): string {
     return this.consumerGroupId;
   }
 
-  ccloudUrl(): string {
+  get ccloudUrl(): string {
     if (this.connectionType !== ConnectionType.Ccloud) {
       return "";
     }
@@ -148,7 +153,7 @@ export class Consumer implements IResourceBase, ISearchable, IdItem {
     return `${this.consumerId} ${this.clientId}`;
   }
 
-  ccloudUrl(): string {
+  get ccloudUrl(): string {
     if (this.connectionType !== ConnectionType.Ccloud) {
       return "";
     }
@@ -172,8 +177,7 @@ export class ConsumerGroupTreeItem extends vscode.TreeItem {
     this.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
     this.description = resource.state;
 
-    // highlight inactive groups (Empty/Dead) with a warning color
-    const isInactive = [ConsumerGroupState.Empty, ConsumerGroupState.Dead].includes(resource.state);
+    const isInactive = INACTIVE_STATES.includes(resource.state);
     this.iconPath = new vscode.ThemeIcon(
       resource.iconName,
       isInactive ? new vscode.ThemeColor("problemsWarningIcon.foreground") : undefined,
@@ -211,6 +215,8 @@ function createConsumerGroupTooltip(resource: ConsumerGroup): CustomMarkdownStri
     tooltip.addWarning("Consumer group is currently rebalancing.");
   }
 
+  tooltip.addCCloudLink(resource.ccloudUrl);
+
   return tooltip;
 }
 
@@ -245,6 +251,8 @@ function createConsumerTooltip(resource: Consumer): CustomMarkdownString {
   if (resource.instanceId) {
     tooltip.addField("Instance ID", resource.instanceId);
   }
+
+  tooltip.addCCloudLink(resource.ccloudUrl);
 
   return tooltip;
 }
