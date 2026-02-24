@@ -196,7 +196,7 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
     }
 
     const cluster: KafkaCluster = this.kafkaCluster;
-    await this.withProgress("Loading topics...", async () => {
+    await this.withProgress("Loading topics and consumer groups...", async () => {
       // set up containers before loading
       this.topicsContainer = new KafkaClusterResourceContainer<KafkaTopic>(
         cluster.connectionId,
