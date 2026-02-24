@@ -1,5 +1,5 @@
 import type { Disposable, TreeItem } from "vscode";
-import { window } from "vscode";
+import { ThemeIcon, TreeItemCollapsibleState, window } from "vscode";
 import { ContextValues } from "../context/values";
 import type {
   EnvironmentChangeEvent,
@@ -17,15 +17,16 @@ import {
   topicSearchSet,
   topicsViewResourceChanged,
 } from "../emitters";
+import { IconNames } from "../icons";
 import { ResourceLoader } from "../loaders";
 import { TopicFetchError } from "../loaders/utils/loaderUtils";
 import {
   Consumer,
   ConsumerGroup,
-  ConsumerGroupContainer,
   ConsumerGroupTreeItem,
   ConsumerTreeItem,
 } from "../models/consumerGroup";
+import { KafkaClusterResourceContainer } from "../models/containers/kafkaClusterResourceContainer";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
@@ -37,7 +38,8 @@ import { ParentedBaseViewProvider } from "./baseModels/parentedBase";
  * type via the {@link TopicViewProvider provider's} {@linkcode TopicViewProvider.getTreeItem() .getTreeItem()} method.
  */
 type TopicViewProviderData =
-  | ConsumerGroupContainer
+  | KafkaClusterResourceContainer<KafkaTopic>
+  | KafkaClusterResourceContainer<ConsumerGroup>
   | ConsumerGroup
   | Consumer
   | KafkaTopic
@@ -62,6 +64,8 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
   searchContextValue = ContextValues.topicSearchApplied;
   searchChangedEmitter = topicSearchSet;
 
+  /** Container for topics in this cluster (expanded by default). */
+  private topicsContainer: KafkaClusterResourceContainer<KafkaTopic> | null = null;
   /** Map of topic name -> {@link KafkaTopic} instance currently in the tree view. */
   private topicsInTreeView: Map<string, KafkaTopic> = new Map();
   /** Map of subject name -> {@link Subject} instance currently in the tree view. */
@@ -70,16 +74,17 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
   private subjectToTopicMap: Map<string, KafkaTopic> = new Map();
 
   /** Container for consumer groups in this cluster. */
-  private consumerGroupsContainer: ConsumerGroupContainer | null = null;
+  private consumerGroupsContainer: KafkaClusterResourceContainer<ConsumerGroup> | null = null;
   /** Map of consumer group ID -> {@link ConsumerGroup} instance currently in the tree view. */
   private consumerGroupsInTreeView: Map<string, ConsumerGroup> = new Map();
 
   private clearCaches(): void {
+    this.topicsContainer = null;
     this.topicsInTreeView.clear();
     this.subjectsInTreeView.clear();
     this.subjectToTopicMap.clear();
-    this.consumerGroupsInTreeView.clear();
     this.consumerGroupsContainer = null;
+    this.consumerGroupsInTreeView.clear();
   }
 
   get kafkaCluster(): KafkaCluster | null {
@@ -98,15 +103,13 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
     let children: TopicViewProviderData[] = [];
 
     if (!element) {
-      // top-level: show consumer groups container + topics
-      const topics = Array.from(this.topicsInTreeView.values());
-      if (this.consumerGroupsContainer) {
-        children = [this.consumerGroupsContainer, ...topics];
-      } else {
-        children = topics;
-      }
-    } else if (element instanceof ConsumerGroupContainer) {
-      // expanding the consumer groups container to show consumer groups
+      // top-level: show consumer groups first, then topics
+      const containers: TopicViewProviderData[] = [];
+      if (this.consumerGroupsContainer) containers.push(this.consumerGroupsContainer);
+      if (this.topicsContainer) containers.push(this.topicsContainer);
+      children = containers;
+    } else if (element instanceof KafkaClusterResourceContainer) {
+      // expanding a container to show its children (topics or consumer groups)
       children = element.children;
     } else if (element instanceof ConsumerGroup) {
       // expanding a consumer group to show its members
@@ -142,7 +145,7 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
 
   getTreeItem(element: TopicViewProviderData): TreeItem {
     let treeItem: TreeItem;
-    if (element instanceof ConsumerGroupContainer) {
+    if (element instanceof KafkaClusterResourceContainer) {
       treeItem = element;
     } else if (element instanceof ConsumerGroup) {
       treeItem = new ConsumerGroupTreeItem(element);
@@ -194,12 +197,28 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
 
     const cluster: KafkaCluster = this.kafkaCluster;
     await this.withProgress("Loading topics...", async () => {
-      // set up consumer group container before loading
-      this.consumerGroupsContainer = new ConsumerGroupContainer(
+      // set up containers before loading
+      this.topicsContainer = new KafkaClusterResourceContainer<KafkaTopic>(
         cluster.connectionId,
         cluster.connectionType,
         cluster.id,
         cluster.environmentId,
+        "Topics",
+        [],
+        "topics-container",
+        new ThemeIcon(IconNames.TOPIC),
+      );
+      this.topicsContainer.collapsibleState = TreeItemCollapsibleState.Expanded;
+
+      this.consumerGroupsContainer = new KafkaClusterResourceContainer<ConsumerGroup>(
+        cluster.connectionId,
+        cluster.connectionType,
+        cluster.id,
+        cluster.environmentId,
+        "Consumer Groups",
+        [],
+        undefined,
+        new ThemeIcon(IconNames.CONSUMER_GROUP),
       );
 
       await Promise.all([
@@ -210,11 +229,17 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
   }
 
   async refreshTopics(cluster: KafkaCluster, forceDeepRefresh: boolean): Promise<void> {
+    if (!this.topicsContainer) {
+      return;
+    }
+    // set initial loading state
+    this.topicsContainer.isLoading = true;
+    this._onDidChangeTreeData.fire(this.topicsContainer);
+
     const loader = ResourceLoader.getInstance(cluster.connectionId);
     try {
       const topics = await loader.getTopicsForCluster(cluster, forceDeepRefresh);
       topics.forEach((topic) => {
-        // update topic and subject caches before firing change event
         this.topicsInTreeView.set(topic.name, topic);
         if (topic.children && topic.children.length > 0) {
           topic.children.forEach((subject) => {
@@ -223,8 +248,13 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
           });
         }
       });
+      this.topicsContainer.children = topics;
+      // loading/error state is cleared by the children setter
     } catch (err) {
       this.logger.error("Error fetching topics for cluster", cluster, err);
+      // signal error state so the container shows an error indicator
+      this.topicsContainer.hasError = true;
+      this.topicsContainer.children = [];
       if (err instanceof TopicFetchError) {
         window.showErrorMessage(
           `Failed to list topics for cluster "${cluster.name}": ${err.message}`,
@@ -232,7 +262,7 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
       }
     }
 
-    this._onDidChangeTreeData.fire();
+    this._onDidChangeTreeData.fire(this.topicsContainer);
   }
 
   // similar to the Flink Database provider's refreshResourceContainer method:
@@ -258,7 +288,7 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
       // loading/error state is cleared
     } catch (err) {
       this.logger.error("Error fetching consumer groups for cluster", cluster, err);
-      // clear loading/error states
+      // signal error state so the container shows an error indicator
       this.consumerGroupsContainer.hasError = true;
       this.consumerGroupsContainer.children = [];
       // TODO: show error in tooltip?
@@ -286,7 +316,7 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
 
   /** Get the parent of the given element, or `undefined` if it's a root-level item. */
   getParent(element: TopicViewProviderData): TopicViewProviderData | undefined {
-    if (element instanceof ConsumerGroupContainer) {
+    if (element instanceof KafkaClusterResourceContainer) {
       // root-level item
       return;
     }
@@ -297,8 +327,7 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
       return this.consumerGroupsInTreeView.get(element.consumerGroupId);
     }
     if (element instanceof KafkaTopic) {
-      // root-level item
-      return;
+      return this.topicsContainer ?? undefined;
     }
     if (element instanceof Subject) {
       return this.subjectToTopicMap.get(element.name);
