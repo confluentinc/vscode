@@ -171,7 +171,7 @@ export class ConsumerGroupTreeItem extends vscode.TreeItem {
     this.id = resource.id;
     this.resource = resource;
     // includes state for conditional menu visibility, like:
-    // "ccloud-consumerGroup-Stable" or "local-consumerGroup-Empty"
+    // "ccloud-consumerGroup-STABLE" or "local-consumerGroup-EMPTY"
     this.contextValue = `${resource.connectionType.toLowerCase()}-consumerGroup-${resource.state}`;
 
     this.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
