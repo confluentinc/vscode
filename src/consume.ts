@@ -826,7 +826,7 @@ function messageViewerStartPollingCommand(
 }
 
 /** Define basic consume params based on desired consume mode. */
-function getParams(
+export function getParams(
   mode: "beginning" | "latest" | "timestamp",
   timestamp: number | undefined,
   max_poll_records: number,
@@ -838,7 +838,7 @@ function getParams(
       : { ...DEFAULT_CONSUME_PARAMS, max_poll_records };
 }
 
-function getTextFilterParams(query: string, capacity: number) {
+export function getTextFilterParams(query: string, capacity: number) {
   const bitset = new BitSet(capacity);
   const escaped = query
     .trim()
@@ -852,7 +852,7 @@ function getTextFilterParams(query: string, capacity: number) {
 }
 
 /** Compute partition offsets for the next consume request, based on response of the previous one. */
-function getOffsets(
+export function getOffsets(
   params: SimpleConsumeMultiPartitionRequest,
   results: SimpleConsumeMultiPartitionResponse | null,
   partitions: number[] | null,
@@ -870,7 +870,7 @@ function getOffsets(
 }
 
 /** Compress any valid json value into smaller payload for preview purpose. */
-function truncate(value: any): any {
+export function truncate(value: any): any {
   if (value == null) return null;
   if (typeof value === "object") {
     value = JSON.stringify(value, null, " ");
@@ -881,7 +881,7 @@ function truncate(value: any): any {
   return value;
 }
 
-function prepare(
+export function prepare(
   message: PartitionConsumeRecord,
   keySerialized: boolean,
   valueSerialized: boolean,
