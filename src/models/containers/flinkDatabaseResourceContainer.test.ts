@@ -5,7 +5,7 @@ import { CCLOUD_CONNECTION_ID } from "../../constants";
 import type { FlinkDatabaseResource } from "../flinkDatabaseResource";
 import { FlinkDatabaseResourceContainer } from "./flinkDatabaseResourceContainer";
 
-describe("models/flinkDatabaseResourceContainer", () => {
+describe("models/containers/flinkDatabaseResourceContainer", () => {
   describe("FlinkDatabaseResourceContainer", () => {
     describe("constructor", () => {
       it("should set connectionId to CCLOUD_CONNECTION_ID", () => {
