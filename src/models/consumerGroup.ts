@@ -171,35 +171,16 @@ export class ConsumerGroupTreeItem extends vscode.TreeItem {
 
     this.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
     this.description = resource.state;
-    this.iconPath = getConsumerGroupIcon(resource);
+
+    // highlight inactive groups (Empty/Dead) with a warning color
+    const isInactive = [ConsumerGroupState.Empty, ConsumerGroupState.Dead].includes(resource.state);
+    this.iconPath = new vscode.ThemeIcon(
+      resource.iconName,
+      isInactive ? new vscode.ThemeColor("problemsWarningIcon.foreground") : undefined,
+    );
+
     this.tooltip = createConsumerGroupTooltip(resource);
   }
-}
-
-function getConsumerGroupIcon(group: ConsumerGroup): vscode.ThemeIcon {
-  let stateColor: string | undefined;
-  switch (group.state) {
-    case ConsumerGroupState.Stable:
-      // Green for stable/healthy
-      stateColor = "testing.iconPassed";
-      break;
-    case ConsumerGroupState.Empty:
-      // Yellow/warning for empty (no active consumers)
-      stateColor = "problemsWarningIcon.foreground";
-      break;
-    case ConsumerGroupState.Dead:
-      // Red for dead
-      stateColor = "problemsErrorIcon.foreground";
-      break;
-    case ConsumerGroupState.PreparingRebalance:
-    case ConsumerGroupState.CompletingRebalance:
-      stateColor = "notificationsInfoIcon.foreground";
-      break;
-  }
-  return new vscode.ThemeIcon(
-    group.iconName,
-    stateColor ? new vscode.ThemeColor(stateColor) : undefined,
-  );
 }
 
 function createConsumerGroupTooltip(resource: ConsumerGroup): CustomMarkdownString {

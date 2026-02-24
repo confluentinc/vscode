@@ -223,12 +223,13 @@ describe("models/consumerGroup.ts", () => {
     });
 
     describe("icon color", () => {
+      // inactive states (Empty/Dead) get a warning color, all others use the default
       const expectedColorByState: Record<ConsumerGroupState, string | undefined> = {
-        [ConsumerGroupState.Stable]: "testing.iconPassed",
+        [ConsumerGroupState.Stable]: undefined,
         [ConsumerGroupState.Empty]: "problemsWarningIcon.foreground",
-        [ConsumerGroupState.Dead]: "problemsErrorIcon.foreground",
-        [ConsumerGroupState.PreparingRebalance]: "notificationsInfoIcon.foreground",
-        [ConsumerGroupState.CompletingRebalance]: "notificationsInfoIcon.foreground",
+        [ConsumerGroupState.Dead]: "problemsWarningIcon.foreground",
+        [ConsumerGroupState.PreparingRebalance]: undefined,
+        [ConsumerGroupState.CompletingRebalance]: undefined,
         [ConsumerGroupState.Unknown]: undefined,
       };
 
