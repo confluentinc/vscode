@@ -1847,11 +1847,6 @@
           "group": "navigation@1"
         },
         {
-          "command": "confluent.topics.create",
-          "when": "view == confluent-topics && confluent.kafkaClusterSelected",
-          "group": "navigation@2"
-        },
-        {
           "command": "confluent.topics.kafka-cluster.select",
           "when": "view == confluent-topics && (confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable)",
           "group": "navigation@3"
@@ -2007,6 +2002,11 @@
           "command": "confluent.connections.ccloud.signOut",
           "when": "viewItem == resources-ccloud-container-connected",
           "group": "inline@2"
+        },
+        {
+          "command": "confluent.topics.create",
+          "when": "view == confluent-topics && viewItem == topics-container",
+          "group": "inline@1"
         },
         {
           "command": "confluent.flinkdatabase.createRelation",
