@@ -124,7 +124,7 @@ describe("consume", () => {
       strictEqual(truncate(null), null);
     });
 
-    it("should return undefined for undefined input", () => {
+    it("should return null for undefined input", () => {
       strictEqual(truncate(undefined), null);
     });
 
@@ -137,14 +137,14 @@ describe("consume", () => {
     });
 
     it("should stringify objects", () => {
-      const result = truncate({ a: 1 });
+      const result = truncate({ a: 1 }) as string;
       strictEqual(typeof result, "string");
       equal(result.includes('"a"'), true);
     });
 
     it("should truncate strings over 1024 characters", () => {
       const long = "x".repeat(2000);
-      const result = truncate(long);
+      const result = truncate(long) as string;
       strictEqual(typeof result, "string");
       equal(result.includes("..."), true);
       strictEqual(result.length, 517); // 256 + separator (5) + 256

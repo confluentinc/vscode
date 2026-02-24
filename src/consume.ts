@@ -9,6 +9,7 @@ import {
 } from "./authz/schemaRegistry";
 import {
   ResponseError,
+  type JsonNode,
   type PartitionConsumeRecord,
   type PartitionOffset,
   type SimpleConsumeMultiPartitionRequest,
@@ -572,8 +573,8 @@ function messageViewerStartPollingCommand(
         const { results, indices } = stream().slice(offset, limit, includes);
         const messages = results.map(
           ({ partition_id, offset, timestamp, key, value, metadata }) => {
-            key = truncate(key);
-            value = truncate(value);
+            key = truncate(key) as JsonNode;
+            value = truncate(value) as JsonNode;
             return { partition_id, offset, timestamp, key, value, metadata };
           },
         );
@@ -838,6 +839,7 @@ export function getParams(
       : { ...DEFAULT_CONSUME_PARAMS, max_poll_records };
 }
 
+/** Build regex-based text filter params and a bitset for tracking matched records. */
 export function getTextFilterParams(query: string, capacity: number) {
   const bitset = new BitSet(capacity);
   const escaped = query
@@ -870,7 +872,7 @@ export function getOffsets(
 }
 
 /** Compress any valid json value into smaller payload for preview purpose. */
-export function truncate(value: any): any {
+export function truncate(value: unknown): unknown {
   if (value == null) return null;
   if (typeof value === "object") {
     value = JSON.stringify(value, null, " ");
@@ -881,6 +883,7 @@ export function truncate(value: any): any {
   return value;
 }
 
+/** Deserialize a raw consumed record's key and value, optionally parsing JSON strings. */
 export function prepare(
   message: PartitionConsumeRecord,
   keySerialized: boolean,
@@ -889,13 +892,13 @@ export function prepare(
   let key, value;
 
   try {
-    key = keySerialized ? JSON.parse(message.key as any) : message.key;
+    key = keySerialized ? JSON.parse(message.key as string) : message.key;
   } catch {
     key = message.key;
   }
 
   try {
-    value = valueSerialized ? JSON.parse(message.value as any) : message.value;
+    value = valueSerialized ? JSON.parse(message.value as string) : message.value;
   } catch {
     value = message.value;
   }
