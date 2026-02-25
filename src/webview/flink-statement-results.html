@@ -610,11 +610,7 @@
         border-left: 3px solid transparent;
       }
 
-      .detail-item.error {
-        border-left-color: var(--vscode-editorError-foreground);
-        background: color-mix(in srgb, var(--vscode-editorError-foreground) 10%, transparent);
-      }
-
+      .detail-item.error,
       .detail-item.critical {
         border-left-color: var(--vscode-editorError-foreground);
         background: color-mix(in srgb, var(--vscode-editorError-foreground) 10%, transparent);
@@ -648,10 +644,7 @@
         text-transform: uppercase;
       }
 
-      .detail-severity.error {
-        color: var(--vscode-editorError-foreground);
-      }
-
+      .detail-severity.error,
       .detail-severity.critical {
         color: var(--vscode-editorError-foreground);
       }
