@@ -73,7 +73,6 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly colWidth: Signal<number[]>;
   readonly gridTemplateColumns: Signal<string>;
   readonly pageButtons: Signal<(number | "ldot" | "rdot")[]>;
-  readonly detailText: Signal<string | null>;
   readonly detailItems: Signal<DetailItem[]>;
   readonly pagePersistWatcher: () => void;
 
@@ -176,27 +175,18 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       const { total, filter } = this.resultCount();
       return filter != null ? filter > 0 : total > 0;
     });
-    this.detailText = this.derive(() => {
-      const meta = this.statementMeta();
-      const detail = meta.detail;
-      if (!detail) {
-        return null;
-      }
-      // Strip warnings from detail when API warnings are displayed separately
-      const hasApiWarnings = meta.warnings.length > 0;
-      const processedDetail = hasApiWarnings ? stripWarningsFromDetail(detail) : detail;
-      return processedDetail ? processedDetail.replace(/\n/g, "<br>") : null;
-    });
-
-    /**
-     * Unified list of all detail items (errors, warnings, info) for display.
-     * Ordered by severity: ERROR > CRITICAL > MODERATE > LOW > INFO
-     */
+    /** Unified list of all detail items (errors, warnings, info) for display. */
     this.detailItems = this.derive(() => {
       const items: DetailItem[] = [];
 
       const meta = this.statementMeta();
-      const detail = this.detailText();
+      const rawDetail = meta.detail;
+      let detail: string | null = null;
+      if (rawDetail) {
+        const hasApiWarnings = meta.warnings.length > 0;
+        const processedDetail = hasApiWarnings ? stripWarningsFromDetail(rawDetail) : rawDetail;
+        detail = processedDetail ? processedDetail.replace(/\n/g, "<br>") : null;
+      }
 
       // Add error message if statement failed
       if (meta.failed && detail) {
