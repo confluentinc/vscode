@@ -69,28 +69,41 @@
               </div>
             </template>
           </div>
-          <template data-if="this.statementMeta().failed && this.statementMeta().detail">
-            <details class="detail-section error" open>
+          <template data-if="this.detailItems().length > 0">
+            <details class="detail-section" open data-testid="statement-execution-details">
               <summary>
-                <span class="detail-title">Something went wrong</span>
+                <span class="detail-title">Details and warning messages</span>
               </summary>
-              <div
-                data-testid="statement-detail-error"
-                class="detail-content"
-                data-html="this.detailText()"
-              ></div>
-            </details>
-          </template>
-          <template data-if="!this.statementMeta().failed && this.statementMeta().detail">
-            <details class="detail-section info" open>
-              <summary>
-                <span class="detail-title">Info</span>
-              </summary>
-              <div
-                data-testid="statement-detail-info"
-                class="detail-content"
-                data-html="this.detailText()"
-              ></div>
+              <div class="detail-section-content">
+                <template data-for="item of this.detailItems()">
+                  <div
+                    class="detail-item"
+                    data-attr-class="'detail-item ' + this.item().severity.toLowerCase()"
+                    data-attr-data-testid="'statement-detail-' + this.item().severity.toLowerCase()"
+                  >
+                    <div class="detail-header">
+                      <span
+                        class="detail-severity"
+                        data-attr-class="'detail-severity ' + this.item().severity.toLowerCase()"
+                        data-text="this.item().severity"
+                      ></span>
+                      <template data-if="this.item().reason">
+                        <span
+                          class="detail-reason"
+                          data-text="'[' + this.item().reason + ']'"
+                        ></span>
+                      </template>
+                      <template data-if="this.item().createdAt">
+                        <span
+                          class="detail-timestamp"
+                          data-text="'(' + this.item().createdAt + ')'"
+                        ></span>
+                      </template>
+                    </div>
+                    <div class="detail-message" data-html="this.item().message"></div>
+                  </div>
+                </template>
+              </div>
             </details>
           </template>
         </section>
@@ -570,32 +583,96 @@
         padding: 5px;
       }
 
-      .detail-section.error[open] {
-        background: var(--vscode-inputValidation-errorBackground);
-        border-color: var(--vscode-inputValidation-errorBorder);
-      }
-
-      .detail-section.info[open] {
-        background: var(--vscode-inputValidation-infoBackground);
-        border-color: var(--vscode-inputValidation-infoBorder);
-      }
-
       .detail-title {
         font-weight: 600;
       }
 
-      .detail-content {
+      .detail-section[open] {
+        background: var(--vscode-editor-background);
+        border-color: var(--vscode-panel-border);
+      }
+
+      .detail-section-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
         padding: 0 12px 12px 12px;
         font-size: 95%;
         line-height: 1.5;
       }
 
-      .detail-section.error .detail-content {
-        color: var(--vscode-inputValidation-errorForeground);
+      .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        border-radius: 4px;
+        border-left: 3px solid transparent;
       }
 
-      .detail-section.info .detail-content {
-        color: var(--vscode-inputValidation-infoForeground);
+      .detail-item.error,
+      .detail-item.critical {
+        border-left-color: var(--vscode-editorError-foreground);
+        background: color-mix(in srgb, var(--vscode-editorError-foreground) 10%, transparent);
+      }
+
+      .detail-item.moderate {
+        border-left-color: var(--vscode-editorWarning-foreground);
+        background: color-mix(in srgb, var(--vscode-editorWarning-foreground) 10%, transparent);
+      }
+
+      .detail-item.low {
+        border-left-color: var(--vscode-editorInfo-foreground);
+        background: color-mix(in srgb, var(--vscode-editorInfo-foreground) 10%, transparent);
+      }
+
+      .detail-item.info {
+        border-left-color: var(--vscode-editor-foreground);
+        background: transparent;
+      }
+
+      .detail-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 90%;
+      }
+
+      .detail-severity {
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .detail-severity.error,
+      .detail-severity.critical {
+        color: var(--vscode-editorError-foreground);
+      }
+
+      .detail-severity.moderate {
+        color: var(--vscode-editorWarning-foreground);
+      }
+
+      .detail-severity.low {
+        color: var(--vscode-editorInfo-foreground);
+      }
+
+      .detail-severity.info {
+        color: var(--vscode-editor-foreground);
+      }
+
+      .detail-reason {
+        font-family: var(--vscode-editor-font-family, monospace);
+        color: var(--vscode-descriptionForeground);
+      }
+
+      .detail-timestamp {
+        color: var(--vscode-descriptionForeground);
+        font-size: 90%;
+      }
+
+      .detail-message {
+        line-height: 1.5;
       }
 
       .toggle-actions {
