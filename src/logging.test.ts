@@ -460,7 +460,7 @@ describe("logging.ts", () => {
     });
 
     it("should delegate getFileUris() to member RotatingLogManager instance", function () {
-      const getFileUrisStub = sinon.stub(logManagerStub, "getFileUris");
+      const getFileUrisStub = sandbox.stub(logManagerStub, "getFileUris");
 
       instance.getFileUris();
 
