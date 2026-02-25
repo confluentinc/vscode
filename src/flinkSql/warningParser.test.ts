@@ -1,5 +1,10 @@
 import assert from "assert";
-import { extractWarnings, parseLegacyWarnings, stripWarningsFromDetail, type StatementWarning } from "./warningParser";
+import {
+  extractWarnings,
+  parseLegacyWarnings,
+  stripWarningsFromDetail,
+  type StatementWarning,
+} from "./warningParser";
 
 describe("flinkSql/warningParser", () => {
   describe("parseLegacyWarnings", () => {
