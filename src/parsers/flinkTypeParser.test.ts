@@ -948,4 +948,28 @@ describe("flinkTypeParser", () => {
       assert.strictEqual(topicField.comment, undefined);
     });
   });
+
+  describe("DoS protection", () => {
+    it("rejects type strings exceeding maximum length", () => {
+      // Create a type string longer than 65KB limit
+      const longTypeString = "VARCHAR(" + "1".repeat(70000) + ")";
+
+      assert.throws(() => parseFlinkType(longTypeString), /Type string exceeds maximum length/);
+    });
+
+    it("accepts valid type strings within the length limit", () => {
+      // Create a large but valid ROW type with many fields (well under 65KB)
+      const largeRowType =
+        "ROW<" +
+        Array.from({ length: 100 })
+          .map((_, i) => `field${i} VARCHAR(100)`)
+          .join(", ") +
+        ">";
+
+      // Should not throw
+      const result = parseFlinkType(largeRowType);
+      assert.strictEqual(result.typeName, "ROW");
+      assert.strictEqual((result as any).children.length, 100);
+    });
+  });
 });

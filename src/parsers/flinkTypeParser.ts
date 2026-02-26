@@ -427,6 +427,15 @@ function extractTypeNameAndParameters(typeString: string): {
   parameters: string[];
 } {
   const trimmed = typeString.trim();
+
+  // Prevent catastrophic backtracking by limiting input length.
+  // Most Flink types are small, but we allow generous limits for arbitrarily complex ROW types
+  // with many nested fields. Limit is set to 65KB which is well beyond any practical type definition.
+  const MAX_TYPE_LENGTH = 65536;
+  if (trimmed.length > MAX_TYPE_LENGTH) {
+    throw new Error(`Type string exceeds maximum length: ${typeString}`);
+  }
+
   // Match type name (single word or multi-word like "TIMESTAMP WITH LOCAL TIME ZONE").
   // This regex captures the full type name with any embedded parameters preserved in the name.
   // Pattern: word [parameters] [more words [parameters] ...]
