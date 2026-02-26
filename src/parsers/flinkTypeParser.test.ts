@@ -486,7 +486,6 @@ describe("flinkTypeParser", () => {
       assert.strictEqual(result.dataType, "TIMESTAMP_LTZ(9)");
     });
 
-    // Note: MULTISET<BIGINT> and MAP with unquoted scalar types are disabled
     // Note: These example tests using MULTISET<BIGINT> and MAP with unquoted scalar types
     // are intentionally left commented out as illustrative samples. Nested scalar types in
     // collection/compound contexts are exercised by other tests in this suite.
@@ -556,8 +555,8 @@ describe("flinkTypeParser", () => {
     // covered by dedicated tests elsewhere. This disabled example is kept only for reference.
     // it("parses ROW with parameterized type and comment", () => { ... });
 
-    it("parses complex Playlist type with nested ROW structures (simplified, no ARRAY)", () => {
-      // Playlist with nested ROW for owner (ARRAY removed for now due to parser limitation)
+    it("parses complex Playlist type with nested ROW structures", () => {
+      // Simplified Playlist schema with nested ROW for owner
       const input = `ROW<\`collaborative\` BOOLEAN NOT NULL, \`description\` VARCHAR(2147483647) NOT NULL, \`href\` VARCHAR(2147483647) NOT NULL, \`id\` VARCHAR(2147483647) NOT NULL, \`name\` VARCHAR(2147483647) NOT NULL, \`owner\` ROW<\`display_name\` VARCHAR(2147483647), \`href\` VARCHAR(2147483647) NOT NULL, \`id\` VARCHAR(2147483647), \`type\` VARCHAR(2147483647) NOT NULL, \`uri\` VARCHAR(2147483647)> NOT NULL, \`primary_color\` VARCHAR(2147483647), \`public\` BOOLEAN NOT NULL, \`snapshot_id\` VARCHAR(2147483647) NOT NULL, \`type\` VARCHAR(2147483647) NOT NULL, \`uri\` VARCHAR(2147483647) NOT NULL>`;
       const result = parseFlinkType(input);
       assert(isCompoundFlinkType(result));
