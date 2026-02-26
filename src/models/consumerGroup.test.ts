@@ -14,7 +14,7 @@ import {
 } from "../../tests/unit/testResources/consumerGroup";
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources/kafkaCluster";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
+import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
 import { ConsumerGroupState, ConsumerGroupTreeItem, ConsumerTreeItem } from "./consumerGroup";
 
@@ -97,7 +97,7 @@ describe("models/consumerGroup.ts", () => {
     describe("ccloudUrl", () => {
       it("should return the correct URL for CCloud groups", () => {
         const group = TEST_CCLOUD_CONSUMER_GROUP;
-        const expected = `https://confluent.cloud/environments/${group.environmentId}/clusters/${group.clusterId}/clients/consumer-lag/${group.consumerGroupId}`;
+        const expected = `https://${CCLOUD_BASE_PATH}/environments/${group.environmentId}/clusters/${group.clusterId}/clients/consumer-lag/${group.consumerGroupId}`;
 
         assert.strictEqual(group.ccloudUrl, expected);
       });
@@ -133,7 +133,7 @@ describe("models/consumerGroup.ts", () => {
     describe("ccloudUrl", () => {
       it("should return the correct URL for CCloud consumers", () => {
         const consumer = TEST_CCLOUD_CONSUMER;
-        const expected = `https://confluent.cloud/environments/${consumer.environmentId}/clusters/${consumer.clusterId}/clients/consumers/${consumer.clientId}`;
+        const expected = `https://${CCLOUD_BASE_PATH}/environments/${consumer.environmentId}/clusters/${consumer.clusterId}/clients/consumers/${consumer.clientId}`;
 
         assert.strictEqual(consumer.ccloudUrl, expected);
       });

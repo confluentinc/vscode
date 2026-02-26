@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
+import { CCLOUD_BASE_PATH } from "../constants";
 import { IconNames } from "../icons";
 import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
@@ -98,7 +99,7 @@ export class ConsumerGroup implements IResourceBase, ISearchable, IdItem {
     if (this.connectionType !== ConnectionType.Ccloud) {
       return "";
     }
-    return `https://confluent.cloud/environments/${this.environmentId}/clusters/${this.clusterId}/clients/consumer-lag/${this.consumerGroupId}`;
+    return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/clusters/${this.clusterId}/clients/consumer-lag/${this.consumerGroupId}`;
   }
 }
 
@@ -157,7 +158,7 @@ export class Consumer implements IResourceBase, ISearchable, IdItem {
     if (this.connectionType !== ConnectionType.Ccloud) {
       return "";
     }
-    return `https://confluent.cloud/environments/${this.environmentId}/clusters/${this.clusterId}/clients/consumers/${this.clientId}`;
+    return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/clusters/${this.clusterId}/clients/consumers/${this.clientId}`;
   }
 }
 
