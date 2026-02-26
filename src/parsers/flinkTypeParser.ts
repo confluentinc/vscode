@@ -175,7 +175,7 @@ function parseAtomicOrParameterizedType(
       arrayMembersAreNullable: decorators.arrayMembersAreNullable,
       isMultiset: decorators.isMultiset,
       multisetMembersAreNullable: decorators.multisetMembersAreNullable,
-      maxLength: parameters.length > 0 ? parseInt(parameters[0], 10) : undefined,
+      maxLength: parameters.length > 0 ? Number.parseInt(parameters[0], 10) : undefined,
     };
     return type;
   }
@@ -189,8 +189,8 @@ function parseAtomicOrParameterizedType(
       arrayMembersAreNullable: decorators.arrayMembersAreNullable,
       isMultiset: decorators.isMultiset,
       multisetMembersAreNullable: decorators.multisetMembersAreNullable,
-      precision: parameters.length > 0 ? parseInt(parameters[0], 10) : undefined,
-      scale: parameters.length > 1 ? parseInt(parameters[1], 10) : undefined,
+      precision: parameters.length > 0 ? Number.parseInt(parameters[0], 10) : undefined,
+      scale: parameters.length > 1 ? Number.parseInt(parameters[1], 10) : undefined,
     };
     return type;
   }
@@ -204,7 +204,7 @@ function parseAtomicOrParameterizedType(
       arrayMembersAreNullable: decorators.arrayMembersAreNullable,
       isMultiset: decorators.isMultiset,
       multisetMembersAreNullable: decorators.multisetMembersAreNullable,
-      precision: parameters.length > 0 ? parseInt(parameters[0], 10) : undefined,
+      precision: parameters.length > 0 ? Number.parseInt(parameters[0], 10) : undefined,
     };
     return type;
   }
