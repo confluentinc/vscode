@@ -6,6 +6,7 @@ import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
 import { SearchableView } from "./View";
 import { TopicItem } from "./viewItems/TopicItem";
+import { ViewItem } from "./viewItems/ViewItem";
 
 export enum SelectKafkaCluster {
   FromResourcesView = "Kafka cluster action from the Resources view",
@@ -29,9 +30,10 @@ export class TopicsView extends SearchableView {
     await this.clickNavAction("Search");
   }
 
-  /** Click the "Create Topic" nav action in the view title area. */
+  /** Click the "Create Topic" inline action on the Topics container item. */
   async clickCreateTopic(): Promise<void> {
-    await this.clickNavAction("Create Topic");
+    const containerItem = new ViewItem(this.page, this.topicsContainer);
+    await containerItem.clickInlineAction("Create Topic");
   }
 
   /**
@@ -49,9 +51,14 @@ export class TopicsView extends SearchableView {
     await expect(this.progressIndicator).toBeHidden();
   }
 
-  /** Get all (root-level) topic items in the view. */
+  /** Get the "Topics" container at the root level of the tree. */
+  get topicsContainer(): Locator {
+    return this.body.locator("[role='treeitem'][aria-level='1']").filter({ hasText: "Topics" });
+  }
+
+  /** Get all topic items in the view (nested under the Topics container). */
   get topics(): Locator {
-    return this.body.locator("[role='treeitem'][aria-level='1']");
+    return this.body.locator("[role='treeitem'][aria-level='2']");
   }
 
   /** Get a topic item by its label/name. */
@@ -78,7 +85,7 @@ export class TopicsView extends SearchableView {
    */
   get subjects(): Locator {
     // we don't use `this.topicsWithSchemas` because these are sibling elements to topics in the DOM
-    return this.body.locator("[role='treeitem'][aria-level='2']");
+    return this.body.locator("[role='treeitem'][aria-level='3']");
   }
 
   /**
@@ -87,7 +94,7 @@ export class TopicsView extends SearchableView {
    */
   get schemaVersions(): Locator {
     // we don't use `this.subjects` because these are sibling elements to subjects in the DOM
-    return this.body.locator("[role='treeitem'][aria-level='3']");
+    return this.body.locator("[role='treeitem'][aria-level='4']");
   }
 
   /**
@@ -130,8 +137,8 @@ export class TopicsView extends SearchableView {
   }
 
   /**
-   * Create a new topic using the "Create Topic" nav action in the view title area, filling out the
-   * required inputs in the subsequent input boxes.
+   * Create a new topic using the "Create Topic" inline action on the Topics container, filling out
+   * the required inputs in the subsequent input boxes.
    *
    * @param topicName The name of the new topic to create.
    * @param numPartitions (Optional) The number of partitions for the new topic. If not provided,
