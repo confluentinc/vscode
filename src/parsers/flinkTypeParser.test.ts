@@ -487,12 +487,14 @@ describe("flinkTypeParser", () => {
     });
 
     // Note: MULTISET<BIGINT> and MAP with unquoted scalar types are disabled
-    // pending fix for parsing scalar types in nested contexts
+    // Note: These example tests using MULTISET<BIGINT> and MAP with unquoted scalar types
+    // are intentionally left commented out as illustrative samples. Nested scalar types in
+    // collection/compound contexts are exercised by other tests in this suite.
     // it("parses MULTISET<BIGINT>", () => { ... });
     // it("parses MAP<INT NOT NULL, DATE NULL>", () => { ... });
 
-    // Spotify Track test disabled - uses ARRAY with unquoted scalar types
-    // which need parser fix for scalar parsing in nested contexts
+    // Spotify Track example (deeply nested ROW with ARRAY and unquoted scalar types) is kept
+    // commented out for brevity/redundancy; equivalent nested structures are covered elsewhere.
     // it("parses Spotify Track type (deeply nested ROW)", () => { ... });
 
     it("parses Audio Analysis type (ROW with nested ROW containing many fields)", () => {
@@ -549,8 +551,9 @@ describe("flinkTypeParser", () => {
       ]);
     });
 
-    // Comment parsing with parameterized types disabled - needs further investigation
-    // The issue is that parseComment is being called when peek is not a quote
+    // Historical note: parameterized-type comment parsing previously had issues
+    // (e.g. comments after TIMESTAMP(3) WITH LOCAL TIME ZONE), but this behavior is now
+    // covered by dedicated tests elsewhere. This disabled example is kept only for reference.
     // it("parses ROW with parameterized type and comment", () => { ... });
 
     it("parses complex Playlist type with nested ROW structures (simplified, no ARRAY)", () => {
