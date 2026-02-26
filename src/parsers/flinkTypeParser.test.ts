@@ -138,6 +138,72 @@ describe("flinkTypeParser", () => {
     });
   });
 
+  describe("array and multiset nullability combinations", () => {
+    it("parses ARRAY<INT> (array nullable, members nullable by default)", () => {
+      const result = parseFlinkType("ARRAY<INT>");
+      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
+      assert.strictEqual(result.isFieldNullable, true); // Array itself is nullable by default
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members[0].isFieldNullable, true); // Members nullable by default
+    });
+
+    it("parses ARRAY<INT NOT NULL> (array nullable, members NOT null)", () => {
+      const result = parseFlinkType("ARRAY<INT NOT NULL>");
+      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
+      assert.strictEqual(result.isFieldNullable, true); // Array itself is nullable by default
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members[0].isFieldNullable, false); // Members are NOT NULL
+    });
+
+    it("parses ARRAY<INT> NOT NULL (array NOT null, members nullable)", () => {
+      const result = parseFlinkType("ARRAY<INT> NOT NULL");
+      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
+      assert.strictEqual(result.isFieldNullable, false); // Array itself is NOT NULL
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members[0].isFieldNullable, true); // Members nullable by default
+    });
+
+    it("parses ARRAY<INT NOT NULL> NOT NULL (array NOT null, members NOT null)", () => {
+      const result = parseFlinkType("ARRAY<INT NOT NULL> NOT NULL");
+      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
+      assert.strictEqual(result.isFieldNullable, false); // Array itself is NOT NULL
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members[0].isFieldNullable, false); // Members are NOT NULL
+    });
+
+    it("parses MULTISET<VARCHAR> (multiset nullable, members nullable)", () => {
+      const result = parseFlinkType("MULTISET<VARCHAR>");
+      assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
+      assert.strictEqual(result.isFieldNullable, true); // Multiset itself is nullable by default
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members[0].isFieldNullable, true); // Members nullable by default
+    });
+
+    it("parses MULTISET<VARCHAR NOT NULL> (multiset nullable, members NOT null)", () => {
+      const result = parseFlinkType("MULTISET<VARCHAR NOT NULL>");
+      assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
+      assert.strictEqual(result.isFieldNullable, true); // Multiset itself is nullable by default
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members[0].isFieldNullable, false); // Members are NOT NULL
+    });
+
+    it("parses MULTISET<VARCHAR> NOT NULL (multiset NOT null, members nullable)", () => {
+      const result = parseFlinkType("MULTISET<VARCHAR> NOT NULL");
+      assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
+      assert.strictEqual(result.isFieldNullable, false); // Multiset itself is NOT NULL
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members[0].isFieldNullable, true); // Members nullable by default
+    });
+
+    it("parses MULTISET<VARCHAR NOT NULL> NOT NULL (multiset NOT null, members NOT null)", () => {
+      const result = parseFlinkType("MULTISET<VARCHAR NOT NULL> NOT NULL");
+      assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
+      assert.strictEqual(result.isFieldNullable, false); // Multiset itself is NOT NULL
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members[0].isFieldNullable, false); // Members are NOT NULL
+    });
+  });
+
   describe("ROW types", () => {
     it("parses ROW with backtick-quoted field names", () => {
       const result = parseFlinkType("ROW<`id` BIGINT, `name` VARCHAR>");
@@ -194,6 +260,22 @@ describe("flinkTypeParser", () => {
       assert.strictEqual(row.members[1].dataType, "VARCHAR");
       const fieldNames = row.members.map((m) => m.fieldName);
       assert.deepStrictEqual(fieldNames, ["id", "name"]);
+    });
+
+    it("parses ROW field comments with escaped quotes", () => {
+      const result = parseFlinkType(
+        "ROW<`name` VARCHAR 'User''s name', `status` INT 'Status code: ''OK'' or ''ERROR''.'>",
+      );
+      assert(isCompoundFlinkType(result));
+      const row = result;
+      assert.strictEqual(row.members.length, 2);
+      // Verify that doubled quotes are unescaped to single quotes
+      const nameField = row.members[0];
+      assert.strictEqual(nameField.fieldName, "name");
+      assert.strictEqual(nameField.comment, "User's name");
+      const statusField = row.members[1];
+      assert.strictEqual(statusField.fieldName, "status");
+      assert.strictEqual(statusField.comment, "Status code: 'OK' or 'ERROR'.");
     });
   });
 
@@ -606,6 +688,42 @@ describe("flinkTypeParser", () => {
       assert.strictEqual(headersMap.members.length, 2);
       const headersMapFieldNames = headersMap.members.map((m) => m.fieldName);
       assert.deepStrictEqual(headersMapFieldNames, ["key", "value"]);
+    });
+  });
+
+  describe("type guard validation (kind vs members mismatch)", () => {
+    // Test cases for invalid kind/members combinations
+    const invalidMismatches = [
+      {
+        description: "SCALAR kind with members",
+        type: {
+          kind: FlinkTypeKind.SCALAR,
+          dataType: "INT",
+          isFieldNullable: true,
+          members: [{ kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: true }],
+        },
+      },
+      {
+        description: "another SCALAR with members",
+        type: {
+          kind: FlinkTypeKind.SCALAR,
+          dataType: "VARCHAR",
+          isFieldNullable: true,
+          members: [
+            { kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: true },
+            { kind: FlinkTypeKind.SCALAR, dataType: "VARCHAR", isFieldNullable: true },
+          ],
+        },
+      },
+    ];
+
+    invalidMismatches.forEach(({ description, type }) => {
+      it(`throws error on ${description}`, () => {
+        assert.throws(
+          () => isCompoundFlinkType(type),
+          /Invalid type: kind is SCALAR but members array is present/,
+        );
+      });
     });
   });
 

@@ -299,9 +299,10 @@ class FlinkTypeParser {
    */
   /**
    * Parse a field comment in single quotes.
-   * Interior single quotes are escaped as doubled quotes ('').
+   * In Flink SQL, interior single quotes are escaped as doubled quotes ('').
+   * This method handles the unescaping: '' in input becomes ' in output.
    *
-   * @returns The comment text (unescaped)
+   * @returns The comment text with escaped quotes unescaped
    */
   private parseComment(): string {
     // Consume opening quote (caller verified it exists with peek() === "'")

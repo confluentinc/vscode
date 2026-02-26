@@ -29,6 +29,11 @@ export enum FlinkTypeKind {
  */
 export interface FlinkType {
   /**
+   * Enumeration indicating the kind of type: scalar, ROW, MAP, ARRAY, or MULTISET.
+   */
+  kind: FlinkTypeKind;
+
+  /**
    * The data type name, including any size or precision designators.
    * Examples: 'DATE', 'VARCHAR(256)', 'TIME STAMP WITH TIME ZONE'
    * For containers: just the base name without the angle bracket content.
@@ -37,15 +42,8 @@ export interface FlinkType {
 
   /**
    * Is this field/type nullable as a whole?
-   * True means the value itself can be NULL.
-   * False means the value cannot be NULL.
    */
   isFieldNullable: boolean;
-
-  /**
-   * Enumeration indicating the kind of type: scalar, ROW, MAP, ARRAY, or MULTISET.
-   */
-  kind: FlinkTypeKind;
 
   /**
    * For ROW, MAP, ARRAY, or MULTISET types: the contained member types.
@@ -65,7 +63,7 @@ export interface FlinkType {
   /**
    * Optional comment/documentation for this field.
    * Only defined for ROW member fields.
-   * May span multiple lines. Interior single quotes are escaped as doubled quotes ('').
+   * Returned unescaped: doubled single quotes ('') in the input are converted to single quotes (').
    */
   comment?: string;
 }
@@ -74,12 +72,12 @@ export interface FlinkType {
  * Compound Flink type (subinterface of FlinkType).
  *
  * Extends FlinkType for types that contain sub-members: ROW, MAP, ARRAY, and MULTISET.
- * The members array provides structured access to nested types.
+ * The members array is guaranteed to be non-empty and provides structured access to nested types.
  */
 export interface CompoundFlinkType extends FlinkType {
   /**
-   * Array of member types (required for compound types).
-   * - For ROW: each element has a fieldName
+   * Non-empty array of member types (required for compound types).
+   * - For ROW: each element has a fieldName (2+ elements for practical schemas)
    * - For MAP: exactly 2 elements with fieldNames "key" and "value" (key first)
    * - For ARRAY/MULTISET: exactly 1 element (no fieldName)
    */
@@ -88,10 +86,36 @@ export interface CompoundFlinkType extends FlinkType {
 
 /**
  * Type guard to check if a FlinkType is a CompoundFlinkType.
+ * Verifies that members exists, is a non-empty array, and the kind matches.
+ * Throws an error if a members array is present but kind is not a compound type.
  *
  * @param type - The FlinkType to check
- * @returns true if the type is a compound type with members
+ * @returns true if the type is a compound type with a non-empty members array
+ * @throws Error if members array exists but kind is not ROW, MAP, ARRAY, or MULTISET
  */
 export function isCompoundFlinkType(type: FlinkType): type is CompoundFlinkType {
-  return "members" in type && Array.isArray((type as CompoundFlinkType).members);
+  const hasMembers =
+    "members" in type &&
+    Array.isArray((type as CompoundFlinkType).members) &&
+    (type as CompoundFlinkType).members.length > 0;
+
+  if (hasMembers && !shouldHaveMembers(type.kind)) {
+    throw new Error(
+      `Invalid type: kind is ${type.kind} but members array is present. ` +
+        `Only ROW, MAP, ARRAY, and MULTISET can have members.`,
+    );
+  }
+
+  return hasMembers;
+}
+
+/**
+ * Check if a FlinkTypeKind should have members.
+ * Container types (ROW, MAP, ARRAY, MULTISET) have members; scalar types do not.
+ *
+ * @param kind - The FlinkTypeKind to check
+ * @returns true if the kind should have a members array
+ */
+function shouldHaveMembers(kind: FlinkTypeKind): boolean {
+  return kind !== FlinkTypeKind.SCALAR;
 }
