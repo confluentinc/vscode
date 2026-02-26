@@ -249,7 +249,7 @@ function parseRowFields(rowContent: string): FlinkType[] {
       afterFieldName = remaining.substring(closeBacktick + 1).trim();
     } else {
       // Unquoted field name
-      const fieldMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s+/.exec(remaining);
+      const fieldMatch = /^([A-Za-z_]\w*)\s+/.exec(remaining);
       if (!fieldMatch) {
         throw new Error(`Invalid ROW field syntax: ${remaining}`);
       }
@@ -431,13 +431,11 @@ function extractTypeNameAndParameters(typeString: string): {
   // This regex captures the full type name with any embedded parameters preserved in the name.
   // Pattern: word [parameters] [more words [parameters] ...]
   // Note: The regex is complex but necessary to handle multi-word type names with embedded
-  // parameters (e.g., "TIMESTAMP(3) WITH LOCAL TIME ZONE"). Character class [A-Za-z_] and
-  // [A-Za-z0-9_] are used instead of \w because type names cannot start with digits.
+  // parameters (e.g., "TIMESTAMP(3) WITH LOCAL TIME ZONE"). [A-Za-z_] is used at the start
+  // because type names cannot begin with digits, followed by \w for subsequent characters.
   // NOSONAR - S5843: Regex complexity is intentional for Flink type parsing
   const match =
-    /^([A-Za-z_][A-Za-z0-9_]*(?:\s*\([^)]*\))?(?:\s+[A-Za-z_][A-Za-z0-9_]*(?:\s*\([^)]*\))?)*)\s*(.*)$/.exec(
-      trimmed,
-    );
+    /^([A-Za-z_]\w*(?:\s*\([^)]*\))?(?:\s+[A-Za-z_]\w*(?:\s*\([^)]*\))?)*)\s*(.*)$/.exec(trimmed);
 
   if (!match) {
     throw new Error(`Invalid type syntax: ${typeString}`);
