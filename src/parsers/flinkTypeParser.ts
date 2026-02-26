@@ -159,35 +159,30 @@ class FlinkTypeParser {
    * Parse a scalar or parameterized type (e.g., INT, VARCHAR(255), TIMESTAMP WITH TIME ZONE).
    */
   private parseScalarType(): FlinkType {
-    // Parse base type name, stopping at delimiters, keywords, and punctuation
-    let baseType = this.state.parseIdentifierWithSpaces(() => this.shouldStopParsingType());
-    let dataType = baseType;
+    // Parse base type, then consume any parameters and keywords
+    let dataType = this.state.parseIdentifierWithSpaces(() => this.shouldStopParsingType());
 
-    // Check for parameters in parentheses
+    // Consume parameters in parentheses (e.g., VARCHAR(255), DECIMAL(10,2))
     this.state.skipWhitespace();
     if (this.state.peek() === "(") {
       const paramContent = this.state.consumeUntilMatchingDelimiter("(");
-      dataType = `${baseType}(${paramContent})`;
-      if (!this.state.tryConsume(")")) {
-        throw new Error("Expected ')' after parameters");
-      }
+      dataType += `(${paramContent})`;
+      this.state.tryConsume(")");
     }
 
-    // Parse additional type keywords (e.g., "WITH LOCAL TIME ZONE")
+    // Parse additional type keywords (e.g., "WITH LOCAL TIME ZONE", "WITH TIME ZONE")
     this.state.skipWhitespace();
     if (!this.state.isEof() && !this.shouldStopParsingType()) {
-      const afterParams = this.state.parseIdentifierWithSpaces(() => this.shouldStopParsingType());
-      if (afterParams) {
-        dataType = `${dataType} ${afterParams}`;
+      const keywords = this.state.parseIdentifierWithSpaces(() => this.shouldStopParsingType());
+      if (keywords) {
+        dataType += ` ${keywords}`;
       }
     }
 
     this.state.skipWhitespace();
-    const isFieldNullable = this.parseNullability();
-
     return {
       dataType,
-      isFieldNullable,
+      isFieldNullable: this.parseNullability(),
       kind: FlinkTypeKind.SCALAR,
     };
   }
@@ -255,7 +250,10 @@ class FlinkTypeParser {
 
       this.state.skipWhitespace();
 
-      // Check for comma separator
+      // Check for comma separator or closing bracket
+      if (this.state.isEof()) {
+        throw new Error("Expected ',' or '>' in ROW definition, got EOF");
+      }
       if (this.state.peek() === ",") {
         this.state.consume();
       } else if (this.state.peek() !== ">") {
@@ -303,20 +301,23 @@ class FlinkTypeParser {
     // Consume opening quote (caller verified it exists with peek() === "'")
     this.state.consume();
 
-    let comment = "";
+    const start = this.state.getCurrentPos();
+
+    // Scan forward to find the closing quote, tracking doubled quotes
     while (!this.state.isEof()) {
       if (this.state.peek() === "'") {
-        this.state.consume(); // consume the quote
+        this.state.consume();
         // Check if it's an escaped quote (doubled)
         if (this.state.peek() === "'") {
-          comment += "'";
-          this.state.consume(); // consume second quote
+          this.state.consume(); // consume second quote, continue scanning
         } else {
-          // End of comment
-          return comment;
+          // Found closing quote - extract and unescape
+          const rawComment = this.state.extractSince(start);
+          // Remove the closing quote (last character) and unescape doubled quotes
+          return rawComment.slice(0, -1).replaceAll("''", "'");
         }
       } else {
-        comment += this.state.consume();
+        this.state.consume();
       }
     }
 
@@ -331,15 +332,12 @@ class FlinkTypeParser {
    * Returns true if found, false otherwise.
    */
   private hasNotNull(): boolean {
-    const word1 = this.state.peekWord();
-    if (word1.word !== "NOT") {
+    if (this.state.peekWord().word !== "NOT") {
       return false;
     }
 
     // After NOT, we need to see NULL
-    // peekWordAt uses offset from current position, word1.word.length is the length of "NOT"
-    const word2 = this.state.peekWordAt(word1.word.length);
-
+    const word2 = this.state.peekWordAt("NOT".length);
     return word2 === "NULL";
   }
 

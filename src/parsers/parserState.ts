@@ -261,6 +261,12 @@ export class ParserState {
       }
     }
 
+    if (this.isEof()) {
+      throw new Error(
+        `Unclosed delimiter "${openChar}": reached end of input without finding matching "${closeChar}"`,
+      );
+    }
+
     return this.input.slice(start, this.pos).trim();
   }
 
@@ -291,5 +297,23 @@ export class ParserState {
     this.consume(keyword.length);
 
     return true;
+  }
+
+  /**
+   * Get the current position in the input.
+   * Used to save a position and later extract a substring using extractSince().
+   */
+  getCurrentPos(): number {
+    return this.pos;
+  }
+
+  /**
+   * Extract substring from a marked starting position to current position.
+   * Useful for capturing content after advancing the parser.
+   * @param startPos - The starting position (typically from getCurrentPos())
+   * @returns The substring from startPos to current position (exclusive)
+   */
+  extractSince(startPos: number): string {
+    return this.input.slice(startPos, this.pos);
   }
 }

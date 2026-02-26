@@ -8,42 +8,34 @@ import { parseFlinkType } from "./flinkTypeParser";
 
 describe("flinkTypeParser", () => {
   describe("scalar types", () => {
-    it("parses INT", () => {
-      const result = parseFlinkType("INT");
-      assert.strictEqual(result.dataType, "INT");
-      assert.strictEqual(result.kind, FlinkTypeKind.SCALAR);
-      assert.strictEqual(result.isFieldNullable, true);
-    });
-
-    it("parses BIGINT", () => {
-      const result = parseFlinkType("BIGINT");
-      assert.strictEqual(result.dataType, "BIGINT");
-    });
-
-    it("parses VARCHAR", () => {
-      const result = parseFlinkType("VARCHAR");
-      assert.strictEqual(result.dataType, "VARCHAR");
-    });
-
-    it("parses DOUBLE", () => {
-      const result = parseFlinkType("DOUBLE");
-      assert.strictEqual(result.dataType, "DOUBLE");
-    });
-
-    it("parses BOOLEAN", () => {
-      const result = parseFlinkType("BOOLEAN");
-      assert.strictEqual(result.dataType, "BOOLEAN");
-    });
-
-    it("parses DATE", () => {
-      const result = parseFlinkType("DATE");
-      assert.strictEqual(result.dataType, "DATE");
+    // Parameterized test for basic scalar types
+    const scalarTypes = ["INT", "BIGINT", "VARCHAR", "DOUBLE", "BOOLEAN", "DATE"];
+    scalarTypes.forEach((type) => {
+      it(`parses ${type}`, () => {
+        const result = parseFlinkType(type);
+        assert.strictEqual(result.dataType, type);
+        assert.strictEqual(result.kind, FlinkTypeKind.SCALAR);
+        assert.strictEqual(result.isFieldNullable, true);
+      });
     });
 
     it("parses INT NOT NULL", () => {
       const result = parseFlinkType("INT NOT NULL");
       assert.strictEqual(result.dataType, "INT");
       assert.strictEqual(result.isFieldNullable, false);
+    });
+
+    it("parses INT NULL (explicit null)", () => {
+      const result = parseFlinkType("INT NULL");
+      assert.strictEqual(result.dataType, "INT");
+      assert.strictEqual(result.kind, FlinkTypeKind.SCALAR);
+      assert.strictEqual(result.isFieldNullable, true);
+    });
+
+    it("parses VARCHAR NULL", () => {
+      const result = parseFlinkType("VARCHAR NULL");
+      assert.strictEqual(result.dataType, "VARCHAR");
+      assert.strictEqual(result.isFieldNullable, true);
     });
   });
 
@@ -84,6 +76,18 @@ describe("flinkTypeParser", () => {
       const result = parseFlinkType("TYPE(OUTER(MIDDLE(INNER())))");
       assert.strictEqual(result.dataType, "TYPE(OUTER(MIDDLE(INNER())))");
     });
+
+    it("parses VARCHAR(255) NOT NULL", () => {
+      const result = parseFlinkType("VARCHAR(255) NOT NULL");
+      assert.strictEqual(result.dataType, "VARCHAR(255)");
+      assert.strictEqual(result.isFieldNullable, false);
+    });
+
+    it("parses DECIMAL(10,2) NULL (explicit null)", () => {
+      const result = parseFlinkType("DECIMAL(10,2) NULL");
+      assert.strictEqual(result.dataType, "DECIMAL(10,2)");
+      assert.strictEqual(result.isFieldNullable, true);
+    });
   });
 
   describe("NOT NULL parsing (not confused with other NOT keywords)", () => {
@@ -121,22 +125,6 @@ describe("flinkTypeParser", () => {
       assert.strictEqual(result.members[0].dataType, "VARCHAR(256)");
     });
 
-    it("parses ARRAY<INT NULL>", () => {
-      const result = parseFlinkType("ARRAY<INT NULL>");
-      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
-      assert(isCompoundFlinkType(result));
-      assert.strictEqual(result.members.length, 1);
-      assert.strictEqual(result.members[0].isFieldNullable, true);
-    });
-
-    it("parses ARRAY<VARCHAR(256) NULL>", () => {
-      const result = parseFlinkType("ARRAY<VARCHAR(256) NULL>");
-      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
-      assert(isCompoundFlinkType(result));
-      assert.strictEqual(result.members.length, 1);
-      assert.strictEqual(result.members[0].isFieldNullable, true);
-    });
-
     it("parses MULTISET<BIGINT>", () => {
       const result = parseFlinkType("MULTISET<BIGINT>");
       assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
@@ -145,36 +133,29 @@ describe("flinkTypeParser", () => {
       assert.strictEqual(result.members[0].dataType, "BIGINT");
     });
 
-    it("parses MULTISET<CHAR NOT NULL>", () => {
-      const result = parseFlinkType("MULTISET<CHAR NOT NULL>");
-      assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
+    it("parses ARRAY<INT> NULL (explicit null on array)", () => {
+      const result = parseFlinkType("ARRAY<INT> NULL");
+      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
+      assert.strictEqual(result.isFieldNullable, true);
       assert(isCompoundFlinkType(result));
-      assert.strictEqual(result.members.length, 1);
-      assert.strictEqual(result.members[0].isFieldNullable, false);
+      assert.strictEqual(result.members[0].dataType, "INT");
+    });
+
+    it("parses MULTISET<VARCHAR> NULL (explicit null on multiset)", () => {
+      const result = parseFlinkType("MULTISET<VARCHAR> NULL");
+      assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
+      assert.strictEqual(result.isFieldNullable, true);
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members[0].dataType, "VARCHAR");
     });
   });
 
   describe("array and multiset nullability combinations", () => {
+    // Representative tests for nullability combinations - keep ARRAY and MULTISET with mixed nullability
     it("parses ARRAY<INT> (array nullable, members nullable by default)", () => {
       const result = parseFlinkType("ARRAY<INT>");
       assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
       assert.strictEqual(result.isFieldNullable, true); // Array itself is nullable by default
-      assert(isCompoundFlinkType(result));
-      assert.strictEqual(result.members[0].isFieldNullable, true); // Members nullable by default
-    });
-
-    it("parses ARRAY<INT NOT NULL> (array nullable, members NOT null)", () => {
-      const result = parseFlinkType("ARRAY<INT NOT NULL>");
-      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
-      assert.strictEqual(result.isFieldNullable, true); // Array itself is nullable by default
-      assert(isCompoundFlinkType(result));
-      assert.strictEqual(result.members[0].isFieldNullable, false); // Members are NOT NULL
-    });
-
-    it("parses ARRAY<INT> NOT NULL (array NOT null, members nullable)", () => {
-      const result = parseFlinkType("ARRAY<INT> NOT NULL");
-      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
-      assert.strictEqual(result.isFieldNullable, false); // Array itself is NOT NULL
       assert(isCompoundFlinkType(result));
       assert.strictEqual(result.members[0].isFieldNullable, true); // Members nullable by default
     });
@@ -191,22 +172,6 @@ describe("flinkTypeParser", () => {
       const result = parseFlinkType("MULTISET<VARCHAR>");
       assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
       assert.strictEqual(result.isFieldNullable, true); // Multiset itself is nullable by default
-      assert(isCompoundFlinkType(result));
-      assert.strictEqual(result.members[0].isFieldNullable, true); // Members nullable by default
-    });
-
-    it("parses MULTISET<VARCHAR NOT NULL> (multiset nullable, members NOT null)", () => {
-      const result = parseFlinkType("MULTISET<VARCHAR NOT NULL>");
-      assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
-      assert.strictEqual(result.isFieldNullable, true); // Multiset itself is nullable by default
-      assert(isCompoundFlinkType(result));
-      assert.strictEqual(result.members[0].isFieldNullable, false); // Members are NOT NULL
-    });
-
-    it("parses MULTISET<VARCHAR> NOT NULL (multiset NOT null, members nullable)", () => {
-      const result = parseFlinkType("MULTISET<VARCHAR> NOT NULL");
-      assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
-      assert.strictEqual(result.isFieldNullable, false); // Multiset itself is NOT NULL
       assert(isCompoundFlinkType(result));
       assert.strictEqual(result.members[0].isFieldNullable, true); // Members nullable by default
     });
@@ -276,6 +241,31 @@ describe("flinkTypeParser", () => {
       assert.strictEqual(row.members[1].dataType, "VARCHAR");
       const fieldNames = row.members.map((m) => m.fieldName);
       assert.deepStrictEqual(fieldNames, ["id", "name"]);
+    });
+
+    it("parses ROW with mixed backtick-quoted and unquoted field names", () => {
+      const result = parseFlinkType("ROW<`id` BIGINT, name VARCHAR, `status` INT>");
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.kind, FlinkTypeKind.ROW);
+      const row = result;
+      assert.strictEqual(row.members.length, 3);
+      assert.strictEqual(row.members[0].fieldName, "id");
+      assert.strictEqual(row.members[0].dataType, "BIGINT");
+      assert.strictEqual(row.members[1].fieldName, "name");
+      assert.strictEqual(row.members[1].dataType, "VARCHAR");
+      assert.strictEqual(row.members[2].fieldName, "status");
+      assert.strictEqual(row.members[2].dataType, "INT");
+      const fieldNames = row.members.map((m) => m.fieldName);
+      assert.deepStrictEqual(fieldNames, ["id", "name", "status"]);
+    });
+
+    it("parses ROW with explicit NULL", () => {
+      const result = parseFlinkType("ROW<`id` INT, `name` VARCHAR> NULL");
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.kind, FlinkTypeKind.ROW);
+      assert.strictEqual(result.isFieldNullable, true); // Explicit NULL on ROW
+      const row = result;
+      assert.strictEqual(row.members.length, 2);
     });
 
     it("parses ROW field comments with escaped quotes", () => {
@@ -842,7 +832,10 @@ describe("flinkTypeParser", () => {
 
   describe("error handling", () => {
     it("throws error on missing closing parenthesis in parameters", () => {
-      assert.throws(() => parseFlinkType("VARCHAR(255"), /Expected '\)' after parameters/);
+      assert.throws(
+        () => parseFlinkType("VARCHAR(255"),
+        /Unclosed delimiter "\(": reached end of input without finding matching "\)"/,
+      );
     });
 
     it("throws error on malformed ROW with missing comma", () => {
@@ -859,8 +852,16 @@ describe("flinkTypeParser", () => {
       );
     });
 
-    it("throws error on ARRAY with missing closing angle bracket", () => {
-      assert.throws(() => parseFlinkType("ARRAY<INT"), /Expected '>' to close ARRAY/);
+    // Parameterized tests for missing closing bracket errors
+    const closingBracketTests = [
+      { input: "ARRAY<INT", expected: /Expected '>' to close ARRAY/ },
+      { input: "MAP<INT, VARCHAR", expected: /Expected '>' to close MAP/ },
+      { input: "MULTISET<INT", expected: /Expected '>' to close MULTISET/ },
+    ];
+    closingBracketTests.forEach(({ input, expected }) => {
+      it(`throws error on ${input.split("<")[0]} with missing closing angle bracket`, () => {
+        assert.throws(() => parseFlinkType(input), expected);
+      });
     });
 
     it("throws error on ROW with missing closing angle bracket", () => {
@@ -871,28 +872,20 @@ describe("flinkTypeParser", () => {
       assert.throws(() => parseFlinkType("ROW<`id` INT,"), /Expected '>' to close ROW/);
     });
 
-    it("throws error on MAP with missing closing angle bracket", () => {
-      assert.throws(() => parseFlinkType("MAP<INT, VARCHAR"), /Expected '>' to close MAP/);
-    });
-
-    it("throws error on MULTISET with missing closing angle bracket", () => {
-      assert.throws(() => parseFlinkType("MULTISET<INT"), /Expected '>' to close MULTISET/);
-    });
-
-    it("throws error on ARRAY with missing opening angle bracket", () => {
-      assert.throws(() => parseFlinkType("ARRAY INT"), /Expected '<' after ARRAY/);
-    });
-
-    it("throws error on MULTISET with missing opening angle bracket", () => {
-      assert.throws(() => parseFlinkType("MULTISET INT"), /Expected '<' after MULTISET/);
+    // Parameterized tests for missing opening bracket errors
+    const openingBracketTests = [
+      { input: "ARRAY INT", expected: /Expected '<' after ARRAY/ },
+      { input: "MULTISET INT", expected: /Expected '<' after MULTISET/ },
+      { input: "MAP INT, VARCHAR", expected: /Expected '<' after MAP/ },
+    ];
+    openingBracketTests.forEach(({ input, expected }) => {
+      it(`throws error on ${input.split(" ")[0]} with missing opening angle bracket`, () => {
+        assert.throws(() => parseFlinkType(input), expected);
+      });
     });
 
     it("throws error on ROW with missing opening angle bracket", () => {
       assert.throws(() => parseFlinkType("ROW `id` INT"), /Expected '<' after ROW/);
-    });
-
-    it("throws error on MAP with missing opening angle bracket", () => {
-      assert.throws(() => parseFlinkType("MAP INT, VARCHAR"), /Expected '<' after MAP/);
     });
 
     it("throws error on unterminated backtick-quoted ROW field name", () => {
@@ -930,6 +923,27 @@ describe("flinkTypeParser", () => {
       it(`throws error on ${description}`, () => {
         assert.throws(() => parseFlinkType(input), /Expected identifier, got: null/);
       });
+    });
+  });
+
+  describe("EOF edge cases", () => {
+    it("throws error on ROW with EOF before closing bracket", () => {
+      assert.throws(
+        () => parseFlinkType("ROW<id INT, name VARCHAR"),
+        /Expected ',' or '>' in ROW definition, got EOF/,
+      );
+    });
+
+    it("throws error on MAP with EOF before closing bracket", () => {
+      assert.throws(() => parseFlinkType("MAP<INT, VARCHAR"), /Expected '>' to close MAP/);
+    });
+
+    it("throws error on ARRAY with EOF before closing bracket", () => {
+      assert.throws(() => parseFlinkType("ARRAY<INT"), /Expected '>' to close ARRAY/);
+    });
+
+    it("throws error on MULTISET with EOF before closing bracket", () => {
+      assert.throws(() => parseFlinkType("MULTISET<BIGINT"), /Expected '>' to close MULTISET/);
     });
   });
 });

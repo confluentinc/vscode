@@ -737,7 +737,7 @@ export async function testRun() {
 
   // Convert pipe-separated patterns to regex OR pattern, and detect regex syntax
   const isRegexPattern =
-    testFilter && (testFilter.includes("|") || /[\[\(\)\.\*\+\?\{]/.test(testFilter));
+    testFilter && (testFilter.includes("|") || /[\[\]\(\)\.\*\+\?\{\}]/.test(testFilter));
   let grepPattern;
   if (isRegexPattern && testFilter.includes("|")) {
     // Convert "pattern1|pattern2" to "(pattern1|pattern2)" for Mocha grep
