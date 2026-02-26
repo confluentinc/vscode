@@ -415,15 +415,20 @@ function parseMapKeyValue(mapContent: string): FlinkType[] {
 
 /**
  * Extracts type name and parameters from a type string.
+ * Note: For multi-word timestamp types like "TIMESTAMP WITH LOCAL TIME ZONE",
+ * this function extracts the full multi-word name and preserves any embedded parameters.
+ * However, such types currently fall back to FlinkAtomicType since isTimestampType()
+ * only recognizes single-word variants (TIMESTAMP, TIMESTAMP_LTZ, TIME).
  * Example: "VARCHAR(255)" => { typeName: "VARCHAR", parameters: ["255"] }
+ * Example: "TIMESTAMP(3) WITH LOCAL TIME ZONE" => { typeName: "TIMESTAMP WITH LOCAL TIME ZONE", parameters: ["3"] }
  */
 function extractTypeNameAndParameters(typeString: string): {
   typeName: string;
   parameters: string[];
 } {
   const trimmed = typeString.trim();
-  // Match type name (single word or multi-word like "TIMESTAMP WITH LOCAL TIME ZONE"),
-  // allowing parameters in between words: TIMESTAMP(3) WITH LOCAL TIME ZONE
+  // Match type name (single word or multi-word like "TIMESTAMP WITH LOCAL TIME ZONE").
+  // This regex captures the full type name with any embedded parameters preserved in the name.
   // Pattern: word [parameters] [more words [parameters] ...]
   const match = trimmed.match(
     /^([A-Za-z_][A-Za-z0-9_]*(?:\s*\([^)]*\))?(?:\s+[A-Za-z_][A-Za-z0-9_]*(?:\s*\([^)]*\))?)*)\s*(.*)$/,
@@ -522,6 +527,10 @@ function isNumericType(typeName: string): boolean {
 
 /**
  * Checks if a type name is a timestamp/temporal type (with precision parameter).
+ * Recognizes single-word timestamp variants: TIMESTAMP, TIMESTAMP_LTZ, and TIME.
+ * Multi-word variants like "TIMESTAMP WITH LOCAL TIME ZONE" are not recognized
+ * and will fall back to FlinkAtomicType. This is a known limitation that could be
+ * addressed in a future enhancement.
  */
 function isTimestampType(typeName: string): boolean {
   return ["TIMESTAMP", "TIMESTAMP_LTZ", "TIME"].includes(typeName);
