@@ -338,11 +338,12 @@ export async function setFlinkDocumentMetadata(
     catalog?: CCloudEnvironment;
     database?: CCloudFlinkDbKafkaCluster;
     computePool?: CCloudFlinkComputePool;
+    fromWorkspace?: boolean;
   },
 ): Promise<void> {
   const metadata: UriMetadata = {};
 
-  const { catalog: environment, database, computePool } = opts;
+  const { catalog: environment, database, computePool, fromWorkspace } = opts;
 
   if (environment) {
     metadata[UriMetadataKeys.FLINK_CATALOG_ID] = environment.id;
@@ -356,6 +357,10 @@ export async function setFlinkDocumentMetadata(
 
   if (computePool) {
     metadata[UriMetadataKeys.FLINK_COMPUTE_POOL_ID] = computePool.id;
+  }
+
+  if (fromWorkspace) {
+    metadata[UriMetadataKeys.FLINK_FROM_WORKSPACE] = true;
   }
 
   logger.debug(`setting Flink catalog / database / compute pool metadata for URI`, {
