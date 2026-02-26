@@ -2,6 +2,8 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { createTestResource } from "../../../tests/unit/testResources/base";
+import { ConnectionType } from "../../clients/sidecar";
+import { CCLOUD_CONNECTION_ID } from "../../constants";
 import { ERROR_ICON, IconNames } from "../../icons";
 import type { BaseViewProviderData } from "../../viewProviders/baseModels/base";
 import { LOADING_POLL_INTERVAL_MS, ResourceContainer } from "./resourceContainer";
@@ -16,7 +18,7 @@ class TestContainer extends ResourceContainer<BaseViewProviderData> {
     contextValue?: string,
     icon?: ThemeIcon,
   ) {
-    super(label, children, contextValue, icon);
+    super(CCLOUD_CONNECTION_ID, ConnectionType.Ccloud, label, children, contextValue, icon);
     this.id = `test-${label}`;
   }
 }

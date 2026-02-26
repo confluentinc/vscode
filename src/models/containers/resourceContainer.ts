@@ -1,7 +1,8 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import type { ConnectionType } from "../../clients/sidecar";
 import { ERROR_ICON, IconNames } from "../../icons";
 import { Logger } from "../../logging";
-import type { ISearchable } from "../resource";
+import type { ConnectionId, ISearchable } from "../resource";
 
 /** Poll interval to use when waiting for a container to finish loading. */
 export const LOADING_POLL_INTERVAL_MS = 100;
@@ -17,6 +18,10 @@ export abstract class ResourceContainer<T extends ISearchable>
   // enforce string so subclasses set this after super()
   declare id: string;
 
+  // IResourceBase fields required by BaseViewProviderData
+  readonly connectionId: ConnectionId;
+  readonly connectionType: ConnectionType;
+
   abstract loggerName: string;
 
   private _children: T[];
@@ -26,9 +31,18 @@ export abstract class ResourceContainer<T extends ISearchable>
   protected readonly _defaultContextValue: string | undefined;
   protected readonly _defaultIcon: ThemeIcon | undefined;
 
-  protected constructor(label: string, children: T[], contextValue?: string, icon?: ThemeIcon) {
+  protected constructor(
+    connectionId: ConnectionId,
+    connectionType: ConnectionType,
+    label: string,
+    children: T[],
+    contextValue?: string,
+    icon?: ThemeIcon,
+  ) {
     super(label, TreeItemCollapsibleState.Collapsed);
 
+    this.connectionId = connectionId;
+    this.connectionType = connectionType;
     this._children = children;
 
     this._defaultContextValue = contextValue;
