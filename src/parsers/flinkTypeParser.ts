@@ -445,7 +445,7 @@ function extractTypeNameAndParameters(typeString: string): {
   const afterTypeName = match[2];
 
   // Check for malformed syntax (e.g., unclosed parentheses or garbage after)
-  if (afterTypeName && afterTypeName.trim()) {
+  if (afterTypeName?.trim()) {
     throw new Error(`Invalid type syntax: ${typeString}`);
   }
 
