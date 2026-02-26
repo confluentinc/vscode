@@ -108,8 +108,9 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       sinon.assert.notCalled(setFlinkDocumentMetadataStub);
     });
 
-    it("should open a single statement as a document without metadata", async function () {
+    it("should open a single statement as a document with fromWorkspace set", async function () {
       openTextDocumentStub.resolves(mockDocument);
+      setFlinkDocumentMetadataStub.resolves();
 
       await openSqlStatementsAsDocuments([statement]);
 
@@ -119,10 +120,13 @@ describe("flinkSql/flinkWorkspace.ts", function () {
         content: statement,
       });
 
+      sinon.assert.calledOnce(setFlinkDocumentMetadataStub);
+      sinon.assert.calledWith(setFlinkDocumentMetadataStub, mockDocument.uri, {
+        fromWorkspace: true,
+      });
+
       sinon.assert.calledOnce(showTextDocumentStub);
       sinon.assert.calledWith(showTextDocumentStub, mockDocument, { preview: false });
-
-      sinon.assert.notCalled(setFlinkDocumentMetadataStub);
     });
 
     it("should open a single statement with metadata context", async function () {
@@ -144,7 +148,10 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       });
 
       sinon.assert.calledOnce(setFlinkDocumentMetadataStub);
-      sinon.assert.calledWith(setFlinkDocumentMetadataStub, mockDocument.uri, metadataContext);
+      sinon.assert.calledWith(setFlinkDocumentMetadataStub, mockDocument.uri, {
+        ...metadataContext,
+        fromWorkspace: true,
+      });
 
       sinon.assert.calledOnce(showTextDocumentStub);
       sinon.assert.calledWith(showTextDocumentStub, mockDocument, { preview: false });
@@ -166,6 +173,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       await openSqlStatementsAsDocuments(statements);
 
       sinon.assert.callCount(openTextDocumentStub, 3);
+      sinon.assert.callCount(setFlinkDocumentMetadataStub, 3);
       sinon.assert.callCount(showTextDocumentStub, 3);
 
       for (let i = 0; i < statements.length; i++) {
@@ -177,8 +185,6 @@ describe("flinkSql/flinkWorkspace.ts", function () {
           preview: false,
         });
       }
-
-      sinon.assert.notCalled(setFlinkDocumentMetadataStub);
     });
 
     it("should set metadata on each document when metadata context is provided", async function () {
@@ -196,16 +202,14 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       await openSqlStatementsAsDocuments(statements, metadataContext);
 
       sinon.assert.callCount(setFlinkDocumentMetadataStub, 2);
-      sinon.assert.calledWith(
-        setFlinkDocumentMetadataStub.getCall(0),
-        mockDocuments[0].uri,
-        metadataContext,
-      );
-      sinon.assert.calledWith(
-        setFlinkDocumentMetadataStub.getCall(1),
-        mockDocuments[1].uri,
-        metadataContext,
-      );
+      sinon.assert.calledWith(setFlinkDocumentMetadataStub.getCall(0), mockDocuments[0].uri, {
+        ...metadataContext,
+        fromWorkspace: true,
+      });
+      sinon.assert.calledWith(setFlinkDocumentMetadataStub.getCall(1), mockDocuments[1].uri, {
+        ...metadataContext,
+        fromWorkspace: true,
+      });
       sinon.assert.callOrder(setFlinkDocumentMetadataStub, showTextDocumentStub);
     });
 
@@ -221,7 +225,10 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       await openSqlStatementsAsDocuments([statement], metadataContext);
 
       sinon.assert.calledOnce(setFlinkDocumentMetadataStub);
-      sinon.assert.calledWith(setFlinkDocumentMetadataStub, mockDocument.uri, metadataContext);
+      sinon.assert.calledWith(setFlinkDocumentMetadataStub, mockDocument.uri, {
+        ...metadataContext,
+        fromWorkspace: true,
+      });
     });
 
     it("should handle empty metadata context", async function () {
@@ -233,9 +240,10 @@ describe("flinkSql/flinkWorkspace.ts", function () {
 
       await openSqlStatementsAsDocuments([statement], metadataContext);
 
-      // Empty metadata context is still truthy, so setFlinkDocumentMetadata should be called
       sinon.assert.calledOnce(setFlinkDocumentMetadataStub);
-      sinon.assert.calledWith(setFlinkDocumentMetadataStub, mockDocument.uri, metadataContext);
+      sinon.assert.calledWith(setFlinkDocumentMetadataStub, mockDocument.uri, {
+        fromWorkspace: true,
+      });
     });
   });
 
@@ -766,6 +774,11 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       assert.ok(docOptions.content.includes("No Flink SQL statements were found"));
 
       sinon.assert.calledOnce(setFlinkDocumentMetadataStub);
+      sinon.assert.calledWith(
+        setFlinkDocumentMetadataStub,
+        mockDocument.uri,
+        sinon.match({ catalog: testEnvironment }),
+      );
       sinon.assert.calledOnce(showTextDocumentStub);
       sinon.assert.notCalled(createEnhancedQuickPickStub);
     });
