@@ -11,8 +11,6 @@ import { showErrorNotificationWithButtons } from "../notifications";
 import type { QuickPickItemWithValue } from "../quickpicks/types";
 import { createEnhancedQuickPick } from "../quickpicks/utils/quickPickUtils";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { UriMetadataKeys } from "../storage/constants";
-import { getResourceManager } from "../storage/resourceManager";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import { setFlinkDocumentMetadata } from "./statementUtils";
 
@@ -113,12 +111,7 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
       language: FLINK_SQL_LANGUAGE_ID,
       content: `No Flink SQL statements were found in this workspace.`,
     });
-    await setFlinkDocumentMetadata(document.uri, metadataContext);
-    await getResourceManager().setUriMetadataValue(
-      document.uri,
-      UriMetadataKeys.FLINK_FROM_WORKSPACE,
-      true,
-    );
+    await setFlinkDocumentMetadata(document.uri, { ...metadataContext, fromWorkspace: true });
     await vscode.window.showTextDocument(document);
     return;
   }
@@ -334,14 +327,10 @@ export async function openSqlStatementsAsDocuments(
     });
 
     // Set metadata on document before showing (triggers language client config)
-    if (metadataContext) {
-      await setFlinkDocumentMetadata(document.uri, metadataContext);
-    }
-    await getResourceManager().setUriMetadataValue(
-      document.uri,
-      UriMetadataKeys.FLINK_FROM_WORKSPACE,
-      true,
-    );
+    await setFlinkDocumentMetadata(document.uri, {
+      ...(metadataContext ?? {}),
+      fromWorkspace: true,
+    });
 
     await vscode.window.showTextDocument(document, { preview: false });
   }
