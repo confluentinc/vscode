@@ -38,7 +38,7 @@ export async function run() {
   if (process.env.GREP != null) {
     try {
       mocha.grep(new RegExp(process.env.GREP));
-    } catch (error) {
+    } catch {
       throw new Error(`Invalid GREP regex pattern: ${process.env.GREP}`);
     }
   } else if (process.env.FGREP != null) {
