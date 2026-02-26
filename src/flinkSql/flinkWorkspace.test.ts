@@ -777,7 +777,7 @@ describe("flinkSql/flinkWorkspace.ts", function () {
       sinon.assert.calledWith(
         setFlinkDocumentMetadataStub,
         mockDocument.uri,
-        sinon.match({ fromWorkspace: true }),
+        sinon.match({ catalog: testEnvironment }),
       );
       sinon.assert.calledOnce(showTextDocumentStub);
       sinon.assert.notCalled(createEnhancedQuickPickStub);
