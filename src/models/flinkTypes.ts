@@ -35,7 +35,7 @@ export interface FlinkType {
 
   /**
    * The data type name, including any size or precision designators.
-   * Examples: 'DATE', 'VARCHAR(256)', 'TIME STAMP WITH TIME ZONE'
+   * Examples: 'DATE', 'VARCHAR(256)', 'TIMESTAMP WITH TIME ZONE'
    * For containers: just the base name without the angle bracket content.
    */
   dataType: string;

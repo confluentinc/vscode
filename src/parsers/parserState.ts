@@ -246,8 +246,7 @@ export class ParserState {
     }
 
     // Consume the keyword
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for (const _ of keyword) {
+    for (let i = 0; i < keyword.length; i++) {
       this.consume();
     }
 

@@ -443,7 +443,7 @@ describe("flinkTypeParser", () => {
     });
   });
 
-  describe("extravagant real-world examples from REAL_WORLD_FULL_DATA_TYPE_EXAMPLES.md", () => {
+  describe("extravagant real-world examples", () => {
     it("parses INTERVAL YEAR(4) TO MONTH", () => {
       const result = parseFlinkType("INTERVAL YEAR(4) TO MONTH");
       assert.strictEqual(result.kind, FlinkTypeKind.SCALAR);
