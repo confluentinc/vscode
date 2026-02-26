@@ -91,7 +91,7 @@ export interface CompoundFlinkType extends FlinkType {
  *
  * @param type - The FlinkType to check
  * @returns true if the type is a compound type with a non-empty members array
- * @throws Error if members array exists but kind is not ROW, MAP, ARRAY, or MULTISET
+ * @throws Error if members array exists but kind is SCALAR, indicating an invalid type definition
  */
 export function isCompoundFlinkType(type: FlinkType): type is CompoundFlinkType {
   const hasMembers =
@@ -99,23 +99,9 @@ export function isCompoundFlinkType(type: FlinkType): type is CompoundFlinkType 
     Array.isArray((type as CompoundFlinkType).members) &&
     (type as CompoundFlinkType).members.length > 0;
 
-  if (hasMembers && !shouldHaveMembers(type.kind)) {
-    throw new Error(
-      `Invalid type: kind is ${type.kind} but members array is present. ` +
-        `Only ROW, MAP, ARRAY, and MULTISET can have members.`,
-    );
+  if (hasMembers && type.kind === FlinkTypeKind.SCALAR) {
+    throw new Error(`Invalid type: kind is ${type.kind} but members array is present.`);
   }
 
   return hasMembers;
-}
-
-/**
- * Check if a FlinkTypeKind should have members.
- * Container types (ROW, MAP, ARRAY, MULTISET) have members; scalar types do not.
- *
- * @param kind - The FlinkTypeKind to check
- * @returns true if the kind should have a members array
- */
-function shouldHaveMembers(kind: FlinkTypeKind): boolean {
-  return kind !== FlinkTypeKind.SCALAR;
 }
