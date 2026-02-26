@@ -86,12 +86,12 @@ export interface CompoundFlinkType extends FlinkType {
 
 /**
  * Type guard to check if a FlinkType is a CompoundFlinkType.
- * Verifies that members exists, is a non-empty array, and the kind matches.
- * Throws an error if a members array is present but kind is not a compound type.
+ * Returns true if the type has a non-empty members array.
+ * Validates that if members are present, the kind must not be SCALAR (which would be invalid).
  *
  * @param type - The FlinkType to check
- * @returns true if the type is a compound type with a non-empty members array
- * @throws Error if members array exists but kind is SCALAR, indicating an invalid type definition
+ * @returns true if the type has a non-empty members array (indicating a compound type)
+ * @throws Error if members array exists but kind is SCALAR, indicating an invalid/corrupted type
  */
 export function isCompoundFlinkType(type: FlinkType): type is CompoundFlinkType {
   const hasMembers =

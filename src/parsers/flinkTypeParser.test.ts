@@ -725,6 +725,100 @@ describe("flinkTypeParser", () => {
         );
       });
     });
+
+    // Test valid compound types return true
+    it("returns true for ARRAY with members", () => {
+      const arrayType: FlinkType = {
+        kind: FlinkTypeKind.ARRAY,
+        dataType: "ARRAY",
+        isFieldNullable: false,
+        members: [{ kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: false }],
+      };
+      assert(isCompoundFlinkType(arrayType));
+    });
+
+    it("returns true for ROW with members", () => {
+      const rowType: FlinkType = {
+        kind: FlinkTypeKind.ROW,
+        dataType: "ROW",
+        isFieldNullable: false,
+        members: [
+          { kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: false, fieldName: "id" },
+        ],
+      };
+      assert(isCompoundFlinkType(rowType));
+    });
+
+    it("returns true for MAP with members", () => {
+      const mapType: FlinkType = {
+        kind: FlinkTypeKind.MAP,
+        dataType: "MAP",
+        isFieldNullable: false,
+        members: [
+          { kind: FlinkTypeKind.SCALAR, dataType: "STRING", isFieldNullable: false },
+          { kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: false },
+        ],
+      };
+      assert(isCompoundFlinkType(mapType));
+    });
+
+    it("returns true for MULTISET with members", () => {
+      const multisetType: FlinkType = {
+        kind: FlinkTypeKind.MULTISET,
+        dataType: "MULTISET",
+        isFieldNullable: false,
+        members: [{ kind: FlinkTypeKind.SCALAR, dataType: "DOUBLE", isFieldNullable: false }],
+      };
+      assert(isCompoundFlinkType(multisetType));
+    });
+
+    // Test scalar types without members return false
+    it("returns false for SCALAR type without members", () => {
+      const scalarType: FlinkType = {
+        kind: FlinkTypeKind.SCALAR,
+        dataType: "INT",
+        isFieldNullable: false,
+      };
+      assert(!isCompoundFlinkType(scalarType));
+    });
+
+    // Test compound types with empty members array return false
+    it("returns false for compound type with empty members array", () => {
+      const emptyArrayType: FlinkType = {
+        kind: FlinkTypeKind.ARRAY,
+        dataType: "ARRAY",
+        isFieldNullable: false,
+        members: [],
+      };
+      assert(!isCompoundFlinkType(emptyArrayType));
+    });
+
+    // Test nested compound types
+    it("returns true for nested ARRAY<ROW<>> structure", () => {
+      const nestedType: FlinkType = {
+        kind: FlinkTypeKind.ARRAY,
+        dataType: "ARRAY",
+        isFieldNullable: false,
+        members: [
+          {
+            kind: FlinkTypeKind.ROW,
+            dataType: "ROW",
+            isFieldNullable: false,
+            members: [
+              {
+                kind: FlinkTypeKind.SCALAR,
+                dataType: "INT",
+                isFieldNullable: false,
+                fieldName: "id",
+              },
+            ],
+          },
+        ],
+      };
+      assert(isCompoundFlinkType(nestedType));
+      // The element type should also be compound
+      assert(isCompoundFlinkType(nestedType.members![0]));
+    });
   });
 
   describe("error handling", () => {
