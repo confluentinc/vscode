@@ -34,8 +34,10 @@ export async function run() {
   const files = globSync("./**/*.test.js", { cwd: testsRoot });
   for (const f of files) mocha.addFile(resolve(testsRoot, f));
 
-  // the environment may provide filter string
-  if (process.env.FGREP != null) {
+  // the environment may provide filter string (exact match) or grep pattern (regex)
+  if (process.env.GREP != null) {
+    mocha.grep(process.env.GREP);
+  } else if (process.env.FGREP != null) {
     mocha.fgrep(process.env.FGREP);
   }
 
