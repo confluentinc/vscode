@@ -1,4 +1,4 @@
-import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { type MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import type { ConnectionType } from "../../clients/sidecar";
 import { ERROR_ICON, IconNames } from "../../icons";
 import { Logger } from "../../logging";
@@ -62,47 +62,49 @@ export abstract class ResourceContainer<T extends ISearchable>
     return this._logger;
   }
 
-  /**
-   * Child resources belonging to this container.
-   * Setting this will clear the internal {@linkcode isLoading} state.
-   * If the children array has items, this will also set {@linkcode hasError} to `false`.
-   */
+  /** Child resources belonging to this container. */
   get children(): T[] {
     return this._children;
-  }
-
-  set children(children: T[]) {
-    this._children = children;
-    this.isLoading = false;
-    this.description = `(${children.length})`;
-
-    if (children.length > 0) {
-      this.hasError = false;
-    }
   }
 
   get isLoading(): boolean {
     return this._isLoading;
   }
 
-  set isLoading(loading: boolean) {
-    this._isLoading = loading;
-    this.iconPath = loading ? new ThemeIcon(IconNames.LOADING) : this._defaultIcon;
-  }
-
   get hasError(): boolean {
     return this._hasError;
   }
 
-  /** Set or clear the error state for this container. */
-  set hasError(error: boolean) {
-    this._hasError = error;
-    this.iconPath = error ? ERROR_ICON : this._defaultIcon;
+  /** Transition to loading state. Shows loading spinner icon. */
+  setLoading(): void {
+    this._isLoading = true;
+    this._hasError = false;
+    this.iconPath = new ThemeIcon(IconNames.LOADING);
+  }
 
+  /** Transition to loaded state with results. Clears loading, error, and tooltip. */
+  setLoaded(children: T[]): void {
+    this._children = children;
+    this._isLoading = false;
+    this._hasError = false;
+    this.description = `(${children.length})`;
+    this.iconPath = this._defaultIcon;
+    this.tooltip = undefined;
     if (this._defaultContextValue) {
-      // append or remove "-error" suffix to context value based on error state to toggle enablement
-      // of resource-specific commands
-      this.contextValue = error ? `${this._defaultContextValue}-error` : this._defaultContextValue;
+      this.contextValue = this._defaultContextValue;
+    }
+  }
+
+  /** Transition to error state. Sets error icon, clears children, sets error tooltip. */
+  setError(tooltip: string | MarkdownString): void {
+    this._children = [];
+    this._isLoading = false;
+    this._hasError = true;
+    this.description = "(0)";
+    this.iconPath = ERROR_ICON;
+    this.tooltip = tooltip;
+    if (this._defaultContextValue) {
+      this.contextValue = `${this._defaultContextValue}-error`;
     }
   }
 
