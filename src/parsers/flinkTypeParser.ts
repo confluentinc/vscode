@@ -52,8 +52,8 @@ function parseTypeInternal(input: string): { type: FlinkType; remaining: string 
   const upperRemaining = remaining.toUpperCase();
 
   // Check for ARRAY/MULTISET decorator (with optional whitespace before <)
-  const arrayMatch = upperRemaining.match(/^ARRAY\s*</i);
-  const multisetMatch = upperRemaining.match(/^MULTISET\s*</i);
+  const arrayMatch = /^ARRAY\s*</i.exec(upperRemaining);
+  const multisetMatch = /^MULTISET\s*</i.exec(upperRemaining);
 
   if (arrayMatch) {
     // Extract ARRAY<...> and parse recursively
@@ -249,7 +249,7 @@ function parseRowFields(rowContent: string): FlinkType[] {
       afterFieldName = remaining.substring(closeBacktick + 1).trim();
     } else {
       // Unquoted field name
-      const fieldMatch = remaining.match(/^([A-Za-z_][A-Za-z0-9_]*)\s+/);
+      const fieldMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s+/.exec(remaining);
       if (!fieldMatch) {
         throw new Error(`Invalid ROW field syntax: ${remaining}`);
       }
@@ -430,9 +430,14 @@ function extractTypeNameAndParameters(typeString: string): {
   // Match type name (single word or multi-word like "TIMESTAMP WITH LOCAL TIME ZONE").
   // This regex captures the full type name with any embedded parameters preserved in the name.
   // Pattern: word [parameters] [more words [parameters] ...]
-  const match = trimmed.match(
-    /^([A-Za-z_][A-Za-z0-9_]*(?:\s*\([^)]*\))?(?:\s+[A-Za-z_][A-Za-z0-9_]*(?:\s*\([^)]*\))?)*)\s*(.*)$/,
-  );
+  // Note: The regex is complex but necessary to handle multi-word type names with embedded
+  // parameters (e.g., "TIMESTAMP(3) WITH LOCAL TIME ZONE"). Character class [A-Za-z_] and
+  // [A-Za-z0-9_] are used instead of \w because type names cannot start with digits.
+  // NOSONAR - S5843: Regex complexity is intentional for Flink type parsing
+  const match =
+    /^([A-Za-z_][A-Za-z0-9_]*(?:\s*\([^)]*\))?(?:\s+[A-Za-z_][A-Za-z0-9_]*(?:\s*\([^)]*\))?)*)\s*(.*)$/.exec(
+      trimmed,
+    );
 
   if (!match) {
     throw new Error(`Invalid type syntax: ${typeString}`);
