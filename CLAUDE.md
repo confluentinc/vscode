@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this
+repository.
+
+## Project Overview
+
+This is the **Confluent for VS Code** extension - a VS Code extension for building stream processing
+applications using Confluent Cloud, Apache Kafka, and Apache Flink. The extension integrates with
+Confluent Cloud products and Apache Kafka-compatible clusters within VS Code.
+
 ## Core Commands
 
 ### Build & Development
