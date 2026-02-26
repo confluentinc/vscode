@@ -64,7 +64,7 @@ function parseTypeInternal(input: string): { type: FlinkType; remaining: string 
     const { type: innerType } = parseTypeInternal(content);
 
     // Parse outer nullability (after the closing bracket)
-    const { typeString: _baseTypeString, isNullable } = parseNotNull(rest);
+    const { isNullable } = parseNotNull(rest);
 
     // Merge decorators
     innerType.isArray = true;
@@ -83,7 +83,7 @@ function parseTypeInternal(input: string): { type: FlinkType; remaining: string 
     const { type: innerType } = parseTypeInternal(content);
 
     // Parse outer nullability (after the closing bracket)
-    const { typeString: _baseTypeString, isNullable } = parseNotNull(rest);
+    const { isNullable } = parseNotNull(rest);
 
     // Merge decorators
     innerType.isMultiset = true;

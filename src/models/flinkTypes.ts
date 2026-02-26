@@ -54,6 +54,7 @@ export interface FlinkType {
  * Use directly for types with no additional fields beyond FlinkType base properties.
  * Examples: BOOLEAN, BIGINT, INTERVAL types, etc.
  */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface FlinkAtomicType extends FlinkType {
   // Marker only - no additional fields
 }
@@ -101,6 +102,7 @@ export interface FlinkCompositeType extends FlinkType {
  * typeName will be "MAP"
  * Exactly 2 children with rowFieldName="key" and rowFieldName="value"
  */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface FlinkMapType extends FlinkCompositeType {
   // Note: children array has exactly 2 elements
   // children[0] is the key type (cannot be null in Flink)
@@ -112,6 +114,7 @@ export interface FlinkMapType extends FlinkCompositeType {
  * typeName will be "ROW"
  * Open-ended array of children, each representing a named field
  */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface FlinkRowType extends FlinkCompositeType {
   // Note: children array can have any number of elements
   // Each child has its rowFieldName set to the field name
