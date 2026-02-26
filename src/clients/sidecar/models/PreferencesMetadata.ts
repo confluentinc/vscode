@@ -12,58 +12,55 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
- *
+ * 
  * @export
  * @interface PreferencesMetadata
  */
 export interface PreferencesMetadata {
-  /**
-   *
-   * @type {string}
-   * @memberof PreferencesMetadata
-   */
-  self: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PreferencesMetadata
+     */
+    self: string;
 }
 
 /**
  * Check if a given object implements the PreferencesMetadata interface.
  */
 export function instanceOfPreferencesMetadata(value: object): value is PreferencesMetadata {
-  if (!("self" in value) || value["self"] === undefined) return false;
-  return true;
+    if (!('self' in value) || value['self'] === undefined) return false;
+    return true;
 }
 
 export function PreferencesMetadataFromJSON(json: any): PreferencesMetadata {
-  return PreferencesMetadataFromJSONTyped(json, false);
+    return PreferencesMetadataFromJSONTyped(json, false);
 }
 
-export function PreferencesMetadataFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): PreferencesMetadata {
-  if (json == null) {
-    return json;
-  }
-  return {
-    self: json["self"],
-  };
+export function PreferencesMetadataFromJSONTyped(json: any, ignoreDiscriminator: boolean): PreferencesMetadata {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'self': json['self'],
+    };
 }
 
 export function PreferencesMetadataToJSON(json: any): PreferencesMetadata {
-  return PreferencesMetadataToJSONTyped(json, false);
+    return PreferencesMetadataToJSONTyped(json, false);
 }
 
-export function PreferencesMetadataToJSONTyped(
-  value?: PreferencesMetadata | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function PreferencesMetadataToJSONTyped(value?: PreferencesMetadata | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    self: value["self"],
-  };
+    return {
+        
+        'self': value['self'],
+    };
 }
+

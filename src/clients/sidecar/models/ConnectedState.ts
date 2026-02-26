@@ -13,47 +13,43 @@
  */
 
 /**
- *
+ * 
  * @export
  * @enum {string}
  */
 export enum ConnectedState {
-  None = "NONE",
-  Attempting = "ATTEMPTING",
-  Success = "SUCCESS",
-  Expired = "EXPIRED",
-  Failed = "FAILED",
+    None = 'NONE',
+    Attempting = 'ATTEMPTING',
+    Success = 'SUCCESS',
+    Expired = 'EXPIRED',
+    Failed = 'FAILED'
 }
 
+
 export function instanceOfConnectedState(value: any): boolean {
-  for (const key in ConnectedState) {
-    if (Object.prototype.hasOwnProperty.call(ConnectedState, key)) {
-      if (ConnectedState[key as keyof typeof ConnectedState] === value) {
-        return true;
-      }
+    for (const key in ConnectedState) {
+        if (Object.prototype.hasOwnProperty.call(ConnectedState, key)) {
+            if (ConnectedState[key as keyof typeof ConnectedState] === value) {
+                return true;
+            }
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 export function ConnectedStateFromJSON(json: any): ConnectedState {
-  return ConnectedStateFromJSONTyped(json, false);
+    return ConnectedStateFromJSONTyped(json, false);
 }
 
-export function ConnectedStateFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): ConnectedState {
-  return json as ConnectedState;
+export function ConnectedStateFromJSONTyped(json: any, ignoreDiscriminator: boolean): ConnectedState {
+    return json as ConnectedState;
 }
 
 export function ConnectedStateToJSON(value?: ConnectedState | null): any {
-  return value as any;
+    return value as any;
 }
 
-export function ConnectedStateToJSONTyped(
-  value: any,
-  ignoreDiscriminator: boolean,
-): ConnectedState {
-  return value as ConnectedState;
+export function ConnectedStateToJSONTyped(value: any, ignoreDiscriminator: boolean): ConnectedState {
+    return value as ConnectedState;
 }
+

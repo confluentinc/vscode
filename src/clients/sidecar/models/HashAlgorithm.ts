@@ -13,38 +13,40 @@
  */
 
 /**
- *
+ * 
  * @export
  * @enum {string}
  */
 export enum HashAlgorithm {
-  _256 = "SCRAM_SHA_256",
-  _512 = "SCRAM_SHA_512",
+    _256 = 'SCRAM_SHA_256',
+    _512 = 'SCRAM_SHA_512'
 }
 
+
 export function instanceOfHashAlgorithm(value: any): boolean {
-  for (const key in HashAlgorithm) {
-    if (Object.prototype.hasOwnProperty.call(HashAlgorithm, key)) {
-      if (HashAlgorithm[key as keyof typeof HashAlgorithm] === value) {
-        return true;
-      }
+    for (const key in HashAlgorithm) {
+        if (Object.prototype.hasOwnProperty.call(HashAlgorithm, key)) {
+            if (HashAlgorithm[key as keyof typeof HashAlgorithm] === value) {
+                return true;
+            }
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 export function HashAlgorithmFromJSON(json: any): HashAlgorithm {
-  return HashAlgorithmFromJSONTyped(json, false);
+    return HashAlgorithmFromJSONTyped(json, false);
 }
 
 export function HashAlgorithmFromJSONTyped(json: any, ignoreDiscriminator: boolean): HashAlgorithm {
-  return json as HashAlgorithm;
+    return json as HashAlgorithm;
 }
 
 export function HashAlgorithmToJSON(value?: HashAlgorithm | null): any {
-  return value as any;
+    return value as any;
 }
 
 export function HashAlgorithmToJSONTyped(value: any, ignoreDiscriminator: boolean): HashAlgorithm {
-  return value as HashAlgorithm;
+    return value as HashAlgorithm;
 }
+

@@ -12,98 +12,88 @@
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
-import type { Failure, Preferences } from "../models/index";
+
+import * as runtime from '../runtime';
+import type {
+  Failure,
+  Preferences,
+} from '../models/index';
 import {
-  FailureFromJSON,
-  FailureToJSON,
-  PreferencesFromJSON,
-  PreferencesToJSON,
-} from "../models/index";
+    FailureFromJSON,
+    FailureToJSON,
+    PreferencesFromJSON,
+    PreferencesToJSON,
+} from '../models/index';
 
 export interface GatewayV1PreferencesPutRequest {
-  Preferences: Preferences;
+    Preferences: Preferences;
 }
 
 /**
- *
+ * 
  */
 export class PreferencesResourceApi extends runtime.BaseAPI {
-  /**
-   * Get Preferences
-   */
-  async gatewayV1PreferencesGetRaw(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Preferences>> {
-    const queryParameters: any = {};
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * Get Preferences
+     */
+    async gatewayV1PreferencesGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Preferences>> {
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/gateway/v1/preferences`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => PreferencesFromJSON(jsonValue));
-  }
+        const response = await this.request({
+            path: `/gateway/v1/preferences`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   * Get Preferences
-   */
-  async gatewayV1PreferencesGet(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Preferences> {
-    const response = await this.gatewayV1PreferencesGetRaw(initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Update Preferences
-   */
-  async gatewayV1PreferencesPutRaw(
-    requestParameters: GatewayV1PreferencesPutRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Preferences>> {
-    if (requestParameters["Preferences"] == null) {
-      throw new runtime.RequiredError(
-        "Preferences",
-        'Required parameter "Preferences" was null or undefined when calling gatewayV1PreferencesPut().',
-      );
+        return new runtime.JSONApiResponse(response, (jsonValue) => PreferencesFromJSON(jsonValue));
     }
 
-    const queryParameters: any = {};
+    /**
+     * Get Preferences
+     */
+    async gatewayV1PreferencesGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Preferences> {
+        const response = await this.gatewayV1PreferencesGetRaw(initOverrides);
+        return await response.value();
+    }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * Update Preferences
+     */
+    async gatewayV1PreferencesPutRaw(requestParameters: GatewayV1PreferencesPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Preferences>> {
+        if (requestParameters['Preferences'] == null) {
+            throw new runtime.RequiredError(
+                'Preferences',
+                'Required parameter "Preferences" was null or undefined when calling gatewayV1PreferencesPut().'
+            );
+        }
 
-    headerParameters["Content-Type"] = "application/json";
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/gateway/v1/preferences`,
-        method: "PUT",
-        headers: headerParameters,
-        query: queryParameters,
-        body: PreferencesToJSON(requestParameters["Preferences"]),
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => PreferencesFromJSON(jsonValue));
-  }
+        headerParameters['Content-Type'] = 'application/json';
 
-  /**
-   * Update Preferences
-   */
-  async gatewayV1PreferencesPut(
-    requestParameters: GatewayV1PreferencesPutRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Preferences> {
-    const response = await this.gatewayV1PreferencesPutRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
+        const response = await this.request({
+            path: `/gateway/v1/preferences`,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PreferencesToJSON(requestParameters['Preferences']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PreferencesFromJSON(jsonValue));
+    }
+
+    /**
+     * Update Preferences
+     */
+    async gatewayV1PreferencesPut(requestParameters: GatewayV1PreferencesPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Preferences> {
+        const response = await this.gatewayV1PreferencesPutRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
 }

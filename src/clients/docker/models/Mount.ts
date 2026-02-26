@@ -2,161 +2,162 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { MountVolumeOptions } from "./MountVolumeOptions";
+import { mapValues } from '../runtime';
+import type { MountVolumeOptions } from './MountVolumeOptions';
 import {
-  MountVolumeOptionsFromJSON,
-  MountVolumeOptionsFromJSONTyped,
-  MountVolumeOptionsToJSON,
-  MountVolumeOptionsToJSONTyped,
-} from "./MountVolumeOptions";
-import type { MountTmpfsOptions } from "./MountTmpfsOptions";
+    MountVolumeOptionsFromJSON,
+    MountVolumeOptionsFromJSONTyped,
+    MountVolumeOptionsToJSON,
+    MountVolumeOptionsToJSONTyped,
+} from './MountVolumeOptions';
+import type { MountTmpfsOptions } from './MountTmpfsOptions';
 import {
-  MountTmpfsOptionsFromJSON,
-  MountTmpfsOptionsFromJSONTyped,
-  MountTmpfsOptionsToJSON,
-  MountTmpfsOptionsToJSONTyped,
-} from "./MountTmpfsOptions";
-import type { MountBindOptions } from "./MountBindOptions";
+    MountTmpfsOptionsFromJSON,
+    MountTmpfsOptionsFromJSONTyped,
+    MountTmpfsOptionsToJSON,
+    MountTmpfsOptionsToJSONTyped,
+} from './MountTmpfsOptions';
+import type { MountBindOptions } from './MountBindOptions';
 import {
-  MountBindOptionsFromJSON,
-  MountBindOptionsFromJSONTyped,
-  MountBindOptionsToJSON,
-  MountBindOptionsToJSONTyped,
-} from "./MountBindOptions";
+    MountBindOptionsFromJSON,
+    MountBindOptionsFromJSONTyped,
+    MountBindOptionsToJSON,
+    MountBindOptionsToJSONTyped,
+} from './MountBindOptions';
 
 /**
- *
+ * 
  * @export
  * @interface Mount
  */
 export interface Mount {
-  /**
-   * Container path.
-   * @type {string}
-   * @memberof Mount
-   */
-  Target?: string;
-  /**
-   * Mount source (e.g. a volume name, a host path).
-   * @type {string}
-   * @memberof Mount
-   */
-  Source?: string;
-  /**
-   * The mount type. Available types:
-   *
-   * - `bind` Mounts a file or directory from the host into the container. Must exist prior to creating the container.
-   * - `volume` Creates a volume with the given name and options (or uses a pre-existing volume with the same name and options). These are **not** removed when the container is removed.
-   * - `tmpfs` Create a tmpfs with the given options. The mount source cannot be specified for tmpfs.
-   * - `npipe` Mounts a named pipe from the host into the container. Must exist prior to creating the container.
-   * - `cluster` a Swarm cluster volume
-   *
-   * @type {string}
-   * @memberof Mount
-   */
-  Type?: MountTypeEnum;
-  /**
-   * Whether the mount should be read-only.
-   * @type {boolean}
-   * @memberof Mount
-   */
-  ReadOnly?: boolean;
-  /**
-   * The consistency requirement for the mount: `default`, `consistent`, `cached`, or `delegated`.
-   * @type {string}
-   * @memberof Mount
-   */
-  Consistency?: string;
-  /**
-   *
-   * @type {MountBindOptions}
-   * @memberof Mount
-   */
-  BindOptions?: MountBindOptions;
-  /**
-   *
-   * @type {MountVolumeOptions}
-   * @memberof Mount
-   */
-  VolumeOptions?: MountVolumeOptions;
-  /**
-   *
-   * @type {MountTmpfsOptions}
-   * @memberof Mount
-   */
-  TmpfsOptions?: MountTmpfsOptions;
+    /**
+     * Container path.
+     * @type {string}
+     * @memberof Mount
+     */
+    Target?: string;
+    /**
+     * Mount source (e.g. a volume name, a host path).
+     * @type {string}
+     * @memberof Mount
+     */
+    Source?: string;
+    /**
+     * The mount type. Available types:
+     * 
+     * - `bind` Mounts a file or directory from the host into the container. Must exist prior to creating the container.
+     * - `volume` Creates a volume with the given name and options (or uses a pre-existing volume with the same name and options). These are **not** removed when the container is removed.
+     * - `tmpfs` Create a tmpfs with the given options. The mount source cannot be specified for tmpfs.
+     * - `npipe` Mounts a named pipe from the host into the container. Must exist prior to creating the container.
+     * - `cluster` a Swarm cluster volume
+     * 
+     * @type {string}
+     * @memberof Mount
+     */
+    Type?: MountTypeEnum;
+    /**
+     * Whether the mount should be read-only.
+     * @type {boolean}
+     * @memberof Mount
+     */
+    ReadOnly?: boolean;
+    /**
+     * The consistency requirement for the mount: `default`, `consistent`, `cached`, or `delegated`.
+     * @type {string}
+     * @memberof Mount
+     */
+    Consistency?: string;
+    /**
+     * 
+     * @type {MountBindOptions}
+     * @memberof Mount
+     */
+    BindOptions?: MountBindOptions;
+    /**
+     * 
+     * @type {MountVolumeOptions}
+     * @memberof Mount
+     */
+    VolumeOptions?: MountVolumeOptions;
+    /**
+     * 
+     * @type {MountTmpfsOptions}
+     * @memberof Mount
+     */
+    TmpfsOptions?: MountTmpfsOptions;
 }
 
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export enum MountTypeEnum {
-  Bind = "bind",
-  Volume = "volume",
-  Tmpfs = "tmpfs",
-  Npipe = "npipe",
-  Cluster = "cluster",
+    Bind = 'bind',
+    Volume = 'volume',
+    Tmpfs = 'tmpfs',
+    Npipe = 'npipe',
+    Cluster = 'cluster'
 }
+
 
 /**
  * Check if a given object implements the Mount interface.
  */
 export function instanceOfMount(value: object): value is Mount {
-  return true;
+    return true;
 }
 
 export function MountFromJSON(json: any): Mount {
-  return MountFromJSONTyped(json, false);
+    return MountFromJSONTyped(json, false);
 }
 
 export function MountFromJSONTyped(json: any, ignoreDiscriminator: boolean): Mount {
-  if (json == null) {
-    return json;
-  }
-  return {
-    Target: json["Target"] == null ? undefined : json["Target"],
-    Source: json["Source"] == null ? undefined : json["Source"],
-    Type: json["Type"] == null ? undefined : json["Type"],
-    ReadOnly: json["ReadOnly"] == null ? undefined : json["ReadOnly"],
-    Consistency: json["Consistency"] == null ? undefined : json["Consistency"],
-    BindOptions:
-      json["BindOptions"] == null ? undefined : MountBindOptionsFromJSON(json["BindOptions"]),
-    VolumeOptions:
-      json["VolumeOptions"] == null ? undefined : MountVolumeOptionsFromJSON(json["VolumeOptions"]),
-    TmpfsOptions:
-      json["TmpfsOptions"] == null ? undefined : MountTmpfsOptionsFromJSON(json["TmpfsOptions"]),
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'Target': json['Target'] == null ? undefined : json['Target'],
+        'Source': json['Source'] == null ? undefined : json['Source'],
+        'Type': json['Type'] == null ? undefined : json['Type'],
+        'ReadOnly': json['ReadOnly'] == null ? undefined : json['ReadOnly'],
+        'Consistency': json['Consistency'] == null ? undefined : json['Consistency'],
+        'BindOptions': json['BindOptions'] == null ? undefined : MountBindOptionsFromJSON(json['BindOptions']),
+        'VolumeOptions': json['VolumeOptions'] == null ? undefined : MountVolumeOptionsFromJSON(json['VolumeOptions']),
+        'TmpfsOptions': json['TmpfsOptions'] == null ? undefined : MountTmpfsOptionsFromJSON(json['TmpfsOptions']),
+    };
 }
 
 export function MountToJSON(json: any): Mount {
-  return MountToJSONTyped(json, false);
+    return MountToJSONTyped(json, false);
 }
 
 export function MountToJSONTyped(value?: Mount | null, ignoreDiscriminator: boolean = false): any {
-  if (value == null) {
-    return value;
-  }
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    Target: value["Target"],
-    Source: value["Source"],
-    Type: value["Type"],
-    ReadOnly: value["ReadOnly"],
-    Consistency: value["Consistency"],
-    BindOptions: MountBindOptionsToJSON(value["BindOptions"]),
-    VolumeOptions: MountVolumeOptionsToJSON(value["VolumeOptions"]),
-    TmpfsOptions: MountTmpfsOptionsToJSON(value["TmpfsOptions"]),
-  };
+    return {
+        
+        'Target': value['Target'],
+        'Source': value['Source'],
+        'Type': value['Type'],
+        'ReadOnly': value['ReadOnly'],
+        'Consistency': value['Consistency'],
+        'BindOptions': MountBindOptionsToJSON(value['BindOptions']),
+        'VolumeOptions': MountVolumeOptionsToJSON(value['VolumeOptions']),
+        'TmpfsOptions': MountTmpfsOptionsToJSON(value['TmpfsOptions']),
+    };
 }
+

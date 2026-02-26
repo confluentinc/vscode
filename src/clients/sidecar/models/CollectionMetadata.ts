@@ -12,73 +12,70 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
- *
+ * 
  * @export
  * @interface CollectionMetadata
  */
 export interface CollectionMetadata {
-  /**
-   *
-   * @type {string}
-   * @memberof CollectionMetadata
-   */
-  self?: string;
-  /**
-   *
-   * @type {string}
-   * @memberof CollectionMetadata
-   */
-  next?: string;
-  /**
-   *
-   * @type {number}
-   * @memberof CollectionMetadata
-   */
-  total_size?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof CollectionMetadata
+     */
+    self?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CollectionMetadata
+     */
+    next?: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof CollectionMetadata
+     */
+    total_size?: number;
 }
 
 /**
  * Check if a given object implements the CollectionMetadata interface.
  */
 export function instanceOfCollectionMetadata(value: object): value is CollectionMetadata {
-  return true;
+    return true;
 }
 
 export function CollectionMetadataFromJSON(json: any): CollectionMetadata {
-  return CollectionMetadataFromJSONTyped(json, false);
+    return CollectionMetadataFromJSONTyped(json, false);
 }
 
-export function CollectionMetadataFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): CollectionMetadata {
-  if (json == null) {
-    return json;
-  }
-  return {
-    self: json["self"] == null ? undefined : json["self"],
-    next: json["next"] == null ? undefined : json["next"],
-    total_size: json["total_size"] == null ? undefined : json["total_size"],
-  };
+export function CollectionMetadataFromJSONTyped(json: any, ignoreDiscriminator: boolean): CollectionMetadata {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'self': json['self'] == null ? undefined : json['self'],
+        'next': json['next'] == null ? undefined : json['next'],
+        'total_size': json['total_size'] == null ? undefined : json['total_size'],
+    };
 }
 
 export function CollectionMetadataToJSON(json: any): CollectionMetadata {
-  return CollectionMetadataToJSONTyped(json, false);
+    return CollectionMetadataToJSONTyped(json, false);
 }
 
-export function CollectionMetadataToJSONTyped(
-  value?: CollectionMetadata | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function CollectionMetadataToJSONTyped(value?: CollectionMetadata | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    self: value["self"],
-    next: value["next"],
-    total_size: value["total_size"],
-  };
+    return {
+        
+        'self': value['self'],
+        'next': value['next'],
+        'total_size': value['total_size'],
+    };
 }
+

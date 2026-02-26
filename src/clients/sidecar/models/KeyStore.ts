@@ -12,87 +12,89 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { StoreType } from "./StoreType";
+import { mapValues } from '../runtime';
+import type { StoreType } from './StoreType';
 import {
-  StoreTypeFromJSON,
-  StoreTypeFromJSONTyped,
-  StoreTypeToJSON,
-  StoreTypeToJSONTyped,
-} from "./StoreType";
+    StoreTypeFromJSON,
+    StoreTypeFromJSONTyped,
+    StoreTypeToJSON,
+    StoreTypeToJSONTyped,
+} from './StoreType';
 
 /**
- *
+ * 
  * @export
  * @interface KeyStore
  */
 export interface KeyStore {
-  /**
-   * The path to the local key store file. Only specified if client needs to be authenticated by the server (mutual TLS).
-   * @type {string}
-   * @memberof KeyStore
-   */
-  path: string;
-  /**
-   * The password for the local key store file. If a password is not set, key store file configured will still be used, but integrity checking is disabled. A key store password is not supported for PEM format.
-   * @type {string}
-   * @memberof KeyStore
-   */
-  password?: string | null;
-  /**
-   * The file format of the local key store file.
-   * @type {StoreType}
-   * @memberof KeyStore
-   */
-  type?: StoreType | null;
-  /**
-   * The password of the private key in the local key store file.
-   * @type {string}
-   * @memberof KeyStore
-   */
-  key_password?: string | null;
+    /**
+     * The path to the local key store file. Only specified if client needs to be authenticated by the server (mutual TLS).
+     * @type {string}
+     * @memberof KeyStore
+     */
+    path: string;
+    /**
+     * The password for the local key store file. If a password is not set, key store file configured will still be used, but integrity checking is disabled. A key store password is not supported for PEM format.
+     * @type {string}
+     * @memberof KeyStore
+     */
+    password?: string | null;
+    /**
+     * The file format of the local key store file.
+     * @type {StoreType}
+     * @memberof KeyStore
+     */
+    type?: StoreType | null;
+    /**
+     * The password of the private key in the local key store file.
+     * @type {string}
+     * @memberof KeyStore
+     */
+    key_password?: string | null;
 }
+
+
 
 /**
  * Check if a given object implements the KeyStore interface.
  */
 export function instanceOfKeyStore(value: object): value is KeyStore {
-  if (!("path" in value) || value["path"] === undefined) return false;
-  return true;
+    if (!('path' in value) || value['path'] === undefined) return false;
+    return true;
 }
 
 export function KeyStoreFromJSON(json: any): KeyStore {
-  return KeyStoreFromJSONTyped(json, false);
+    return KeyStoreFromJSONTyped(json, false);
 }
 
 export function KeyStoreFromJSONTyped(json: any, ignoreDiscriminator: boolean): KeyStore {
-  if (json == null) {
-    return json;
-  }
-  return {
-    path: json["path"],
-    password: json["password"] == null ? undefined : json["password"],
-    type: json["type"] == null ? undefined : StoreTypeFromJSON(json["type"]),
-    key_password: json["key_password"] == null ? undefined : json["key_password"],
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'path': json['path'],
+        'password': json['password'] == null ? undefined : json['password'],
+        'type': json['type'] == null ? undefined : StoreTypeFromJSON(json['type']),
+        'key_password': json['key_password'] == null ? undefined : json['key_password'],
+    };
 }
 
 export function KeyStoreToJSON(json: any): KeyStore {
-  return KeyStoreToJSONTyped(json, false);
+    return KeyStoreToJSONTyped(json, false);
 }
 
-export function KeyStoreToJSONTyped(
-  value?: KeyStore | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function KeyStoreToJSONTyped(value?: KeyStore | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    path: value["path"],
-    password: value["password"],
-    type: StoreTypeToJSON(value["type"]),
-    key_password: value["key_password"],
-  };
+    return {
+        
+        'path': value['path'],
+        'password': value['password'],
+        'type': StoreTypeToJSON(value['type']),
+        'key_password': value['key_password'],
+    };
 }
+

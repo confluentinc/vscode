@@ -2,17 +2,18 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
+
+import * as runtime from '../runtime';
 import type {
   ErrorResponse,
   Volume,
@@ -20,330 +21,265 @@ import type {
   VolumeListResponse,
   VolumePruneResponse,
   VolumeUpdateRequest,
-} from "../models/index";
+} from '../models/index';
 import {
-  ErrorResponseFromJSON,
-  ErrorResponseToJSON,
-  VolumeFromJSON,
-  VolumeToJSON,
-  VolumeCreateOptionsFromJSON,
-  VolumeCreateOptionsToJSON,
-  VolumeListResponseFromJSON,
-  VolumeListResponseToJSON,
-  VolumePruneResponseFromJSON,
-  VolumePruneResponseToJSON,
-  VolumeUpdateRequestFromJSON,
-  VolumeUpdateRequestToJSON,
-} from "../models/index";
+    ErrorResponseFromJSON,
+    ErrorResponseToJSON,
+    VolumeFromJSON,
+    VolumeToJSON,
+    VolumeCreateOptionsFromJSON,
+    VolumeCreateOptionsToJSON,
+    VolumeListResponseFromJSON,
+    VolumeListResponseToJSON,
+    VolumePruneResponseFromJSON,
+    VolumePruneResponseToJSON,
+    VolumeUpdateRequestFromJSON,
+    VolumeUpdateRequestToJSON,
+} from '../models/index';
 
 export interface VolumeCreateRequest {
-  volumeConfig: VolumeCreateOptions;
+    volumeConfig: VolumeCreateOptions;
 }
 
 export interface VolumeDeleteRequest {
-  name: string;
-  force?: boolean;
+    name: string;
+    force?: boolean;
 }
 
 export interface VolumeInspectRequest {
-  name: string;
+    name: string;
 }
 
 export interface VolumeListRequest {
-  filters?: string;
+    filters?: string;
 }
 
 export interface VolumePruneRequest {
-  filters?: string;
+    filters?: string;
 }
 
 export interface VolumeUpdateOperationRequest {
-  name: string;
-  version: number;
-  body?: VolumeUpdateRequest;
+    name: string;
+    version: number;
+    body?: VolumeUpdateRequest;
 }
 
 /**
- *
+ * 
  */
 export class VolumeApi extends runtime.BaseAPI {
-  /**
-   * Create a volume
-   */
-  async volumeCreateRaw(
-    requestParameters: VolumeCreateRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Volume>> {
-    if (requestParameters["volumeConfig"] == null) {
-      throw new runtime.RequiredError(
-        "volumeConfig",
-        'Required parameter "volumeConfig" was null or undefined when calling volumeCreate().',
-      );
+
+    /**
+     * Create a volume
+     */
+    async volumeCreateRaw(requestParameters: VolumeCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Volume>> {
+        if (requestParameters['volumeConfig'] == null) {
+            throw new runtime.RequiredError(
+                'volumeConfig',
+                'Required parameter "volumeConfig" was null or undefined when calling volumeCreate().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/volumes/create`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: VolumeCreateOptionsToJSON(requestParameters['volumeConfig']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VolumeFromJSON(jsonValue));
     }
 
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    headerParameters["Content-Type"] = "application/json";
-
-    const response = await this.request(
-      {
-        path: `/volumes/create`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: VolumeCreateOptionsToJSON(requestParameters["volumeConfig"]),
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) => VolumeFromJSON(jsonValue));
-  }
-
-  /**
-   * Create a volume
-   */
-  async volumeCreate(
-    requestParameters: VolumeCreateRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Volume> {
-    const response = await this.volumeCreateRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Instruct the driver to remove the volume.
-   * Remove a volume
-   */
-  async volumeDeleteRaw(
-    requestParameters: VolumeDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["name"] == null) {
-      throw new runtime.RequiredError(
-        "name",
-        'Required parameter "name" was null or undefined when calling volumeDelete().',
-      );
+    /**
+     * Create a volume
+     */
+    async volumeCreate(requestParameters: VolumeCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Volume> {
+        const response = await this.volumeCreateRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    const queryParameters: any = {};
+    /**
+     * Instruct the driver to remove the volume.
+     * Remove a volume
+     */
+    async volumeDeleteRaw(requestParameters: VolumeDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling volumeDelete().'
+            );
+        }
 
-    if (requestParameters["force"] != null) {
-      queryParameters["force"] = requestParameters["force"];
+        const queryParameters: any = {};
+
+        if (requestParameters['force'] != null) {
+            queryParameters['force'] = requestParameters['force'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/volumes/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/volumes/{name}`.replace(
-          `{${"name"}}`,
-          encodeURIComponent(String(requestParameters["name"])),
-        ),
-        method: "DELETE",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Instruct the driver to remove the volume.
-   * Remove a volume
-   */
-  async volumeDelete(
-    requestParameters: VolumeDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.volumeDeleteRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Inspect a volume
-   */
-  async volumeInspectRaw(
-    requestParameters: VolumeInspectRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Volume>> {
-    if (requestParameters["name"] == null) {
-      throw new runtime.RequiredError(
-        "name",
-        'Required parameter "name" was null or undefined when calling volumeInspect().',
-      );
+    /**
+     * Instruct the driver to remove the volume.
+     * Remove a volume
+     */
+    async volumeDelete(requestParameters: VolumeDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.volumeDeleteRaw(requestParameters, initOverrides);
     }
 
-    const queryParameters: any = {};
+    /**
+     * Inspect a volume
+     */
+    async volumeInspectRaw(requestParameters: VolumeInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Volume>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling volumeInspect().'
+            );
+        }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/volumes/{name}`.replace(
-          `{${"name"}}`,
-          encodeURIComponent(String(requestParameters["name"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => VolumeFromJSON(jsonValue));
-  }
+        const response = await this.request({
+            path: `/volumes/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   * Inspect a volume
-   */
-  async volumeInspect(
-    requestParameters: VolumeInspectRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Volume> {
-    const response = await this.volumeInspectRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * List volumes
-   */
-  async volumeListRaw(
-    requestParameters: VolumeListRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<VolumeListResponse>> {
-    const queryParameters: any = {};
-
-    if (requestParameters["filters"] != null) {
-      queryParameters["filters"] = requestParameters["filters"];
+        return new runtime.JSONApiResponse(response, (jsonValue) => VolumeFromJSON(jsonValue));
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/volumes`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      VolumeListResponseFromJSON(jsonValue),
-    );
-  }
-
-  /**
-   * List volumes
-   */
-  async volumeList(
-    requestParameters: VolumeListRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<VolumeListResponse> {
-    const response = await this.volumeListRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Delete unused volumes
-   */
-  async volumePruneRaw(
-    requestParameters: VolumePruneRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<VolumePruneResponse>> {
-    const queryParameters: any = {};
-
-    if (requestParameters["filters"] != null) {
-      queryParameters["filters"] = requestParameters["filters"];
+    /**
+     * Inspect a volume
+     */
+    async volumeInspect(requestParameters: VolumeInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Volume> {
+        const response = await this.volumeInspectRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * List volumes
+     */
+    async volumeListRaw(requestParameters: VolumeListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VolumeListResponse>> {
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/volumes/prune`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        if (requestParameters['filters'] != null) {
+            queryParameters['filters'] = requestParameters['filters'];
+        }
 
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      VolumePruneResponseFromJSON(jsonValue),
-    );
-  }
+        const headerParameters: runtime.HTTPHeaders = {};
 
-  /**
-   * Delete unused volumes
-   */
-  async volumePrune(
-    requestParameters: VolumePruneRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<VolumePruneResponse> {
-    const response = await this.volumePruneRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
+        const response = await this.request({
+            path: `/volumes`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   * \"Update a volume. Valid only for Swarm cluster volumes\"
-   */
-  async volumeUpdateRaw(
-    requestParameters: VolumeUpdateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["name"] == null) {
-      throw new runtime.RequiredError(
-        "name",
-        'Required parameter "name" was null or undefined when calling volumeUpdate().',
-      );
+        return new runtime.JSONApiResponse(response, (jsonValue) => VolumeListResponseFromJSON(jsonValue));
     }
 
-    if (requestParameters["version"] == null) {
-      throw new runtime.RequiredError(
-        "version",
-        'Required parameter "version" was null or undefined when calling volumeUpdate().',
-      );
+    /**
+     * List volumes
+     */
+    async volumeList(requestParameters: VolumeListRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VolumeListResponse> {
+        const response = await this.volumeListRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    const queryParameters: any = {};
+    /**
+     * Delete unused volumes
+     */
+    async volumePruneRaw(requestParameters: VolumePruneRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VolumePruneResponse>> {
+        const queryParameters: any = {};
 
-    if (requestParameters["version"] != null) {
-      queryParameters["version"] = requestParameters["version"];
+        if (requestParameters['filters'] != null) {
+            queryParameters['filters'] = requestParameters['filters'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/volumes/prune`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VolumePruneResponseFromJSON(jsonValue));
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * Delete unused volumes
+     */
+    async volumePrune(requestParameters: VolumePruneRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VolumePruneResponse> {
+        const response = await this.volumePruneRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
-    headerParameters["Content-Type"] = "application/json";
+    /**
+     * \"Update a volume. Valid only for Swarm cluster volumes\" 
+     */
+    async volumeUpdateRaw(requestParameters: VolumeUpdateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling volumeUpdate().'
+            );
+        }
 
-    const response = await this.request(
-      {
-        path: `/volumes/{name}`.replace(
-          `{${"name"}}`,
-          encodeURIComponent(String(requestParameters["name"])),
-        ),
-        method: "PUT",
-        headers: headerParameters,
-        query: queryParameters,
-        body: VolumeUpdateRequestToJSON(requestParameters["body"]),
-      },
-      initOverrides,
-    );
+        if (requestParameters['version'] == null) {
+            throw new runtime.RequiredError(
+                'version',
+                'Required parameter "version" was null or undefined when calling volumeUpdate().'
+            );
+        }
 
-    return new runtime.VoidApiResponse(response);
-  }
+        const queryParameters: any = {};
 
-  /**
-   * \"Update a volume. Valid only for Swarm cluster volumes\"
-   */
-  async volumeUpdate(
-    requestParameters: VolumeUpdateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.volumeUpdateRaw(requestParameters, initOverrides);
-  }
+        if (requestParameters['version'] != null) {
+            queryParameters['version'] = requestParameters['version'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/volumes/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: VolumeUpdateRequestToJSON(requestParameters['body']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * \"Update a volume. Valid only for Swarm cluster volumes\" 
+     */
+    async volumeUpdate(requestParameters: VolumeUpdateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.volumeUpdateRaw(requestParameters, initOverrides);
+    }
+
 }

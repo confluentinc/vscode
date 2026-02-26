@@ -2,191 +2,191 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
- *
+ * 
  * @export
  * @interface ImageSummary
  */
 export interface ImageSummary {
-  /**
-   * ID is the content-addressable ID of an image.
-   *
-   * This identifier is a content-addressable digest calculated from the
-   * image's configuration (which includes the digests of layers used by
-   * the image).
-   *
-   * Note that this digest differs from the `RepoDigests` below, which
-   * holds digests of image manifests that reference the image.
-   *
-   * @type {string}
-   * @memberof ImageSummary
-   */
-  Id: string;
-  /**
-   * ID of the parent image.
-   *
-   * Depending on how the image was created, this field may be empty and
-   * is only set for images that were built/created locally. This field
-   * is empty if the image was pulled from an image registry.
-   *
-   * @type {string}
-   * @memberof ImageSummary
-   */
-  ParentId: string;
-  /**
-   * List of image names/tags in the local image cache that reference this
-   * image.
-   *
-   * Multiple image tags can refer to the same image, and this list may be
-   * empty if no tags reference the image, in which case the image is
-   * "untagged", in which case it can still be referenced by its ID.
-   *
-   * @type {Array<string>}
-   * @memberof ImageSummary
-   */
-  RepoTags: Array<string>;
-  /**
-   * List of content-addressable digests of locally available image manifests
-   * that the image is referenced from. Multiple manifests can refer to the
-   * same image.
-   *
-   * These digests are usually only available if the image was either pulled
-   * from a registry, or if the image was pushed to a registry, which is when
-   * the manifest is generated and its digest calculated.
-   *
-   * @type {Array<string>}
-   * @memberof ImageSummary
-   */
-  RepoDigests: Array<string>;
-  /**
-   * Date and time at which the image was created as a Unix timestamp
-   * (number of seconds since EPOCH).
-   *
-   * @type {number}
-   * @memberof ImageSummary
-   */
-  Created: number;
-  /**
-   * Total size of the image including all layers it is composed of.
-   *
-   * @type {number}
-   * @memberof ImageSummary
-   */
-  Size: number;
-  /**
-   * Total size of image layers that are shared between this image and other
-   * images.
-   *
-   * This size is not calculated by default. `-1` indicates that the value
-   * has not been set / calculated.
-   *
-   * @type {number}
-   * @memberof ImageSummary
-   */
-  SharedSize: number;
-  /**
-   * Total size of the image including all layers it is composed of.
-   *
-   * In versions of Docker before v1.10, this field was calculated from
-   * the image itself and all of its parent images. Images are now stored
-   * self-contained, and no longer use a parent-chain, making this field
-   * an equivalent of the Size field.
-   *
-   * Deprecated: this field is kept for backward compatibility, and will be removed in API v1.44.
-   * @type {number}
-   * @memberof ImageSummary
-   */
-  VirtualSize?: number;
-  /**
-   * User-defined key/value metadata.
-   * @type {{ [key: string]: string; }}
-   * @memberof ImageSummary
-   */
-  Labels: { [key: string]: string };
-  /**
-   * Number of containers using this image. Includes both stopped and running
-   * containers.
-   *
-   * This size is not calculated by default, and depends on which API endpoint
-   * is used. `-1` indicates that the value has not been set / calculated.
-   *
-   * @type {number}
-   * @memberof ImageSummary
-   */
-  Containers: number;
+    /**
+     * ID is the content-addressable ID of an image.
+     * 
+     * This identifier is a content-addressable digest calculated from the
+     * image's configuration (which includes the digests of layers used by
+     * the image).
+     * 
+     * Note that this digest differs from the `RepoDigests` below, which
+     * holds digests of image manifests that reference the image.
+     * 
+     * @type {string}
+     * @memberof ImageSummary
+     */
+    Id: string;
+    /**
+     * ID of the parent image.
+     * 
+     * Depending on how the image was created, this field may be empty and
+     * is only set for images that were built/created locally. This field
+     * is empty if the image was pulled from an image registry.
+     * 
+     * @type {string}
+     * @memberof ImageSummary
+     */
+    ParentId: string;
+    /**
+     * List of image names/tags in the local image cache that reference this
+     * image.
+     * 
+     * Multiple image tags can refer to the same image, and this list may be
+     * empty if no tags reference the image, in which case the image is
+     * "untagged", in which case it can still be referenced by its ID.
+     * 
+     * @type {Array<string>}
+     * @memberof ImageSummary
+     */
+    RepoTags: Array<string>;
+    /**
+     * List of content-addressable digests of locally available image manifests
+     * that the image is referenced from. Multiple manifests can refer to the
+     * same image.
+     * 
+     * These digests are usually only available if the image was either pulled
+     * from a registry, or if the image was pushed to a registry, which is when
+     * the manifest is generated and its digest calculated.
+     * 
+     * @type {Array<string>}
+     * @memberof ImageSummary
+     */
+    RepoDigests: Array<string>;
+    /**
+     * Date and time at which the image was created as a Unix timestamp
+     * (number of seconds since EPOCH).
+     * 
+     * @type {number}
+     * @memberof ImageSummary
+     */
+    Created: number;
+    /**
+     * Total size of the image including all layers it is composed of.
+     * 
+     * @type {number}
+     * @memberof ImageSummary
+     */
+    Size: number;
+    /**
+     * Total size of image layers that are shared between this image and other
+     * images.
+     * 
+     * This size is not calculated by default. `-1` indicates that the value
+     * has not been set / calculated.
+     * 
+     * @type {number}
+     * @memberof ImageSummary
+     */
+    SharedSize: number;
+    /**
+     * Total size of the image including all layers it is composed of.
+     * 
+     * In versions of Docker before v1.10, this field was calculated from
+     * the image itself and all of its parent images. Images are now stored
+     * self-contained, and no longer use a parent-chain, making this field
+     * an equivalent of the Size field.
+     * 
+     * Deprecated: this field is kept for backward compatibility, and will be removed in API v1.44.
+     * @type {number}
+     * @memberof ImageSummary
+     */
+    VirtualSize?: number;
+    /**
+     * User-defined key/value metadata.
+     * @type {{ [key: string]: string; }}
+     * @memberof ImageSummary
+     */
+    Labels: { [key: string]: string; };
+    /**
+     * Number of containers using this image. Includes both stopped and running
+     * containers.
+     * 
+     * This size is not calculated by default, and depends on which API endpoint
+     * is used. `-1` indicates that the value has not been set / calculated.
+     * 
+     * @type {number}
+     * @memberof ImageSummary
+     */
+    Containers: number;
 }
 
 /**
  * Check if a given object implements the ImageSummary interface.
  */
 export function instanceOfImageSummary(value: object): value is ImageSummary {
-  if (!("Id" in value) || value["Id"] === undefined) return false;
-  if (!("ParentId" in value) || value["ParentId"] === undefined) return false;
-  if (!("RepoTags" in value) || value["RepoTags"] === undefined) return false;
-  if (!("RepoDigests" in value) || value["RepoDigests"] === undefined) return false;
-  if (!("Created" in value) || value["Created"] === undefined) return false;
-  if (!("Size" in value) || value["Size"] === undefined) return false;
-  if (!("SharedSize" in value) || value["SharedSize"] === undefined) return false;
-  if (!("Labels" in value) || value["Labels"] === undefined) return false;
-  if (!("Containers" in value) || value["Containers"] === undefined) return false;
-  return true;
+    if (!('Id' in value) || value['Id'] === undefined) return false;
+    if (!('ParentId' in value) || value['ParentId'] === undefined) return false;
+    if (!('RepoTags' in value) || value['RepoTags'] === undefined) return false;
+    if (!('RepoDigests' in value) || value['RepoDigests'] === undefined) return false;
+    if (!('Created' in value) || value['Created'] === undefined) return false;
+    if (!('Size' in value) || value['Size'] === undefined) return false;
+    if (!('SharedSize' in value) || value['SharedSize'] === undefined) return false;
+    if (!('Labels' in value) || value['Labels'] === undefined) return false;
+    if (!('Containers' in value) || value['Containers'] === undefined) return false;
+    return true;
 }
 
 export function ImageSummaryFromJSON(json: any): ImageSummary {
-  return ImageSummaryFromJSONTyped(json, false);
+    return ImageSummaryFromJSONTyped(json, false);
 }
 
 export function ImageSummaryFromJSONTyped(json: any, ignoreDiscriminator: boolean): ImageSummary {
-  if (json == null) {
-    return json;
-  }
-  return {
-    Id: json["Id"],
-    ParentId: json["ParentId"],
-    RepoTags: json["RepoTags"],
-    RepoDigests: json["RepoDigests"],
-    Created: json["Created"],
-    Size: json["Size"],
-    SharedSize: json["SharedSize"],
-    VirtualSize: json["VirtualSize"] == null ? undefined : json["VirtualSize"],
-    Labels: json["Labels"],
-    Containers: json["Containers"],
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'Id': json['Id'],
+        'ParentId': json['ParentId'],
+        'RepoTags': json['RepoTags'],
+        'RepoDigests': json['RepoDigests'],
+        'Created': json['Created'],
+        'Size': json['Size'],
+        'SharedSize': json['SharedSize'],
+        'VirtualSize': json['VirtualSize'] == null ? undefined : json['VirtualSize'],
+        'Labels': json['Labels'],
+        'Containers': json['Containers'],
+    };
 }
 
 export function ImageSummaryToJSON(json: any): ImageSummary {
-  return ImageSummaryToJSONTyped(json, false);
+    return ImageSummaryToJSONTyped(json, false);
 }
 
-export function ImageSummaryToJSONTyped(
-  value?: ImageSummary | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function ImageSummaryToJSONTyped(value?: ImageSummary | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    Id: value["Id"],
-    ParentId: value["ParentId"],
-    RepoTags: value["RepoTags"],
-    RepoDigests: value["RepoDigests"],
-    Created: value["Created"],
-    Size: value["Size"],
-    SharedSize: value["SharedSize"],
-    VirtualSize: value["VirtualSize"],
-    Labels: value["Labels"],
-    Containers: value["Containers"],
-  };
+    return {
+        
+        'Id': value['Id'],
+        'ParentId': value['ParentId'],
+        'RepoTags': value['RepoTags'],
+        'RepoDigests': value['RepoDigests'],
+        'Created': value['Created'],
+        'Size': value['Size'],
+        'SharedSize': value['SharedSize'],
+        'VirtualSize': value['VirtualSize'],
+        'Labels': value['Labels'],
+        'Containers': value['Containers'],
+    };
 }
+

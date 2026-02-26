@@ -2,237 +2,235 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { IPAM } from "./IPAM";
-import { IPAMFromJSON, IPAMFromJSONTyped, IPAMToJSON, IPAMToJSONTyped } from "./IPAM";
-import type { PeerInfo } from "./PeerInfo";
+import { mapValues } from '../runtime';
+import type { IPAM } from './IPAM';
 import {
-  PeerInfoFromJSON,
-  PeerInfoFromJSONTyped,
-  PeerInfoToJSON,
-  PeerInfoToJSONTyped,
-} from "./PeerInfo";
-import type { ConfigReference } from "./ConfigReference";
+    IPAMFromJSON,
+    IPAMFromJSONTyped,
+    IPAMToJSON,
+    IPAMToJSONTyped,
+} from './IPAM';
+import type { PeerInfo } from './PeerInfo';
 import {
-  ConfigReferenceFromJSON,
-  ConfigReferenceFromJSONTyped,
-  ConfigReferenceToJSON,
-  ConfigReferenceToJSONTyped,
-} from "./ConfigReference";
-import type { NetworkContainer } from "./NetworkContainer";
+    PeerInfoFromJSON,
+    PeerInfoFromJSONTyped,
+    PeerInfoToJSON,
+    PeerInfoToJSONTyped,
+} from './PeerInfo';
+import type { ConfigReference } from './ConfigReference';
 import {
-  NetworkContainerFromJSON,
-  NetworkContainerFromJSONTyped,
-  NetworkContainerToJSON,
-  NetworkContainerToJSONTyped,
-} from "./NetworkContainer";
+    ConfigReferenceFromJSON,
+    ConfigReferenceFromJSONTyped,
+    ConfigReferenceToJSON,
+    ConfigReferenceToJSONTyped,
+} from './ConfigReference';
+import type { NetworkContainer } from './NetworkContainer';
+import {
+    NetworkContainerFromJSON,
+    NetworkContainerFromJSONTyped,
+    NetworkContainerToJSON,
+    NetworkContainerToJSONTyped,
+} from './NetworkContainer';
 
 /**
- *
+ * 
  * @export
  * @interface Network
  */
 export interface Network {
-  /**
-   * Name of the network.
-   *
-   * @type {string}
-   * @memberof Network
-   */
-  Name?: string;
-  /**
-   * ID that uniquely identifies a network on a single machine.
-   *
-   * @type {string}
-   * @memberof Network
-   */
-  Id?: string;
-  /**
-   * Date and time at which the network was created in
-   * [RFC 3339](https://www.ietf.org/rfc/rfc3339.txt) format with nano-seconds.
-   *
-   * @type {string}
-   * @memberof Network
-   */
-  Created?: string;
-  /**
-   * The level at which the network exists (e.g. `swarm` for cluster-wide
-   * or `local` for machine level)
-   *
-   * @type {string}
-   * @memberof Network
-   */
-  Scope?: string;
-  /**
-   * The name of the driver used to create the network (e.g. `bridge`,
-   * `overlay`).
-   *
-   * @type {string}
-   * @memberof Network
-   */
-  Driver?: string;
-  /**
-   * Whether the network was created with IPv6 enabled.
-   *
-   * @type {boolean}
-   * @memberof Network
-   */
-  EnableIPv6?: boolean;
-  /**
-   *
-   * @type {IPAM}
-   * @memberof Network
-   */
-  IPAM?: IPAM;
-  /**
-   * Whether the network is created to only allow internal networking
-   * connectivity.
-   *
-   * @type {boolean}
-   * @memberof Network
-   */
-  Internal?: boolean;
-  /**
-   * Whether a global / swarm scope network is manually attachable by regular
-   * containers from workers in swarm mode.
-   *
-   * @type {boolean}
-   * @memberof Network
-   */
-  Attachable?: boolean;
-  /**
-   * Whether the network is providing the routing-mesh for the swarm cluster.
-   *
-   * @type {boolean}
-   * @memberof Network
-   */
-  Ingress?: boolean;
-  /**
-   *
-   * @type {ConfigReference}
-   * @memberof Network
-   */
-  ConfigFrom?: ConfigReference;
-  /**
-   * Whether the network is a config-only network. Config-only networks are
-   * placeholder networks for network configurations to be used by other
-   * networks. Config-only networks cannot be used directly to run containers
-   * or services.
-   *
-   * @type {boolean}
-   * @memberof Network
-   */
-  ConfigOnly?: boolean;
-  /**
-   * Contains endpoints attached to the network.
-   *
-   * @type {{ [key: string]: NetworkContainer; }}
-   * @memberof Network
-   */
-  Containers?: { [key: string]: NetworkContainer };
-  /**
-   * Network-specific options uses when creating the network.
-   *
-   * @type {{ [key: string]: string; }}
-   * @memberof Network
-   */
-  Options?: { [key: string]: string };
-  /**
-   * User-defined key/value metadata.
-   * @type {{ [key: string]: string; }}
-   * @memberof Network
-   */
-  Labels?: { [key: string]: string };
-  /**
-   * List of peer nodes for an overlay network. This field is only present
-   * for overlay networks, and omitted for other network types.
-   *
-   * @type {Array<PeerInfo>}
-   * @memberof Network
-   */
-  Peers?: Array<PeerInfo> | null;
+    /**
+     * Name of the network.
+     * 
+     * @type {string}
+     * @memberof Network
+     */
+    Name?: string;
+    /**
+     * ID that uniquely identifies a network on a single machine.
+     * 
+     * @type {string}
+     * @memberof Network
+     */
+    Id?: string;
+    /**
+     * Date and time at which the network was created in
+     * [RFC 3339](https://www.ietf.org/rfc/rfc3339.txt) format with nano-seconds.
+     * 
+     * @type {string}
+     * @memberof Network
+     */
+    Created?: string;
+    /**
+     * The level at which the network exists (e.g. `swarm` for cluster-wide
+     * or `local` for machine level)
+     * 
+     * @type {string}
+     * @memberof Network
+     */
+    Scope?: string;
+    /**
+     * The name of the driver used to create the network (e.g. `bridge`,
+     * `overlay`).
+     * 
+     * @type {string}
+     * @memberof Network
+     */
+    Driver?: string;
+    /**
+     * Whether the network was created with IPv6 enabled.
+     * 
+     * @type {boolean}
+     * @memberof Network
+     */
+    EnableIPv6?: boolean;
+    /**
+     * 
+     * @type {IPAM}
+     * @memberof Network
+     */
+    IPAM?: IPAM;
+    /**
+     * Whether the network is created to only allow internal networking
+     * connectivity.
+     * 
+     * @type {boolean}
+     * @memberof Network
+     */
+    Internal?: boolean;
+    /**
+     * Whether a global / swarm scope network is manually attachable by regular
+     * containers from workers in swarm mode.
+     * 
+     * @type {boolean}
+     * @memberof Network
+     */
+    Attachable?: boolean;
+    /**
+     * Whether the network is providing the routing-mesh for the swarm cluster.
+     * 
+     * @type {boolean}
+     * @memberof Network
+     */
+    Ingress?: boolean;
+    /**
+     * 
+     * @type {ConfigReference}
+     * @memberof Network
+     */
+    ConfigFrom?: ConfigReference;
+    /**
+     * Whether the network is a config-only network. Config-only networks are
+     * placeholder networks for network configurations to be used by other
+     * networks. Config-only networks cannot be used directly to run containers
+     * or services.
+     * 
+     * @type {boolean}
+     * @memberof Network
+     */
+    ConfigOnly?: boolean;
+    /**
+     * Contains endpoints attached to the network.
+     * 
+     * @type {{ [key: string]: NetworkContainer; }}
+     * @memberof Network
+     */
+    Containers?: { [key: string]: NetworkContainer; };
+    /**
+     * Network-specific options uses when creating the network.
+     * 
+     * @type {{ [key: string]: string; }}
+     * @memberof Network
+     */
+    Options?: { [key: string]: string; };
+    /**
+     * User-defined key/value metadata.
+     * @type {{ [key: string]: string; }}
+     * @memberof Network
+     */
+    Labels?: { [key: string]: string; };
+    /**
+     * List of peer nodes for an overlay network. This field is only present
+     * for overlay networks, and omitted for other network types.
+     * 
+     * @type {Array<PeerInfo>}
+     * @memberof Network
+     */
+    Peers?: Array<PeerInfo> | null;
 }
 
 /**
  * Check if a given object implements the Network interface.
  */
 export function instanceOfNetwork(value: object): value is Network {
-  return true;
+    return true;
 }
 
 export function NetworkFromJSON(json: any): Network {
-  return NetworkFromJSONTyped(json, false);
+    return NetworkFromJSONTyped(json, false);
 }
 
 export function NetworkFromJSONTyped(json: any, ignoreDiscriminator: boolean): Network {
-  if (json == null) {
-    return json;
-  }
-  return {
-    Name: json["Name"] == null ? undefined : json["Name"],
-    Id: json["Id"] == null ? undefined : json["Id"],
-    Created: json["Created"] == null ? undefined : json["Created"],
-    Scope: json["Scope"] == null ? undefined : json["Scope"],
-    Driver: json["Driver"] == null ? undefined : json["Driver"],
-    EnableIPv6: json["EnableIPv6"] == null ? undefined : json["EnableIPv6"],
-    IPAM: json["IPAM"] == null ? undefined : IPAMFromJSON(json["IPAM"]),
-    Internal: json["Internal"] == null ? undefined : json["Internal"],
-    Attachable: json["Attachable"] == null ? undefined : json["Attachable"],
-    Ingress: json["Ingress"] == null ? undefined : json["Ingress"],
-    ConfigFrom:
-      json["ConfigFrom"] == null ? undefined : ConfigReferenceFromJSON(json["ConfigFrom"]),
-    ConfigOnly: json["ConfigOnly"] == null ? undefined : json["ConfigOnly"],
-    Containers:
-      json["Containers"] == null
-        ? undefined
-        : mapValues(json["Containers"], NetworkContainerFromJSON),
-    Options: json["Options"] == null ? undefined : json["Options"],
-    Labels: json["Labels"] == null ? undefined : json["Labels"],
-    Peers: json["Peers"] == null ? undefined : (json["Peers"] as Array<any>).map(PeerInfoFromJSON),
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'Name': json['Name'] == null ? undefined : json['Name'],
+        'Id': json['Id'] == null ? undefined : json['Id'],
+        'Created': json['Created'] == null ? undefined : json['Created'],
+        'Scope': json['Scope'] == null ? undefined : json['Scope'],
+        'Driver': json['Driver'] == null ? undefined : json['Driver'],
+        'EnableIPv6': json['EnableIPv6'] == null ? undefined : json['EnableIPv6'],
+        'IPAM': json['IPAM'] == null ? undefined : IPAMFromJSON(json['IPAM']),
+        'Internal': json['Internal'] == null ? undefined : json['Internal'],
+        'Attachable': json['Attachable'] == null ? undefined : json['Attachable'],
+        'Ingress': json['Ingress'] == null ? undefined : json['Ingress'],
+        'ConfigFrom': json['ConfigFrom'] == null ? undefined : ConfigReferenceFromJSON(json['ConfigFrom']),
+        'ConfigOnly': json['ConfigOnly'] == null ? undefined : json['ConfigOnly'],
+        'Containers': json['Containers'] == null ? undefined : (mapValues(json['Containers'], NetworkContainerFromJSON)),
+        'Options': json['Options'] == null ? undefined : json['Options'],
+        'Labels': json['Labels'] == null ? undefined : json['Labels'],
+        'Peers': json['Peers'] == null ? undefined : ((json['Peers'] as Array<any>).map(PeerInfoFromJSON)),
+    };
 }
 
 export function NetworkToJSON(json: any): Network {
-  return NetworkToJSONTyped(json, false);
+    return NetworkToJSONTyped(json, false);
 }
 
-export function NetworkToJSONTyped(
-  value?: Network | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function NetworkToJSONTyped(value?: Network | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    Name: value["Name"],
-    Id: value["Id"],
-    Created: value["Created"],
-    Scope: value["Scope"],
-    Driver: value["Driver"],
-    EnableIPv6: value["EnableIPv6"],
-    IPAM: IPAMToJSON(value["IPAM"]),
-    Internal: value["Internal"],
-    Attachable: value["Attachable"],
-    Ingress: value["Ingress"],
-    ConfigFrom: ConfigReferenceToJSON(value["ConfigFrom"]),
-    ConfigOnly: value["ConfigOnly"],
-    Containers:
-      value["Containers"] == null
-        ? undefined
-        : mapValues(value["Containers"], NetworkContainerToJSON),
-    Options: value["Options"],
-    Labels: value["Labels"],
-    Peers: value["Peers"] == null ? undefined : (value["Peers"] as Array<any>).map(PeerInfoToJSON),
-  };
+    return {
+        
+        'Name': value['Name'],
+        'Id': value['Id'],
+        'Created': value['Created'],
+        'Scope': value['Scope'],
+        'Driver': value['Driver'],
+        'EnableIPv6': value['EnableIPv6'],
+        'IPAM': IPAMToJSON(value['IPAM']),
+        'Internal': value['Internal'],
+        'Attachable': value['Attachable'],
+        'Ingress': value['Ingress'],
+        'ConfigFrom': ConfigReferenceToJSON(value['ConfigFrom']),
+        'ConfigOnly': value['ConfigOnly'],
+        'Containers': value['Containers'] == null ? undefined : (mapValues(value['Containers'], NetworkContainerToJSON)),
+        'Options': value['Options'],
+        'Labels': value['Labels'],
+        'Peers': value['Peers'] == null ? undefined : ((value['Peers'] as Array<any>).map(PeerInfoToJSON)),
+    };
 }
+

@@ -12,182 +12,172 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { RecordMetadata } from "./RecordMetadata";
+import { mapValues } from '../runtime';
+import type { RecordMetadata } from './RecordMetadata';
 import {
-  RecordMetadataFromJSON,
-  RecordMetadataFromJSONTyped,
-  RecordMetadataToJSON,
-  RecordMetadataToJSONTyped,
-} from "./RecordMetadata";
-import type { ExceededFields } from "./ExceededFields";
+    RecordMetadataFromJSON,
+    RecordMetadataFromJSONTyped,
+    RecordMetadataToJSON,
+    RecordMetadataToJSONTyped,
+} from './RecordMetadata';
+import type { ExceededFields } from './ExceededFields';
 import {
-  ExceededFieldsFromJSON,
-  ExceededFieldsFromJSONTyped,
-  ExceededFieldsToJSON,
-  ExceededFieldsToJSONTyped,
-} from "./ExceededFields";
-import type { TimestampType } from "./TimestampType";
+    ExceededFieldsFromJSON,
+    ExceededFieldsFromJSONTyped,
+    ExceededFieldsToJSON,
+    ExceededFieldsToJSONTyped,
+} from './ExceededFields';
+import type { TimestampType } from './TimestampType';
 import {
-  TimestampTypeFromJSON,
-  TimestampTypeFromJSONTyped,
-  TimestampTypeToJSON,
-  TimestampTypeToJSONTyped,
-} from "./TimestampType";
-import type { JsonNode } from "./JsonNode";
+    TimestampTypeFromJSON,
+    TimestampTypeFromJSONTyped,
+    TimestampTypeToJSON,
+    TimestampTypeToJSONTyped,
+} from './TimestampType';
+import type { JsonNode } from './JsonNode';
 import {
-  JsonNodeFromJSON,
-  JsonNodeFromJSONTyped,
-  JsonNodeToJSON,
-  JsonNodeToJSONTyped,
-} from "./JsonNode";
-import type { PartitionConsumeRecordHeader } from "./PartitionConsumeRecordHeader";
+    JsonNodeFromJSON,
+    JsonNodeFromJSONTyped,
+    JsonNodeToJSON,
+    JsonNodeToJSONTyped,
+} from './JsonNode';
+import type { PartitionConsumeRecordHeader } from './PartitionConsumeRecordHeader';
 import {
-  PartitionConsumeRecordHeaderFromJSON,
-  PartitionConsumeRecordHeaderFromJSONTyped,
-  PartitionConsumeRecordHeaderToJSON,
-  PartitionConsumeRecordHeaderToJSONTyped,
-} from "./PartitionConsumeRecordHeader";
+    PartitionConsumeRecordHeaderFromJSON,
+    PartitionConsumeRecordHeaderFromJSONTyped,
+    PartitionConsumeRecordHeaderToJSON,
+    PartitionConsumeRecordHeaderToJSONTyped,
+} from './PartitionConsumeRecordHeader';
 
 /**
- *
+ * 
  * @export
  * @interface PartitionConsumeRecord
  */
 export interface PartitionConsumeRecord {
-  /**
-   *
-   * @type {number}
-   * @memberof PartitionConsumeRecord
-   */
-  partition_id?: number;
-  /**
-   *
-   * @type {number}
-   * @memberof PartitionConsumeRecord
-   */
-  offset?: number;
-  /**
-   *
-   * @type {number}
-   * @memberof PartitionConsumeRecord
-   */
-  timestamp?: number;
-  /**
-   *
-   * @type {TimestampType}
-   * @memberof PartitionConsumeRecord
-   */
-  timestamp_type?: TimestampType;
-  /**
-   *
-   * @type {Array<PartitionConsumeRecordHeader>}
-   * @memberof PartitionConsumeRecord
-   */
-  headers?: Array<PartitionConsumeRecordHeader>;
-  /**
-   *
-   * @type {JsonNode}
-   * @memberof PartitionConsumeRecord
-   */
-  key?: JsonNode;
-  /**
-   *
-   * @type {JsonNode}
-   * @memberof PartitionConsumeRecord
-   */
-  value?: JsonNode;
-  /**
-   *
-   * @type {RecordMetadata}
-   * @memberof PartitionConsumeRecord
-   */
-  metadata?: RecordMetadata;
-  /**
-   *
-   * @type {string}
-   * @memberof PartitionConsumeRecord
-   */
-  key_decoding_error?: string;
-  /**
-   *
-   * @type {string}
-   * @memberof PartitionConsumeRecord
-   */
-  value_decoding_error?: string;
-  /**
-   *
-   * @type {ExceededFields}
-   * @memberof PartitionConsumeRecord
-   */
-  exceeded_fields?: ExceededFields;
+    /**
+     * 
+     * @type {number}
+     * @memberof PartitionConsumeRecord
+     */
+    partition_id?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PartitionConsumeRecord
+     */
+    offset?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PartitionConsumeRecord
+     */
+    timestamp?: number;
+    /**
+     * 
+     * @type {TimestampType}
+     * @memberof PartitionConsumeRecord
+     */
+    timestamp_type?: TimestampType;
+    /**
+     * 
+     * @type {Array<PartitionConsumeRecordHeader>}
+     * @memberof PartitionConsumeRecord
+     */
+    headers?: Array<PartitionConsumeRecordHeader>;
+    /**
+     * 
+     * @type {JsonNode}
+     * @memberof PartitionConsumeRecord
+     */
+    key?: JsonNode;
+    /**
+     * 
+     * @type {JsonNode}
+     * @memberof PartitionConsumeRecord
+     */
+    value?: JsonNode;
+    /**
+     * 
+     * @type {RecordMetadata}
+     * @memberof PartitionConsumeRecord
+     */
+    metadata?: RecordMetadata;
+    /**
+     * 
+     * @type {string}
+     * @memberof PartitionConsumeRecord
+     */
+    key_decoding_error?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PartitionConsumeRecord
+     */
+    value_decoding_error?: string;
+    /**
+     * 
+     * @type {ExceededFields}
+     * @memberof PartitionConsumeRecord
+     */
+    exceeded_fields?: ExceededFields;
 }
+
+
 
 /**
  * Check if a given object implements the PartitionConsumeRecord interface.
  */
 export function instanceOfPartitionConsumeRecord(value: object): value is PartitionConsumeRecord {
-  return true;
+    return true;
 }
 
 export function PartitionConsumeRecordFromJSON(json: any): PartitionConsumeRecord {
-  return PartitionConsumeRecordFromJSONTyped(json, false);
+    return PartitionConsumeRecordFromJSONTyped(json, false);
 }
 
-export function PartitionConsumeRecordFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): PartitionConsumeRecord {
-  if (json == null) {
-    return json;
-  }
-  return {
-    partition_id: json["partition_id"] == null ? undefined : json["partition_id"],
-    offset: json["offset"] == null ? undefined : json["offset"],
-    timestamp: json["timestamp"] == null ? undefined : json["timestamp"],
-    timestamp_type:
-      json["timestamp_type"] == null ? undefined : TimestampTypeFromJSON(json["timestamp_type"]),
-    headers:
-      json["headers"] == null
-        ? undefined
-        : (json["headers"] as Array<any>).map(PartitionConsumeRecordHeaderFromJSON),
-    key: json["key"] == null ? undefined : JsonNodeFromJSON(json["key"]),
-    value: json["value"] == null ? undefined : JsonNodeFromJSON(json["value"]),
-    metadata: json["metadata"] == null ? undefined : RecordMetadataFromJSON(json["metadata"]),
-    key_decoding_error: json["key_decoding_error"] == null ? undefined : json["key_decoding_error"],
-    value_decoding_error:
-      json["value_decoding_error"] == null ? undefined : json["value_decoding_error"],
-    exceeded_fields:
-      json["exceeded_fields"] == null ? undefined : ExceededFieldsFromJSON(json["exceeded_fields"]),
-  };
+export function PartitionConsumeRecordFromJSONTyped(json: any, ignoreDiscriminator: boolean): PartitionConsumeRecord {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'partition_id': json['partition_id'] == null ? undefined : json['partition_id'],
+        'offset': json['offset'] == null ? undefined : json['offset'],
+        'timestamp': json['timestamp'] == null ? undefined : json['timestamp'],
+        'timestamp_type': json['timestamp_type'] == null ? undefined : TimestampTypeFromJSON(json['timestamp_type']),
+        'headers': json['headers'] == null ? undefined : ((json['headers'] as Array<any>).map(PartitionConsumeRecordHeaderFromJSON)),
+        'key': json['key'] == null ? undefined : JsonNodeFromJSON(json['key']),
+        'value': json['value'] == null ? undefined : JsonNodeFromJSON(json['value']),
+        'metadata': json['metadata'] == null ? undefined : RecordMetadataFromJSON(json['metadata']),
+        'key_decoding_error': json['key_decoding_error'] == null ? undefined : json['key_decoding_error'],
+        'value_decoding_error': json['value_decoding_error'] == null ? undefined : json['value_decoding_error'],
+        'exceeded_fields': json['exceeded_fields'] == null ? undefined : ExceededFieldsFromJSON(json['exceeded_fields']),
+    };
 }
 
 export function PartitionConsumeRecordToJSON(json: any): PartitionConsumeRecord {
-  return PartitionConsumeRecordToJSONTyped(json, false);
+    return PartitionConsumeRecordToJSONTyped(json, false);
 }
 
-export function PartitionConsumeRecordToJSONTyped(
-  value?: PartitionConsumeRecord | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function PartitionConsumeRecordToJSONTyped(value?: PartitionConsumeRecord | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    partition_id: value["partition_id"],
-    offset: value["offset"],
-    timestamp: value["timestamp"],
-    timestamp_type: TimestampTypeToJSON(value["timestamp_type"]),
-    headers:
-      value["headers"] == null
-        ? undefined
-        : (value["headers"] as Array<any>).map(PartitionConsumeRecordHeaderToJSON),
-    key: JsonNodeToJSON(value["key"]),
-    value: JsonNodeToJSON(value["value"]),
-    metadata: RecordMetadataToJSON(value["metadata"]),
-    key_decoding_error: value["key_decoding_error"],
-    value_decoding_error: value["value_decoding_error"],
-    exceeded_fields: ExceededFieldsToJSON(value["exceeded_fields"]),
-  };
+    return {
+        
+        'partition_id': value['partition_id'],
+        'offset': value['offset'],
+        'timestamp': value['timestamp'],
+        'timestamp_type': TimestampTypeToJSON(value['timestamp_type']),
+        'headers': value['headers'] == null ? undefined : ((value['headers'] as Array<any>).map(PartitionConsumeRecordHeaderToJSON)),
+        'key': JsonNodeToJSON(value['key']),
+        'value': JsonNodeToJSON(value['value']),
+        'metadata': RecordMetadataToJSON(value['metadata']),
+        'key_decoding_error': value['key_decoding_error'],
+        'value_decoding_error': value['value_decoding_error'],
+        'exceeded_fields': ExceededFieldsToJSON(value['exceeded_fields']),
+    };
 }
+

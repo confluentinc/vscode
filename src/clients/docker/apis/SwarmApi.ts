@@ -2,17 +2,18 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
+
+import * as runtime from '../runtime';
 import type {
   ErrorResponse,
   Swarm,
@@ -21,357 +22,300 @@ import type {
   SwarmSpec,
   SwarmUnlockRequest,
   UnlockKeyResponse,
-} from "../models/index";
+} from '../models/index';
 import {
-  ErrorResponseFromJSON,
-  ErrorResponseToJSON,
-  SwarmFromJSON,
-  SwarmToJSON,
-  SwarmInitRequestFromJSON,
-  SwarmInitRequestToJSON,
-  SwarmJoinRequestFromJSON,
-  SwarmJoinRequestToJSON,
-  SwarmSpecFromJSON,
-  SwarmSpecToJSON,
-  SwarmUnlockRequestFromJSON,
-  SwarmUnlockRequestToJSON,
-  UnlockKeyResponseFromJSON,
-  UnlockKeyResponseToJSON,
-} from "../models/index";
+    ErrorResponseFromJSON,
+    ErrorResponseToJSON,
+    SwarmFromJSON,
+    SwarmToJSON,
+    SwarmInitRequestFromJSON,
+    SwarmInitRequestToJSON,
+    SwarmJoinRequestFromJSON,
+    SwarmJoinRequestToJSON,
+    SwarmSpecFromJSON,
+    SwarmSpecToJSON,
+    SwarmUnlockRequestFromJSON,
+    SwarmUnlockRequestToJSON,
+    UnlockKeyResponseFromJSON,
+    UnlockKeyResponseToJSON,
+} from '../models/index';
 
 export interface SwarmInitOperationRequest {
-  body: SwarmInitRequest;
+    body: SwarmInitRequest;
 }
 
 export interface SwarmJoinOperationRequest {
-  body: SwarmJoinRequest;
+    body: SwarmJoinRequest;
 }
 
 export interface SwarmLeaveRequest {
-  force?: boolean;
+    force?: boolean;
 }
 
 export interface SwarmUnlockOperationRequest {
-  body: SwarmUnlockRequest;
+    body: SwarmUnlockRequest;
 }
 
 export interface SwarmUpdateRequest {
-  version: number;
-  body: SwarmSpec;
-  rotateWorkerToken?: boolean;
-  rotateManagerToken?: boolean;
-  rotateManagerUnlockKey?: boolean;
+    version: number;
+    body: SwarmSpec;
+    rotateWorkerToken?: boolean;
+    rotateManagerToken?: boolean;
+    rotateManagerUnlockKey?: boolean;
 }
 
 /**
- *
+ * 
  */
 export class SwarmApi extends runtime.BaseAPI {
-  /**
-   * Initialize a new swarm
-   */
-  async swarmInitRaw(
-    requestParameters: SwarmInitOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<string>> {
-    if (requestParameters["body"] == null) {
-      throw new runtime.RequiredError(
-        "body",
-        'Required parameter "body" was null or undefined when calling swarmInit().',
-      );
+
+    /**
+     * Initialize a new swarm
+     */
+    async swarmInitRaw(requestParameters: SwarmInitOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling swarmInit().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/swarm/init`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SwarmInitRequestToJSON(requestParameters['body']),
+        }, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<string>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
     }
 
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    headerParameters["Content-Type"] = "application/json";
-
-    const response = await this.request(
-      {
-        path: `/swarm/init`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: SwarmInitRequestToJSON(requestParameters["body"]),
-      },
-      initOverrides,
-    );
-
-    if (this.isJsonMime(response.headers.get("content-type"))) {
-      return new runtime.JSONApiResponse<string>(response);
-    } else {
-      return new runtime.TextApiResponse(response) as any;
-    }
-  }
-
-  /**
-   * Initialize a new swarm
-   */
-  async swarmInit(
-    requestParameters: SwarmInitOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<string> {
-    const response = await this.swarmInitRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Inspect swarm
-   */
-  async swarmInspectRaw(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Swarm>> {
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/swarm`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) => SwarmFromJSON(jsonValue));
-  }
-
-  /**
-   * Inspect swarm
-   */
-  async swarmInspect(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Swarm> {
-    const response = await this.swarmInspectRaw(initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Join an existing swarm
-   */
-  async swarmJoinRaw(
-    requestParameters: SwarmJoinOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["body"] == null) {
-      throw new runtime.RequiredError(
-        "body",
-        'Required parameter "body" was null or undefined when calling swarmJoin().',
-      );
+    /**
+     * Initialize a new swarm
+     */
+    async swarmInit(requestParameters: SwarmInitOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
+        const response = await this.swarmInitRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    const queryParameters: any = {};
+    /**
+     * Inspect swarm
+     */
+    async swarmInspectRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Swarm>> {
+        const queryParameters: any = {};
 
-    const headerParameters: runtime.HTTPHeaders = {};
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    headerParameters["Content-Type"] = "application/json";
+        const response = await this.request({
+            path: `/swarm`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-    const response = await this.request(
-      {
-        path: `/swarm/join`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: SwarmJoinRequestToJSON(requestParameters["body"]),
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Join an existing swarm
-   */
-  async swarmJoin(
-    requestParameters: SwarmJoinOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.swarmJoinRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Leave a swarm
-   */
-  async swarmLeaveRaw(
-    requestParameters: SwarmLeaveRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    const queryParameters: any = {};
-
-    if (requestParameters["force"] != null) {
-      queryParameters["force"] = requestParameters["force"];
+        return new runtime.JSONApiResponse(response, (jsonValue) => SwarmFromJSON(jsonValue));
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/swarm/leave`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Leave a swarm
-   */
-  async swarmLeave(
-    requestParameters: SwarmLeaveRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.swarmLeaveRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Unlock a locked manager
-   */
-  async swarmUnlockRaw(
-    requestParameters: SwarmUnlockOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["body"] == null) {
-      throw new runtime.RequiredError(
-        "body",
-        'Required parameter "body" was null or undefined when calling swarmUnlock().',
-      );
+    /**
+     * Inspect swarm
+     */
+    async swarmInspect(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Swarm> {
+        const response = await this.swarmInspectRaw(initOverrides);
+        return await response.value();
     }
 
-    const queryParameters: any = {};
+    /**
+     * Join an existing swarm
+     */
+    async swarmJoinRaw(requestParameters: SwarmJoinOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling swarmJoin().'
+            );
+        }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+        const queryParameters: any = {};
 
-    headerParameters["Content-Type"] = "application/json";
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    const response = await this.request(
-      {
-        path: `/swarm/unlock`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: SwarmUnlockRequestToJSON(requestParameters["body"]),
-      },
-      initOverrides,
-    );
+        headerParameters['Content-Type'] = 'application/json';
 
-    return new runtime.VoidApiResponse(response);
-  }
+        const response = await this.request({
+            path: `/swarm/join`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SwarmJoinRequestToJSON(requestParameters['body']),
+        }, initOverrides);
 
-  /**
-   * Unlock a locked manager
-   */
-  async swarmUnlock(
-    requestParameters: SwarmUnlockOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.swarmUnlockRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Get the unlock key
-   */
-  async swarmUnlockkeyRaw(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<UnlockKeyResponse>> {
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/swarm/unlockkey`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      UnlockKeyResponseFromJSON(jsonValue),
-    );
-  }
-
-  /**
-   * Get the unlock key
-   */
-  async swarmUnlockkey(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<UnlockKeyResponse> {
-    const response = await this.swarmUnlockkeyRaw(initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Update a swarm
-   */
-  async swarmUpdateRaw(
-    requestParameters: SwarmUpdateRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["version"] == null) {
-      throw new runtime.RequiredError(
-        "version",
-        'Required parameter "version" was null or undefined when calling swarmUpdate().',
-      );
+        return new runtime.VoidApiResponse(response);
     }
 
-    if (requestParameters["body"] == null) {
-      throw new runtime.RequiredError(
-        "body",
-        'Required parameter "body" was null or undefined when calling swarmUpdate().',
-      );
+    /**
+     * Join an existing swarm
+     */
+    async swarmJoin(requestParameters: SwarmJoinOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.swarmJoinRaw(requestParameters, initOverrides);
     }
 
-    const queryParameters: any = {};
+    /**
+     * Leave a swarm
+     */
+    async swarmLeaveRaw(requestParameters: SwarmLeaveRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const queryParameters: any = {};
 
-    if (requestParameters["version"] != null) {
-      queryParameters["version"] = requestParameters["version"];
+        if (requestParameters['force'] != null) {
+            queryParameters['force'] = requestParameters['force'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/swarm/leave`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
     }
 
-    if (requestParameters["rotateWorkerToken"] != null) {
-      queryParameters["rotateWorkerToken"] = requestParameters["rotateWorkerToken"];
+    /**
+     * Leave a swarm
+     */
+    async swarmLeave(requestParameters: SwarmLeaveRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.swarmLeaveRaw(requestParameters, initOverrides);
     }
 
-    if (requestParameters["rotateManagerToken"] != null) {
-      queryParameters["rotateManagerToken"] = requestParameters["rotateManagerToken"];
+    /**
+     * Unlock a locked manager
+     */
+    async swarmUnlockRaw(requestParameters: SwarmUnlockOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling swarmUnlock().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/swarm/unlock`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SwarmUnlockRequestToJSON(requestParameters['body']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
     }
 
-    if (requestParameters["rotateManagerUnlockKey"] != null) {
-      queryParameters["rotateManagerUnlockKey"] = requestParameters["rotateManagerUnlockKey"];
+    /**
+     * Unlock a locked manager
+     */
+    async swarmUnlock(requestParameters: SwarmUnlockOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.swarmUnlockRaw(requestParameters, initOverrides);
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * Get the unlock key
+     */
+    async swarmUnlockkeyRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UnlockKeyResponse>> {
+        const queryParameters: any = {};
 
-    headerParameters["Content-Type"] = "application/json";
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    const response = await this.request(
-      {
-        path: `/swarm/update`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: SwarmSpecToJSON(requestParameters["body"]),
-      },
-      initOverrides,
-    );
+        const response = await this.request({
+            path: `/swarm/unlockkey`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-    return new runtime.VoidApiResponse(response);
-  }
+        return new runtime.JSONApiResponse(response, (jsonValue) => UnlockKeyResponseFromJSON(jsonValue));
+    }
 
-  /**
-   * Update a swarm
-   */
-  async swarmUpdate(
-    requestParameters: SwarmUpdateRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.swarmUpdateRaw(requestParameters, initOverrides);
-  }
+    /**
+     * Get the unlock key
+     */
+    async swarmUnlockkey(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UnlockKeyResponse> {
+        const response = await this.swarmUnlockkeyRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Update a swarm
+     */
+    async swarmUpdateRaw(requestParameters: SwarmUpdateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['version'] == null) {
+            throw new runtime.RequiredError(
+                'version',
+                'Required parameter "version" was null or undefined when calling swarmUpdate().'
+            );
+        }
+
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling swarmUpdate().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['version'] != null) {
+            queryParameters['version'] = requestParameters['version'];
+        }
+
+        if (requestParameters['rotateWorkerToken'] != null) {
+            queryParameters['rotateWorkerToken'] = requestParameters['rotateWorkerToken'];
+        }
+
+        if (requestParameters['rotateManagerToken'] != null) {
+            queryParameters['rotateManagerToken'] = requestParameters['rotateManagerToken'];
+        }
+
+        if (requestParameters['rotateManagerUnlockKey'] != null) {
+            queryParameters['rotateManagerUnlockKey'] = requestParameters['rotateManagerUnlockKey'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/swarm/update`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SwarmSpecToJSON(requestParameters['body']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Update a swarm
+     */
+    async swarmUpdate(requestParameters: SwarmUpdateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.swarmUpdateRaw(requestParameters, initOverrides);
+    }
+
 }

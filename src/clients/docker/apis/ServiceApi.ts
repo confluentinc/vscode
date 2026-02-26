@@ -2,17 +2,18 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
+
+import * as runtime from '../runtime';
 import type {
   ErrorResponse,
   Service,
@@ -20,413 +21,345 @@ import type {
   ServiceCreateResponse,
   ServiceUpdateRequest,
   ServiceUpdateResponse,
-} from "../models/index";
+} from '../models/index';
 import {
-  ErrorResponseFromJSON,
-  ErrorResponseToJSON,
-  ServiceFromJSON,
-  ServiceToJSON,
-  ServiceCreateRequestFromJSON,
-  ServiceCreateRequestToJSON,
-  ServiceCreateResponseFromJSON,
-  ServiceCreateResponseToJSON,
-  ServiceUpdateRequestFromJSON,
-  ServiceUpdateRequestToJSON,
-  ServiceUpdateResponseFromJSON,
-  ServiceUpdateResponseToJSON,
-} from "../models/index";
+    ErrorResponseFromJSON,
+    ErrorResponseToJSON,
+    ServiceFromJSON,
+    ServiceToJSON,
+    ServiceCreateRequestFromJSON,
+    ServiceCreateRequestToJSON,
+    ServiceCreateResponseFromJSON,
+    ServiceCreateResponseToJSON,
+    ServiceUpdateRequestFromJSON,
+    ServiceUpdateRequestToJSON,
+    ServiceUpdateResponseFromJSON,
+    ServiceUpdateResponseToJSON,
+} from '../models/index';
 
 export interface ServiceCreateOperationRequest {
-  body: ServiceCreateRequest;
-  X_Registry_Auth?: string;
+    body: ServiceCreateRequest;
+    X_Registry_Auth?: string;
 }
 
 export interface ServiceDeleteRequest {
-  id: string;
+    id: string;
 }
 
 export interface ServiceInspectRequest {
-  id: string;
-  insertDefaults?: boolean;
+    id: string;
+    insertDefaults?: boolean;
 }
 
 export interface ServiceListRequest {
-  filters?: string;
-  status?: boolean;
+    filters?: string;
+    status?: boolean;
 }
 
 export interface ServiceLogsRequest {
-  id: string;
-  details?: boolean;
-  follow?: boolean;
-  stdout?: boolean;
-  stderr?: boolean;
-  since?: number;
-  timestamps?: boolean;
-  tail?: string;
+    id: string;
+    details?: boolean;
+    follow?: boolean;
+    stdout?: boolean;
+    stderr?: boolean;
+    since?: number;
+    timestamps?: boolean;
+    tail?: string;
 }
 
 export interface ServiceUpdateOperationRequest {
-  id: string;
-  version: number;
-  body: ServiceUpdateRequest;
-  registryAuthFrom?: ServiceUpdateRegistryAuthFromEnum;
-  rollback?: string;
-  X_Registry_Auth?: string;
+    id: string;
+    version: number;
+    body: ServiceUpdateRequest;
+    registryAuthFrom?: ServiceUpdateRegistryAuthFromEnum;
+    rollback?: string;
+    X_Registry_Auth?: string;
 }
 
 /**
- *
+ * 
  */
 export class ServiceApi extends runtime.BaseAPI {
-  /**
-   * Create a service
-   */
-  async serviceCreateRaw(
-    requestParameters: ServiceCreateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<ServiceCreateResponse>> {
-    if (requestParameters["body"] == null) {
-      throw new runtime.RequiredError(
-        "body",
-        'Required parameter "body" was null or undefined when calling serviceCreate().',
-      );
+
+    /**
+     * Create a service
+     */
+    async serviceCreateRaw(requestParameters: ServiceCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServiceCreateResponse>> {
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling serviceCreate().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['X_Registry_Auth'] != null) {
+            headerParameters['X-Registry-Auth'] = String(requestParameters['X_Registry_Auth']);
+        }
+
+        const response = await this.request({
+            path: `/services/create`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ServiceCreateRequestToJSON(requestParameters['body']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServiceCreateResponseFromJSON(jsonValue));
     }
 
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    headerParameters["Content-Type"] = "application/json";
-
-    if (requestParameters["X_Registry_Auth"] != null) {
-      headerParameters["X-Registry-Auth"] = String(requestParameters["X_Registry_Auth"]);
+    /**
+     * Create a service
+     */
+    async serviceCreate(requestParameters: ServiceCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServiceCreateResponse> {
+        const response = await this.serviceCreateRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    const response = await this.request(
-      {
-        path: `/services/create`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: ServiceCreateRequestToJSON(requestParameters["body"]),
-      },
-      initOverrides,
-    );
+    /**
+     * Delete a service
+     */
+    async serviceDeleteRaw(requestParameters: ServiceDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling serviceDelete().'
+            );
+        }
 
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      ServiceCreateResponseFromJSON(jsonValue),
-    );
-  }
+        const queryParameters: any = {};
 
-  /**
-   * Create a service
-   */
-  async serviceCreate(
-    requestParameters: ServiceCreateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<ServiceCreateResponse> {
-    const response = await this.serviceCreateRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
+        const headerParameters: runtime.HTTPHeaders = {};
 
-  /**
-   * Delete a service
-   */
-  async serviceDeleteRaw(
-    requestParameters: ServiceDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling serviceDelete().',
-      );
+        const response = await this.request({
+            path: `/services/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
     }
 
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/services/{id}`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "DELETE",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Delete a service
-   */
-  async serviceDelete(
-    requestParameters: ServiceDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.serviceDeleteRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Inspect a service
-   */
-  async serviceInspectRaw(
-    requestParameters: ServiceInspectRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Service>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling serviceInspect().',
-      );
+    /**
+     * Delete a service
+     */
+    async serviceDelete(requestParameters: ServiceDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.serviceDeleteRaw(requestParameters, initOverrides);
     }
 
-    const queryParameters: any = {};
+    /**
+     * Inspect a service
+     */
+    async serviceInspectRaw(requestParameters: ServiceInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Service>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling serviceInspect().'
+            );
+        }
 
-    if (requestParameters["insertDefaults"] != null) {
-      queryParameters["insertDefaults"] = requestParameters["insertDefaults"];
+        const queryParameters: any = {};
+
+        if (requestParameters['insertDefaults'] != null) {
+            queryParameters['insertDefaults'] = requestParameters['insertDefaults'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/services/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServiceFromJSON(jsonValue));
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/services/{id}`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) => ServiceFromJSON(jsonValue));
-  }
-
-  /**
-   * Inspect a service
-   */
-  async serviceInspect(
-    requestParameters: ServiceInspectRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Service> {
-    const response = await this.serviceInspectRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * List services
-   */
-  async serviceListRaw(
-    requestParameters: ServiceListRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Array<Service>>> {
-    const queryParameters: any = {};
-
-    if (requestParameters["filters"] != null) {
-      queryParameters["filters"] = requestParameters["filters"];
+    /**
+     * Inspect a service
+     */
+    async serviceInspect(requestParameters: ServiceInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Service> {
+        const response = await this.serviceInspectRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    if (requestParameters["status"] != null) {
-      queryParameters["status"] = requestParameters["status"];
+    /**
+     * List services
+     */
+    async serviceListRaw(requestParameters: ServiceListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Service>>> {
+        const queryParameters: any = {};
+
+        if (requestParameters['filters'] != null) {
+            queryParameters['filters'] = requestParameters['filters'];
+        }
+
+        if (requestParameters['status'] != null) {
+            queryParameters['status'] = requestParameters['status'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/services`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ServiceFromJSON));
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/services`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ServiceFromJSON));
-  }
-
-  /**
-   * List services
-   */
-  async serviceList(
-    requestParameters: ServiceListRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Array<Service>> {
-    const response = await this.serviceListRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Get `stdout` and `stderr` logs from a service. See also [`/containers/{id}/logs`](#operation/ContainerLogs).  **Note**: This endpoint works only for services with the `local`, `json-file` or `journald` logging drivers.
-   * Get service logs
-   */
-  async serviceLogsRaw(
-    requestParameters: ServiceLogsRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Blob>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling serviceLogs().',
-      );
+    /**
+     * List services
+     */
+    async serviceList(requestParameters: ServiceListRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Service>> {
+        const response = await this.serviceListRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    const queryParameters: any = {};
+    /**
+     * Get `stdout` and `stderr` logs from a service. See also [`/containers/{id}/logs`](#operation/ContainerLogs).  **Note**: This endpoint works only for services with the `local`, `json-file` or `journald` logging drivers. 
+     * Get service logs
+     */
+    async serviceLogsRaw(requestParameters: ServiceLogsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling serviceLogs().'
+            );
+        }
 
-    if (requestParameters["details"] != null) {
-      queryParameters["details"] = requestParameters["details"];
+        const queryParameters: any = {};
+
+        if (requestParameters['details'] != null) {
+            queryParameters['details'] = requestParameters['details'];
+        }
+
+        if (requestParameters['follow'] != null) {
+            queryParameters['follow'] = requestParameters['follow'];
+        }
+
+        if (requestParameters['stdout'] != null) {
+            queryParameters['stdout'] = requestParameters['stdout'];
+        }
+
+        if (requestParameters['stderr'] != null) {
+            queryParameters['stderr'] = requestParameters['stderr'];
+        }
+
+        if (requestParameters['since'] != null) {
+            queryParameters['since'] = requestParameters['since'];
+        }
+
+        if (requestParameters['timestamps'] != null) {
+            queryParameters['timestamps'] = requestParameters['timestamps'];
+        }
+
+        if (requestParameters['tail'] != null) {
+            queryParameters['tail'] = requestParameters['tail'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/services/{id}/logs`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
     }
 
-    if (requestParameters["follow"] != null) {
-      queryParameters["follow"] = requestParameters["follow"];
+    /**
+     * Get `stdout` and `stderr` logs from a service. See also [`/containers/{id}/logs`](#operation/ContainerLogs).  **Note**: This endpoint works only for services with the `local`, `json-file` or `journald` logging drivers. 
+     * Get service logs
+     */
+    async serviceLogs(requestParameters: ServiceLogsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.serviceLogsRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    if (requestParameters["stdout"] != null) {
-      queryParameters["stdout"] = requestParameters["stdout"];
+    /**
+     * Update a service
+     */
+    async serviceUpdateRaw(requestParameters: ServiceUpdateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServiceUpdateResponse>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling serviceUpdate().'
+            );
+        }
+
+        if (requestParameters['version'] == null) {
+            throw new runtime.RequiredError(
+                'version',
+                'Required parameter "version" was null or undefined when calling serviceUpdate().'
+            );
+        }
+
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling serviceUpdate().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['version'] != null) {
+            queryParameters['version'] = requestParameters['version'];
+        }
+
+        if (requestParameters['registryAuthFrom'] != null) {
+            queryParameters['registryAuthFrom'] = requestParameters['registryAuthFrom'];
+        }
+
+        if (requestParameters['rollback'] != null) {
+            queryParameters['rollback'] = requestParameters['rollback'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['X_Registry_Auth'] != null) {
+            headerParameters['X-Registry-Auth'] = String(requestParameters['X_Registry_Auth']);
+        }
+
+        const response = await this.request({
+            path: `/services/{id}/update`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ServiceUpdateRequestToJSON(requestParameters['body']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServiceUpdateResponseFromJSON(jsonValue));
     }
 
-    if (requestParameters["stderr"] != null) {
-      queryParameters["stderr"] = requestParameters["stderr"];
+    /**
+     * Update a service
+     */
+    async serviceUpdate(requestParameters: ServiceUpdateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServiceUpdateResponse> {
+        const response = await this.serviceUpdateRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    if (requestParameters["since"] != null) {
-      queryParameters["since"] = requestParameters["since"];
-    }
-
-    if (requestParameters["timestamps"] != null) {
-      queryParameters["timestamps"] = requestParameters["timestamps"];
-    }
-
-    if (requestParameters["tail"] != null) {
-      queryParameters["tail"] = requestParameters["tail"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/services/{id}/logs`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.BlobApiResponse(response);
-  }
-
-  /**
-   * Get `stdout` and `stderr` logs from a service. See also [`/containers/{id}/logs`](#operation/ContainerLogs).  **Note**: This endpoint works only for services with the `local`, `json-file` or `journald` logging drivers.
-   * Get service logs
-   */
-  async serviceLogs(
-    requestParameters: ServiceLogsRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Blob> {
-    const response = await this.serviceLogsRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Update a service
-   */
-  async serviceUpdateRaw(
-    requestParameters: ServiceUpdateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<ServiceUpdateResponse>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling serviceUpdate().',
-      );
-    }
-
-    if (requestParameters["version"] == null) {
-      throw new runtime.RequiredError(
-        "version",
-        'Required parameter "version" was null or undefined when calling serviceUpdate().',
-      );
-    }
-
-    if (requestParameters["body"] == null) {
-      throw new runtime.RequiredError(
-        "body",
-        'Required parameter "body" was null or undefined when calling serviceUpdate().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["version"] != null) {
-      queryParameters["version"] = requestParameters["version"];
-    }
-
-    if (requestParameters["registryAuthFrom"] != null) {
-      queryParameters["registryAuthFrom"] = requestParameters["registryAuthFrom"];
-    }
-
-    if (requestParameters["rollback"] != null) {
-      queryParameters["rollback"] = requestParameters["rollback"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    headerParameters["Content-Type"] = "application/json";
-
-    if (requestParameters["X_Registry_Auth"] != null) {
-      headerParameters["X-Registry-Auth"] = String(requestParameters["X_Registry_Auth"]);
-    }
-
-    const response = await this.request(
-      {
-        path: `/services/{id}/update`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: ServiceUpdateRequestToJSON(requestParameters["body"]),
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      ServiceUpdateResponseFromJSON(jsonValue),
-    );
-  }
-
-  /**
-   * Update a service
-   */
-  async serviceUpdate(
-    requestParameters: ServiceUpdateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<ServiceUpdateResponse> {
-    const response = await this.serviceUpdateRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
 }
 
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export enum ServiceUpdateOperationRegistryAuthFromEnum {
-  Spec = "spec",
-  PreviousSpec = "previous-spec",
+    Spec = 'spec',
+    PreviousSpec = 'previous-spec'
 }

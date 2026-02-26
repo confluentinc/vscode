@@ -2,192 +2,193 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { IPAM } from "./IPAM";
-import { IPAMFromJSON, IPAMFromJSONTyped, IPAMToJSON, IPAMToJSONTyped } from "./IPAM";
-import type { ConfigReference } from "./ConfigReference";
+import { mapValues } from '../runtime';
+import type { IPAM } from './IPAM';
 import {
-  ConfigReferenceFromJSON,
-  ConfigReferenceFromJSONTyped,
-  ConfigReferenceToJSON,
-  ConfigReferenceToJSONTyped,
-} from "./ConfigReference";
+    IPAMFromJSON,
+    IPAMFromJSONTyped,
+    IPAMToJSON,
+    IPAMToJSONTyped,
+} from './IPAM';
+import type { ConfigReference } from './ConfigReference';
+import {
+    ConfigReferenceFromJSON,
+    ConfigReferenceFromJSONTyped,
+    ConfigReferenceToJSON,
+    ConfigReferenceToJSONTyped,
+} from './ConfigReference';
 
 /**
- *
+ * 
  * @export
  * @interface NetworkCreateRequest
  */
 export interface NetworkCreateRequest {
-  /**
-   * The network's name.
-   * @type {string}
-   * @memberof NetworkCreateRequest
-   */
-  Name: string;
-  /**
-   * Check for networks with duplicate names. Since Network is
-   * primarily keyed based on a random ID and not on the name, and
-   * network name is strictly a user-friendly alias to the network
-   * which is uniquely identified using ID, there is no guaranteed
-   * way to check for duplicates. CheckDuplicate is there to provide
-   * a best effort checking of any networks which has the same name
-   * but it is not guaranteed to catch all name collisions.
-   *
-   * @type {boolean}
-   * @memberof NetworkCreateRequest
-   */
-  CheckDuplicate?: boolean;
-  /**
-   * Name of the network driver plugin to use.
-   * @type {string}
-   * @memberof NetworkCreateRequest
-   */
-  Driver?: string;
-  /**
-   * The level at which the network exists (e.g. `swarm` for cluster-wide
-   * or `local` for machine level).
-   *
-   * @type {string}
-   * @memberof NetworkCreateRequest
-   */
-  Scope?: string;
-  /**
-   * Restrict external access to the network.
-   * @type {boolean}
-   * @memberof NetworkCreateRequest
-   */
-  Internal?: boolean;
-  /**
-   * Globally scoped network is manually attachable by regular
-   * containers from workers in swarm mode.
-   *
-   * @type {boolean}
-   * @memberof NetworkCreateRequest
-   */
-  Attachable?: boolean;
-  /**
-   * Ingress network is the network which provides the routing-mesh
-   * in swarm mode.
-   *
-   * @type {boolean}
-   * @memberof NetworkCreateRequest
-   */
-  Ingress?: boolean;
-  /**
-   * Creates a config-only network. Config-only networks are placeholder
-   * networks for network configurations to be used by other networks.
-   * Config-only networks cannot be used directly to run containers
-   * or services.
-   *
-   * @type {boolean}
-   * @memberof NetworkCreateRequest
-   */
-  ConfigOnly?: boolean;
-  /**
-   *
-   * @type {ConfigReference}
-   * @memberof NetworkCreateRequest
-   */
-  ConfigFrom?: ConfigReference;
-  /**
-   *
-   * @type {IPAM}
-   * @memberof NetworkCreateRequest
-   */
-  IPAM?: IPAM;
-  /**
-   * Enable IPv6 on the network.
-   * @type {boolean}
-   * @memberof NetworkCreateRequest
-   */
-  EnableIPv6?: boolean;
-  /**
-   * Network specific options to be used by the drivers.
-   * @type {{ [key: string]: string; }}
-   * @memberof NetworkCreateRequest
-   */
-  Options?: { [key: string]: string };
-  /**
-   * User-defined key/value metadata.
-   * @type {{ [key: string]: string; }}
-   * @memberof NetworkCreateRequest
-   */
-  Labels?: { [key: string]: string };
+    /**
+     * The network's name.
+     * @type {string}
+     * @memberof NetworkCreateRequest
+     */
+    Name: string;
+    /**
+     * Check for networks with duplicate names. Since Network is
+     * primarily keyed based on a random ID and not on the name, and
+     * network name is strictly a user-friendly alias to the network
+     * which is uniquely identified using ID, there is no guaranteed
+     * way to check for duplicates. CheckDuplicate is there to provide
+     * a best effort checking of any networks which has the same name
+     * but it is not guaranteed to catch all name collisions.
+     * 
+     * @type {boolean}
+     * @memberof NetworkCreateRequest
+     */
+    CheckDuplicate?: boolean;
+    /**
+     * Name of the network driver plugin to use.
+     * @type {string}
+     * @memberof NetworkCreateRequest
+     */
+    Driver?: string;
+    /**
+     * The level at which the network exists (e.g. `swarm` for cluster-wide
+     * or `local` for machine level).
+     * 
+     * @type {string}
+     * @memberof NetworkCreateRequest
+     */
+    Scope?: string;
+    /**
+     * Restrict external access to the network.
+     * @type {boolean}
+     * @memberof NetworkCreateRequest
+     */
+    Internal?: boolean;
+    /**
+     * Globally scoped network is manually attachable by regular
+     * containers from workers in swarm mode.
+     * 
+     * @type {boolean}
+     * @memberof NetworkCreateRequest
+     */
+    Attachable?: boolean;
+    /**
+     * Ingress network is the network which provides the routing-mesh
+     * in swarm mode.
+     * 
+     * @type {boolean}
+     * @memberof NetworkCreateRequest
+     */
+    Ingress?: boolean;
+    /**
+     * Creates a config-only network. Config-only networks are placeholder
+     * networks for network configurations to be used by other networks.
+     * Config-only networks cannot be used directly to run containers
+     * or services.
+     * 
+     * @type {boolean}
+     * @memberof NetworkCreateRequest
+     */
+    ConfigOnly?: boolean;
+    /**
+     * 
+     * @type {ConfigReference}
+     * @memberof NetworkCreateRequest
+     */
+    ConfigFrom?: ConfigReference;
+    /**
+     * 
+     * @type {IPAM}
+     * @memberof NetworkCreateRequest
+     */
+    IPAM?: IPAM;
+    /**
+     * Enable IPv6 on the network.
+     * @type {boolean}
+     * @memberof NetworkCreateRequest
+     */
+    EnableIPv6?: boolean;
+    /**
+     * Network specific options to be used by the drivers.
+     * @type {{ [key: string]: string; }}
+     * @memberof NetworkCreateRequest
+     */
+    Options?: { [key: string]: string; };
+    /**
+     * User-defined key/value metadata.
+     * @type {{ [key: string]: string; }}
+     * @memberof NetworkCreateRequest
+     */
+    Labels?: { [key: string]: string; };
 }
 
 /**
  * Check if a given object implements the NetworkCreateRequest interface.
  */
 export function instanceOfNetworkCreateRequest(value: object): value is NetworkCreateRequest {
-  if (!("Name" in value) || value["Name"] === undefined) return false;
-  return true;
+    if (!('Name' in value) || value['Name'] === undefined) return false;
+    return true;
 }
 
 export function NetworkCreateRequestFromJSON(json: any): NetworkCreateRequest {
-  return NetworkCreateRequestFromJSONTyped(json, false);
+    return NetworkCreateRequestFromJSONTyped(json, false);
 }
 
-export function NetworkCreateRequestFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): NetworkCreateRequest {
-  if (json == null) {
-    return json;
-  }
-  return {
-    Name: json["Name"],
-    CheckDuplicate: json["CheckDuplicate"] == null ? undefined : json["CheckDuplicate"],
-    Driver: json["Driver"] == null ? undefined : json["Driver"],
-    Scope: json["Scope"] == null ? undefined : json["Scope"],
-    Internal: json["Internal"] == null ? undefined : json["Internal"],
-    Attachable: json["Attachable"] == null ? undefined : json["Attachable"],
-    Ingress: json["Ingress"] == null ? undefined : json["Ingress"],
-    ConfigOnly: json["ConfigOnly"] == null ? undefined : json["ConfigOnly"],
-    ConfigFrom:
-      json["ConfigFrom"] == null ? undefined : ConfigReferenceFromJSON(json["ConfigFrom"]),
-    IPAM: json["IPAM"] == null ? undefined : IPAMFromJSON(json["IPAM"]),
-    EnableIPv6: json["EnableIPv6"] == null ? undefined : json["EnableIPv6"],
-    Options: json["Options"] == null ? undefined : json["Options"],
-    Labels: json["Labels"] == null ? undefined : json["Labels"],
-  };
+export function NetworkCreateRequestFromJSONTyped(json: any, ignoreDiscriminator: boolean): NetworkCreateRequest {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'Name': json['Name'],
+        'CheckDuplicate': json['CheckDuplicate'] == null ? undefined : json['CheckDuplicate'],
+        'Driver': json['Driver'] == null ? undefined : json['Driver'],
+        'Scope': json['Scope'] == null ? undefined : json['Scope'],
+        'Internal': json['Internal'] == null ? undefined : json['Internal'],
+        'Attachable': json['Attachable'] == null ? undefined : json['Attachable'],
+        'Ingress': json['Ingress'] == null ? undefined : json['Ingress'],
+        'ConfigOnly': json['ConfigOnly'] == null ? undefined : json['ConfigOnly'],
+        'ConfigFrom': json['ConfigFrom'] == null ? undefined : ConfigReferenceFromJSON(json['ConfigFrom']),
+        'IPAM': json['IPAM'] == null ? undefined : IPAMFromJSON(json['IPAM']),
+        'EnableIPv6': json['EnableIPv6'] == null ? undefined : json['EnableIPv6'],
+        'Options': json['Options'] == null ? undefined : json['Options'],
+        'Labels': json['Labels'] == null ? undefined : json['Labels'],
+    };
 }
 
 export function NetworkCreateRequestToJSON(json: any): NetworkCreateRequest {
-  return NetworkCreateRequestToJSONTyped(json, false);
+    return NetworkCreateRequestToJSONTyped(json, false);
 }
 
-export function NetworkCreateRequestToJSONTyped(
-  value?: NetworkCreateRequest | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function NetworkCreateRequestToJSONTyped(value?: NetworkCreateRequest | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    Name: value["Name"],
-    CheckDuplicate: value["CheckDuplicate"],
-    Driver: value["Driver"],
-    Scope: value["Scope"],
-    Internal: value["Internal"],
-    Attachable: value["Attachable"],
-    Ingress: value["Ingress"],
-    ConfigOnly: value["ConfigOnly"],
-    ConfigFrom: ConfigReferenceToJSON(value["ConfigFrom"]),
-    IPAM: IPAMToJSON(value["IPAM"]),
-    EnableIPv6: value["EnableIPv6"],
-    Options: value["Options"],
-    Labels: value["Labels"],
-  };
+    return {
+        
+        'Name': value['Name'],
+        'CheckDuplicate': value['CheckDuplicate'],
+        'Driver': value['Driver'],
+        'Scope': value['Scope'],
+        'Internal': value['Internal'],
+        'Attachable': value['Attachable'],
+        'Ingress': value['Ingress'],
+        'ConfigOnly': value['ConfigOnly'],
+        'ConfigFrom': ConfigReferenceToJSON(value['ConfigFrom']),
+        'IPAM': IPAMToJSON(value['IPAM']),
+        'EnableIPv6': value['EnableIPv6'],
+        'Options': value['Options'],
+        'Labels': value['Labels'],
+    };
 }
+

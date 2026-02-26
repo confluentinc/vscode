@@ -2,17 +2,18 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
+
+import * as runtime from '../runtime';
 import type {
   ErrorResponse,
   Network,
@@ -21,391 +22,314 @@ import type {
   NetworkCreateResponse,
   NetworkDisconnectRequest,
   NetworkPruneResponse,
-} from "../models/index";
+} from '../models/index';
 import {
-  ErrorResponseFromJSON,
-  ErrorResponseToJSON,
-  NetworkFromJSON,
-  NetworkToJSON,
-  NetworkConnectRequestFromJSON,
-  NetworkConnectRequestToJSON,
-  NetworkCreateRequestFromJSON,
-  NetworkCreateRequestToJSON,
-  NetworkCreateResponseFromJSON,
-  NetworkCreateResponseToJSON,
-  NetworkDisconnectRequestFromJSON,
-  NetworkDisconnectRequestToJSON,
-  NetworkPruneResponseFromJSON,
-  NetworkPruneResponseToJSON,
-} from "../models/index";
+    ErrorResponseFromJSON,
+    ErrorResponseToJSON,
+    NetworkFromJSON,
+    NetworkToJSON,
+    NetworkConnectRequestFromJSON,
+    NetworkConnectRequestToJSON,
+    NetworkCreateRequestFromJSON,
+    NetworkCreateRequestToJSON,
+    NetworkCreateResponseFromJSON,
+    NetworkCreateResponseToJSON,
+    NetworkDisconnectRequestFromJSON,
+    NetworkDisconnectRequestToJSON,
+    NetworkPruneResponseFromJSON,
+    NetworkPruneResponseToJSON,
+} from '../models/index';
 
 export interface NetworkConnectOperationRequest {
-  id: string;
-  container: NetworkConnectRequest;
+    id: string;
+    container: NetworkConnectRequest;
 }
 
 export interface NetworkCreateOperationRequest {
-  networkConfig: NetworkCreateRequest;
+    networkConfig: NetworkCreateRequest;
 }
 
 export interface NetworkDeleteRequest {
-  id: string;
+    id: string;
 }
 
 export interface NetworkDisconnectOperationRequest {
-  id: string;
-  container: NetworkDisconnectRequest;
+    id: string;
+    container: NetworkDisconnectRequest;
 }
 
 export interface NetworkInspectRequest {
-  id: string;
-  verbose?: boolean;
-  scope?: string;
+    id: string;
+    verbose?: boolean;
+    scope?: string;
 }
 
 export interface NetworkListRequest {
-  filters?: string;
+    filters?: string;
 }
 
 export interface NetworkPruneRequest {
-  filters?: string;
+    filters?: string;
 }
 
 /**
- *
+ * 
  */
 export class NetworkApi extends runtime.BaseAPI {
-  /**
-   * Connect a container to a network
-   */
-  async networkConnectRaw(
-    requestParameters: NetworkConnectOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling networkConnect().',
-      );
+
+    /**
+     * Connect a container to a network
+     */
+    async networkConnectRaw(requestParameters: NetworkConnectOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling networkConnect().'
+            );
+        }
+
+        if (requestParameters['container'] == null) {
+            throw new runtime.RequiredError(
+                'container',
+                'Required parameter "container" was null or undefined when calling networkConnect().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/networks/{id}/connect`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: NetworkConnectRequestToJSON(requestParameters['container']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
     }
 
-    if (requestParameters["container"] == null) {
-      throw new runtime.RequiredError(
-        "container",
-        'Required parameter "container" was null or undefined when calling networkConnect().',
-      );
+    /**
+     * Connect a container to a network
+     */
+    async networkConnect(requestParameters: NetworkConnectOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.networkConnectRaw(requestParameters, initOverrides);
     }
 
-    const queryParameters: any = {};
+    /**
+     * Create a network
+     */
+    async networkCreateRaw(requestParameters: NetworkCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<NetworkCreateResponse>> {
+        if (requestParameters['networkConfig'] == null) {
+            throw new runtime.RequiredError(
+                'networkConfig',
+                'Required parameter "networkConfig" was null or undefined when calling networkCreate().'
+            );
+        }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+        const queryParameters: any = {};
 
-    headerParameters["Content-Type"] = "application/json";
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    const response = await this.request(
-      {
-        path: `/networks/{id}/connect`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: NetworkConnectRequestToJSON(requestParameters["container"]),
-      },
-      initOverrides,
-    );
+        headerParameters['Content-Type'] = 'application/json';
 
-    return new runtime.VoidApiResponse(response);
-  }
+        const response = await this.request({
+            path: `/networks/create`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: NetworkCreateRequestToJSON(requestParameters['networkConfig']),
+        }, initOverrides);
 
-  /**
-   * Connect a container to a network
-   */
-  async networkConnect(
-    requestParameters: NetworkConnectOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.networkConnectRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Create a network
-   */
-  async networkCreateRaw(
-    requestParameters: NetworkCreateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<NetworkCreateResponse>> {
-    if (requestParameters["networkConfig"] == null) {
-      throw new runtime.RequiredError(
-        "networkConfig",
-        'Required parameter "networkConfig" was null or undefined when calling networkCreate().',
-      );
+        return new runtime.JSONApiResponse(response, (jsonValue) => NetworkCreateResponseFromJSON(jsonValue));
     }
 
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    headerParameters["Content-Type"] = "application/json";
-
-    const response = await this.request(
-      {
-        path: `/networks/create`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: NetworkCreateRequestToJSON(requestParameters["networkConfig"]),
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      NetworkCreateResponseFromJSON(jsonValue),
-    );
-  }
-
-  /**
-   * Create a network
-   */
-  async networkCreate(
-    requestParameters: NetworkCreateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<NetworkCreateResponse> {
-    const response = await this.networkCreateRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Remove a network
-   */
-  async networkDeleteRaw(
-    requestParameters: NetworkDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling networkDelete().',
-      );
+    /**
+     * Create a network
+     */
+    async networkCreate(requestParameters: NetworkCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<NetworkCreateResponse> {
+        const response = await this.networkCreateRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    const queryParameters: any = {};
+    /**
+     * Remove a network
+     */
+    async networkDeleteRaw(requestParameters: NetworkDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling networkDelete().'
+            );
+        }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/networks/{id}`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "DELETE",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.VoidApiResponse(response);
-  }
+        const response = await this.request({
+            path: `/networks/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   * Remove a network
-   */
-  async networkDelete(
-    requestParameters: NetworkDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.networkDeleteRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Disconnect a container from a network
-   */
-  async networkDisconnectRaw(
-    requestParameters: NetworkDisconnectOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling networkDisconnect().',
-      );
+        return new runtime.VoidApiResponse(response);
     }
 
-    if (requestParameters["container"] == null) {
-      throw new runtime.RequiredError(
-        "container",
-        'Required parameter "container" was null or undefined when calling networkDisconnect().',
-      );
+    /**
+     * Remove a network
+     */
+    async networkDelete(requestParameters: NetworkDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.networkDeleteRaw(requestParameters, initOverrides);
     }
 
-    const queryParameters: any = {};
+    /**
+     * Disconnect a container from a network
+     */
+    async networkDisconnectRaw(requestParameters: NetworkDisconnectOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling networkDisconnect().'
+            );
+        }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+        if (requestParameters['container'] == null) {
+            throw new runtime.RequiredError(
+                'container',
+                'Required parameter "container" was null or undefined when calling networkDisconnect().'
+            );
+        }
 
-    headerParameters["Content-Type"] = "application/json";
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/networks/{id}/disconnect`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: NetworkDisconnectRequestToJSON(requestParameters["container"]),
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.VoidApiResponse(response);
-  }
+        headerParameters['Content-Type'] = 'application/json';
 
-  /**
-   * Disconnect a container from a network
-   */
-  async networkDisconnect(
-    requestParameters: NetworkDisconnectOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.networkDisconnectRaw(requestParameters, initOverrides);
-  }
+        const response = await this.request({
+            path: `/networks/{id}/disconnect`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: NetworkDisconnectRequestToJSON(requestParameters['container']),
+        }, initOverrides);
 
-  /**
-   * Inspect a network
-   */
-  async networkInspectRaw(
-    requestParameters: NetworkInspectRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Network>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling networkInspect().',
-      );
+        return new runtime.VoidApiResponse(response);
     }
 
-    const queryParameters: any = {};
-
-    if (requestParameters["verbose"] != null) {
-      queryParameters["verbose"] = requestParameters["verbose"];
+    /**
+     * Disconnect a container from a network
+     */
+    async networkDisconnect(requestParameters: NetworkDisconnectOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.networkDisconnectRaw(requestParameters, initOverrides);
     }
 
-    if (requestParameters["scope"] != null) {
-      queryParameters["scope"] = requestParameters["scope"];
+    /**
+     * Inspect a network
+     */
+    async networkInspectRaw(requestParameters: NetworkInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Network>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling networkInspect().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['verbose'] != null) {
+            queryParameters['verbose'] = requestParameters['verbose'];
+        }
+
+        if (requestParameters['scope'] != null) {
+            queryParameters['scope'] = requestParameters['scope'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/networks/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => NetworkFromJSON(jsonValue));
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/networks/{id}`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) => NetworkFromJSON(jsonValue));
-  }
-
-  /**
-   * Inspect a network
-   */
-  async networkInspect(
-    requestParameters: NetworkInspectRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Network> {
-    const response = await this.networkInspectRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Returns a list of networks. For details on the format, see the [network inspect endpoint](#operation/NetworkInspect).  Note that it uses a different, smaller representation of a network than inspecting a single network. For example, the list of containers attached to the network is not propagated in API versions 1.28 and up.
-   * List networks
-   */
-  async networkListRaw(
-    requestParameters: NetworkListRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Array<Network>>> {
-    const queryParameters: any = {};
-
-    if (requestParameters["filters"] != null) {
-      queryParameters["filters"] = requestParameters["filters"];
+    /**
+     * Inspect a network
+     */
+    async networkInspect(requestParameters: NetworkInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Network> {
+        const response = await this.networkInspectRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * Returns a list of networks. For details on the format, see the [network inspect endpoint](#operation/NetworkInspect).  Note that it uses a different, smaller representation of a network than inspecting a single network. For example, the list of containers attached to the network is not propagated in API versions 1.28 and up. 
+     * List networks
+     */
+    async networkListRaw(requestParameters: NetworkListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Network>>> {
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/networks`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        if (requestParameters['filters'] != null) {
+            queryParameters['filters'] = requestParameters['filters'];
+        }
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(NetworkFromJSON));
-  }
+        const headerParameters: runtime.HTTPHeaders = {};
 
-  /**
-   * Returns a list of networks. For details on the format, see the [network inspect endpoint](#operation/NetworkInspect).  Note that it uses a different, smaller representation of a network than inspecting a single network. For example, the list of containers attached to the network is not propagated in API versions 1.28 and up.
-   * List networks
-   */
-  async networkList(
-    requestParameters: NetworkListRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Array<Network>> {
-    const response = await this.networkListRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
+        const response = await this.request({
+            path: `/networks`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   * Delete unused networks
-   */
-  async networkPruneRaw(
-    requestParameters: NetworkPruneRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<NetworkPruneResponse>> {
-    const queryParameters: any = {};
-
-    if (requestParameters["filters"] != null) {
-      queryParameters["filters"] = requestParameters["filters"];
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(NetworkFromJSON));
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * Returns a list of networks. For details on the format, see the [network inspect endpoint](#operation/NetworkInspect).  Note that it uses a different, smaller representation of a network than inspecting a single network. For example, the list of containers attached to the network is not propagated in API versions 1.28 and up. 
+     * List networks
+     */
+    async networkList(requestParameters: NetworkListRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Network>> {
+        const response = await this.networkListRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
-    const response = await this.request(
-      {
-        path: `/networks/prune`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+    /**
+     * Delete unused networks
+     */
+    async networkPruneRaw(requestParameters: NetworkPruneRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<NetworkPruneResponse>> {
+        const queryParameters: any = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      NetworkPruneResponseFromJSON(jsonValue),
-    );
-  }
+        if (requestParameters['filters'] != null) {
+            queryParameters['filters'] = requestParameters['filters'];
+        }
 
-  /**
-   * Delete unused networks
-   */
-  async networkPrune(
-    requestParameters: NetworkPruneRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<NetworkPruneResponse> {
-    const response = await this.networkPruneRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/networks/prune`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => NetworkPruneResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Delete unused networks
+     */
+    async networkPrune(requestParameters: NetworkPruneRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<NetworkPruneResponse> {
+        const response = await this.networkPruneRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
 }

@@ -2,188 +2,191 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { Health } from "./Health";
-import { HealthFromJSON, HealthFromJSONTyped, HealthToJSON, HealthToJSONTyped } from "./Health";
+import { mapValues } from '../runtime';
+import type { Health } from './Health';
+import {
+    HealthFromJSON,
+    HealthFromJSONTyped,
+    HealthToJSON,
+    HealthToJSONTyped,
+} from './Health';
 
 /**
  * ContainerState stores container's running state. It's part of ContainerJSONBase
  * and will be returned by the "inspect" command.
- *
+ * 
  * @export
  * @interface ContainerState
  */
 export interface ContainerState {
-  /**
-   * String representation of the container state. Can be one of "created",
-   * "running", "paused", "restarting", "removing", "exited", or "dead".
-   *
-   * @type {string}
-   * @memberof ContainerState
-   */
-  Status?: ContainerStateStatusEnum;
-  /**
-   * Whether this container is running.
-   *
-   * Note that a running container can be _paused_. The `Running` and `Paused`
-   * booleans are not mutually exclusive:
-   *
-   * When pausing a container (on Linux), the freezer cgroup is used to suspend
-   * all processes in the container. Freezing the process requires the process to
-   * be running. As a result, paused containers are both `Running` _and_ `Paused`.
-   *
-   * Use the `Status` field instead to determine if a container's state is "running".
-   *
-   * @type {boolean}
-   * @memberof ContainerState
-   */
-  Running?: boolean;
-  /**
-   * Whether this container is paused.
-   * @type {boolean}
-   * @memberof ContainerState
-   */
-  Paused?: boolean;
-  /**
-   * Whether this container is restarting.
-   * @type {boolean}
-   * @memberof ContainerState
-   */
-  Restarting?: boolean;
-  /**
-   * Whether a process within this container has been killed because it ran
-   * out of memory since the container was last started.
-   *
-   * @type {boolean}
-   * @memberof ContainerState
-   */
-  OOMKilled?: boolean;
-  /**
-   *
-   * @type {boolean}
-   * @memberof ContainerState
-   */
-  Dead?: boolean;
-  /**
-   * The process ID of this container
-   * @type {number}
-   * @memberof ContainerState
-   */
-  Pid?: number;
-  /**
-   * The last exit code of this container
-   * @type {number}
-   * @memberof ContainerState
-   */
-  ExitCode?: number;
-  /**
-   *
-   * @type {string}
-   * @memberof ContainerState
-   */
-  Error?: string;
-  /**
-   * The time when this container was last started.
-   * @type {string}
-   * @memberof ContainerState
-   */
-  StartedAt?: string;
-  /**
-   * The time when this container last exited.
-   * @type {string}
-   * @memberof ContainerState
-   */
-  FinishedAt?: string;
-  /**
-   *
-   * @type {Health}
-   * @memberof ContainerState
-   */
-  Health?: Health | null;
+    /**
+     * String representation of the container state. Can be one of "created",
+     * "running", "paused", "restarting", "removing", "exited", or "dead".
+     * 
+     * @type {string}
+     * @memberof ContainerState
+     */
+    Status?: ContainerStateStatusEnum;
+    /**
+     * Whether this container is running.
+     * 
+     * Note that a running container can be _paused_. The `Running` and `Paused`
+     * booleans are not mutually exclusive:
+     * 
+     * When pausing a container (on Linux), the freezer cgroup is used to suspend
+     * all processes in the container. Freezing the process requires the process to
+     * be running. As a result, paused containers are both `Running` _and_ `Paused`.
+     * 
+     * Use the `Status` field instead to determine if a container's state is "running".
+     * 
+     * @type {boolean}
+     * @memberof ContainerState
+     */
+    Running?: boolean;
+    /**
+     * Whether this container is paused.
+     * @type {boolean}
+     * @memberof ContainerState
+     */
+    Paused?: boolean;
+    /**
+     * Whether this container is restarting.
+     * @type {boolean}
+     * @memberof ContainerState
+     */
+    Restarting?: boolean;
+    /**
+     * Whether a process within this container has been killed because it ran
+     * out of memory since the container was last started.
+     * 
+     * @type {boolean}
+     * @memberof ContainerState
+     */
+    OOMKilled?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof ContainerState
+     */
+    Dead?: boolean;
+    /**
+     * The process ID of this container
+     * @type {number}
+     * @memberof ContainerState
+     */
+    Pid?: number;
+    /**
+     * The last exit code of this container
+     * @type {number}
+     * @memberof ContainerState
+     */
+    ExitCode?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof ContainerState
+     */
+    Error?: string;
+    /**
+     * The time when this container was last started.
+     * @type {string}
+     * @memberof ContainerState
+     */
+    StartedAt?: string;
+    /**
+     * The time when this container last exited.
+     * @type {string}
+     * @memberof ContainerState
+     */
+    FinishedAt?: string;
+    /**
+     * 
+     * @type {Health}
+     * @memberof ContainerState
+     */
+    Health?: Health | null;
 }
 
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export enum ContainerStateStatusEnum {
-  Created = "created",
-  Running = "running",
-  Paused = "paused",
-  Restarting = "restarting",
-  Removing = "removing",
-  Exited = "exited",
-  Dead = "dead",
+    Created = 'created',
+    Running = 'running',
+    Paused = 'paused',
+    Restarting = 'restarting',
+    Removing = 'removing',
+    Exited = 'exited',
+    Dead = 'dead'
 }
+
 
 /**
  * Check if a given object implements the ContainerState interface.
  */
 export function instanceOfContainerState(value: object): value is ContainerState {
-  return true;
+    return true;
 }
 
 export function ContainerStateFromJSON(json: any): ContainerState {
-  return ContainerStateFromJSONTyped(json, false);
+    return ContainerStateFromJSONTyped(json, false);
 }
 
-export function ContainerStateFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): ContainerState {
-  if (json == null) {
-    return json;
-  }
-  return {
-    Status: json["Status"] == null ? undefined : json["Status"],
-    Running: json["Running"] == null ? undefined : json["Running"],
-    Paused: json["Paused"] == null ? undefined : json["Paused"],
-    Restarting: json["Restarting"] == null ? undefined : json["Restarting"],
-    OOMKilled: json["OOMKilled"] == null ? undefined : json["OOMKilled"],
-    Dead: json["Dead"] == null ? undefined : json["Dead"],
-    Pid: json["Pid"] == null ? undefined : json["Pid"],
-    ExitCode: json["ExitCode"] == null ? undefined : json["ExitCode"],
-    Error: json["Error"] == null ? undefined : json["Error"],
-    StartedAt: json["StartedAt"] == null ? undefined : json["StartedAt"],
-    FinishedAt: json["FinishedAt"] == null ? undefined : json["FinishedAt"],
-    Health: json["Health"] == null ? undefined : HealthFromJSON(json["Health"]),
-  };
+export function ContainerStateFromJSONTyped(json: any, ignoreDiscriminator: boolean): ContainerState {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'Status': json['Status'] == null ? undefined : json['Status'],
+        'Running': json['Running'] == null ? undefined : json['Running'],
+        'Paused': json['Paused'] == null ? undefined : json['Paused'],
+        'Restarting': json['Restarting'] == null ? undefined : json['Restarting'],
+        'OOMKilled': json['OOMKilled'] == null ? undefined : json['OOMKilled'],
+        'Dead': json['Dead'] == null ? undefined : json['Dead'],
+        'Pid': json['Pid'] == null ? undefined : json['Pid'],
+        'ExitCode': json['ExitCode'] == null ? undefined : json['ExitCode'],
+        'Error': json['Error'] == null ? undefined : json['Error'],
+        'StartedAt': json['StartedAt'] == null ? undefined : json['StartedAt'],
+        'FinishedAt': json['FinishedAt'] == null ? undefined : json['FinishedAt'],
+        'Health': json['Health'] == null ? undefined : HealthFromJSON(json['Health']),
+    };
 }
 
 export function ContainerStateToJSON(json: any): ContainerState {
-  return ContainerStateToJSONTyped(json, false);
+    return ContainerStateToJSONTyped(json, false);
 }
 
-export function ContainerStateToJSONTyped(
-  value?: ContainerState | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function ContainerStateToJSONTyped(value?: ContainerState | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    Status: value["Status"],
-    Running: value["Running"],
-    Paused: value["Paused"],
-    Restarting: value["Restarting"],
-    OOMKilled: value["OOMKilled"],
-    Dead: value["Dead"],
-    Pid: value["Pid"],
-    ExitCode: value["ExitCode"],
-    Error: value["Error"],
-    StartedAt: value["StartedAt"],
-    FinishedAt: value["FinishedAt"],
-    Health: HealthToJSON(value["Health"]),
-  };
+    return {
+        
+        'Status': value['Status'],
+        'Running': value['Running'],
+        'Paused': value['Paused'],
+        'Restarting': value['Restarting'],
+        'OOMKilled': value['OOMKilled'],
+        'Dead': value['Dead'],
+        'Pid': value['Pid'],
+        'ExitCode': value['ExitCode'],
+        'Error': value['Error'],
+        'StartedAt': value['StartedAt'],
+        'FinishedAt': value['FinishedAt'],
+        'Health': HealthToJSON(value['Health']),
+    };
 }
+

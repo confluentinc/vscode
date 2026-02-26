@@ -12,57 +12,54 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
- *
+ * 
  * @export
  * @interface SidecarAccessToken
  */
 export interface SidecarAccessToken {
-  /**
-   *
-   * @type {string}
-   * @memberof SidecarAccessToken
-   */
-  auth_secret?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SidecarAccessToken
+     */
+    auth_secret?: string;
 }
 
 /**
  * Check if a given object implements the SidecarAccessToken interface.
  */
 export function instanceOfSidecarAccessToken(value: object): value is SidecarAccessToken {
-  return true;
+    return true;
 }
 
 export function SidecarAccessTokenFromJSON(json: any): SidecarAccessToken {
-  return SidecarAccessTokenFromJSONTyped(json, false);
+    return SidecarAccessTokenFromJSONTyped(json, false);
 }
 
-export function SidecarAccessTokenFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): SidecarAccessToken {
-  if (json == null) {
-    return json;
-  }
-  return {
-    auth_secret: json["auth_secret"] == null ? undefined : json["auth_secret"],
-  };
+export function SidecarAccessTokenFromJSONTyped(json: any, ignoreDiscriminator: boolean): SidecarAccessToken {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'auth_secret': json['auth_secret'] == null ? undefined : json['auth_secret'],
+    };
 }
 
 export function SidecarAccessTokenToJSON(json: any): SidecarAccessToken {
-  return SidecarAccessTokenToJSONTyped(json, false);
+    return SidecarAccessTokenToJSONTyped(json, false);
 }
 
-export function SidecarAccessTokenToJSONTyped(
-  value?: SidecarAccessToken | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function SidecarAccessTokenToJSONTyped(value?: SidecarAccessToken | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    auth_secret: value["auth_secret"],
-  };
+    return {
+        
+        'auth_secret': value['auth_secret'],
+    };
 }
+

@@ -2,17 +2,18 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
+
+import * as runtime from '../runtime';
 import type {
   AuthConfig,
   ErrorResponse,
@@ -21,333 +22,278 @@ import type {
   SystemDataUsageResponse,
   SystemInfo,
   SystemVersion,
-} from "../models/index";
+} from '../models/index';
 import {
-  AuthConfigFromJSON,
-  AuthConfigToJSON,
-  ErrorResponseFromJSON,
-  ErrorResponseToJSON,
-  EventMessageFromJSON,
-  EventMessageToJSON,
-  SystemAuthResponseFromJSON,
-  SystemAuthResponseToJSON,
-  SystemDataUsageResponseFromJSON,
-  SystemDataUsageResponseToJSON,
-  SystemInfoFromJSON,
-  SystemInfoToJSON,
-  SystemVersionFromJSON,
-  SystemVersionToJSON,
-} from "../models/index";
+    AuthConfigFromJSON,
+    AuthConfigToJSON,
+    ErrorResponseFromJSON,
+    ErrorResponseToJSON,
+    EventMessageFromJSON,
+    EventMessageToJSON,
+    SystemAuthResponseFromJSON,
+    SystemAuthResponseToJSON,
+    SystemDataUsageResponseFromJSON,
+    SystemDataUsageResponseToJSON,
+    SystemInfoFromJSON,
+    SystemInfoToJSON,
+    SystemVersionFromJSON,
+    SystemVersionToJSON,
+} from '../models/index';
 
 export interface SystemAuthRequest {
-  authConfig?: AuthConfig;
+    authConfig?: AuthConfig;
 }
 
 export interface SystemDataUsageRequest {
-  type?: Array<SystemDataUsageTypeEnum>;
+    type?: Array<SystemDataUsageTypeEnum>;
 }
 
 export interface SystemEventsRequest {
-  since?: string;
-  until?: string;
-  filters?: string;
+    since?: string;
+    until?: string;
+    filters?: string;
 }
 
 /**
- *
+ * 
  */
 export class SystemApi extends runtime.BaseAPI {
-  /**
-   * Validate credentials for a registry and, if available, get an identity token for accessing the registry without password.
-   * Check auth configuration
-   */
-  async systemAuthRaw(
-    requestParameters: SystemAuthRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<SystemAuthResponse>> {
-    const queryParameters: any = {};
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * Validate credentials for a registry and, if available, get an identity token for accessing the registry without password. 
+     * Check auth configuration
+     */
+    async systemAuthRaw(requestParameters: SystemAuthRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemAuthResponse>> {
+        const queryParameters: any = {};
 
-    headerParameters["Content-Type"] = "application/json";
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    const response = await this.request(
-      {
-        path: `/auth`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: AuthConfigToJSON(requestParameters["authConfig"]),
-      },
-      initOverrides,
-    );
+        headerParameters['Content-Type'] = 'application/json';
 
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      SystemAuthResponseFromJSON(jsonValue),
-    );
-  }
+        const response = await this.request({
+            path: `/auth`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: AuthConfigToJSON(requestParameters['authConfig']),
+        }, initOverrides);
 
-  /**
-   * Validate credentials for a registry and, if available, get an identity token for accessing the registry without password.
-   * Check auth configuration
-   */
-  async systemAuth(
-    requestParameters: SystemAuthRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<SystemAuthResponse | null | undefined> {
-    const response = await this.systemAuthRaw(requestParameters, initOverrides);
-    switch (response.raw.status) {
-      case 200:
+        return new runtime.JSONApiResponse(response, (jsonValue) => SystemAuthResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Validate credentials for a registry and, if available, get an identity token for accessing the registry without password. 
+     * Check auth configuration
+     */
+    async systemAuth(requestParameters: SystemAuthRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemAuthResponse | null | undefined > {
+        const response = await this.systemAuthRaw(requestParameters, initOverrides);
+        switch (response.raw.status) {
+            case 200:
+                return await response.value();
+            case 204:
+                return null;
+            default:
+                return await response.value();
+        }
+    }
+
+    /**
+     * Get data usage information
+     */
+    async systemDataUsageRaw(requestParameters: SystemDataUsageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemDataUsageResponse>> {
+        const queryParameters: any = {};
+
+        if (requestParameters['type'] != null) {
+            queryParameters['type'] = requestParameters['type'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/system/df`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SystemDataUsageResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Get data usage information
+     */
+    async systemDataUsage(requestParameters: SystemDataUsageRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemDataUsageResponse> {
+        const response = await this.systemDataUsageRaw(requestParameters, initOverrides);
         return await response.value();
-      case 204:
-        return null;
-      default:
+    }
+
+    /**
+     * Stream real-time events from the server.  Various objects within Docker report events when something happens to them.  Containers report these events: `attach`, `commit`, `copy`, `create`, `destroy`, `detach`, `die`, `exec_create`, `exec_detach`, `exec_start`, `exec_die`, `export`, `health_status`, `kill`, `oom`, `pause`, `rename`, `resize`, `restart`, `start`, `stop`, `top`, `unpause`, `update`, and `prune`  Images report these events: `delete`, `import`, `load`, `pull`, `push`, `save`, `tag`, `untag`, and `prune`  Volumes report these events: `create`, `mount`, `unmount`, `destroy`, and `prune`  Networks report these events: `create`, `connect`, `disconnect`, `destroy`, `update`, `remove`, and `prune`  The Docker daemon reports these events: `reload`  Services report these events: `create`, `update`, and `remove`  Nodes report these events: `create`, `update`, and `remove`  Secrets report these events: `create`, `update`, and `remove`  Configs report these events: `create`, `update`, and `remove`  The Builder reports `prune` events 
+     * Monitor events
+     */
+    async systemEventsRaw(requestParameters: SystemEventsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<EventMessage>> {
+        const queryParameters: any = {};
+
+        if (requestParameters['since'] != null) {
+            queryParameters['since'] = requestParameters['since'];
+        }
+
+        if (requestParameters['until'] != null) {
+            queryParameters['until'] = requestParameters['until'];
+        }
+
+        if (requestParameters['filters'] != null) {
+            queryParameters['filters'] = requestParameters['filters'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/events`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => EventMessageFromJSON(jsonValue));
+    }
+
+    /**
+     * Stream real-time events from the server.  Various objects within Docker report events when something happens to them.  Containers report these events: `attach`, `commit`, `copy`, `create`, `destroy`, `detach`, `die`, `exec_create`, `exec_detach`, `exec_start`, `exec_die`, `export`, `health_status`, `kill`, `oom`, `pause`, `rename`, `resize`, `restart`, `start`, `stop`, `top`, `unpause`, `update`, and `prune`  Images report these events: `delete`, `import`, `load`, `pull`, `push`, `save`, `tag`, `untag`, and `prune`  Volumes report these events: `create`, `mount`, `unmount`, `destroy`, and `prune`  Networks report these events: `create`, `connect`, `disconnect`, `destroy`, `update`, `remove`, and `prune`  The Docker daemon reports these events: `reload`  Services report these events: `create`, `update`, and `remove`  Nodes report these events: `create`, `update`, and `remove`  Secrets report these events: `create`, `update`, and `remove`  Configs report these events: `create`, `update`, and `remove`  The Builder reports `prune` events 
+     * Monitor events
+     */
+    async systemEvents(requestParameters: SystemEventsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<EventMessage> {
+        const response = await this.systemEventsRaw(requestParameters, initOverrides);
         return await response.value();
     }
-  }
 
-  /**
-   * Get data usage information
-   */
-  async systemDataUsageRaw(
-    requestParameters: SystemDataUsageRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<SystemDataUsageResponse>> {
-    const queryParameters: any = {};
+    /**
+     * Get system information
+     */
+    async systemInfoRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemInfo>> {
+        const queryParameters: any = {};
 
-    if (requestParameters["type"] != null) {
-      queryParameters["type"] = requestParameters["type"];
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/info`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SystemInfoFromJSON(jsonValue));
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/system/df`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      SystemDataUsageResponseFromJSON(jsonValue),
-    );
-  }
-
-  /**
-   * Get data usage information
-   */
-  async systemDataUsage(
-    requestParameters: SystemDataUsageRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<SystemDataUsageResponse> {
-    const response = await this.systemDataUsageRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Stream real-time events from the server.  Various objects within Docker report events when something happens to them.  Containers report these events: `attach`, `commit`, `copy`, `create`, `destroy`, `detach`, `die`, `exec_create`, `exec_detach`, `exec_start`, `exec_die`, `export`, `health_status`, `kill`, `oom`, `pause`, `rename`, `resize`, `restart`, `start`, `stop`, `top`, `unpause`, `update`, and `prune`  Images report these events: `delete`, `import`, `load`, `pull`, `push`, `save`, `tag`, `untag`, and `prune`  Volumes report these events: `create`, `mount`, `unmount`, `destroy`, and `prune`  Networks report these events: `create`, `connect`, `disconnect`, `destroy`, `update`, `remove`, and `prune`  The Docker daemon reports these events: `reload`  Services report these events: `create`, `update`, and `remove`  Nodes report these events: `create`, `update`, and `remove`  Secrets report these events: `create`, `update`, and `remove`  Configs report these events: `create`, `update`, and `remove`  The Builder reports `prune` events
-   * Monitor events
-   */
-  async systemEventsRaw(
-    requestParameters: SystemEventsRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<EventMessage>> {
-    const queryParameters: any = {};
-
-    if (requestParameters["since"] != null) {
-      queryParameters["since"] = requestParameters["since"];
+    /**
+     * Get system information
+     */
+    async systemInfo(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemInfo> {
+        const response = await this.systemInfoRaw(initOverrides);
+        return await response.value();
     }
 
-    if (requestParameters["until"] != null) {
-      queryParameters["until"] = requestParameters["until"];
+    /**
+     * This is a dummy endpoint you can use to test if the server is accessible.
+     * Ping
+     */
+    async systemPingRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/_ping`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<string>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
     }
 
-    if (requestParameters["filters"] != null) {
-      queryParameters["filters"] = requestParameters["filters"];
+    /**
+     * This is a dummy endpoint you can use to test if the server is accessible.
+     * Ping
+     */
+    async systemPing(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
+        const response = await this.systemPingRaw(initOverrides);
+        return await response.value();
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * This is a dummy endpoint you can use to test if the server is accessible.
+     * Ping
+     */
+    async systemPingHeadRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/events`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => EventMessageFromJSON(jsonValue));
-  }
+        const response = await this.request({
+            path: `/_ping`,
+            method: 'HEAD',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   * Stream real-time events from the server.  Various objects within Docker report events when something happens to them.  Containers report these events: `attach`, `commit`, `copy`, `create`, `destroy`, `detach`, `die`, `exec_create`, `exec_detach`, `exec_start`, `exec_die`, `export`, `health_status`, `kill`, `oom`, `pause`, `rename`, `resize`, `restart`, `start`, `stop`, `top`, `unpause`, `update`, and `prune`  Images report these events: `delete`, `import`, `load`, `pull`, `push`, `save`, `tag`, `untag`, and `prune`  Volumes report these events: `create`, `mount`, `unmount`, `destroy`, and `prune`  Networks report these events: `create`, `connect`, `disconnect`, `destroy`, `update`, `remove`, and `prune`  The Docker daemon reports these events: `reload`  Services report these events: `create`, `update`, and `remove`  Nodes report these events: `create`, `update`, and `remove`  Secrets report these events: `create`, `update`, and `remove`  Configs report these events: `create`, `update`, and `remove`  The Builder reports `prune` events
-   * Monitor events
-   */
-  async systemEvents(
-    requestParameters: SystemEventsRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<EventMessage> {
-    const response = await this.systemEventsRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Get system information
-   */
-  async systemInfoRaw(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<SystemInfo>> {
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/info`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) => SystemInfoFromJSON(jsonValue));
-  }
-
-  /**
-   * Get system information
-   */
-  async systemInfo(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<SystemInfo> {
-    const response = await this.systemInfoRaw(initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * This is a dummy endpoint you can use to test if the server is accessible.
-   * Ping
-   */
-  async systemPingRaw(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<string>> {
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/_ping`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    if (this.isJsonMime(response.headers.get("content-type"))) {
-      return new runtime.JSONApiResponse<string>(response);
-    } else {
-      return new runtime.TextApiResponse(response) as any;
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<string>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
     }
-  }
 
-  /**
-   * This is a dummy endpoint you can use to test if the server is accessible.
-   * Ping
-   */
-  async systemPing(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
-    const response = await this.systemPingRaw(initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * This is a dummy endpoint you can use to test if the server is accessible.
-   * Ping
-   */
-  async systemPingHeadRaw(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<string>> {
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/_ping`,
-        method: "HEAD",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    if (this.isJsonMime(response.headers.get("content-type"))) {
-      return new runtime.JSONApiResponse<string>(response);
-    } else {
-      return new runtime.TextApiResponse(response) as any;
+    /**
+     * This is a dummy endpoint you can use to test if the server is accessible.
+     * Ping
+     */
+    async systemPingHead(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
+        const response = await this.systemPingHeadRaw(initOverrides);
+        return await response.value();
     }
-  }
 
-  /**
-   * This is a dummy endpoint you can use to test if the server is accessible.
-   * Ping
-   */
-  async systemPingHead(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<string> {
-    const response = await this.systemPingHeadRaw(initOverrides);
-    return await response.value();
-  }
+    /**
+     * Returns the version of Docker that is running and various information about the system that Docker is running on.
+     * Get version
+     */
+    async systemVersionRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemVersion>> {
+        const queryParameters: any = {};
 
-  /**
-   * Returns the version of Docker that is running and various information about the system that Docker is running on.
-   * Get version
-   */
-  async systemVersionRaw(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<SystemVersion>> {
-    const queryParameters: any = {};
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    const headerParameters: runtime.HTTPHeaders = {};
+        const response = await this.request({
+            path: `/version`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-    const response = await this.request(
-      {
-        path: `/version`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        return new runtime.JSONApiResponse(response, (jsonValue) => SystemVersionFromJSON(jsonValue));
+    }
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => SystemVersionFromJSON(jsonValue));
-  }
+    /**
+     * Returns the version of Docker that is running and various information about the system that Docker is running on.
+     * Get version
+     */
+    async systemVersion(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemVersion> {
+        const response = await this.systemVersionRaw(initOverrides);
+        return await response.value();
+    }
 
-  /**
-   * Returns the version of Docker that is running and various information about the system that Docker is running on.
-   * Get version
-   */
-  async systemVersion(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<SystemVersion> {
-    const response = await this.systemVersionRaw(initOverrides);
-    return await response.value();
-  }
 }
 
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export enum SystemDataUsageTypeEnum {
-  Container = "container",
-  Image = "image",
-  Volume = "volume",
-  BuildCache = "build-cache",
+    Container = 'container',
+    Image = 'image',
+    Volume = 'volume',
+    BuildCache = 'build-cache'
 }

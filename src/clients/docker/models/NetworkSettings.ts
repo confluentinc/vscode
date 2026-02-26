@@ -2,38 +2,38 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { PortBinding } from "./PortBinding";
+import { mapValues } from '../runtime';
+import type { PortBinding } from './PortBinding';
 import {
-  PortBindingFromJSON,
-  PortBindingFromJSONTyped,
-  PortBindingToJSON,
-  PortBindingToJSONTyped,
-} from "./PortBinding";
-import type { Address } from "./Address";
+    PortBindingFromJSON,
+    PortBindingFromJSONTyped,
+    PortBindingToJSON,
+    PortBindingToJSONTyped,
+} from './PortBinding';
+import type { Address } from './Address';
 import {
-  AddressFromJSON,
-  AddressFromJSONTyped,
-  AddressToJSON,
-  AddressToJSONTyped,
-} from "./Address";
-import type { EndpointSettings } from "./EndpointSettings";
+    AddressFromJSON,
+    AddressFromJSONTyped,
+    AddressToJSON,
+    AddressToJSONTyped,
+} from './Address';
+import type { EndpointSettings } from './EndpointSettings';
 import {
-  EndpointSettingsFromJSON,
-  EndpointSettingsFromJSONTyped,
-  EndpointSettingsToJSON,
-  EndpointSettingsToJSONTyped,
-} from "./EndpointSettings";
+    EndpointSettingsFromJSON,
+    EndpointSettingsFromJSONTyped,
+    EndpointSettingsToJSON,
+    EndpointSettingsToJSONTyped,
+} from './EndpointSettings';
 
 /**
  * NetworkSettings exposes the network settings in the API
@@ -41,283 +41,263 @@ import {
  * @interface NetworkSettings
  */
 export interface NetworkSettings {
-  /**
-   * Name of the network's bridge (for example, `docker0`).
-   * @type {string}
-   * @memberof NetworkSettings
-   */
-  Bridge?: string;
-  /**
-   * SandboxID uniquely represents a container's network stack.
-   * @type {string}
-   * @memberof NetworkSettings
-   */
-  SandboxID?: string;
-  /**
-   * Indicates if hairpin NAT should be enabled on the virtual interface.
-   *
-   * @type {boolean}
-   * @memberof NetworkSettings
-   */
-  HairpinMode?: boolean;
-  /**
-   * IPv6 unicast address using the link-local prefix.
-   * @type {string}
-   * @memberof NetworkSettings
-   */
-  LinkLocalIPv6Address?: string;
-  /**
-   * Prefix length of the IPv6 unicast address.
-   * @type {number}
-   * @memberof NetworkSettings
-   */
-  LinkLocalIPv6PrefixLen?: number;
-  /**
-   * PortMap describes the mapping of container ports to host ports, using the
-   * container's port-number and protocol as key in the format `<port>/<protocol>`,
-   * for example, `80/udp`.
-   *
-   * If a container's port is mapped for multiple protocols, separate entries
-   * are added to the mapping table.
-   *
-   * @type {{ [key: string]: Array<PortBinding> | null; }}
-   * @memberof NetworkSettings
-   */
-  Ports?: { [key: string]: Array<PortBinding> | null };
-  /**
-   * SandboxKey identifies the sandbox
-   * @type {string}
-   * @memberof NetworkSettings
-   */
-  SandboxKey?: string;
-  /**
-   *
-   * @type {Array<Address>}
-   * @memberof NetworkSettings
-   */
-  SecondaryIPAddresses?: Array<Address> | null;
-  /**
-   *
-   * @type {Array<Address>}
-   * @memberof NetworkSettings
-   */
-  SecondaryIPv6Addresses?: Array<Address> | null;
-  /**
-   * EndpointID uniquely represents a service endpoint in a Sandbox.
-   *
-   * <p><br /></p>
-   *
-   * > **Deprecated**: This field is only propagated when attached to the
-   * > default "bridge" network. Use the information from the "bridge"
-   * > network inside the `Networks` map instead, which contains the same
-   * > information. This field was deprecated in Docker 1.9 and is scheduled
-   * > to be removed in Docker 17.12.0
-   *
-   * @type {string}
-   * @memberof NetworkSettings
-   */
-  EndpointID?: string;
-  /**
-   * Gateway address for the default "bridge" network.
-   *
-   * <p><br /></p>
-   *
-   * > **Deprecated**: This field is only propagated when attached to the
-   * > default "bridge" network. Use the information from the "bridge"
-   * > network inside the `Networks` map instead, which contains the same
-   * > information. This field was deprecated in Docker 1.9 and is scheduled
-   * > to be removed in Docker 17.12.0
-   *
-   * @type {string}
-   * @memberof NetworkSettings
-   */
-  Gateway?: string;
-  /**
-   * Global IPv6 address for the default "bridge" network.
-   *
-   * <p><br /></p>
-   *
-   * > **Deprecated**: This field is only propagated when attached to the
-   * > default "bridge" network. Use the information from the "bridge"
-   * > network inside the `Networks` map instead, which contains the same
-   * > information. This field was deprecated in Docker 1.9 and is scheduled
-   * > to be removed in Docker 17.12.0
-   *
-   * @type {string}
-   * @memberof NetworkSettings
-   */
-  GlobalIPv6Address?: string;
-  /**
-   * Mask length of the global IPv6 address.
-   *
-   * <p><br /></p>
-   *
-   * > **Deprecated**: This field is only propagated when attached to the
-   * > default "bridge" network. Use the information from the "bridge"
-   * > network inside the `Networks` map instead, which contains the same
-   * > information. This field was deprecated in Docker 1.9 and is scheduled
-   * > to be removed in Docker 17.12.0
-   *
-   * @type {number}
-   * @memberof NetworkSettings
-   */
-  GlobalIPv6PrefixLen?: number;
-  /**
-   * IPv4 address for the default "bridge" network.
-   *
-   * <p><br /></p>
-   *
-   * > **Deprecated**: This field is only propagated when attached to the
-   * > default "bridge" network. Use the information from the "bridge"
-   * > network inside the `Networks` map instead, which contains the same
-   * > information. This field was deprecated in Docker 1.9 and is scheduled
-   * > to be removed in Docker 17.12.0
-   *
-   * @type {string}
-   * @memberof NetworkSettings
-   */
-  IPAddress?: string;
-  /**
-   * Mask length of the IPv4 address.
-   *
-   * <p><br /></p>
-   *
-   * > **Deprecated**: This field is only propagated when attached to the
-   * > default "bridge" network. Use the information from the "bridge"
-   * > network inside the `Networks` map instead, which contains the same
-   * > information. This field was deprecated in Docker 1.9 and is scheduled
-   * > to be removed in Docker 17.12.0
-   *
-   * @type {number}
-   * @memberof NetworkSettings
-   */
-  IPPrefixLen?: number;
-  /**
-   * IPv6 gateway address for this network.
-   *
-   * <p><br /></p>
-   *
-   * > **Deprecated**: This field is only propagated when attached to the
-   * > default "bridge" network. Use the information from the "bridge"
-   * > network inside the `Networks` map instead, which contains the same
-   * > information. This field was deprecated in Docker 1.9 and is scheduled
-   * > to be removed in Docker 17.12.0
-   *
-   * @type {string}
-   * @memberof NetworkSettings
-   */
-  IPv6Gateway?: string;
-  /**
-   * MAC address for the container on the default "bridge" network.
-   *
-   * <p><br /></p>
-   *
-   * > **Deprecated**: This field is only propagated when attached to the
-   * > default "bridge" network. Use the information from the "bridge"
-   * > network inside the `Networks` map instead, which contains the same
-   * > information. This field was deprecated in Docker 1.9 and is scheduled
-   * > to be removed in Docker 17.12.0
-   *
-   * @type {string}
-   * @memberof NetworkSettings
-   */
-  MacAddress?: string;
-  /**
-   * Information about all networks that the container is connected to.
-   *
-   * @type {{ [key: string]: EndpointSettings; }}
-   * @memberof NetworkSettings
-   */
-  Networks?: { [key: string]: EndpointSettings };
+    /**
+     * Name of the network's bridge (for example, `docker0`).
+     * @type {string}
+     * @memberof NetworkSettings
+     */
+    Bridge?: string;
+    /**
+     * SandboxID uniquely represents a container's network stack.
+     * @type {string}
+     * @memberof NetworkSettings
+     */
+    SandboxID?: string;
+    /**
+     * Indicates if hairpin NAT should be enabled on the virtual interface.
+     * 
+     * @type {boolean}
+     * @memberof NetworkSettings
+     */
+    HairpinMode?: boolean;
+    /**
+     * IPv6 unicast address using the link-local prefix.
+     * @type {string}
+     * @memberof NetworkSettings
+     */
+    LinkLocalIPv6Address?: string;
+    /**
+     * Prefix length of the IPv6 unicast address.
+     * @type {number}
+     * @memberof NetworkSettings
+     */
+    LinkLocalIPv6PrefixLen?: number;
+    /**
+     * PortMap describes the mapping of container ports to host ports, using the
+     * container's port-number and protocol as key in the format `<port>/<protocol>`,
+     * for example, `80/udp`.
+     * 
+     * If a container's port is mapped for multiple protocols, separate entries
+     * are added to the mapping table.
+     * 
+     * @type {{ [key: string]: Array<PortBinding> | null; }}
+     * @memberof NetworkSettings
+     */
+    Ports?: { [key: string]: Array<PortBinding> | null; };
+    /**
+     * SandboxKey identifies the sandbox
+     * @type {string}
+     * @memberof NetworkSettings
+     */
+    SandboxKey?: string;
+    /**
+     * 
+     * @type {Array<Address>}
+     * @memberof NetworkSettings
+     */
+    SecondaryIPAddresses?: Array<Address> | null;
+    /**
+     * 
+     * @type {Array<Address>}
+     * @memberof NetworkSettings
+     */
+    SecondaryIPv6Addresses?: Array<Address> | null;
+    /**
+     * EndpointID uniquely represents a service endpoint in a Sandbox.
+     * 
+     * <p><br /></p>
+     * 
+     * > **Deprecated**: This field is only propagated when attached to the
+     * > default "bridge" network. Use the information from the "bridge"
+     * > network inside the `Networks` map instead, which contains the same
+     * > information. This field was deprecated in Docker 1.9 and is scheduled
+     * > to be removed in Docker 17.12.0
+     * 
+     * @type {string}
+     * @memberof NetworkSettings
+     */
+    EndpointID?: string;
+    /**
+     * Gateway address for the default "bridge" network.
+     * 
+     * <p><br /></p>
+     * 
+     * > **Deprecated**: This field is only propagated when attached to the
+     * > default "bridge" network. Use the information from the "bridge"
+     * > network inside the `Networks` map instead, which contains the same
+     * > information. This field was deprecated in Docker 1.9 and is scheduled
+     * > to be removed in Docker 17.12.0
+     * 
+     * @type {string}
+     * @memberof NetworkSettings
+     */
+    Gateway?: string;
+    /**
+     * Global IPv6 address for the default "bridge" network.
+     * 
+     * <p><br /></p>
+     * 
+     * > **Deprecated**: This field is only propagated when attached to the
+     * > default "bridge" network. Use the information from the "bridge"
+     * > network inside the `Networks` map instead, which contains the same
+     * > information. This field was deprecated in Docker 1.9 and is scheduled
+     * > to be removed in Docker 17.12.0
+     * 
+     * @type {string}
+     * @memberof NetworkSettings
+     */
+    GlobalIPv6Address?: string;
+    /**
+     * Mask length of the global IPv6 address.
+     * 
+     * <p><br /></p>
+     * 
+     * > **Deprecated**: This field is only propagated when attached to the
+     * > default "bridge" network. Use the information from the "bridge"
+     * > network inside the `Networks` map instead, which contains the same
+     * > information. This field was deprecated in Docker 1.9 and is scheduled
+     * > to be removed in Docker 17.12.0
+     * 
+     * @type {number}
+     * @memberof NetworkSettings
+     */
+    GlobalIPv6PrefixLen?: number;
+    /**
+     * IPv4 address for the default "bridge" network.
+     * 
+     * <p><br /></p>
+     * 
+     * > **Deprecated**: This field is only propagated when attached to the
+     * > default "bridge" network. Use the information from the "bridge"
+     * > network inside the `Networks` map instead, which contains the same
+     * > information. This field was deprecated in Docker 1.9 and is scheduled
+     * > to be removed in Docker 17.12.0
+     * 
+     * @type {string}
+     * @memberof NetworkSettings
+     */
+    IPAddress?: string;
+    /**
+     * Mask length of the IPv4 address.
+     * 
+     * <p><br /></p>
+     * 
+     * > **Deprecated**: This field is only propagated when attached to the
+     * > default "bridge" network. Use the information from the "bridge"
+     * > network inside the `Networks` map instead, which contains the same
+     * > information. This field was deprecated in Docker 1.9 and is scheduled
+     * > to be removed in Docker 17.12.0
+     * 
+     * @type {number}
+     * @memberof NetworkSettings
+     */
+    IPPrefixLen?: number;
+    /**
+     * IPv6 gateway address for this network.
+     * 
+     * <p><br /></p>
+     * 
+     * > **Deprecated**: This field is only propagated when attached to the
+     * > default "bridge" network. Use the information from the "bridge"
+     * > network inside the `Networks` map instead, which contains the same
+     * > information. This field was deprecated in Docker 1.9 and is scheduled
+     * > to be removed in Docker 17.12.0
+     * 
+     * @type {string}
+     * @memberof NetworkSettings
+     */
+    IPv6Gateway?: string;
+    /**
+     * MAC address for the container on the default "bridge" network.
+     * 
+     * <p><br /></p>
+     * 
+     * > **Deprecated**: This field is only propagated when attached to the
+     * > default "bridge" network. Use the information from the "bridge"
+     * > network inside the `Networks` map instead, which contains the same
+     * > information. This field was deprecated in Docker 1.9 and is scheduled
+     * > to be removed in Docker 17.12.0
+     * 
+     * @type {string}
+     * @memberof NetworkSettings
+     */
+    MacAddress?: string;
+    /**
+     * Information about all networks that the container is connected to.
+     * 
+     * @type {{ [key: string]: EndpointSettings; }}
+     * @memberof NetworkSettings
+     */
+    Networks?: { [key: string]: EndpointSettings; };
 }
 
 /**
  * Check if a given object implements the NetworkSettings interface.
  */
 export function instanceOfNetworkSettings(value: object): value is NetworkSettings {
-  return true;
+    return true;
 }
 
 export function NetworkSettingsFromJSON(json: any): NetworkSettings {
-  return NetworkSettingsFromJSONTyped(json, false);
+    return NetworkSettingsFromJSONTyped(json, false);
 }
 
-export function NetworkSettingsFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): NetworkSettings {
-  if (json == null) {
-    return json;
-  }
-  return {
-    Bridge: json["Bridge"] == null ? undefined : json["Bridge"],
-    SandboxID: json["SandboxID"] == null ? undefined : json["SandboxID"],
-    HairpinMode: json["HairpinMode"] == null ? undefined : json["HairpinMode"],
-    LinkLocalIPv6Address:
-      json["LinkLocalIPv6Address"] == null ? undefined : json["LinkLocalIPv6Address"],
-    LinkLocalIPv6PrefixLen:
-      json["LinkLocalIPv6PrefixLen"] == null ? undefined : json["LinkLocalIPv6PrefixLen"],
-    Ports: json["Ports"] == null ? undefined : json["Ports"],
-    SandboxKey: json["SandboxKey"] == null ? undefined : json["SandboxKey"],
-    SecondaryIPAddresses:
-      json["SecondaryIPAddresses"] == null
-        ? undefined
-        : (json["SecondaryIPAddresses"] as Array<any>).map(AddressFromJSON),
-    SecondaryIPv6Addresses:
-      json["SecondaryIPv6Addresses"] == null
-        ? undefined
-        : (json["SecondaryIPv6Addresses"] as Array<any>).map(AddressFromJSON),
-    EndpointID: json["EndpointID"] == null ? undefined : json["EndpointID"],
-    Gateway: json["Gateway"] == null ? undefined : json["Gateway"],
-    GlobalIPv6Address: json["GlobalIPv6Address"] == null ? undefined : json["GlobalIPv6Address"],
-    GlobalIPv6PrefixLen:
-      json["GlobalIPv6PrefixLen"] == null ? undefined : json["GlobalIPv6PrefixLen"],
-    IPAddress: json["IPAddress"] == null ? undefined : json["IPAddress"],
-    IPPrefixLen: json["IPPrefixLen"] == null ? undefined : json["IPPrefixLen"],
-    IPv6Gateway: json["IPv6Gateway"] == null ? undefined : json["IPv6Gateway"],
-    MacAddress: json["MacAddress"] == null ? undefined : json["MacAddress"],
-    Networks:
-      json["Networks"] == null ? undefined : mapValues(json["Networks"], EndpointSettingsFromJSON),
-  };
+export function NetworkSettingsFromJSONTyped(json: any, ignoreDiscriminator: boolean): NetworkSettings {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'Bridge': json['Bridge'] == null ? undefined : json['Bridge'],
+        'SandboxID': json['SandboxID'] == null ? undefined : json['SandboxID'],
+        'HairpinMode': json['HairpinMode'] == null ? undefined : json['HairpinMode'],
+        'LinkLocalIPv6Address': json['LinkLocalIPv6Address'] == null ? undefined : json['LinkLocalIPv6Address'],
+        'LinkLocalIPv6PrefixLen': json['LinkLocalIPv6PrefixLen'] == null ? undefined : json['LinkLocalIPv6PrefixLen'],
+        'Ports': json['Ports'] == null ? undefined : json['Ports'],
+        'SandboxKey': json['SandboxKey'] == null ? undefined : json['SandboxKey'],
+        'SecondaryIPAddresses': json['SecondaryIPAddresses'] == null ? undefined : ((json['SecondaryIPAddresses'] as Array<any>).map(AddressFromJSON)),
+        'SecondaryIPv6Addresses': json['SecondaryIPv6Addresses'] == null ? undefined : ((json['SecondaryIPv6Addresses'] as Array<any>).map(AddressFromJSON)),
+        'EndpointID': json['EndpointID'] == null ? undefined : json['EndpointID'],
+        'Gateway': json['Gateway'] == null ? undefined : json['Gateway'],
+        'GlobalIPv6Address': json['GlobalIPv6Address'] == null ? undefined : json['GlobalIPv6Address'],
+        'GlobalIPv6PrefixLen': json['GlobalIPv6PrefixLen'] == null ? undefined : json['GlobalIPv6PrefixLen'],
+        'IPAddress': json['IPAddress'] == null ? undefined : json['IPAddress'],
+        'IPPrefixLen': json['IPPrefixLen'] == null ? undefined : json['IPPrefixLen'],
+        'IPv6Gateway': json['IPv6Gateway'] == null ? undefined : json['IPv6Gateway'],
+        'MacAddress': json['MacAddress'] == null ? undefined : json['MacAddress'],
+        'Networks': json['Networks'] == null ? undefined : (mapValues(json['Networks'], EndpointSettingsFromJSON)),
+    };
 }
 
 export function NetworkSettingsToJSON(json: any): NetworkSettings {
-  return NetworkSettingsToJSONTyped(json, false);
+    return NetworkSettingsToJSONTyped(json, false);
 }
 
-export function NetworkSettingsToJSONTyped(
-  value?: NetworkSettings | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function NetworkSettingsToJSONTyped(value?: NetworkSettings | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    Bridge: value["Bridge"],
-    SandboxID: value["SandboxID"],
-    HairpinMode: value["HairpinMode"],
-    LinkLocalIPv6Address: value["LinkLocalIPv6Address"],
-    LinkLocalIPv6PrefixLen: value["LinkLocalIPv6PrefixLen"],
-    Ports: value["Ports"],
-    SandboxKey: value["SandboxKey"],
-    SecondaryIPAddresses:
-      value["SecondaryIPAddresses"] == null
-        ? undefined
-        : (value["SecondaryIPAddresses"] as Array<any>).map(AddressToJSON),
-    SecondaryIPv6Addresses:
-      value["SecondaryIPv6Addresses"] == null
-        ? undefined
-        : (value["SecondaryIPv6Addresses"] as Array<any>).map(AddressToJSON),
-    EndpointID: value["EndpointID"],
-    Gateway: value["Gateway"],
-    GlobalIPv6Address: value["GlobalIPv6Address"],
-    GlobalIPv6PrefixLen: value["GlobalIPv6PrefixLen"],
-    IPAddress: value["IPAddress"],
-    IPPrefixLen: value["IPPrefixLen"],
-    IPv6Gateway: value["IPv6Gateway"],
-    MacAddress: value["MacAddress"],
-    Networks:
-      value["Networks"] == null ? undefined : mapValues(value["Networks"], EndpointSettingsToJSON),
-  };
+    return {
+        
+        'Bridge': value['Bridge'],
+        'SandboxID': value['SandboxID'],
+        'HairpinMode': value['HairpinMode'],
+        'LinkLocalIPv6Address': value['LinkLocalIPv6Address'],
+        'LinkLocalIPv6PrefixLen': value['LinkLocalIPv6PrefixLen'],
+        'Ports': value['Ports'],
+        'SandboxKey': value['SandboxKey'],
+        'SecondaryIPAddresses': value['SecondaryIPAddresses'] == null ? undefined : ((value['SecondaryIPAddresses'] as Array<any>).map(AddressToJSON)),
+        'SecondaryIPv6Addresses': value['SecondaryIPv6Addresses'] == null ? undefined : ((value['SecondaryIPv6Addresses'] as Array<any>).map(AddressToJSON)),
+        'EndpointID': value['EndpointID'],
+        'Gateway': value['Gateway'],
+        'GlobalIPv6Address': value['GlobalIPv6Address'],
+        'GlobalIPv6PrefixLen': value['GlobalIPv6PrefixLen'],
+        'IPAddress': value['IPAddress'],
+        'IPPrefixLen': value['IPPrefixLen'],
+        'IPv6Gateway': value['IPv6Gateway'],
+        'MacAddress': value['MacAddress'],
+        'Networks': value['Networks'] == null ? undefined : (mapValues(value['Networks'], EndpointSettingsToJSON)),
+    };
 }
+

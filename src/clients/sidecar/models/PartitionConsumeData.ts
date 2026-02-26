@@ -12,87 +12,78 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { PartitionConsumeRecord } from "./PartitionConsumeRecord";
+import { mapValues } from '../runtime';
+import type { PartitionConsumeRecord } from './PartitionConsumeRecord';
 import {
-  PartitionConsumeRecordFromJSON,
-  PartitionConsumeRecordFromJSONTyped,
-  PartitionConsumeRecordToJSON,
-  PartitionConsumeRecordToJSONTyped,
-} from "./PartitionConsumeRecord";
+    PartitionConsumeRecordFromJSON,
+    PartitionConsumeRecordFromJSONTyped,
+    PartitionConsumeRecordToJSON,
+    PartitionConsumeRecordToJSONTyped,
+} from './PartitionConsumeRecord';
 
 /**
- *
+ * 
  * @export
  * @interface PartitionConsumeData
  */
 export interface PartitionConsumeData {
-  /**
-   *
-   * @type {number}
-   * @memberof PartitionConsumeData
-   */
-  partition_id?: number;
-  /**
-   *
-   * @type {number}
-   * @memberof PartitionConsumeData
-   */
-  next_offset?: number;
-  /**
-   *
-   * @type {Array<PartitionConsumeRecord>}
-   * @memberof PartitionConsumeData
-   */
-  records?: Array<PartitionConsumeRecord>;
+    /**
+     * 
+     * @type {number}
+     * @memberof PartitionConsumeData
+     */
+    partition_id?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PartitionConsumeData
+     */
+    next_offset?: number;
+    /**
+     * 
+     * @type {Array<PartitionConsumeRecord>}
+     * @memberof PartitionConsumeData
+     */
+    records?: Array<PartitionConsumeRecord>;
 }
 
 /**
  * Check if a given object implements the PartitionConsumeData interface.
  */
 export function instanceOfPartitionConsumeData(value: object): value is PartitionConsumeData {
-  return true;
+    return true;
 }
 
 export function PartitionConsumeDataFromJSON(json: any): PartitionConsumeData {
-  return PartitionConsumeDataFromJSONTyped(json, false);
+    return PartitionConsumeDataFromJSONTyped(json, false);
 }
 
-export function PartitionConsumeDataFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): PartitionConsumeData {
-  if (json == null) {
-    return json;
-  }
-  return {
-    partition_id: json["partition_id"] == null ? undefined : json["partition_id"],
-    next_offset: json["next_offset"] == null ? undefined : json["next_offset"],
-    records:
-      json["records"] == null
-        ? undefined
-        : (json["records"] as Array<any>).map(PartitionConsumeRecordFromJSON),
-  };
+export function PartitionConsumeDataFromJSONTyped(json: any, ignoreDiscriminator: boolean): PartitionConsumeData {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'partition_id': json['partition_id'] == null ? undefined : json['partition_id'],
+        'next_offset': json['next_offset'] == null ? undefined : json['next_offset'],
+        'records': json['records'] == null ? undefined : ((json['records'] as Array<any>).map(PartitionConsumeRecordFromJSON)),
+    };
 }
 
 export function PartitionConsumeDataToJSON(json: any): PartitionConsumeData {
-  return PartitionConsumeDataToJSONTyped(json, false);
+    return PartitionConsumeDataToJSONTyped(json, false);
 }
 
-export function PartitionConsumeDataToJSONTyped(
-  value?: PartitionConsumeData | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function PartitionConsumeDataToJSONTyped(value?: PartitionConsumeData | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    partition_id: value["partition_id"],
-    next_offset: value["next_offset"],
-    records:
-      value["records"] == null
-        ? undefined
-        : (value["records"] as Array<any>).map(PartitionConsumeRecordToJSON),
-  };
+    return {
+        
+        'partition_id': value['partition_id'],
+        'next_offset': value['next_offset'],
+        'records': value['records'] == null ? undefined : ((value['records'] as Array<any>).map(PartitionConsumeRecordToJSON)),
+    };
 }
+

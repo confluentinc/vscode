@@ -12,81 +12,80 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { DataFormat } from "./DataFormat";
+import { mapValues } from '../runtime';
+import type { DataFormat } from './DataFormat';
 import {
-  DataFormatFromJSON,
-  DataFormatFromJSONTyped,
-  DataFormatToJSON,
-  DataFormatToJSONTyped,
-} from "./DataFormat";
+    DataFormatFromJSON,
+    DataFormatFromJSONTyped,
+    DataFormatToJSON,
+    DataFormatToJSONTyped,
+} from './DataFormat';
 
 /**
- *
+ * 
  * @export
  * @interface KeyOrValueMetadata
  */
 export interface KeyOrValueMetadata {
-  /**
-   *
-   * @type {number}
-   * @memberof KeyOrValueMetadata
-   */
-  schema_id?: number;
-  /**
-   *
-   * @type {string}
-   * @memberof KeyOrValueMetadata
-   */
-  schema_guid?: string;
-  /**
-   *
-   * @type {DataFormat}
-   * @memberof KeyOrValueMetadata
-   */
-  data_format?: DataFormat;
+    /**
+     * 
+     * @type {number}
+     * @memberof KeyOrValueMetadata
+     */
+    schema_id?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof KeyOrValueMetadata
+     */
+    schema_guid?: string;
+    /**
+     * 
+     * @type {DataFormat}
+     * @memberof KeyOrValueMetadata
+     */
+    data_format?: DataFormat;
 }
+
+
 
 /**
  * Check if a given object implements the KeyOrValueMetadata interface.
  */
 export function instanceOfKeyOrValueMetadata(value: object): value is KeyOrValueMetadata {
-  return true;
+    return true;
 }
 
 export function KeyOrValueMetadataFromJSON(json: any): KeyOrValueMetadata {
-  return KeyOrValueMetadataFromJSONTyped(json, false);
+    return KeyOrValueMetadataFromJSONTyped(json, false);
 }
 
-export function KeyOrValueMetadataFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): KeyOrValueMetadata {
-  if (json == null) {
-    return json;
-  }
-  return {
-    schema_id: json["schema_id"] == null ? undefined : json["schema_id"],
-    schema_guid: json["schema_guid"] == null ? undefined : json["schema_guid"],
-    data_format: json["data_format"] == null ? undefined : DataFormatFromJSON(json["data_format"]),
-  };
+export function KeyOrValueMetadataFromJSONTyped(json: any, ignoreDiscriminator: boolean): KeyOrValueMetadata {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'schema_id': json['schema_id'] == null ? undefined : json['schema_id'],
+        'schema_guid': json['schema_guid'] == null ? undefined : json['schema_guid'],
+        'data_format': json['data_format'] == null ? undefined : DataFormatFromJSON(json['data_format']),
+    };
 }
 
 export function KeyOrValueMetadataToJSON(json: any): KeyOrValueMetadata {
-  return KeyOrValueMetadataToJSONTyped(json, false);
+    return KeyOrValueMetadataToJSONTyped(json, false);
 }
 
-export function KeyOrValueMetadataToJSONTyped(
-  value?: KeyOrValueMetadata | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function KeyOrValueMetadataToJSONTyped(value?: KeyOrValueMetadata | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    schema_id: value["schema_id"],
-    schema_guid: value["schema_guid"],
-    data_format: DataFormatToJSON(value["data_format"]),
-  };
+    return {
+        
+        'schema_id': value['schema_id'],
+        'schema_guid': value['schema_guid'],
+        'data_format': DataFormatToJSON(value['data_format']),
+    };
 }
+

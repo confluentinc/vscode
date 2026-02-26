@@ -2,31 +2,31 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { PluginConfig } from "./PluginConfig";
+import { mapValues } from '../runtime';
+import type { PluginConfig } from './PluginConfig';
 import {
-  PluginConfigFromJSON,
-  PluginConfigFromJSONTyped,
-  PluginConfigToJSON,
-  PluginConfigToJSONTyped,
-} from "./PluginConfig";
-import type { PluginSettings } from "./PluginSettings";
+    PluginConfigFromJSON,
+    PluginConfigFromJSONTyped,
+    PluginConfigToJSON,
+    PluginConfigToJSONTyped,
+} from './PluginConfig';
+import type { PluginSettings } from './PluginSettings';
 import {
-  PluginSettingsFromJSON,
-  PluginSettingsFromJSONTyped,
-  PluginSettingsToJSON,
-  PluginSettingsToJSONTyped,
-} from "./PluginSettings";
+    PluginSettingsFromJSON,
+    PluginSettingsFromJSONTyped,
+    PluginSettingsToJSON,
+    PluginSettingsToJSONTyped,
+} from './PluginSettings';
 
 /**
  * A plugin for the Engine API
@@ -34,91 +34,91 @@ import {
  * @interface Plugin
  */
 export interface Plugin {
-  /**
-   *
-   * @type {string}
-   * @memberof Plugin
-   */
-  Id?: string;
-  /**
-   *
-   * @type {string}
-   * @memberof Plugin
-   */
-  Name: string;
-  /**
-   * True if the plugin is running. False if the plugin is not running, only installed.
-   * @type {boolean}
-   * @memberof Plugin
-   */
-  Enabled: boolean;
-  /**
-   *
-   * @type {PluginSettings}
-   * @memberof Plugin
-   */
-  Settings: PluginSettings;
-  /**
-   * plugin remote reference used to push/pull the plugin
-   * @type {string}
-   * @memberof Plugin
-   */
-  PluginReference?: string;
-  /**
-   *
-   * @type {PluginConfig}
-   * @memberof Plugin
-   */
-  Config: PluginConfig;
+    /**
+     * 
+     * @type {string}
+     * @memberof Plugin
+     */
+    Id?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Plugin
+     */
+    Name: string;
+    /**
+     * True if the plugin is running. False if the plugin is not running, only installed.
+     * @type {boolean}
+     * @memberof Plugin
+     */
+    Enabled: boolean;
+    /**
+     * 
+     * @type {PluginSettings}
+     * @memberof Plugin
+     */
+    Settings: PluginSettings;
+    /**
+     * plugin remote reference used to push/pull the plugin
+     * @type {string}
+     * @memberof Plugin
+     */
+    PluginReference?: string;
+    /**
+     * 
+     * @type {PluginConfig}
+     * @memberof Plugin
+     */
+    Config: PluginConfig;
 }
 
 /**
  * Check if a given object implements the Plugin interface.
  */
 export function instanceOfPlugin(value: object): value is Plugin {
-  if (!("Name" in value) || value["Name"] === undefined) return false;
-  if (!("Enabled" in value) || value["Enabled"] === undefined) return false;
-  if (!("Settings" in value) || value["Settings"] === undefined) return false;
-  if (!("Config" in value) || value["Config"] === undefined) return false;
-  return true;
+    if (!('Name' in value) || value['Name'] === undefined) return false;
+    if (!('Enabled' in value) || value['Enabled'] === undefined) return false;
+    if (!('Settings' in value) || value['Settings'] === undefined) return false;
+    if (!('Config' in value) || value['Config'] === undefined) return false;
+    return true;
 }
 
 export function PluginFromJSON(json: any): Plugin {
-  return PluginFromJSONTyped(json, false);
+    return PluginFromJSONTyped(json, false);
 }
 
 export function PluginFromJSONTyped(json: any, ignoreDiscriminator: boolean): Plugin {
-  if (json == null) {
-    return json;
-  }
-  return {
-    Id: json["Id"] == null ? undefined : json["Id"],
-    Name: json["Name"],
-    Enabled: json["Enabled"],
-    Settings: PluginSettingsFromJSON(json["Settings"]),
-    PluginReference: json["PluginReference"] == null ? undefined : json["PluginReference"],
-    Config: PluginConfigFromJSON(json["Config"]),
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'Id': json['Id'] == null ? undefined : json['Id'],
+        'Name': json['Name'],
+        'Enabled': json['Enabled'],
+        'Settings': PluginSettingsFromJSON(json['Settings']),
+        'PluginReference': json['PluginReference'] == null ? undefined : json['PluginReference'],
+        'Config': PluginConfigFromJSON(json['Config']),
+    };
 }
 
 export function PluginToJSON(json: any): Plugin {
-  return PluginToJSONTyped(json, false);
+    return PluginToJSONTyped(json, false);
 }
 
-export function PluginToJSONTyped(
-  value?: Plugin | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function PluginToJSONTyped(value?: Plugin | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    Id: value["Id"],
-    Name: value["Name"],
-    Enabled: value["Enabled"],
-    Settings: PluginSettingsToJSON(value["Settings"]),
-    PluginReference: value["PluginReference"],
-    Config: PluginConfigToJSON(value["Config"]),
-  };
+    return {
+        
+        'Id': value['Id'],
+        'Name': value['Name'],
+        'Enabled': value['Enabled'],
+        'Settings': PluginSettingsToJSON(value['Settings']),
+        'PluginReference': value['PluginReference'],
+        'Config': PluginConfigToJSON(value['Config']),
+    };
 }
+

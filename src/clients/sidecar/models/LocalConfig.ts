@@ -12,55 +12,54 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
  * Configuration when using Confluent Local and optionally a local Schema Registry.
  * @export
  * @interface LocalConfig
  */
 export interface LocalConfig {
-  /**
-   * The URL of the Schema Registry running locally.
-   * @type {string}
-   * @memberof LocalConfig
-   */
-  schema_registry_uri?: string;
+    /**
+     * The URL of the Schema Registry running locally.
+     * @type {string}
+     * @memberof LocalConfig
+     */
+    schema_registry_uri?: string;
 }
 
 /**
  * Check if a given object implements the LocalConfig interface.
  */
 export function instanceOfLocalConfig(value: object): value is LocalConfig {
-  return true;
+    return true;
 }
 
 export function LocalConfigFromJSON(json: any): LocalConfig {
-  return LocalConfigFromJSONTyped(json, false);
+    return LocalConfigFromJSONTyped(json, false);
 }
 
 export function LocalConfigFromJSONTyped(json: any, ignoreDiscriminator: boolean): LocalConfig {
-  if (json == null) {
-    return json;
-  }
-  return {
-    schema_registry_uri:
-      json["schema-registry-uri"] == null ? undefined : json["schema-registry-uri"],
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'schema_registry_uri': json['schema-registry-uri'] == null ? undefined : json['schema-registry-uri'],
+    };
 }
 
 export function LocalConfigToJSON(json: any): LocalConfig {
-  return LocalConfigToJSONTyped(json, false);
+    return LocalConfigToJSONTyped(json, false);
 }
 
-export function LocalConfigToJSONTyped(
-  value?: LocalConfig | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function LocalConfigToJSONTyped(value?: LocalConfig | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    "schema-registry-uri": value["schema_registry_uri"],
-  };
+    return {
+        
+        'schema-registry-uri': value['schema_registry_uri'],
+    };
 }
+

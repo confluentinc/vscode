@@ -13,40 +13,42 @@
  */
 
 /**
- *
+ * 
  * @export
  * @enum {string}
  */
 export enum StoreType {
-  Jks = "JKS",
-  Pkcs12 = "PKCS12",
-  Pem = "PEM",
-  Unknown = "UNKNOWN",
+    Jks = 'JKS',
+    Pkcs12 = 'PKCS12',
+    Pem = 'PEM',
+    Unknown = 'UNKNOWN'
 }
 
+
 export function instanceOfStoreType(value: any): boolean {
-  for (const key in StoreType) {
-    if (Object.prototype.hasOwnProperty.call(StoreType, key)) {
-      if (StoreType[key as keyof typeof StoreType] === value) {
-        return true;
-      }
+    for (const key in StoreType) {
+        if (Object.prototype.hasOwnProperty.call(StoreType, key)) {
+            if (StoreType[key as keyof typeof StoreType] === value) {
+                return true;
+            }
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 export function StoreTypeFromJSON(json: any): StoreType {
-  return StoreTypeFromJSONTyped(json, false);
+    return StoreTypeFromJSONTyped(json, false);
 }
 
 export function StoreTypeFromJSONTyped(json: any, ignoreDiscriminator: boolean): StoreType {
-  return json as StoreType;
+    return json as StoreType;
 }
 
 export function StoreTypeToJSON(value?: StoreType | null): any {
-  return value as any;
+    return value as any;
 }
 
 export function StoreTypeToJSONTyped(value: any, ignoreDiscriminator: boolean): StoreType {
-  return value as StoreType;
+    return value as StoreType;
 }
+

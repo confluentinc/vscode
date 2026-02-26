@@ -12,65 +12,62 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
- *
+ * 
  * @export
  * @interface PartitionOffset
  */
 export interface PartitionOffset {
-  /**
-   *
-   * @type {number}
-   * @memberof PartitionOffset
-   */
-  partition_id?: number;
-  /**
-   *
-   * @type {number}
-   * @memberof PartitionOffset
-   */
-  offset?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PartitionOffset
+     */
+    partition_id?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PartitionOffset
+     */
+    offset?: number;
 }
 
 /**
  * Check if a given object implements the PartitionOffset interface.
  */
 export function instanceOfPartitionOffset(value: object): value is PartitionOffset {
-  return true;
+    return true;
 }
 
 export function PartitionOffsetFromJSON(json: any): PartitionOffset {
-  return PartitionOffsetFromJSONTyped(json, false);
+    return PartitionOffsetFromJSONTyped(json, false);
 }
 
-export function PartitionOffsetFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): PartitionOffset {
-  if (json == null) {
-    return json;
-  }
-  return {
-    partition_id: json["partition_id"] == null ? undefined : json["partition_id"],
-    offset: json["offset"] == null ? undefined : json["offset"],
-  };
+export function PartitionOffsetFromJSONTyped(json: any, ignoreDiscriminator: boolean): PartitionOffset {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'partition_id': json['partition_id'] == null ? undefined : json['partition_id'],
+        'offset': json['offset'] == null ? undefined : json['offset'],
+    };
 }
 
 export function PartitionOffsetToJSON(json: any): PartitionOffset {
-  return PartitionOffsetToJSONTyped(json, false);
+    return PartitionOffsetToJSONTyped(json, false);
 }
 
-export function PartitionOffsetToJSONTyped(
-  value?: PartitionOffset | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function PartitionOffsetToJSONTyped(value?: PartitionOffset | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    partition_id: value["partition_id"],
-    offset: value["offset"],
-  };
+    return {
+        
+        'partition_id': value['partition_id'],
+        'offset': value['offset'],
+    };
 }
+

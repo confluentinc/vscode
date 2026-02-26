@@ -2,309 +2,305 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { ContainerConfig } from "./ContainerConfig";
+import { mapValues } from '../runtime';
+import type { ContainerConfig } from './ContainerConfig';
 import {
-  ContainerConfigFromJSON,
-  ContainerConfigFromJSONTyped,
-  ContainerConfigToJSON,
-  ContainerConfigToJSONTyped,
-} from "./ContainerConfig";
-import type { ImageConfig } from "./ImageConfig";
+    ContainerConfigFromJSON,
+    ContainerConfigFromJSONTyped,
+    ContainerConfigToJSON,
+    ContainerConfigToJSONTyped,
+} from './ContainerConfig';
+import type { ImageConfig } from './ImageConfig';
 import {
-  ImageConfigFromJSON,
-  ImageConfigFromJSONTyped,
-  ImageConfigToJSON,
-  ImageConfigToJSONTyped,
-} from "./ImageConfig";
-import type { ImageInspectMetadata } from "./ImageInspectMetadata";
+    ImageConfigFromJSON,
+    ImageConfigFromJSONTyped,
+    ImageConfigToJSON,
+    ImageConfigToJSONTyped,
+} from './ImageConfig';
+import type { ImageInspectMetadata } from './ImageInspectMetadata';
 import {
-  ImageInspectMetadataFromJSON,
-  ImageInspectMetadataFromJSONTyped,
-  ImageInspectMetadataToJSON,
-  ImageInspectMetadataToJSONTyped,
-} from "./ImageInspectMetadata";
-import type { ImageInspectRootFS } from "./ImageInspectRootFS";
+    ImageInspectMetadataFromJSON,
+    ImageInspectMetadataFromJSONTyped,
+    ImageInspectMetadataToJSON,
+    ImageInspectMetadataToJSONTyped,
+} from './ImageInspectMetadata';
+import type { ImageInspectRootFS } from './ImageInspectRootFS';
 import {
-  ImageInspectRootFSFromJSON,
-  ImageInspectRootFSFromJSONTyped,
-  ImageInspectRootFSToJSON,
-  ImageInspectRootFSToJSONTyped,
-} from "./ImageInspectRootFS";
-import type { GraphDriverData } from "./GraphDriverData";
+    ImageInspectRootFSFromJSON,
+    ImageInspectRootFSFromJSONTyped,
+    ImageInspectRootFSToJSON,
+    ImageInspectRootFSToJSONTyped,
+} from './ImageInspectRootFS';
+import type { GraphDriverData } from './GraphDriverData';
 import {
-  GraphDriverDataFromJSON,
-  GraphDriverDataFromJSONTyped,
-  GraphDriverDataToJSON,
-  GraphDriverDataToJSONTyped,
-} from "./GraphDriverData";
+    GraphDriverDataFromJSON,
+    GraphDriverDataFromJSONTyped,
+    GraphDriverDataToJSON,
+    GraphDriverDataToJSONTyped,
+} from './GraphDriverData';
 
 /**
  * Information about an image in the local image cache.
- *
+ * 
  * @export
  * @interface ImageInspect
  */
 export interface ImageInspect {
-  /**
-   * ID is the content-addressable ID of an image.
-   *
-   * This identifier is a content-addressable digest calculated from the
-   * image's configuration (which includes the digests of layers used by
-   * the image).
-   *
-   * Note that this digest differs from the `RepoDigests` below, which
-   * holds digests of image manifests that reference the image.
-   *
-   * @type {string}
-   * @memberof ImageInspect
-   */
-  Id?: string;
-  /**
-   * List of image names/tags in the local image cache that reference this
-   * image.
-   *
-   * Multiple image tags can refer to the same image, and this list may be
-   * empty if no tags reference the image, in which case the image is
-   * "untagged", in which case it can still be referenced by its ID.
-   *
-   * @type {Array<string>}
-   * @memberof ImageInspect
-   */
-  RepoTags?: Array<string>;
-  /**
-   * List of content-addressable digests of locally available image manifests
-   * that the image is referenced from. Multiple manifests can refer to the
-   * same image.
-   *
-   * These digests are usually only available if the image was either pulled
-   * from a registry, or if the image was pushed to a registry, which is when
-   * the manifest is generated and its digest calculated.
-   *
-   * @type {Array<string>}
-   * @memberof ImageInspect
-   */
-  RepoDigests?: Array<string>;
-  /**
-   * ID of the parent image.
-   *
-   * Depending on how the image was created, this field may be empty and
-   * is only set for images that were built/created locally. This field
-   * is empty if the image was pulled from an image registry.
-   *
-   * @type {string}
-   * @memberof ImageInspect
-   */
-  Parent?: string;
-  /**
-   * Optional message that was set when committing or importing the image.
-   *
-   * @type {string}
-   * @memberof ImageInspect
-   */
-  Comment?: string;
-  /**
-   * Date and time at which the image was created, formatted in
-   * [RFC 3339](https://www.ietf.org/rfc/rfc3339.txt) format with nano-seconds.
-   *
-   * @type {string}
-   * @memberof ImageInspect
-   */
-  Created?: string;
-  /**
-   * The ID of the container that was used to create the image.
-   *
-   * Depending on how the image was created, this field may be empty.
-   *
-   * @type {string}
-   * @memberof ImageInspect
-   */
-  Container?: string;
-  /**
-   *
-   * @type {ContainerConfig}
-   * @memberof ImageInspect
-   */
-  ContainerConfig?: ContainerConfig;
-  /**
-   * The version of Docker that was used to build the image.
-   *
-   * Depending on how the image was created, this field may be empty.
-   *
-   * @type {string}
-   * @memberof ImageInspect
-   */
-  DockerVersion?: string;
-  /**
-   * Name of the author that was specified when committing the image, or as
-   * specified through MAINTAINER (deprecated) in the Dockerfile.
-   *
-   * @type {string}
-   * @memberof ImageInspect
-   */
-  Author?: string;
-  /**
-   *
-   * @type {ImageConfig}
-   * @memberof ImageInspect
-   */
-  Config?: ImageConfig;
-  /**
-   * Hardware CPU architecture that the image runs on.
-   *
-   * @type {string}
-   * @memberof ImageInspect
-   */
-  Architecture?: string;
-  /**
-   * CPU architecture variant (presently ARM-only).
-   *
-   * @type {string}
-   * @memberof ImageInspect
-   */
-  Variant?: string | null;
-  /**
-   * Operating System the image is built to run on.
-   *
-   * @type {string}
-   * @memberof ImageInspect
-   */
-  Os?: string;
-  /**
-   * Operating System version the image is built to run on (especially
-   * for Windows).
-   *
-   * @type {string}
-   * @memberof ImageInspect
-   */
-  OsVersion?: string | null;
-  /**
-   * Total size of the image including all layers it is composed of.
-   *
-   * @type {number}
-   * @memberof ImageInspect
-   */
-  Size?: number;
-  /**
-   * Total size of the image including all layers it is composed of.
-   *
-   * In versions of Docker before v1.10, this field was calculated from
-   * the image itself and all of its parent images. Images are now stored
-   * self-contained, and no longer use a parent-chain, making this field
-   * an equivalent of the Size field.
-   *
-   * > **Deprecated**: this field is kept for backward compatibility, but
-   * > will be removed in API v1.44.
-   *
-   * @type {number}
-   * @memberof ImageInspect
-   */
-  VirtualSize?: number;
-  /**
-   *
-   * @type {GraphDriverData}
-   * @memberof ImageInspect
-   */
-  GraphDriver?: GraphDriverData;
-  /**
-   *
-   * @type {ImageInspectRootFS}
-   * @memberof ImageInspect
-   */
-  RootFS?: ImageInspectRootFS;
-  /**
-   *
-   * @type {ImageInspectMetadata}
-   * @memberof ImageInspect
-   */
-  Metadata?: ImageInspectMetadata;
+    /**
+     * ID is the content-addressable ID of an image.
+     * 
+     * This identifier is a content-addressable digest calculated from the
+     * image's configuration (which includes the digests of layers used by
+     * the image).
+     * 
+     * Note that this digest differs from the `RepoDigests` below, which
+     * holds digests of image manifests that reference the image.
+     * 
+     * @type {string}
+     * @memberof ImageInspect
+     */
+    Id?: string;
+    /**
+     * List of image names/tags in the local image cache that reference this
+     * image.
+     * 
+     * Multiple image tags can refer to the same image, and this list may be
+     * empty if no tags reference the image, in which case the image is
+     * "untagged", in which case it can still be referenced by its ID.
+     * 
+     * @type {Array<string>}
+     * @memberof ImageInspect
+     */
+    RepoTags?: Array<string>;
+    /**
+     * List of content-addressable digests of locally available image manifests
+     * that the image is referenced from. Multiple manifests can refer to the
+     * same image.
+     * 
+     * These digests are usually only available if the image was either pulled
+     * from a registry, or if the image was pushed to a registry, which is when
+     * the manifest is generated and its digest calculated.
+     * 
+     * @type {Array<string>}
+     * @memberof ImageInspect
+     */
+    RepoDigests?: Array<string>;
+    /**
+     * ID of the parent image.
+     * 
+     * Depending on how the image was created, this field may be empty and
+     * is only set for images that were built/created locally. This field
+     * is empty if the image was pulled from an image registry.
+     * 
+     * @type {string}
+     * @memberof ImageInspect
+     */
+    Parent?: string;
+    /**
+     * Optional message that was set when committing or importing the image.
+     * 
+     * @type {string}
+     * @memberof ImageInspect
+     */
+    Comment?: string;
+    /**
+     * Date and time at which the image was created, formatted in
+     * [RFC 3339](https://www.ietf.org/rfc/rfc3339.txt) format with nano-seconds.
+     * 
+     * @type {string}
+     * @memberof ImageInspect
+     */
+    Created?: string;
+    /**
+     * The ID of the container that was used to create the image.
+     * 
+     * Depending on how the image was created, this field may be empty.
+     * 
+     * @type {string}
+     * @memberof ImageInspect
+     */
+    Container?: string;
+    /**
+     * 
+     * @type {ContainerConfig}
+     * @memberof ImageInspect
+     */
+    ContainerConfig?: ContainerConfig;
+    /**
+     * The version of Docker that was used to build the image.
+     * 
+     * Depending on how the image was created, this field may be empty.
+     * 
+     * @type {string}
+     * @memberof ImageInspect
+     */
+    DockerVersion?: string;
+    /**
+     * Name of the author that was specified when committing the image, or as
+     * specified through MAINTAINER (deprecated) in the Dockerfile.
+     * 
+     * @type {string}
+     * @memberof ImageInspect
+     */
+    Author?: string;
+    /**
+     * 
+     * @type {ImageConfig}
+     * @memberof ImageInspect
+     */
+    Config?: ImageConfig;
+    /**
+     * Hardware CPU architecture that the image runs on.
+     * 
+     * @type {string}
+     * @memberof ImageInspect
+     */
+    Architecture?: string;
+    /**
+     * CPU architecture variant (presently ARM-only).
+     * 
+     * @type {string}
+     * @memberof ImageInspect
+     */
+    Variant?: string | null;
+    /**
+     * Operating System the image is built to run on.
+     * 
+     * @type {string}
+     * @memberof ImageInspect
+     */
+    Os?: string;
+    /**
+     * Operating System version the image is built to run on (especially
+     * for Windows).
+     * 
+     * @type {string}
+     * @memberof ImageInspect
+     */
+    OsVersion?: string | null;
+    /**
+     * Total size of the image including all layers it is composed of.
+     * 
+     * @type {number}
+     * @memberof ImageInspect
+     */
+    Size?: number;
+    /**
+     * Total size of the image including all layers it is composed of.
+     * 
+     * In versions of Docker before v1.10, this field was calculated from
+     * the image itself and all of its parent images. Images are now stored
+     * self-contained, and no longer use a parent-chain, making this field
+     * an equivalent of the Size field.
+     * 
+     * > **Deprecated**: this field is kept for backward compatibility, but
+     * > will be removed in API v1.44.
+     * 
+     * @type {number}
+     * @memberof ImageInspect
+     */
+    VirtualSize?: number;
+    /**
+     * 
+     * @type {GraphDriverData}
+     * @memberof ImageInspect
+     */
+    GraphDriver?: GraphDriverData;
+    /**
+     * 
+     * @type {ImageInspectRootFS}
+     * @memberof ImageInspect
+     */
+    RootFS?: ImageInspectRootFS;
+    /**
+     * 
+     * @type {ImageInspectMetadata}
+     * @memberof ImageInspect
+     */
+    Metadata?: ImageInspectMetadata;
 }
 
 /**
  * Check if a given object implements the ImageInspect interface.
  */
 export function instanceOfImageInspect(value: object): value is ImageInspect {
-  return true;
+    return true;
 }
 
 export function ImageInspectFromJSON(json: any): ImageInspect {
-  return ImageInspectFromJSONTyped(json, false);
+    return ImageInspectFromJSONTyped(json, false);
 }
 
 export function ImageInspectFromJSONTyped(json: any, ignoreDiscriminator: boolean): ImageInspect {
-  if (json == null) {
-    return json;
-  }
-  return {
-    Id: json["Id"] == null ? undefined : json["Id"],
-    RepoTags: json["RepoTags"] == null ? undefined : json["RepoTags"],
-    RepoDigests: json["RepoDigests"] == null ? undefined : json["RepoDigests"],
-    Parent: json["Parent"] == null ? undefined : json["Parent"],
-    Comment: json["Comment"] == null ? undefined : json["Comment"],
-    Created: json["Created"] == null ? undefined : json["Created"],
-    Container: json["Container"] == null ? undefined : json["Container"],
-    ContainerConfig:
-      json["ContainerConfig"] == null
-        ? undefined
-        : ContainerConfigFromJSON(json["ContainerConfig"]),
-    DockerVersion: json["DockerVersion"] == null ? undefined : json["DockerVersion"],
-    Author: json["Author"] == null ? undefined : json["Author"],
-    Config: json["Config"] == null ? undefined : ImageConfigFromJSON(json["Config"]),
-    Architecture: json["Architecture"] == null ? undefined : json["Architecture"],
-    Variant: json["Variant"] == null ? undefined : json["Variant"],
-    Os: json["Os"] == null ? undefined : json["Os"],
-    OsVersion: json["OsVersion"] == null ? undefined : json["OsVersion"],
-    Size: json["Size"] == null ? undefined : json["Size"],
-    VirtualSize: json["VirtualSize"] == null ? undefined : json["VirtualSize"],
-    GraphDriver:
-      json["GraphDriver"] == null ? undefined : GraphDriverDataFromJSON(json["GraphDriver"]),
-    RootFS: json["RootFS"] == null ? undefined : ImageInspectRootFSFromJSON(json["RootFS"]),
-    Metadata: json["Metadata"] == null ? undefined : ImageInspectMetadataFromJSON(json["Metadata"]),
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'Id': json['Id'] == null ? undefined : json['Id'],
+        'RepoTags': json['RepoTags'] == null ? undefined : json['RepoTags'],
+        'RepoDigests': json['RepoDigests'] == null ? undefined : json['RepoDigests'],
+        'Parent': json['Parent'] == null ? undefined : json['Parent'],
+        'Comment': json['Comment'] == null ? undefined : json['Comment'],
+        'Created': json['Created'] == null ? undefined : json['Created'],
+        'Container': json['Container'] == null ? undefined : json['Container'],
+        'ContainerConfig': json['ContainerConfig'] == null ? undefined : ContainerConfigFromJSON(json['ContainerConfig']),
+        'DockerVersion': json['DockerVersion'] == null ? undefined : json['DockerVersion'],
+        'Author': json['Author'] == null ? undefined : json['Author'],
+        'Config': json['Config'] == null ? undefined : ImageConfigFromJSON(json['Config']),
+        'Architecture': json['Architecture'] == null ? undefined : json['Architecture'],
+        'Variant': json['Variant'] == null ? undefined : json['Variant'],
+        'Os': json['Os'] == null ? undefined : json['Os'],
+        'OsVersion': json['OsVersion'] == null ? undefined : json['OsVersion'],
+        'Size': json['Size'] == null ? undefined : json['Size'],
+        'VirtualSize': json['VirtualSize'] == null ? undefined : json['VirtualSize'],
+        'GraphDriver': json['GraphDriver'] == null ? undefined : GraphDriverDataFromJSON(json['GraphDriver']),
+        'RootFS': json['RootFS'] == null ? undefined : ImageInspectRootFSFromJSON(json['RootFS']),
+        'Metadata': json['Metadata'] == null ? undefined : ImageInspectMetadataFromJSON(json['Metadata']),
+    };
 }
 
 export function ImageInspectToJSON(json: any): ImageInspect {
-  return ImageInspectToJSONTyped(json, false);
+    return ImageInspectToJSONTyped(json, false);
 }
 
-export function ImageInspectToJSONTyped(
-  value?: ImageInspect | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function ImageInspectToJSONTyped(value?: ImageInspect | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    Id: value["Id"],
-    RepoTags: value["RepoTags"],
-    RepoDigests: value["RepoDigests"],
-    Parent: value["Parent"],
-    Comment: value["Comment"],
-    Created: value["Created"],
-    Container: value["Container"],
-    ContainerConfig: ContainerConfigToJSON(value["ContainerConfig"]),
-    DockerVersion: value["DockerVersion"],
-    Author: value["Author"],
-    Config: ImageConfigToJSON(value["Config"]),
-    Architecture: value["Architecture"],
-    Variant: value["Variant"],
-    Os: value["Os"],
-    OsVersion: value["OsVersion"],
-    Size: value["Size"],
-    VirtualSize: value["VirtualSize"],
-    GraphDriver: GraphDriverDataToJSON(value["GraphDriver"]),
-    RootFS: ImageInspectRootFSToJSON(value["RootFS"]),
-    Metadata: ImageInspectMetadataToJSON(value["Metadata"]),
-  };
+    return {
+        
+        'Id': value['Id'],
+        'RepoTags': value['RepoTags'],
+        'RepoDigests': value['RepoDigests'],
+        'Parent': value['Parent'],
+        'Comment': value['Comment'],
+        'Created': value['Created'],
+        'Container': value['Container'],
+        'ContainerConfig': ContainerConfigToJSON(value['ContainerConfig']),
+        'DockerVersion': value['DockerVersion'],
+        'Author': value['Author'],
+        'Config': ImageConfigToJSON(value['Config']),
+        'Architecture': value['Architecture'],
+        'Variant': value['Variant'],
+        'Os': value['Os'],
+        'OsVersion': value['OsVersion'],
+        'Size': value['Size'],
+        'VirtualSize': value['VirtualSize'],
+        'GraphDriver': GraphDriverDataToJSON(value['GraphDriver']),
+        'RootFS': ImageInspectRootFSToJSON(value['RootFS']),
+        'Metadata': ImageInspectMetadataToJSON(value['Metadata']),
+    };
 }
+

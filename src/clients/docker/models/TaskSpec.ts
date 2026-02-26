@@ -2,73 +2,73 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { NetworkAttachmentConfig } from "./NetworkAttachmentConfig";
+import { mapValues } from '../runtime';
+import type { NetworkAttachmentConfig } from './NetworkAttachmentConfig';
 import {
-  NetworkAttachmentConfigFromJSON,
-  NetworkAttachmentConfigFromJSONTyped,
-  NetworkAttachmentConfigToJSON,
-  NetworkAttachmentConfigToJSONTyped,
-} from "./NetworkAttachmentConfig";
-import type { TaskSpecContainerSpec } from "./TaskSpecContainerSpec";
+    NetworkAttachmentConfigFromJSON,
+    NetworkAttachmentConfigFromJSONTyped,
+    NetworkAttachmentConfigToJSON,
+    NetworkAttachmentConfigToJSONTyped,
+} from './NetworkAttachmentConfig';
+import type { TaskSpecContainerSpec } from './TaskSpecContainerSpec';
 import {
-  TaskSpecContainerSpecFromJSON,
-  TaskSpecContainerSpecFromJSONTyped,
-  TaskSpecContainerSpecToJSON,
-  TaskSpecContainerSpecToJSONTyped,
-} from "./TaskSpecContainerSpec";
-import type { TaskSpecPluginSpec } from "./TaskSpecPluginSpec";
+    TaskSpecContainerSpecFromJSON,
+    TaskSpecContainerSpecFromJSONTyped,
+    TaskSpecContainerSpecToJSON,
+    TaskSpecContainerSpecToJSONTyped,
+} from './TaskSpecContainerSpec';
+import type { TaskSpecPluginSpec } from './TaskSpecPluginSpec';
 import {
-  TaskSpecPluginSpecFromJSON,
-  TaskSpecPluginSpecFromJSONTyped,
-  TaskSpecPluginSpecToJSON,
-  TaskSpecPluginSpecToJSONTyped,
-} from "./TaskSpecPluginSpec";
-import type { TaskSpecRestartPolicy } from "./TaskSpecRestartPolicy";
+    TaskSpecPluginSpecFromJSON,
+    TaskSpecPluginSpecFromJSONTyped,
+    TaskSpecPluginSpecToJSON,
+    TaskSpecPluginSpecToJSONTyped,
+} from './TaskSpecPluginSpec';
+import type { TaskSpecRestartPolicy } from './TaskSpecRestartPolicy';
 import {
-  TaskSpecRestartPolicyFromJSON,
-  TaskSpecRestartPolicyFromJSONTyped,
-  TaskSpecRestartPolicyToJSON,
-  TaskSpecRestartPolicyToJSONTyped,
-} from "./TaskSpecRestartPolicy";
-import type { TaskSpecResources } from "./TaskSpecResources";
+    TaskSpecRestartPolicyFromJSON,
+    TaskSpecRestartPolicyFromJSONTyped,
+    TaskSpecRestartPolicyToJSON,
+    TaskSpecRestartPolicyToJSONTyped,
+} from './TaskSpecRestartPolicy';
+import type { TaskSpecResources } from './TaskSpecResources';
 import {
-  TaskSpecResourcesFromJSON,
-  TaskSpecResourcesFromJSONTyped,
-  TaskSpecResourcesToJSON,
-  TaskSpecResourcesToJSONTyped,
-} from "./TaskSpecResources";
-import type { TaskSpecLogDriver } from "./TaskSpecLogDriver";
+    TaskSpecResourcesFromJSON,
+    TaskSpecResourcesFromJSONTyped,
+    TaskSpecResourcesToJSON,
+    TaskSpecResourcesToJSONTyped,
+} from './TaskSpecResources';
+import type { TaskSpecLogDriver } from './TaskSpecLogDriver';
 import {
-  TaskSpecLogDriverFromJSON,
-  TaskSpecLogDriverFromJSONTyped,
-  TaskSpecLogDriverToJSON,
-  TaskSpecLogDriverToJSONTyped,
-} from "./TaskSpecLogDriver";
-import type { TaskSpecNetworkAttachmentSpec } from "./TaskSpecNetworkAttachmentSpec";
+    TaskSpecLogDriverFromJSON,
+    TaskSpecLogDriverFromJSONTyped,
+    TaskSpecLogDriverToJSON,
+    TaskSpecLogDriverToJSONTyped,
+} from './TaskSpecLogDriver';
+import type { TaskSpecNetworkAttachmentSpec } from './TaskSpecNetworkAttachmentSpec';
 import {
-  TaskSpecNetworkAttachmentSpecFromJSON,
-  TaskSpecNetworkAttachmentSpecFromJSONTyped,
-  TaskSpecNetworkAttachmentSpecToJSON,
-  TaskSpecNetworkAttachmentSpecToJSONTyped,
-} from "./TaskSpecNetworkAttachmentSpec";
-import type { TaskSpecPlacement } from "./TaskSpecPlacement";
+    TaskSpecNetworkAttachmentSpecFromJSON,
+    TaskSpecNetworkAttachmentSpecFromJSONTyped,
+    TaskSpecNetworkAttachmentSpecToJSON,
+    TaskSpecNetworkAttachmentSpecToJSONTyped,
+} from './TaskSpecNetworkAttachmentSpec';
+import type { TaskSpecPlacement } from './TaskSpecPlacement';
 import {
-  TaskSpecPlacementFromJSON,
-  TaskSpecPlacementFromJSONTyped,
-  TaskSpecPlacementToJSON,
-  TaskSpecPlacementToJSONTyped,
-} from "./TaskSpecPlacement";
+    TaskSpecPlacementFromJSON,
+    TaskSpecPlacementFromJSONTyped,
+    TaskSpecPlacementToJSON,
+    TaskSpecPlacementToJSONTyped,
+} from './TaskSpecPlacement';
 
 /**
  * User modifiable task configuration.
@@ -76,138 +76,122 @@ import {
  * @interface TaskSpec
  */
 export interface TaskSpec {
-  /**
-   *
-   * @type {TaskSpecPluginSpec}
-   * @memberof TaskSpec
-   */
-  PluginSpec?: TaskSpecPluginSpec;
-  /**
-   *
-   * @type {TaskSpecContainerSpec}
-   * @memberof TaskSpec
-   */
-  ContainerSpec?: TaskSpecContainerSpec;
-  /**
-   *
-   * @type {TaskSpecNetworkAttachmentSpec}
-   * @memberof TaskSpec
-   */
-  NetworkAttachmentSpec?: TaskSpecNetworkAttachmentSpec;
-  /**
-   *
-   * @type {TaskSpecResources}
-   * @memberof TaskSpec
-   */
-  Resources?: TaskSpecResources;
-  /**
-   *
-   * @type {TaskSpecRestartPolicy}
-   * @memberof TaskSpec
-   */
-  RestartPolicy?: TaskSpecRestartPolicy;
-  /**
-   *
-   * @type {TaskSpecPlacement}
-   * @memberof TaskSpec
-   */
-  Placement?: TaskSpecPlacement;
-  /**
-   * A counter that triggers an update even if no relevant parameters have
-   * been changed.
-   *
-   * @type {number}
-   * @memberof TaskSpec
-   */
-  ForceUpdate?: number;
-  /**
-   * Runtime is the type of runtime specified for the task executor.
-   *
-   * @type {string}
-   * @memberof TaskSpec
-   */
-  Runtime?: string;
-  /**
-   * Specifies which networks the service should attach to.
-   * @type {Array<NetworkAttachmentConfig>}
-   * @memberof TaskSpec
-   */
-  Networks?: Array<NetworkAttachmentConfig>;
-  /**
-   *
-   * @type {TaskSpecLogDriver}
-   * @memberof TaskSpec
-   */
-  LogDriver?: TaskSpecLogDriver;
+    /**
+     * 
+     * @type {TaskSpecPluginSpec}
+     * @memberof TaskSpec
+     */
+    PluginSpec?: TaskSpecPluginSpec;
+    /**
+     * 
+     * @type {TaskSpecContainerSpec}
+     * @memberof TaskSpec
+     */
+    ContainerSpec?: TaskSpecContainerSpec;
+    /**
+     * 
+     * @type {TaskSpecNetworkAttachmentSpec}
+     * @memberof TaskSpec
+     */
+    NetworkAttachmentSpec?: TaskSpecNetworkAttachmentSpec;
+    /**
+     * 
+     * @type {TaskSpecResources}
+     * @memberof TaskSpec
+     */
+    Resources?: TaskSpecResources;
+    /**
+     * 
+     * @type {TaskSpecRestartPolicy}
+     * @memberof TaskSpec
+     */
+    RestartPolicy?: TaskSpecRestartPolicy;
+    /**
+     * 
+     * @type {TaskSpecPlacement}
+     * @memberof TaskSpec
+     */
+    Placement?: TaskSpecPlacement;
+    /**
+     * A counter that triggers an update even if no relevant parameters have
+     * been changed.
+     * 
+     * @type {number}
+     * @memberof TaskSpec
+     */
+    ForceUpdate?: number;
+    /**
+     * Runtime is the type of runtime specified for the task executor.
+     * 
+     * @type {string}
+     * @memberof TaskSpec
+     */
+    Runtime?: string;
+    /**
+     * Specifies which networks the service should attach to.
+     * @type {Array<NetworkAttachmentConfig>}
+     * @memberof TaskSpec
+     */
+    Networks?: Array<NetworkAttachmentConfig>;
+    /**
+     * 
+     * @type {TaskSpecLogDriver}
+     * @memberof TaskSpec
+     */
+    LogDriver?: TaskSpecLogDriver;
 }
 
 /**
  * Check if a given object implements the TaskSpec interface.
  */
 export function instanceOfTaskSpec(value: object): value is TaskSpec {
-  return true;
+    return true;
 }
 
 export function TaskSpecFromJSON(json: any): TaskSpec {
-  return TaskSpecFromJSONTyped(json, false);
+    return TaskSpecFromJSONTyped(json, false);
 }
 
 export function TaskSpecFromJSONTyped(json: any, ignoreDiscriminator: boolean): TaskSpec {
-  if (json == null) {
-    return json;
-  }
-  return {
-    PluginSpec:
-      json["PluginSpec"] == null ? undefined : TaskSpecPluginSpecFromJSON(json["PluginSpec"]),
-    ContainerSpec:
-      json["ContainerSpec"] == null
-        ? undefined
-        : TaskSpecContainerSpecFromJSON(json["ContainerSpec"]),
-    NetworkAttachmentSpec:
-      json["NetworkAttachmentSpec"] == null
-        ? undefined
-        : TaskSpecNetworkAttachmentSpecFromJSON(json["NetworkAttachmentSpec"]),
-    Resources: json["Resources"] == null ? undefined : TaskSpecResourcesFromJSON(json["Resources"]),
-    RestartPolicy:
-      json["RestartPolicy"] == null
-        ? undefined
-        : TaskSpecRestartPolicyFromJSON(json["RestartPolicy"]),
-    Placement: json["Placement"] == null ? undefined : TaskSpecPlacementFromJSON(json["Placement"]),
-    ForceUpdate: json["ForceUpdate"] == null ? undefined : json["ForceUpdate"],
-    Runtime: json["Runtime"] == null ? undefined : json["Runtime"],
-    Networks:
-      json["Networks"] == null
-        ? undefined
-        : (json["Networks"] as Array<any>).map(NetworkAttachmentConfigFromJSON),
-    LogDriver: json["LogDriver"] == null ? undefined : TaskSpecLogDriverFromJSON(json["LogDriver"]),
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'PluginSpec': json['PluginSpec'] == null ? undefined : TaskSpecPluginSpecFromJSON(json['PluginSpec']),
+        'ContainerSpec': json['ContainerSpec'] == null ? undefined : TaskSpecContainerSpecFromJSON(json['ContainerSpec']),
+        'NetworkAttachmentSpec': json['NetworkAttachmentSpec'] == null ? undefined : TaskSpecNetworkAttachmentSpecFromJSON(json['NetworkAttachmentSpec']),
+        'Resources': json['Resources'] == null ? undefined : TaskSpecResourcesFromJSON(json['Resources']),
+        'RestartPolicy': json['RestartPolicy'] == null ? undefined : TaskSpecRestartPolicyFromJSON(json['RestartPolicy']),
+        'Placement': json['Placement'] == null ? undefined : TaskSpecPlacementFromJSON(json['Placement']),
+        'ForceUpdate': json['ForceUpdate'] == null ? undefined : json['ForceUpdate'],
+        'Runtime': json['Runtime'] == null ? undefined : json['Runtime'],
+        'Networks': json['Networks'] == null ? undefined : ((json['Networks'] as Array<any>).map(NetworkAttachmentConfigFromJSON)),
+        'LogDriver': json['LogDriver'] == null ? undefined : TaskSpecLogDriverFromJSON(json['LogDriver']),
+    };
 }
 
 export function TaskSpecToJSON(json: any): TaskSpec {
-  return TaskSpecToJSONTyped(json, false);
+    return TaskSpecToJSONTyped(json, false);
 }
 
-export function TaskSpecToJSONTyped(
-  value?: TaskSpec | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function TaskSpecToJSONTyped(value?: TaskSpec | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    PluginSpec: TaskSpecPluginSpecToJSON(value["PluginSpec"]),
-    ContainerSpec: TaskSpecContainerSpecToJSON(value["ContainerSpec"]),
-    NetworkAttachmentSpec: TaskSpecNetworkAttachmentSpecToJSON(value["NetworkAttachmentSpec"]),
-    Resources: TaskSpecResourcesToJSON(value["Resources"]),
-    RestartPolicy: TaskSpecRestartPolicyToJSON(value["RestartPolicy"]),
-    Placement: TaskSpecPlacementToJSON(value["Placement"]),
-    ForceUpdate: value["ForceUpdate"],
-    Runtime: value["Runtime"],
-    Networks:
-      value["Networks"] == null
-        ? undefined
-        : (value["Networks"] as Array<any>).map(NetworkAttachmentConfigToJSON),
-    LogDriver: TaskSpecLogDriverToJSON(value["LogDriver"]),
-  };
+    return {
+        
+        'PluginSpec': TaskSpecPluginSpecToJSON(value['PluginSpec']),
+        'ContainerSpec': TaskSpecContainerSpecToJSON(value['ContainerSpec']),
+        'NetworkAttachmentSpec': TaskSpecNetworkAttachmentSpecToJSON(value['NetworkAttachmentSpec']),
+        'Resources': TaskSpecResourcesToJSON(value['Resources']),
+        'RestartPolicy': TaskSpecRestartPolicyToJSON(value['RestartPolicy']),
+        'Placement': TaskSpecPlacementToJSON(value['Placement']),
+        'ForceUpdate': value['ForceUpdate'],
+        'Runtime': value['Runtime'],
+        'Networks': value['Networks'] == null ? undefined : ((value['Networks'] as Array<any>).map(NetworkAttachmentConfigToJSON)),
+        'LogDriver': TaskSpecLogDriverToJSON(value['LogDriver']),
+    };
 }
+
