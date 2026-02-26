@@ -86,6 +86,22 @@ describe("flinkTypeParser", () => {
     });
   });
 
+  describe("NOT NULL parsing (not confused with other NOT keywords)", () => {
+    it("parses 'NOT FOONLY' as part of dataType, not as nullability modifier", () => {
+      // Key test: only "NOT NULL" should be recognized as a nullability modifier.
+      // "NOT FOONLY" should be parsed as part of the type name itself.
+      const result = parseFlinkType("VARCHAR(254) NOT FOONLY");
+      assert.strictEqual(result.dataType, "VARCHAR(254) NOT FOONLY");
+      assert.strictEqual(result.isFieldNullable, true); // nullable by default
+    });
+
+    it("correctly recognizes 'NOT NULL' as a nullability modifier", () => {
+      const result = parseFlinkType("VARCHAR(255) NOT NULL");
+      assert.strictEqual(result.dataType, "VARCHAR(255)");
+      assert.strictEqual(result.isFieldNullable, false);
+    });
+  });
+
   describe("array and multiset types", () => {
     it("parses ARRAY<INT>", () => {
       const result = parseFlinkType("ARRAY<INT>");
@@ -715,14 +731,28 @@ describe("flinkTypeParser", () => {
           ],
         },
       },
+      {
+        description: "non-SCALAR kind with empty members",
+        type: {
+          kind: FlinkTypeKind.ARRAY,
+          dataType: "ARRAY",
+          isFieldNullable: true,
+          members: [],
+        },
+      },
+      {
+        description: "non-SCALAR kind with missing members",
+        type: {
+          kind: FlinkTypeKind.ARRAY,
+          dataType: "ARRAY",
+          isFieldNullable: true,
+        },
+      },
     ];
 
     invalidMismatches.forEach(({ description, type }) => {
       it(`throws error on ${description}`, () => {
-        assert.throws(
-          () => isCompoundFlinkType(type),
-          /Invalid type: kind is SCALAR but members array is present/,
-        );
+        assert.throws(() => isCompoundFlinkType(type), /Invalid type/);
       });
     });
 
@@ -780,17 +810,6 @@ describe("flinkTypeParser", () => {
         isFieldNullable: false,
       };
       assert(!isCompoundFlinkType(scalarType));
-    });
-
-    // Test compound types with empty members array return false
-    it("returns false for compound type with empty members array", () => {
-      const emptyArrayType: FlinkType = {
-        kind: FlinkTypeKind.ARRAY,
-        dataType: "ARRAY",
-        isFieldNullable: false,
-        members: [],
-      };
-      assert(!isCompoundFlinkType(emptyArrayType));
     });
 
     // Test nested compound types

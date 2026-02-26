@@ -6,6 +6,7 @@
  * - Word/identifier recognition
  * - Keyword matching with word boundaries
  * - Generic string parsing utilities
+ * - Configurable delimiter pairs for nested structure parsing
  *
  * This is a reusable component independent of any specific language grammar.
  */
@@ -13,9 +14,39 @@
 export class ParserState {
   private readonly input: string;
   private pos: number = 0;
+  private readonly delimiterMap: Map<string, string>;
+  private readonly spacePattern: RegExp;
+  private readonly wordPattern: RegExp;
 
-  constructor(input: string) {
-    this.input = input.trim();
+  /**
+   * Create a new ParserState.
+   * @param input - The input string to parse
+   * @param delimiterPairs - Even-length string of matching pairs (e.g., "(){}<>" means ( matches ), { matches }, < matches >)
+   * @param spacePattern - Regex to match whitespace characters (default: /\s/)
+   * @param wordPattern - Regex to match word characters (default: /\w/)
+   */
+  constructor(
+    input: string,
+    delimiterPairs: string = "",
+    spacePattern: RegExp = /\s/,
+    wordPattern: RegExp = /\w/,
+  ) {
+    this.input = input;
+    this.spacePattern = spacePattern;
+    this.wordPattern = wordPattern;
+
+    // Build delimiter map from pairs string
+    this.delimiterMap = new Map();
+    if (delimiterPairs.length % 2 !== 0) {
+      throw new Error(
+        `delimiterPairs must have even length; got: "${delimiterPairs}" (length ${delimiterPairs.length})`,
+      );
+    }
+    for (let i = 0; i < delimiterPairs.length; i += 2) {
+      const openChar = delimiterPairs[i];
+      const closeChar = delimiterPairs[i + 1];
+      this.delimiterMap.set(openChar, closeChar);
+    }
   }
 
   /**
@@ -42,15 +73,23 @@ export class ParserState {
   }
 
   /**
-   * Consume and return the character at the current position.
-   * Returns null if at end of input.
+   * Consume and return the next character(s) from the current position.
+   * If count is not specified, consumes a single character.
+   * Throws an error if count is not positive or exceeds remaining input.
+   * @throws Error if count is not a positive integer (≤ 0)
+   * @throws Error if count exceeds the number of remaining characters
    */
-  consume(): string | null {
-    const ch = this.peek();
-    if (ch !== null) {
-      this.pos++;
+  consume(count: number = 1): string {
+    if (count <= 0) {
+      throw new Error(`Cannot consume non-positive number of characters: ${count}`);
     }
-    return ch;
+    const remaining = this.input.length - this.pos;
+    if (count > remaining) {
+      throw new Error(`Cannot consume ${count} character(s): only ${remaining} remaining in input`);
+    }
+    const start = this.pos;
+    this.pos += count;
+    return this.input.slice(start, this.pos);
   }
 
   /**
@@ -66,10 +105,10 @@ export class ParserState {
   }
 
   /**
-   * Skip whitespace characters.
+   * Skip whitespace characters (as defined by the spacePattern regex).
    */
   skipWhitespace(): void {
-    this.consumeWhile((ch) => /\s/.test(ch));
+    this.consumeWhile((ch) => this.spacePattern.test(ch));
   }
 
   /**
@@ -82,14 +121,15 @@ export class ParserState {
   /**
    * Peek at the next word (identifier-like token) without consuming it.
    * Assumes caller has already skipped whitespace.
-   * Reads consecutive word characters starting from current position.
+   * Reads consecutive word characters (as defined by wordPattern) starting from current position.
    * Returns the word and the absolute position after the word.
    */
   peekWord(): { word: string; endPos: number } {
     let idx = 0;
     let word = "";
-    // Read word characters from current position
-    while (this.peekAt(idx) && /\w/.test(this.peekAt(idx)!)) {
+    // Read word characters from current position.
+    // Expected use: small tokens (keywords, identifiers), so O(n²) concatenation is acceptable.
+    while (this.peekAt(idx) && this.wordPattern.test(this.peekAt(idx)!)) {
       word += this.peekAt(idx);
       idx++;
     }
@@ -102,13 +142,14 @@ export class ParserState {
    */
   peekWordAt(offset: number): string {
     let idx = offset;
-    // Skip whitespace
-    while (this.peekAt(idx) && /\s/.test(this.peekAt(idx)!)) {
+    // Skip whitespace (as defined by spacePattern)
+    while (this.peekAt(idx) && this.spacePattern.test(this.peekAt(idx)!)) {
       idx++;
     }
-    // Collect word characters
+    // Collect word characters (as defined by wordPattern).
+    // Expected use: small tokens (keywords), so O(n²) concatenation is acceptable.
     let word = "";
-    while (this.peekAt(idx) && /\w/.test(this.peekAt(idx)!)) {
+    while (this.peekAt(idx) && this.wordPattern.test(this.peekAt(idx)!)) {
       word += this.peekAt(idx);
       idx++;
     }
@@ -116,36 +157,41 @@ export class ParserState {
   }
 
   /**
-   * Parse an identifier (sequence of word characters).
-   * Stops at whitespace, commas, angle brackets, or parentheses.
+   * Parse an identifier (sequence of word characters as defined by wordPattern).
    */
   parseIdentifier(): string {
-    return this.consumeWhile((ch) => /\w/.test(ch));
+    return this.consumeWhile((ch) => this.wordPattern.test(ch));
   }
 
   /**
-   * Parse an identifier that may contain spaces (like "WITH TIME ZONE").
-   * Stops at specific delimiters: < > , ( ) NOT NULL NULL
+   * Parse an identifier that may contain spaces (e.g., "WITH TIME ZONE").
+   * Stops at custom conditions or non-word/non-space characters.
+   * @param shouldStop - Optional predicate for stop conditions (delimiters, keywords, punctuation, etc.)
    */
-  parseIdentifierWithSpaces(): string {
+  parseIdentifierWithSpaces(shouldStop?: () => boolean): string {
     const start = this.peek();
-    if (!start || !/\w/.test(start)) {
+    if (!start || !this.wordPattern.test(start)) {
       throw new Error(`Expected identifier, got: ${start}`);
     }
 
     let result = "";
     let lastWasSpace = false;
 
-    while (!this.isEof() && !this.shouldStopIdentifier()) {
+    while (!this.isEof()) {
       const ch = this.peek()!;
 
-      if (/\s/.test(ch)) {
+      // Allow caller to define stop conditions (delimiters, keywords, punctuation, etc.)
+      if (shouldStop?.()) {
+        break;
+      }
+
+      if (this.spacePattern.test(ch)) {
         if (!lastWasSpace) {
           result += " ";
           lastWasSpace = true;
         }
         this.consume();
-      } else if (/\w/.test(ch)) {
+      } else if (this.wordPattern.test(ch)) {
         result += this.consume();
         lastWasSpace = false;
       } else {
@@ -157,74 +203,70 @@ export class ParserState {
   }
 
   /**
-   * Check if we should stop parsing an identifier with spaces.
-   * Stops at delimiters: < > , ( ) NOT NULL NULL '
-   */
-  private shouldStopIdentifier(): boolean {
-    const ch = this.peek();
-    if (!ch) return true;
-
-    // Stop at specific delimiters
-    if (ch === "<" || ch === ">" || ch === "," || ch === "(" || ch === ")" || ch === "'") {
-      return true;
-    }
-
-    // Stop at NOT NULL or standalone NULL
-    if (ch === "N") {
-      const word = this.peekWord();
-      if (word.word === "NOT" || word.word === "NULL") {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
    * Parse characters until a specific character is found (non-inclusive).
+   * Uses O(n) slicing for efficiency.
    */
   parseUntilChar(stopChar: string): string {
-    let result = "";
+    const start = this.pos;
     while (!this.isEof() && this.peek() !== stopChar) {
-      result += this.consume();
+      this.pos++;
     }
-    return result;
+    return this.input.slice(start, this.pos);
   }
 
   /**
-   * Consume characters until the matching closing parenthesis is found.
-   * Handles nested parentheses correctly.
-   * Returns the content between parentheses (excluding the closing paren).
+   * Consume characters until the matching closing delimiter is found.
+   * Handles nested delimiters correctly by only counting nesting of the same opening delimiter.
+   * The current position must be at the specified opening delimiter.
+   * Returns the content between the delimiters (excluding the closing delimiter).
+   * @param openChar - The opening delimiter to match
+   * @throws Error if current position is not at the specified opening delimiter
+   * @throws Error if openChar is not a configured opening delimiter
    */
-  consumeUntilMatchingParen(): string {
-    let content = "";
-    let parenDepth = 0;
+  consumeUntilMatchingDelimiter(openChar: string): string {
+    if (!this.delimiterMap.has(openChar)) {
+      throw new Error(`"${openChar}" is not a configured opening delimiter`);
+    }
+
+    const currentChar = this.peek();
+    if (currentChar !== openChar) {
+      throw new Error(
+        `Expected opening delimiter "${openChar}" at current position, got: "${currentChar}"`,
+      );
+    }
+
+    const closeChar = this.delimiterMap.get(openChar)!;
+    this.consume(); // consume the opening delimiter
+
+    const start = this.pos;
+    let depth = 0;
 
     while (!this.isEof()) {
       const ch = this.peek();
 
-      if (ch === ")") {
-        if (parenDepth === 0) {
-          // Found the matching closing paren
+      if (ch === closeChar) {
+        if (depth === 0) {
+          // Found the matching closing delimiter
           break;
         } else {
-          parenDepth--;
-          content += this.consume();
+          depth--;
+          this.pos++;
         }
-      } else if (ch === "(") {
-        parenDepth++;
-        content += this.consume();
+      } else if (ch === openChar) {
+        // This is the same opening delimiter - increase depth
+        depth++;
+        this.pos++;
       } else {
-        content += this.consume();
+        this.pos++;
       }
     }
 
-    return content.trim();
+    return this.input.slice(start, this.pos).trim();
   }
 
   /**
    * Try to consume a specific keyword.
-   * For multi-character keywords, checks word boundary (next char is not word char).
+   * For multi-character keywords, checks word boundary (next char is not a word char per wordPattern).
    * For single-character tokens like "<" or ",", no word boundary check is needed.
    * Returns true if successful, false otherwise. If successful, advances the position past the keyword.
    * If the keyword is not found at the current position, does not consume anything and returns false.
@@ -240,15 +282,13 @@ export class ParserState {
     // Single-character tokens like "<", ",", ">" don't need word boundary checks
     if (keyword.length > 1) {
       const nextChar = this.peekAt(keyword.length);
-      if (nextChar && /\w/.test(nextChar)) {
+      if (nextChar && this.wordPattern.test(nextChar)) {
         return false;
       }
     }
 
     // Consume the keyword
-    for (let i = 0; i < keyword.length; i++) {
-      this.consume();
-    }
+    this.consume(keyword.length);
 
     return true;
   }

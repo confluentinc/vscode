@@ -111,6 +111,163 @@ describe("ParserState", () => {
     });
   });
 
+  describe("consume() with character count", () => {
+    it("consumes single character by default", () => {
+      const state = new ParserState("hello");
+      assert.strictEqual(state.consume(), "h");
+      assert.strictEqual(state.peek(), "e");
+    });
+
+    it("consumes multiple characters with count", () => {
+      const state = new ParserState("hello");
+      assert.strictEqual(state.consume(3), "hel");
+      assert.strictEqual(state.peek(), "l");
+    });
+
+    it("consumes entire remaining input", () => {
+      const state = new ParserState("hi");
+      assert.strictEqual(state.consume(2), "hi");
+      assert(state.isEof());
+    });
+
+    // Parameterized error cases
+    const errorCases = [
+      {
+        count: -1,
+        input: "hello",
+        pattern: /Cannot consume non-positive number of characters: -1/,
+      },
+      { count: 0, input: "hello", pattern: /Cannot consume non-positive number of characters: 0/ },
+      {
+        count: 5,
+        input: "hi",
+        pattern: /Cannot consume 5 character\(s\): only 2 remaining in input/,
+      },
+    ];
+
+    errorCases.forEach(({ count, input, pattern }) => {
+      it(`throws on invalid count=${count} for input="${input}"`, () => {
+        const state = new ParserState(input);
+        assert.throws(() => state.consume(count), pattern);
+      });
+    });
+
+    it("throws when count exceeds remaining after partial consumption", () => {
+      const state = new ParserState("hello");
+      state.consume(2); // pos = 2
+      assert.throws(
+        () => state.consume(10),
+        /Cannot consume 10 character\(s\): only 3 remaining in input/,
+      );
+    });
+  });
+
+  describe("configurable delimiter pairs", () => {
+    it("throws on odd-length delimiter string", () => {
+      assert.throws(() => new ParserState("test", "(<>"), /delimiterPairs must have even length/);
+    });
+
+    it("consumes until matching delimiter with parentheses", () => {
+      const state = new ParserState("(hello)", "()");
+      assert.strictEqual(state.peek(), "(");
+      const result = state.consumeUntilMatchingDelimiter("(");
+      assert.strictEqual(result, "hello");
+      assert.strictEqual(state.peek(), ")");
+    });
+
+    it("consumes until matching delimiter with angle brackets", () => {
+      const state = new ParserState("<INT>", "<>");
+      assert.strictEqual(state.peek(), "<");
+      const result = state.consumeUntilMatchingDelimiter("<");
+      assert.strictEqual(result, "INT");
+      assert.strictEqual(state.peek(), ">");
+    });
+
+    it("handles nested matching delimiters (same type)", () => {
+      const state = new ParserState("(foo(bar)baz)", "()");
+      const result = state.consumeUntilMatchingDelimiter("(");
+      assert.strictEqual(result, "foo(bar)baz");
+    });
+
+    it("only matches specified opener, ignoring other delimiter pairs", () => {
+      // "(foo<bar)" - when matching "(", should NOT be tricked by "<"
+      const state = new ParserState("(foo<bar)", "()<>");
+      const result = state.consumeUntilMatchingDelimiter("(");
+      assert.strictEqual(result, "foo<bar");
+    });
+
+    it("handles interleaved delimiters correctly - stops at matching close", () => {
+      // "({)}" - when matching "(", should stop at the matching ")"
+      // and NOT be fooled by "{" in between (which has no matching "}")
+      const state = new ParserState("({)}", "(){}<>");
+      const result = state.consumeUntilMatchingDelimiter("(");
+      assert.strictEqual(result, "{");
+      assert.strictEqual(state.peek(), ")");
+    });
+
+    it("handles deeply nested same delimiter inside different delimiter", () => {
+      // "<(a(b)c)>" - when matching "<", should correctly handle nested parens inside
+      const state = new ParserState("<(a(b)c)>", "(){}<>");
+      const result = state.consumeUntilMatchingDelimiter("<");
+      assert.strictEqual(result, "(a(b)c)");
+    });
+
+    it("throws when not at specified opening delimiter", () => {
+      const state = new ParserState("hello", "()");
+      assert.throws(
+        () => state.consumeUntilMatchingDelimiter("("),
+        /Expected opening delimiter "\(" at current position/,
+      );
+    });
+
+    it("throws when opener is not configured", () => {
+      const state = new ParserState("hello", "()");
+      assert.throws(
+        () => state.consumeUntilMatchingDelimiter("{"),
+        /is not a configured opening delimiter/,
+      );
+    });
+  });
+
+  describe("custom space and word patterns", () => {
+    it("uses custom word pattern for parseIdentifier", () => {
+      // Custom pattern: only lowercase letters are word chars
+      const customWordPattern = /[a-z]/;
+      const state = new ParserState("hello123", "", /\s/, customWordPattern);
+      const result = state.parseIdentifier();
+      assert.strictEqual(result, "hello");
+      assert.strictEqual(state.peek(), "1");
+    });
+
+    it("uses custom space pattern for skipWhitespace", () => {
+      // Custom pattern: treat underscore as space
+      const customSpacePattern = /_/;
+      const customWordPattern = /[a-z]/; // restrict to letters so _ is not part of word
+      const state = new ParserState("hello_world", "", customSpacePattern, customWordPattern);
+      state.parseIdentifier(); // consume "hello"
+      assert.strictEqual(state.peek(), "_"); // at underscore
+      state.skipWhitespace(); // skip underscore using custom pattern
+      assert.strictEqual(state.peek(), "w"); // now at 'w'
+    });
+
+    it("uses custom patterns in peekWord", () => {
+      const customWordPattern = /[a-z]/;
+      const customSpacePattern = / /;
+      const state = new ParserState("hello 123", "", customSpacePattern, customWordPattern);
+      const word = state.peekWord();
+      assert.strictEqual(word.word, "hello");
+    });
+
+    it("uses custom patterns in parseIdentifierWithSpaces", () => {
+      const customWordPattern = /[a-z]/;
+      const customSpacePattern = / /;
+      const state = new ParserState("hello world 123", "", customSpacePattern, customWordPattern);
+      const result = state.parseIdentifierWithSpaces();
+      assert.strictEqual(result, "hello world");
+      assert.strictEqual(state.peek(), "1");
+    });
+  });
+
   describe("ParserState edge cases", () => {
     it("handles empty input", () => {
       const state = new ParserState("");
@@ -119,11 +276,11 @@ describe("ParserState", () => {
       assert.strictEqual(state.isEof(), true);
     });
 
-    it("trims input on construction", () => {
+    it("preserves input exactly as provided (no trimming)", () => {
       const state = new ParserState("  hello  ");
-      assert.strictEqual(state.peek(), "h");
+      assert.strictEqual(state.peek(), " ");
       const result = state.consumeWhile(() => true);
-      assert.strictEqual(result, "hello");
+      assert.strictEqual(result, "  hello  ");
     });
   });
 });

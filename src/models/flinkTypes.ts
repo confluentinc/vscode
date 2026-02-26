@@ -90,8 +90,9 @@ export interface CompoundFlinkType extends FlinkType {
  * Validates that if members are present, the kind must not be SCALAR (which would be invalid).
  *
  * @param type - The FlinkType to check
- * @returns true if the type has a non-empty members array (indicating a compound type)
- * @throws Error if members array exists but kind is SCALAR, indicating an invalid/corrupted type
+ * @returns true if the type has a non-empty members array and is not SCALAR kind.
+ * @returns false if the type does not have a members array and is SCALAR kind
+ * @throws Error if there is a mismatch between the presence of members and the kind (e.g., SCALAR with members or non-SCALAR without members)
  */
 export function isCompoundFlinkType(type: FlinkType): type is CompoundFlinkType {
   const hasMembers =
@@ -101,6 +102,10 @@ export function isCompoundFlinkType(type: FlinkType): type is CompoundFlinkType 
 
   if (hasMembers && type.kind === FlinkTypeKind.SCALAR) {
     throw new Error(`Invalid type: kind is ${type.kind} but members array is present.`);
+  }
+
+  if (!hasMembers && type.kind !== FlinkTypeKind.SCALAR) {
+    throw new Error(`Invalid type: kind is ${type.kind} but members array is missing or empty.`);
   }
 
   return hasMembers;

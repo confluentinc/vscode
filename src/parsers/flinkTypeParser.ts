@@ -36,7 +36,8 @@ class FlinkTypeParser {
   private readonly state: ParserState;
 
   constructor(input: string) {
-    this.state = new ParserState(input);
+    // Flink uses angle brackets for type parameters and parentheses for function parameters
+    this.state = new ParserState(input, "()<>");
   }
 
   /**
@@ -158,15 +159,14 @@ class FlinkTypeParser {
    * Parse a scalar or parameterized type (e.g., INT, VARCHAR(255), TIMESTAMP WITH TIME ZONE).
    */
   private parseScalarType(): FlinkType {
-    // Parse base type name
-    let baseType = this.state.parseIdentifierWithSpaces();
+    // Parse base type name, stopping at delimiters, keywords, and punctuation
+    let baseType = this.state.parseIdentifierWithSpaces(() => this.shouldStopParsingType());
     let dataType = baseType;
 
     // Check for parameters in parentheses
     this.state.skipWhitespace();
     if (this.state.peek() === "(") {
-      this.state.consume();
-      const paramContent = this.state.consumeUntilMatchingParen();
+      const paramContent = this.state.consumeUntilMatchingDelimiter("(");
       dataType = `${baseType}(${paramContent})`;
       if (!this.state.tryConsume(")")) {
         throw new Error("Expected ')' after parameters");
@@ -175,14 +175,8 @@ class FlinkTypeParser {
 
     // Parse additional type keywords (e.g., "WITH LOCAL TIME ZONE")
     this.state.skipWhitespace();
-    if (
-      !this.state.isEof() &&
-      this.state.peek() !== "," &&
-      this.state.peek() !== ">" &&
-      this.state.peek() !== "'" &&
-      !this.hasNotNull()
-    ) {
-      const afterParams = this.state.parseIdentifierWithSpaces();
+    if (!this.state.isEof() && !this.shouldStopParsingType()) {
+      const afterParams = this.state.parseIdentifierWithSpaces(() => this.shouldStopParsingType());
       if (afterParams) {
         dataType = `${dataType} ${afterParams}`;
       }
@@ -356,6 +350,32 @@ class FlinkTypeParser {
   private hasNull(): boolean {
     const word = this.state.peekWord();
     return word.word === "NULL";
+  }
+
+  /**
+   * Determine if we should stop parsing an identifier.
+   * Stops at: delimiters (<>,()), keywords (NOT NULL, NULL), and punctuation (', ,)
+   */
+  private shouldStopParsingType(): boolean {
+    const ch = this.state.peek();
+    if (!ch) return true;
+
+    // Stop at delimiters: < > , ( )
+    if (ch === "<" || ch === ">" || ch === "(" || ch === ")" || ch === ",") {
+      return true;
+    }
+
+    // Stop at field comment marker
+    if (ch === "'") {
+      return true;
+    }
+
+    // Stop at keywords: NOT NULL or NULL
+    if (this.hasNotNull() || this.hasNull()) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
