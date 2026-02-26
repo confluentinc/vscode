@@ -31,11 +31,11 @@ export class ParserState {
 
   /**
    * Peek at the character at current position + offset.
-   * Returns null if out of bounds.
+   * Returns null if out of bounds (including negative offsets).
    */
   peekAt(offset: number): string | null {
     const idx = this.pos + offset;
-    if (idx >= this.input.length) {
+    if (idx < 0 || idx >= this.input.length) {
       return null;
     }
     return this.input[idx];
@@ -55,14 +55,14 @@ export class ParserState {
 
   /**
    * Consume characters while the predicate is true.
-   * Returns the consumed substring.
+   * Returns the consumed substring. Uses O(n) slicing instead of O(n²) concatenation.
    */
   consumeWhile(predicate: (ch: string) => boolean): string {
-    let result = "";
+    const start = this.pos;
     while (this.peek() !== null && predicate(this.peek()!)) {
-      result += this.consume();
+      this.pos++;
     }
-    return result;
+    return this.input.slice(start, this.pos);
   }
 
   /**
