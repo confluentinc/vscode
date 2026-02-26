@@ -190,14 +190,17 @@ describe("models/consumerGroup.ts", () => {
 
       assert.strictEqual(
         treeItem.contextValue,
-        `ccloud-consumerGroup-${ConsumerGroupState.Stable}`,
+        `ccloud-consumer-group-${ConsumerGroupState.Stable}`,
       );
     });
 
     it("should set contextValue for local connection type", () => {
       const treeItem = new ConsumerGroupTreeItem(TEST_LOCAL_CONSUMER_GROUP);
 
-      assert.strictEqual(treeItem.contextValue, `local-consumerGroup-${ConsumerGroupState.Stable}`);
+      assert.strictEqual(
+        treeItem.contextValue,
+        `local-consumer-group-${ConsumerGroupState.Stable}`,
+      );
     });
 
     it("should set contextValue for direct connection type", () => {
@@ -205,7 +208,7 @@ describe("models/consumerGroup.ts", () => {
 
       assert.strictEqual(
         treeItem.contextValue,
-        `direct-consumerGroup-${ConsumerGroupState.Stable}`,
+        `direct-consumer-group-${ConsumerGroupState.Stable}`,
       );
     });
 
@@ -344,7 +347,7 @@ describe("models/consumerGroup.ts", () => {
 
     it("should include connection type in contextValue", () => {
       const treeItem = new ConsumerTreeItem(TEST_CCLOUD_CONSUMER);
-      assert.strictEqual(treeItem.contextValue, "ccloud-consumerGroup-member");
+      assert.strictEqual(treeItem.contextValue, "ccloud-consumer-group-member");
     });
 
     it("should set collapsible state to None", () => {
