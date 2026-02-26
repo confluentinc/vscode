@@ -111,7 +111,7 @@ export async function handleFlinkWorkspaceUriEvent(uri: vscode.Uri): Promise<voi
       language: FLINK_SQL_LANGUAGE_ID,
       content: `No Flink SQL statements were found in this workspace.`,
     });
-    await setFlinkDocumentMetadata(document.uri, metadataContext);
+    await setFlinkDocumentMetadata(document.uri, { ...metadataContext, fromWorkspace: true });
     await vscode.window.showTextDocument(document);
     return;
   }
@@ -327,9 +327,10 @@ export async function openSqlStatementsAsDocuments(
     });
 
     // Set metadata on document before showing (triggers language client config)
-    if (metadataContext) {
-      await setFlinkDocumentMetadata(document.uri, metadataContext);
-    }
+    await setFlinkDocumentMetadata(document.uri, {
+      ...(metadataContext ?? {}),
+      fromWorkspace: true,
+    });
 
     await vscode.window.showTextDocument(document, { preview: false });
   }
