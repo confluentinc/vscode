@@ -299,11 +299,6 @@ class FlinkTypeParser {
   }
 
   /**
-   * Consume characters until the matching closing parenthesis is found.
-   * Handles nested parentheses correctly.
-   * Returns the content between parentheses (excluding the closing paren).
-   */
-  /**
    * Parse a field comment in single quotes.
    * In Flink SQL, interior single quotes are escaped as doubled quotes ('').
    * This method handles the unescaping: '' in input becomes ' in output.
