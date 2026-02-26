@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { ThemeIcon, TreeItemCollapsibleState } from "vscode";
+import { MarkdownString, ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { createTestResource } from "../../../tests/unit/testResources/base";
 import { ConnectionType } from "../../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../constants";
@@ -84,53 +84,17 @@ describe("models/containers/resourceContainer.ts", () => {
         assert.strictEqual(container.contextValue, undefined);
       });
 
-      it("should leave description undefined before children setter is called", () => {
+      it("should leave description undefined before any state transition", () => {
         const container = new TestContainer(testLabel, []);
 
         assert.strictEqual(container.description, undefined);
       });
-    });
 
-    describe("children setter", () => {
-      it("should update description when `children` is set", () => {
+      it("should start with isLoading=false and hasError=false", () => {
         const container = new TestContainer(testLabel, []);
-        // description is not set in constructor (before loading)
-        assert.strictEqual(container.description, undefined);
-
-        // but is set when children is set
-        container.children = testResources;
-        assert.strictEqual(container.description, `(${testResources.length})`);
-
-        // and updates when children change
-        container.children = [];
-        assert.strictEqual(container.description, "(0)");
-      });
-
-      it("should clear isLoading state when children are set", () => {
-        const container = new TestContainer(testLabel, []);
-        container.isLoading = true;
-
-        container.children = [testResource];
 
         assert.strictEqual(container.isLoading, false);
-      });
-
-      it("should clear hasError when non-empty children are set", () => {
-        const container = new TestContainer(testLabel, []);
-        container.hasError = true;
-
-        container.children = [testResource];
-
         assert.strictEqual(container.hasError, false);
-      });
-
-      it("should preserve hasError when empty children are set", () => {
-        const container = new TestContainer(testLabel, []);
-        container.hasError = true;
-
-        container.children = [];
-
-        assert.strictEqual(container.hasError, true);
       });
     });
 
@@ -142,173 +106,242 @@ describe("models/containers/resourceContainer.ts", () => {
       });
     });
 
-    describe("isLoading", () => {
-      it("should start with isLoading set to false", () => {
+    describe("setLoading()", () => {
+      it("should set isLoading to true and hasError to false", () => {
         const container = new TestContainer(testLabel, []);
 
-        assert.strictEqual(container.isLoading, false);
+        container.setLoading();
+
+        assert.strictEqual(container.isLoading, true);
+        assert.strictEqual(container.hasError, false);
       });
 
-      it("should use the loading icon when isLoading is set to true", () => {
+      it("should use the loading icon", () => {
         const container = new TestContainer(testLabel, []);
 
-        container.isLoading = true;
+        container.setLoading();
 
         assert.ok(container.iconPath);
         assert.strictEqual((container.iconPath as ThemeIcon).id, IconNames.LOADING);
       });
 
-      it("should use the default icon when isLoading is set to false", () => {
-        const icon = new ThemeIcon("symbol-folder");
-        const container = new TestContainer(testLabel, [], undefined, icon);
+      it("should clear a previous error state", () => {
+        const container = new TestContainer(testLabel, [], testContextValue);
+        container.setError("some error");
 
-        container.isLoading = true;
+        container.setLoading();
+
+        assert.strictEqual(container.hasError, false);
         assert.strictEqual((container.iconPath as ThemeIcon).id, IconNames.LOADING);
-
-        container.isLoading = false;
-        assert.strictEqual(container.iconPath, icon);
-      });
-
-      it("should clear .iconPath when isLoading is set to false and no default icon is provided", () => {
-        const container = new TestContainer(
-          "A",
-          [],
-          // no default icon (nor contextValue) set
-        );
-
-        // set initial loading state
-        container.isLoading = true;
-        assert.ok(container.iconPath);
-        assert.strictEqual((container.iconPath as ThemeIcon).id, IconNames.LOADING);
-
-        container.isLoading = false;
-        assert.strictEqual(container.iconPath, undefined);
       });
     });
 
-    describe("hasError", () => {
-      it("should start with hasError set to false", () => {
-        const container = new TestContainer(testLabel, []);
-        assert.strictEqual(container.hasError, false);
-      });
-
-      it("should use the error icon when hasError is set to true", () => {
+    describe("setLoaded()", () => {
+      it("should set children and update description", () => {
         const container = new TestContainer(testLabel, []);
 
-        container.hasError = true;
+        container.setLoaded(testResources);
 
-        assert.deepStrictEqual(container.iconPath, ERROR_ICON);
+        assert.deepStrictEqual(container.children, testResources);
+        assert.strictEqual(container.description, `(${testResources.length})`);
       });
 
-      it("should use the default icon when hasError is set to false", () => {
-        const icon = new ThemeIcon("symbol-folder");
-        const container = new TestContainer(testLabel, [], undefined, icon);
-
-        container.hasError = true;
-        assert.deepStrictEqual(container.iconPath, ERROR_ICON);
-
-        container.hasError = false;
-        assert.strictEqual(container.iconPath, icon);
-      });
-
-      it("should clear .iconPath when hasError is set to false and no default icon is provided", () => {
+      it("should update description for empty children", () => {
         const container = new TestContainer(testLabel, []);
 
-        container.hasError = true;
-        assert.deepStrictEqual(container.iconPath, ERROR_ICON);
+        container.setLoaded([]);
 
-        container.hasError = false;
-        assert.strictEqual(container.iconPath, undefined);
-      });
-
-      it("should toggle the contextValue between error and non-error states without suffix duplication", () => {
-        const container = new TestContainer(testLabel, [], testContextValue);
-
-        container.hasError = true;
-        assert.strictEqual(container.contextValue, `${testContextValue}-error`);
-
-        container.hasError = false;
-        assert.strictEqual(container.contextValue, testContextValue);
-
-        // verify no suffix duplication on repeated toggles
-        container.hasError = true;
-        assert.strictEqual(container.contextValue, `${testContextValue}-error`);
-      });
-
-      it("should not modify .contextValue when no original contextValue was provided in the constructor", () => {
-        const container = new TestContainer(testLabel, []);
-
-        container.hasError = true;
-        assert.strictEqual(container.contextValue, undefined);
-
-        container.hasError = false;
-        assert.strictEqual(container.contextValue, undefined);
-      });
-    });
-
-    describe("state interactions", () => {
-      it("should settle loading state and description when setting children", () => {
-        const container = new TestContainer(testLabel, []);
-        container.isLoading = true;
-
-        container.children = [testResource];
-
-        assert.strictEqual(container.isLoading, false);
-        assert.strictEqual(container.description, "(1)");
-        assert.strictEqual(container.iconPath, undefined);
-      });
-
-      it("should clear hasError when setting non-empty children", () => {
-        const container = new TestContainer(testLabel, [], testContextValue);
-        container.hasError = true;
-
-        container.children = [testResource];
-
-        assert.strictEqual(container.hasError, false);
-        assert.strictEqual(container.description, "(1)");
-        assert.strictEqual(container.iconPath, undefined);
-        assert.strictEqual(container.contextValue, testContextValue);
-      });
-
-      it("should not clear hasError when setting empty children array", () => {
-        const container = new TestContainer(testLabel, [], testContextValue);
-        container.hasError = true;
-
-        container.children = [];
-
-        assert.strictEqual(container.hasError, true);
         assert.strictEqual(container.description, "(0)");
-        assert.strictEqual(container.contextValue, `${testContextValue}-error`);
       });
 
-      it("should handle multiple state transitions", () => {
-        const container = new TestContainer(testLabel, [], testContextValue);
+      it("should clear isLoading and hasError", () => {
+        const container = new TestContainer(testLabel, []);
+        container.setLoading();
 
-        container.isLoading = true;
-        assert.ok(container.iconPath);
+        container.setLoaded([testResource]);
 
-        container.hasError = true;
-        assert.strictEqual(container.contextValue, `${testContextValue}-error`);
-        assert.ok(container.iconPath);
-
-        container.children = [testResource];
         assert.strictEqual(container.isLoading, false);
         assert.strictEqual(container.hasError, false);
-        assert.strictEqual(container.contextValue, testContextValue);
+      });
+
+      it("should restore the default icon", () => {
+        const icon = new ThemeIcon("symbol-folder");
+        const container = new TestContainer(testLabel, [], undefined, icon);
+        container.setLoading();
+
+        container.setLoaded([testResource]);
+
+        assert.strictEqual(container.iconPath, icon);
+      });
+
+      it("should clear iconPath when no default icon is provided", () => {
+        const container = new TestContainer(testLabel, []);
+        container.setLoading();
+
+        container.setLoaded([testResource]);
+
         assert.strictEqual(container.iconPath, undefined);
       });
 
-      it("should handle error recovery with empty then non-empty children", () => {
-        const container = new TestContainer(testLabel, [], testContextValue);
+      it("should clear tooltip", () => {
+        const container = new TestContainer(testLabel, []);
+        container.setError("some error");
 
-        container.hasError = true;
-        container.children = [];
-        assert.strictEqual(container.hasError, true);
+        container.setLoaded([testResource]);
+
+        assert.strictEqual(container.tooltip, undefined);
+      });
+
+      it("should restore contextValue to default (clearing -error suffix)", () => {
+        const container = new TestContainer(testLabel, [], testContextValue);
+        container.setError("some error");
         assert.strictEqual(container.contextValue, `${testContextValue}-error`);
 
-        container.children = [testResource];
+        container.setLoaded([testResource]);
+
+        assert.strictEqual(container.contextValue, testContextValue);
+      });
+
+      it("should not modify contextValue when none was provided", () => {
+        const container = new TestContainer(testLabel, []);
+
+        container.setLoaded([testResource]);
+
+        assert.strictEqual(container.contextValue, undefined);
+      });
+    });
+
+    describe("setError()", () => {
+      it("should set hasError to true and clear isLoading", () => {
+        const container = new TestContainer(testLabel, []);
+        container.setLoading();
+
+        container.setError("something went wrong");
+
+        assert.strictEqual(container.hasError, true);
+        assert.strictEqual(container.isLoading, false);
+      });
+
+      it("should clear children and set description to (0)", () => {
+        const container = new TestContainer(testLabel, []);
+        container.setLoaded(testResources);
+
+        container.setError("something went wrong");
+
+        assert.deepStrictEqual(container.children, []);
+        assert.strictEqual(container.description, "(0)");
+      });
+
+      it("should use the error icon", () => {
+        const container = new TestContainer(testLabel, []);
+
+        container.setError("something went wrong");
+
+        assert.deepStrictEqual(container.iconPath, ERROR_ICON);
+      });
+
+      it("should set the tooltip from a string", () => {
+        const container = new TestContainer(testLabel, []);
+
+        container.setError("something went wrong");
+
+        assert.strictEqual(container.tooltip, "something went wrong");
+      });
+
+      it("should set the tooltip from a MarkdownString", () => {
+        const container = new TestContainer(testLabel, []);
+        const markdown = new MarkdownString("**Error**: something went wrong");
+
+        container.setError(markdown);
+
+        assert.strictEqual(container.tooltip, markdown);
+      });
+
+      it("should append -error suffix to contextValue", () => {
+        const container = new TestContainer(testLabel, [], testContextValue);
+
+        container.setError("something went wrong");
+
+        assert.strictEqual(container.contextValue, `${testContextValue}-error`);
+      });
+
+      it("should not modify contextValue when none was provided", () => {
+        const container = new TestContainer(testLabel, []);
+
+        container.setError("something went wrong");
+
+        assert.strictEqual(container.contextValue, undefined);
+      });
+    });
+
+    describe("state transitions", () => {
+      it("loading -> loaded: should settle all state correctly", () => {
+        const container = new TestContainer(testLabel, [], testContextValue);
+        container.setLoading();
+
+        container.setLoaded([testResource]);
+
+        assert.strictEqual(container.isLoading, false);
+        assert.strictEqual(container.hasError, false);
+        assert.strictEqual(container.description, "(1)");
+        assert.strictEqual(container.iconPath, undefined);
+        assert.strictEqual(container.tooltip, undefined);
+        assert.strictEqual(container.contextValue, testContextValue);
+      });
+
+      it("loading -> error: should settle all state correctly", () => {
+        const container = new TestContainer(testLabel, [], testContextValue);
+        container.setLoading();
+
+        container.setError("failure");
+
+        assert.strictEqual(container.isLoading, false);
+        assert.strictEqual(container.hasError, true);
+        assert.deepStrictEqual(container.children, []);
+        assert.strictEqual(container.description, "(0)");
+        assert.deepStrictEqual(container.iconPath, ERROR_ICON);
+        assert.strictEqual(container.tooltip, "failure");
+        assert.strictEqual(container.contextValue, `${testContextValue}-error`);
+      });
+
+      it("error -> loading -> loaded: full recovery cycle", () => {
+        const container = new TestContainer(testLabel, [], testContextValue);
+
+        container.setError("initial failure");
+        assert.strictEqual(container.hasError, true);
+
+        container.setLoading();
+        assert.strictEqual(container.isLoading, true);
+        assert.strictEqual(container.hasError, false);
+
+        container.setLoaded([testResource]);
+        assert.strictEqual(container.isLoading, false);
         assert.strictEqual(container.hasError, false);
         assert.strictEqual(container.contextValue, testContextValue);
+        assert.deepStrictEqual(container.children, [testResource]);
+      });
+
+      it("loaded -> loading -> error -> loading -> loaded: repeated transitions", () => {
+        const icon = new ThemeIcon("symbol-folder");
+        const container = new TestContainer(testLabel, [], testContextValue, icon);
+
+        container.setLoaded(testResources);
+        assert.strictEqual(container.iconPath, icon);
+
+        container.setLoading();
+        assert.strictEqual((container.iconPath as ThemeIcon).id, IconNames.LOADING);
+
+        container.setError("transient failure");
+        assert.deepStrictEqual(container.iconPath, ERROR_ICON);
+        assert.strictEqual(container.contextValue, `${testContextValue}-error`);
+
+        container.setLoading();
+        assert.strictEqual((container.iconPath as ThemeIcon).id, IconNames.LOADING);
+
+        container.setLoaded([testResource]);
+        assert.strictEqual(container.iconPath, icon);
+        assert.strictEqual(container.contextValue, testContextValue);
+        assert.strictEqual(container.tooltip, undefined);
       });
     });
 
@@ -322,20 +355,18 @@ describe("models/containers/resourceContainer.ts", () => {
       });
 
       it("should resolve immediately when not loading", async () => {
-        container.isLoading = false;
-
         await container.ensureDoneLoading();
 
         assert.strictEqual(container.isLoading, false);
       });
 
       it("should wait for loading to complete", async () => {
-        container.isLoading = true;
+        container.setLoading();
 
         const waitPromise = container.ensureDoneLoading();
 
         await clock.tickAsync(200);
-        container.isLoading = false;
+        container.setLoaded([]);
         await clock.tickAsync(LOADING_POLL_INTERVAL_MS + 1);
 
         await waitPromise;
@@ -343,7 +374,7 @@ describe("models/containers/resourceContainer.ts", () => {
       });
 
       it("should timeout if loading never completes", async () => {
-        container.isLoading = true;
+        container.setLoading();
 
         const timeoutMs = 500;
         const waitPromise = container.ensureDoneLoading(timeoutMs);
@@ -364,7 +395,7 @@ describe("models/containers/resourceContainer.ts", () => {
 
       it("should return children after calling ensureDoneLoading", async () => {
         const resources = [testResource];
-        container.children = resources;
+        container.setLoaded(resources);
 
         const result = await container.gatherResources();
 
