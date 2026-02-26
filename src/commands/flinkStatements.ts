@@ -11,6 +11,7 @@ import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/co
 import type { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
 import {
   determineFlinkStatementName,
+  isFromFlinkWorkspace,
   submitFlinkStatement,
   waitForResultsFetchable,
   waitForStatementCompletion,
@@ -126,6 +127,7 @@ export async function submitFlinkStatementCommand(
 
   const document = await getEditorOrFileContents(statementBodyUri);
   const statement = document.content;
+  const uriMetadata = await ResourceManager.getInstance().getUriMetadata(statementBodyUri);
 
   // 2. Choose the statement name
   const statementName = await determineFlinkStatementName();
@@ -194,6 +196,7 @@ export async function submitFlinkStatementCommand(
         action: "submit_failure",
         compute_pool_id: computePool.id,
         failure_reason: newStatement.status.detail,
+        from_flink_workspace: isFromFlinkWorkspace(uriMetadata),
       });
 
       // limit the error message content so the notification isn't hidden automatically
@@ -207,6 +210,7 @@ export async function submitFlinkStatementCommand(
       action: "submit_success",
       sql_kind: newStatement.sqlKind,
       compute_pool_id: computePool.id,
+      from_flink_workspace: isFromFlinkWorkspace(uriMetadata),
     });
 
     // Refresh the statements view onto the compute pool in question,

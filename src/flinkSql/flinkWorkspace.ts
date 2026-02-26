@@ -327,9 +327,10 @@ export async function openSqlStatementsAsDocuments(
     });
 
     // Set metadata on document before showing (triggers language client config)
-    if (metadataContext) {
-      await setFlinkDocumentMetadata(document.uri, metadataContext);
-    }
+    await setFlinkDocumentMetadata(document.uri, {
+      ...(metadataContext ?? {}),
+      fromWorkspace: true,
+    });
 
     await vscode.window.showTextDocument(document, { preview: false });
   }

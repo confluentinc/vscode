@@ -24,6 +24,7 @@ import { logUsage, UserEvent } from "../telemetry/events";
 import { DisposableCollection } from "../utils/disposables";
 import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import { createLanguageClientFromWebsocket } from "./languageClient";
+import { isFromFlinkWorkspace } from "./statementUtils";
 
 const logger = new Logger("flinkSql.languageClient.FlinkLanguageClientManager");
 
@@ -557,9 +558,11 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       this.lastWebSocketUrl = websocketUrl;
 
       logger.trace("Flink SQL language client successfully initialized");
+      const uriMetadata = await ResourceManager.getInstance().getUriMetadata(uri);
       logUsage(UserEvent.FlinkSqlClientInteraction, {
         action: "client_initialized",
         compute_pool_id: computePoolId,
+        from_flink_workspace: isFromFlinkWorkspace(uriMetadata),
       });
       await this.notifyConfigChanged();
     }
