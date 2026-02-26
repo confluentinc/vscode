@@ -724,7 +724,7 @@ testRun.description = "Run tests using @vscode/test-electron. Use --coverage for
 export async function testRun() {
   const reportCoverage = IS_CI || process.argv.indexOf("--coverage", 2) >= 0;
   // argv array is something like ['gulp', 'test', '-t', 'something'], we look for the one after -t
-  const testFilter =
+  let testFilter =
     process.env.TEST_SUITE || process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
 
   // check for VS Code stable vs Insiders based on TERM_PROGRAM_VERSION
@@ -735,14 +735,25 @@ export async function testRun() {
   const vscodeVersion = process.env.VSCODE_VERSION || (isInsiders ? "insiders" : "stable");
   console.info(`Starting test runner for VS Code ${vscodeVersion}...`);
 
+  // Convert pipe-separated patterns to regex OR pattern, and detect regex syntax
+  const isRegexPattern =
+    testFilter && (testFilter.includes("|") || /[\[\]\(\)\.\*\+\?\{\}]/.test(testFilter));
+  let grepPattern;
+  if (isRegexPattern && testFilter.includes("|")) {
+    // Convert "pattern1|pattern2" to "(pattern1|pattern2)" for Mocha grep
+    grepPattern = `(${testFilter})`;
+  } else if (isRegexPattern) {
+    grepPattern = testFilter;
+  }
+
   try {
     await runTests({
       version: vscodeVersion,
       extensionDevelopmentPath: resolve(DESTINATION),
       extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
       extensionTestsEnv: {
-        // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
-        FGREP: testFilter,
+        // Use GREP for regex patterns, FGREP for simple substring matching
+        ...(grepPattern ? { GREP: grepPattern } : { FGREP: testFilter }),
       },
       launchArgs: [
         "--no-sandbox",
