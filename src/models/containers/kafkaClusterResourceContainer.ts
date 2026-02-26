@@ -27,8 +27,8 @@ export class KafkaClusterResourceContainer<T extends ISearchable> extends Resour
     super(label, children, contextValue, icon);
 
     // convert label to hyphenated id:
-    // "Consumer Groups" → "consumer-groups", "Topics" → "topics"
-    const suffix = label.toLowerCase().replace(/\s+/g, "-");
+    // "Consumer Groups" -> "consumer-groups", "Topics" -> "topics"
+    const suffix = label.toLowerCase().replaceAll(/\s+/g, "-");
     this.id = `${connectionId}-${clusterId}-${suffix}`;
 
     this.connectionId = connectionId;
