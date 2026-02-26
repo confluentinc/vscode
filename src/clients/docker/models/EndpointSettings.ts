@@ -2,24 +2,24 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { EndpointIPAMConfig } from "./EndpointIPAMConfig";
+import { mapValues } from '../runtime';
+import type { EndpointIPAMConfig } from './EndpointIPAMConfig';
 import {
-  EndpointIPAMConfigFromJSON,
-  EndpointIPAMConfigFromJSONTyped,
-  EndpointIPAMConfigToJSON,
-  EndpointIPAMConfigToJSONTyped,
-} from "./EndpointIPAMConfig";
+    EndpointIPAMConfigFromJSON,
+    EndpointIPAMConfigFromJSONTyped,
+    EndpointIPAMConfigToJSON,
+    EndpointIPAMConfigToJSONTyped,
+} from './EndpointIPAMConfig';
 
 /**
  * Configuration for a network endpoint.
@@ -27,159 +27,154 @@ import {
  * @interface EndpointSettings
  */
 export interface EndpointSettings {
-  /**
-   *
-   * @type {EndpointIPAMConfig}
-   * @memberof EndpointSettings
-   */
-  IPAMConfig?: EndpointIPAMConfig | null;
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof EndpointSettings
-   */
-  Links?: Array<string>;
-  /**
-   *
-   * @type {Array<string>}
-   * @memberof EndpointSettings
-   */
-  Aliases?: Array<string>;
-  /**
-   * Unique ID of the network.
-   *
-   * @type {string}
-   * @memberof EndpointSettings
-   */
-  NetworkID?: string;
-  /**
-   * Unique ID for the service endpoint in a Sandbox.
-   *
-   * @type {string}
-   * @memberof EndpointSettings
-   */
-  EndpointID?: string;
-  /**
-   * Gateway address for this network.
-   *
-   * @type {string}
-   * @memberof EndpointSettings
-   */
-  Gateway?: string;
-  /**
-   * IPv4 address.
-   *
-   * @type {string}
-   * @memberof EndpointSettings
-   */
-  IPAddress?: string;
-  /**
-   * Mask length of the IPv4 address.
-   *
-   * @type {number}
-   * @memberof EndpointSettings
-   */
-  IPPrefixLen?: number;
-  /**
-   * IPv6 gateway address.
-   *
-   * @type {string}
-   * @memberof EndpointSettings
-   */
-  IPv6Gateway?: string;
-  /**
-   * Global IPv6 address.
-   *
-   * @type {string}
-   * @memberof EndpointSettings
-   */
-  GlobalIPv6Address?: string;
-  /**
-   * Mask length of the global IPv6 address.
-   *
-   * @type {number}
-   * @memberof EndpointSettings
-   */
-  GlobalIPv6PrefixLen?: number;
-  /**
-   * MAC address for the endpoint on this network.
-   *
-   * @type {string}
-   * @memberof EndpointSettings
-   */
-  MacAddress?: string;
-  /**
-   * DriverOpts is a mapping of driver options and values. These options
-   * are passed directly to the driver and are driver specific.
-   *
-   * @type {{ [key: string]: string; }}
-   * @memberof EndpointSettings
-   */
-  DriverOpts?: { [key: string]: string } | null;
+    /**
+     * 
+     * @type {EndpointIPAMConfig}
+     * @memberof EndpointSettings
+     */
+    IPAMConfig?: EndpointIPAMConfig | null;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof EndpointSettings
+     */
+    Links?: Array<string>;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof EndpointSettings
+     */
+    Aliases?: Array<string>;
+    /**
+     * Unique ID of the network.
+     * 
+     * @type {string}
+     * @memberof EndpointSettings
+     */
+    NetworkID?: string;
+    /**
+     * Unique ID for the service endpoint in a Sandbox.
+     * 
+     * @type {string}
+     * @memberof EndpointSettings
+     */
+    EndpointID?: string;
+    /**
+     * Gateway address for this network.
+     * 
+     * @type {string}
+     * @memberof EndpointSettings
+     */
+    Gateway?: string;
+    /**
+     * IPv4 address.
+     * 
+     * @type {string}
+     * @memberof EndpointSettings
+     */
+    IPAddress?: string;
+    /**
+     * Mask length of the IPv4 address.
+     * 
+     * @type {number}
+     * @memberof EndpointSettings
+     */
+    IPPrefixLen?: number;
+    /**
+     * IPv6 gateway address.
+     * 
+     * @type {string}
+     * @memberof EndpointSettings
+     */
+    IPv6Gateway?: string;
+    /**
+     * Global IPv6 address.
+     * 
+     * @type {string}
+     * @memberof EndpointSettings
+     */
+    GlobalIPv6Address?: string;
+    /**
+     * Mask length of the global IPv6 address.
+     * 
+     * @type {number}
+     * @memberof EndpointSettings
+     */
+    GlobalIPv6PrefixLen?: number;
+    /**
+     * MAC address for the endpoint on this network.
+     * 
+     * @type {string}
+     * @memberof EndpointSettings
+     */
+    MacAddress?: string;
+    /**
+     * DriverOpts is a mapping of driver options and values. These options
+     * are passed directly to the driver and are driver specific.
+     * 
+     * @type {{ [key: string]: string; }}
+     * @memberof EndpointSettings
+     */
+    DriverOpts?: { [key: string]: string; } | null;
 }
 
 /**
  * Check if a given object implements the EndpointSettings interface.
  */
 export function instanceOfEndpointSettings(value: object): value is EndpointSettings {
-  return true;
+    return true;
 }
 
 export function EndpointSettingsFromJSON(json: any): EndpointSettings {
-  return EndpointSettingsFromJSONTyped(json, false);
+    return EndpointSettingsFromJSONTyped(json, false);
 }
 
-export function EndpointSettingsFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): EndpointSettings {
-  if (json == null) {
-    return json;
-  }
-  return {
-    IPAMConfig:
-      json["IPAMConfig"] == null ? undefined : EndpointIPAMConfigFromJSON(json["IPAMConfig"]),
-    Links: json["Links"] == null ? undefined : json["Links"],
-    Aliases: json["Aliases"] == null ? undefined : json["Aliases"],
-    NetworkID: json["NetworkID"] == null ? undefined : json["NetworkID"],
-    EndpointID: json["EndpointID"] == null ? undefined : json["EndpointID"],
-    Gateway: json["Gateway"] == null ? undefined : json["Gateway"],
-    IPAddress: json["IPAddress"] == null ? undefined : json["IPAddress"],
-    IPPrefixLen: json["IPPrefixLen"] == null ? undefined : json["IPPrefixLen"],
-    IPv6Gateway: json["IPv6Gateway"] == null ? undefined : json["IPv6Gateway"],
-    GlobalIPv6Address: json["GlobalIPv6Address"] == null ? undefined : json["GlobalIPv6Address"],
-    GlobalIPv6PrefixLen:
-      json["GlobalIPv6PrefixLen"] == null ? undefined : json["GlobalIPv6PrefixLen"],
-    MacAddress: json["MacAddress"] == null ? undefined : json["MacAddress"],
-    DriverOpts: json["DriverOpts"] == null ? undefined : json["DriverOpts"],
-  };
+export function EndpointSettingsFromJSONTyped(json: any, ignoreDiscriminator: boolean): EndpointSettings {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'IPAMConfig': json['IPAMConfig'] == null ? undefined : EndpointIPAMConfigFromJSON(json['IPAMConfig']),
+        'Links': json['Links'] == null ? undefined : json['Links'],
+        'Aliases': json['Aliases'] == null ? undefined : json['Aliases'],
+        'NetworkID': json['NetworkID'] == null ? undefined : json['NetworkID'],
+        'EndpointID': json['EndpointID'] == null ? undefined : json['EndpointID'],
+        'Gateway': json['Gateway'] == null ? undefined : json['Gateway'],
+        'IPAddress': json['IPAddress'] == null ? undefined : json['IPAddress'],
+        'IPPrefixLen': json['IPPrefixLen'] == null ? undefined : json['IPPrefixLen'],
+        'IPv6Gateway': json['IPv6Gateway'] == null ? undefined : json['IPv6Gateway'],
+        'GlobalIPv6Address': json['GlobalIPv6Address'] == null ? undefined : json['GlobalIPv6Address'],
+        'GlobalIPv6PrefixLen': json['GlobalIPv6PrefixLen'] == null ? undefined : json['GlobalIPv6PrefixLen'],
+        'MacAddress': json['MacAddress'] == null ? undefined : json['MacAddress'],
+        'DriverOpts': json['DriverOpts'] == null ? undefined : json['DriverOpts'],
+    };
 }
 
 export function EndpointSettingsToJSON(json: any): EndpointSettings {
-  return EndpointSettingsToJSONTyped(json, false);
+    return EndpointSettingsToJSONTyped(json, false);
 }
 
-export function EndpointSettingsToJSONTyped(
-  value?: EndpointSettings | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function EndpointSettingsToJSONTyped(value?: EndpointSettings | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    IPAMConfig: EndpointIPAMConfigToJSON(value["IPAMConfig"]),
-    Links: value["Links"],
-    Aliases: value["Aliases"],
-    NetworkID: value["NetworkID"],
-    EndpointID: value["EndpointID"],
-    Gateway: value["Gateway"],
-    IPAddress: value["IPAddress"],
-    IPPrefixLen: value["IPPrefixLen"],
-    IPv6Gateway: value["IPv6Gateway"],
-    GlobalIPv6Address: value["GlobalIPv6Address"],
-    GlobalIPv6PrefixLen: value["GlobalIPv6PrefixLen"],
-    MacAddress: value["MacAddress"],
-    DriverOpts: value["DriverOpts"],
-  };
+    return {
+        
+        'IPAMConfig': EndpointIPAMConfigToJSON(value['IPAMConfig']),
+        'Links': value['Links'],
+        'Aliases': value['Aliases'],
+        'NetworkID': value['NetworkID'],
+        'EndpointID': value['EndpointID'],
+        'Gateway': value['Gateway'],
+        'IPAddress': value['IPAddress'],
+        'IPPrefixLen': value['IPPrefixLen'],
+        'IPv6Gateway': value['IPv6Gateway'],
+        'GlobalIPv6Address': value['GlobalIPv6Address'],
+        'GlobalIPv6PrefixLen': value['GlobalIPv6PrefixLen'],
+        'MacAddress': value['MacAddress'],
+        'DriverOpts': value['DriverOpts'],
+    };
 }
+

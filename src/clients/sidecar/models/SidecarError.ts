@@ -12,14 +12,14 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { JsonNode } from "./JsonNode";
+import { mapValues } from '../runtime';
+import type { JsonNode } from './JsonNode';
 import {
-  JsonNodeFromJSON,
-  JsonNodeFromJSONTyped,
-  JsonNodeToJSON,
-  JsonNodeToJSONTyped,
-} from "./JsonNode";
+    JsonNodeFromJSON,
+    JsonNodeFromJSONTyped,
+    JsonNodeToJSON,
+    JsonNodeToJSONTyped,
+} from './JsonNode';
 
 /**
  * Describes a particular error encountered while performing an operation.
@@ -27,87 +27,87 @@ import {
  * @interface SidecarError
  */
 export interface SidecarError {
-  /**
-   *
-   * @type {string}
-   * @memberof SidecarError
-   */
-  code?: string;
-  /**
-   *
-   * @type {string}
-   * @memberof SidecarError
-   */
-  status?: string;
-  /**
-   *
-   * @type {string}
-   * @memberof SidecarError
-   */
-  title?: string;
-  /**
-   *
-   * @type {string}
-   * @memberof SidecarError
-   */
-  id?: string;
-  /**
-   *
-   * @type {string}
-   * @memberof SidecarError
-   */
-  detail?: string;
-  /**
-   *
-   * @type {JsonNode}
-   * @memberof SidecarError
-   */
-  source?: JsonNode;
+    /**
+     * 
+     * @type {string}
+     * @memberof SidecarError
+     */
+    code?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SidecarError
+     */
+    status?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SidecarError
+     */
+    title?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SidecarError
+     */
+    id?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SidecarError
+     */
+    detail?: string;
+    /**
+     * 
+     * @type {JsonNode}
+     * @memberof SidecarError
+     */
+    source?: JsonNode;
 }
 
 /**
  * Check if a given object implements the SidecarError interface.
  */
 export function instanceOfSidecarError(value: object): value is SidecarError {
-  return true;
+    return true;
 }
 
 export function SidecarErrorFromJSON(json: any): SidecarError {
-  return SidecarErrorFromJSONTyped(json, false);
+    return SidecarErrorFromJSONTyped(json, false);
 }
 
 export function SidecarErrorFromJSONTyped(json: any, ignoreDiscriminator: boolean): SidecarError {
-  if (json == null) {
-    return json;
-  }
-  return {
-    code: json["code"] == null ? undefined : json["code"],
-    status: json["status"] == null ? undefined : json["status"],
-    title: json["title"] == null ? undefined : json["title"],
-    id: json["id"] == null ? undefined : json["id"],
-    detail: json["detail"] == null ? undefined : json["detail"],
-    source: json["source"] == null ? undefined : JsonNodeFromJSON(json["source"]),
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'code': json['code'] == null ? undefined : json['code'],
+        'status': json['status'] == null ? undefined : json['status'],
+        'title': json['title'] == null ? undefined : json['title'],
+        'id': json['id'] == null ? undefined : json['id'],
+        'detail': json['detail'] == null ? undefined : json['detail'],
+        'source': json['source'] == null ? undefined : JsonNodeFromJSON(json['source']),
+    };
 }
 
 export function SidecarErrorToJSON(json: any): SidecarError {
-  return SidecarErrorToJSONTyped(json, false);
+    return SidecarErrorToJSONTyped(json, false);
 }
 
-export function SidecarErrorToJSONTyped(
-  value?: SidecarError | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function SidecarErrorToJSONTyped(value?: SidecarError | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    code: value["code"],
-    status: value["status"],
-    title: value["title"],
-    id: value["id"],
-    detail: value["detail"],
-    source: JsonNodeToJSON(value["source"]),
-  };
+    return {
+        
+        'code': value['code'],
+        'status': value['status'],
+        'title': value['title'],
+        'id': value['id'],
+        'detail': value['detail'],
+        'source': JsonNodeToJSON(value['source']),
+    };
 }
+

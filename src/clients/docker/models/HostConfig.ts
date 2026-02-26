@@ -2,75 +2,80 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { ResourcesUlimitsInner } from "./ResourcesUlimitsInner";
+import { mapValues } from '../runtime';
+import type { ResourcesUlimitsInner } from './ResourcesUlimitsInner';
 import {
-  ResourcesUlimitsInnerFromJSON,
-  ResourcesUlimitsInnerFromJSONTyped,
-  ResourcesUlimitsInnerToJSON,
-  ResourcesUlimitsInnerToJSONTyped,
-} from "./ResourcesUlimitsInner";
-import type { PortBinding } from "./PortBinding";
+    ResourcesUlimitsInnerFromJSON,
+    ResourcesUlimitsInnerFromJSONTyped,
+    ResourcesUlimitsInnerToJSON,
+    ResourcesUlimitsInnerToJSONTyped,
+} from './ResourcesUlimitsInner';
+import type { PortBinding } from './PortBinding';
 import {
-  PortBindingFromJSON,
-  PortBindingFromJSONTyped,
-  PortBindingToJSON,
-  PortBindingToJSONTyped,
-} from "./PortBinding";
-import type { ThrottleDevice } from "./ThrottleDevice";
+    PortBindingFromJSON,
+    PortBindingFromJSONTyped,
+    PortBindingToJSON,
+    PortBindingToJSONTyped,
+} from './PortBinding';
+import type { ThrottleDevice } from './ThrottleDevice';
 import {
-  ThrottleDeviceFromJSON,
-  ThrottleDeviceFromJSONTyped,
-  ThrottleDeviceToJSON,
-  ThrottleDeviceToJSONTyped,
-} from "./ThrottleDevice";
-import type { DeviceMapping } from "./DeviceMapping";
+    ThrottleDeviceFromJSON,
+    ThrottleDeviceFromJSONTyped,
+    ThrottleDeviceToJSON,
+    ThrottleDeviceToJSONTyped,
+} from './ThrottleDevice';
+import type { DeviceMapping } from './DeviceMapping';
 import {
-  DeviceMappingFromJSON,
-  DeviceMappingFromJSONTyped,
-  DeviceMappingToJSON,
-  DeviceMappingToJSONTyped,
-} from "./DeviceMapping";
-import type { Mount } from "./Mount";
-import { MountFromJSON, MountFromJSONTyped, MountToJSON, MountToJSONTyped } from "./Mount";
-import type { HostConfigAllOfLogConfig } from "./HostConfigAllOfLogConfig";
+    DeviceMappingFromJSON,
+    DeviceMappingFromJSONTyped,
+    DeviceMappingToJSON,
+    DeviceMappingToJSONTyped,
+} from './DeviceMapping';
+import type { Mount } from './Mount';
 import {
-  HostConfigAllOfLogConfigFromJSON,
-  HostConfigAllOfLogConfigFromJSONTyped,
-  HostConfigAllOfLogConfigToJSON,
-  HostConfigAllOfLogConfigToJSONTyped,
-} from "./HostConfigAllOfLogConfig";
-import type { RestartPolicy } from "./RestartPolicy";
+    MountFromJSON,
+    MountFromJSONTyped,
+    MountToJSON,
+    MountToJSONTyped,
+} from './Mount';
+import type { HostConfigAllOfLogConfig } from './HostConfigAllOfLogConfig';
 import {
-  RestartPolicyFromJSON,
-  RestartPolicyFromJSONTyped,
-  RestartPolicyToJSON,
-  RestartPolicyToJSONTyped,
-} from "./RestartPolicy";
-import type { DeviceRequest } from "./DeviceRequest";
+    HostConfigAllOfLogConfigFromJSON,
+    HostConfigAllOfLogConfigFromJSONTyped,
+    HostConfigAllOfLogConfigToJSON,
+    HostConfigAllOfLogConfigToJSONTyped,
+} from './HostConfigAllOfLogConfig';
+import type { RestartPolicy } from './RestartPolicy';
 import {
-  DeviceRequestFromJSON,
-  DeviceRequestFromJSONTyped,
-  DeviceRequestToJSON,
-  DeviceRequestToJSONTyped,
-} from "./DeviceRequest";
-import type { ResourcesBlkioWeightDeviceInner } from "./ResourcesBlkioWeightDeviceInner";
+    RestartPolicyFromJSON,
+    RestartPolicyFromJSONTyped,
+    RestartPolicyToJSON,
+    RestartPolicyToJSONTyped,
+} from './RestartPolicy';
+import type { DeviceRequest } from './DeviceRequest';
 import {
-  ResourcesBlkioWeightDeviceInnerFromJSON,
-  ResourcesBlkioWeightDeviceInnerFromJSONTyped,
-  ResourcesBlkioWeightDeviceInnerToJSON,
-  ResourcesBlkioWeightDeviceInnerToJSONTyped,
-} from "./ResourcesBlkioWeightDeviceInner";
+    DeviceRequestFromJSON,
+    DeviceRequestFromJSONTyped,
+    DeviceRequestToJSON,
+    DeviceRequestToJSONTyped,
+} from './DeviceRequest';
+import type { ResourcesBlkioWeightDeviceInner } from './ResourcesBlkioWeightDeviceInner';
+import {
+    ResourcesBlkioWeightDeviceInnerFromJSON,
+    ResourcesBlkioWeightDeviceInnerFromJSONTyped,
+    ResourcesBlkioWeightDeviceInnerToJSON,
+    ResourcesBlkioWeightDeviceInnerToJSONTyped,
+} from './ResourcesBlkioWeightDeviceInner';
 
 /**
  * Container configuration that depends on the host we are running on
@@ -78,859 +83,810 @@ import {
  * @interface HostConfig
  */
 export interface HostConfig {
-  /**
-   * An integer value representing this container's relative CPU weight
-   * versus other containers.
-   *
-   * @type {number}
-   * @memberof HostConfig
-   */
-  CpuShares?: number;
-  /**
-   * Memory limit in bytes.
-   * @type {number}
-   * @memberof HostConfig
-   */
-  Memory?: number;
-  /**
-   * Path to `cgroups` under which the container's `cgroup` is created. If
-   * the path is not absolute, the path is considered to be relative to the
-   * `cgroups` path of the init process. Cgroups are created if they do not
-   * already exist.
-   *
-   * @type {string}
-   * @memberof HostConfig
-   */
-  CgroupParent?: string;
-  /**
-   * Block IO weight (relative weight).
-   * @type {number}
-   * @memberof HostConfig
-   */
-  BlkioWeight?: number;
-  /**
-   * Block IO weight (relative device weight) in the form:
-   *
-   * ```
-   * [{"Path": "device_path", "Weight": weight}]
-   * ```
-   *
-   * @type {Array<ResourcesBlkioWeightDeviceInner>}
-   * @memberof HostConfig
-   */
-  BlkioWeightDevice?: Array<ResourcesBlkioWeightDeviceInner>;
-  /**
-   * Limit read rate (bytes per second) from a device, in the form:
-   *
-   * ```
-   * [{"Path": "device_path", "Rate": rate}]
-   * ```
-   *
-   * @type {Array<ThrottleDevice>}
-   * @memberof HostConfig
-   */
-  BlkioDeviceReadBps?: Array<ThrottleDevice>;
-  /**
-   * Limit write rate (bytes per second) to a device, in the form:
-   *
-   * ```
-   * [{"Path": "device_path", "Rate": rate}]
-   * ```
-   *
-   * @type {Array<ThrottleDevice>}
-   * @memberof HostConfig
-   */
-  BlkioDeviceWriteBps?: Array<ThrottleDevice>;
-  /**
-   * Limit read rate (IO per second) from a device, in the form:
-   *
-   * ```
-   * [{"Path": "device_path", "Rate": rate}]
-   * ```
-   *
-   * @type {Array<ThrottleDevice>}
-   * @memberof HostConfig
-   */
-  BlkioDeviceReadIOps?: Array<ThrottleDevice>;
-  /**
-   * Limit write rate (IO per second) to a device, in the form:
-   *
-   * ```
-   * [{"Path": "device_path", "Rate": rate}]
-   * ```
-   *
-   * @type {Array<ThrottleDevice>}
-   * @memberof HostConfig
-   */
-  BlkioDeviceWriteIOps?: Array<ThrottleDevice>;
-  /**
-   * The length of a CPU period in microseconds.
-   * @type {number}
-   * @memberof HostConfig
-   */
-  CpuPeriod?: number;
-  /**
-   * Microseconds of CPU time that the container can get in a CPU period.
-   *
-   * @type {number}
-   * @memberof HostConfig
-   */
-  CpuQuota?: number;
-  /**
-   * The length of a CPU real-time period in microseconds. Set to 0 to
-   * allocate no time allocated to real-time tasks.
-   *
-   * @type {number}
-   * @memberof HostConfig
-   */
-  CpuRealtimePeriod?: number;
-  /**
-   * The length of a CPU real-time runtime in microseconds. Set to 0 to
-   * allocate no time allocated to real-time tasks.
-   *
-   * @type {number}
-   * @memberof HostConfig
-   */
-  CpuRealtimeRuntime?: number;
-  /**
-   * CPUs in which to allow execution (e.g., `0-3`, `0,1`).
-   *
-   * @type {string}
-   * @memberof HostConfig
-   */
-  CpusetCpus?: string;
-  /**
-   * Memory nodes (MEMs) in which to allow execution (0-3, 0,1). Only
-   * effective on NUMA systems.
-   *
-   * @type {string}
-   * @memberof HostConfig
-   */
-  CpusetMems?: string;
-  /**
-   * A list of devices to add to the container.
-   * @type {Array<DeviceMapping>}
-   * @memberof HostConfig
-   */
-  Devices?: Array<DeviceMapping>;
-  /**
-   * a list of cgroup rules to apply to the container
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  DeviceCgroupRules?: Array<string>;
-  /**
-   * A list of requests for devices to be sent to device drivers.
-   *
-   * @type {Array<DeviceRequest>}
-   * @memberof HostConfig
-   */
-  DeviceRequests?: Array<DeviceRequest>;
-  /**
-   * Hard limit for kernel TCP buffer memory (in bytes). Depending on the
-   * OCI runtime in use, this option may be ignored. It is no longer supported
-   * by the default (runc) runtime.
-   *
-   * This field is omitted when empty.
-   *
-   * @type {number}
-   * @memberof HostConfig
-   */
-  KernelMemoryTCP?: number;
-  /**
-   * Memory soft limit in bytes.
-   * @type {number}
-   * @memberof HostConfig
-   */
-  MemoryReservation?: number;
-  /**
-   * Total memory limit (memory + swap). Set as `-1` to enable unlimited
-   * swap.
-   *
-   * @type {number}
-   * @memberof HostConfig
-   */
-  MemorySwap?: number;
-  /**
-   * Tune a container's memory swappiness behavior. Accepts an integer
-   * between 0 and 100.
-   *
-   * @type {number}
-   * @memberof HostConfig
-   */
-  MemorySwappiness?: number;
-  /**
-   * CPU quota in units of 10<sup>-9</sup> CPUs.
-   * @type {number}
-   * @memberof HostConfig
-   */
-  NanoCpus?: number;
-  /**
-   * Disable OOM Killer for the container.
-   * @type {boolean}
-   * @memberof HostConfig
-   */
-  OomKillDisable?: boolean;
-  /**
-   * Run an init inside the container that forwards signals and reaps
-   * processes. This field is omitted if empty, and the default (as
-   * configured on the daemon) is used.
-   *
-   * @type {boolean}
-   * @memberof HostConfig
-   */
-  Init?: boolean | null;
-  /**
-   * Tune a container's PIDs limit. Set `0` or `-1` for unlimited, or `null`
-   * to not change.
-   *
-   * @type {number}
-   * @memberof HostConfig
-   */
-  PidsLimit?: number | null;
-  /**
-   * A list of resource limits to set in the container. For example:
-   *
-   * ```
-   * {"Name": "nofile", "Soft": 1024, "Hard": 2048}
-   * ```
-   *
-   * @type {Array<ResourcesUlimitsInner>}
-   * @memberof HostConfig
-   */
-  Ulimits?: Array<ResourcesUlimitsInner>;
-  /**
-   * The number of usable CPUs (Windows only).
-   *
-   * On Windows Server containers, the processor resource controls are
-   * mutually exclusive. The order of precedence is `CPUCount` first, then
-   * `CPUShares`, and `CPUPercent` last.
-   *
-   * @type {number}
-   * @memberof HostConfig
-   */
-  CpuCount?: number;
-  /**
-   * The usable percentage of the available CPUs (Windows only).
-   *
-   * On Windows Server containers, the processor resource controls are
-   * mutually exclusive. The order of precedence is `CPUCount` first, then
-   * `CPUShares`, and `CPUPercent` last.
-   *
-   * @type {number}
-   * @memberof HostConfig
-   */
-  CpuPercent?: number;
-  /**
-   * Maximum IOps for the container system drive (Windows only)
-   * @type {number}
-   * @memberof HostConfig
-   */
-  IOMaximumIOps?: number;
-  /**
-   * Maximum IO in bytes per second for the container system drive
-   * (Windows only).
-   *
-   * @type {number}
-   * @memberof HostConfig
-   */
-  IOMaximumBandwidth?: number;
-  /**
-   * A list of volume bindings for this container. Each volume binding
-   * is a string in one of these forms:
-   *
-   * - `host-src:container-dest[:options]` to bind-mount a host path
-   *   into the container. Both `host-src`, and `container-dest` must
-   *   be an _absolute_ path.
-   * - `volume-name:container-dest[:options]` to bind-mount a volume
-   *   managed by a volume driver into the container. `container-dest`
-   *   must be an _absolute_ path.
-   *
-   * `options` is an optional, comma-delimited list of:
-   *
-   * - `nocopy` disables automatic copying of data from the container
-   *   path to the volume. The `nocopy` flag only applies to named volumes.
-   * - `[ro|rw]` mounts a volume read-only or read-write, respectively.
-   *   If omitted or set to `rw`, volumes are mounted read-write.
-   * - `[z|Z]` applies SELinux labels to allow or deny multiple containers
-   *   to read and write to the same volume.
-   *     - `z`: a _shared_ content label is applied to the content. This
-   *       label indicates that multiple containers can share the volume
-   *       content, for both reading and writing.
-   *     - `Z`: a _private unshared_ label is applied to the content.
-   *       This label indicates that only the current container can use
-   *       a private volume. Labeling systems such as SELinux require
-   *       proper labels to be placed on volume content that is mounted
-   *       into a container. Without a label, the security system can
-   *       prevent a container's processes from using the content. By
-   *       default, the labels set by the host operating system are not
-   *       modified.
-   * - `[[r]shared|[r]slave|[r]private]` specifies mount
-   *   [propagation behavior](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt).
-   *   This only applies to bind-mounted volumes, not internal volumes
-   *   or named volumes. Mount propagation requires the source mount
-   *   point (the location where the source directory is mounted in the
-   *   host operating system) to have the correct propagation properties.
-   *   For shared volumes, the source mount point must be set to `shared`.
-   *   For slave volumes, the mount must be set to either `shared` or
-   *   `slave`.
-   *
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  Binds?: Array<string>;
-  /**
-   * Path to a file where the container ID is written
-   * @type {string}
-   * @memberof HostConfig
-   */
-  ContainerIDFile?: string;
-  /**
-   *
-   * @type {HostConfigAllOfLogConfig}
-   * @memberof HostConfig
-   */
-  LogConfig?: HostConfigAllOfLogConfig;
-  /**
-   * Network mode to use for this container. Supported standard values
-   * are: `bridge`, `host`, `none`, and `container:<name|id>`. Any
-   * other value is taken as a custom network's name to which this
-   * container should connect to.
-   *
-   * @type {string}
-   * @memberof HostConfig
-   */
-  NetworkMode?: string;
-  /**
-   * PortMap describes the mapping of container ports to host ports, using the
-   * container's port-number and protocol as key in the format `<port>/<protocol>`,
-   * for example, `80/udp`.
-   *
-   * If a container's port is mapped for multiple protocols, separate entries
-   * are added to the mapping table.
-   *
-   * @type {{ [key: string]: Array<PortBinding> | null; }}
-   * @memberof HostConfig
-   */
-  PortBindings?: { [key: string]: Array<PortBinding> | null };
-  /**
-   *
-   * @type {RestartPolicy}
-   * @memberof HostConfig
-   */
-  RestartPolicy?: RestartPolicy;
-  /**
-   * Automatically remove the container when the container's process
-   * exits. This has no effect if `RestartPolicy` is set.
-   *
-   * @type {boolean}
-   * @memberof HostConfig
-   */
-  AutoRemove?: boolean;
-  /**
-   * Driver that this container uses to mount volumes.
-   * @type {string}
-   * @memberof HostConfig
-   */
-  VolumeDriver?: string;
-  /**
-   * A list of volumes to inherit from another container, specified in
-   * the form `<container name>[:<ro|rw>]`.
-   *
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  VolumesFrom?: Array<string>;
-  /**
-   * Specification for mounts to be added to the container.
-   *
-   * @type {Array<Mount>}
-   * @memberof HostConfig
-   */
-  Mounts?: Array<Mount>;
-  /**
-   * Initial console size, as an `[height, width]` array.
-   *
-   * @type {Array<number>}
-   * @memberof HostConfig
-   */
-  ConsoleSize?: Array<number> | null;
-  /**
-   * Arbitrary non-identifying metadata attached to container and
-   * provided to the runtime when the container is started.
-   *
-   * @type {{ [key: string]: string; }}
-   * @memberof HostConfig
-   */
-  Annotations?: { [key: string]: string };
-  /**
-   * A list of kernel capabilities to add to the container. Conflicts
-   * with option 'Capabilities'.
-   *
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  CapAdd?: Array<string>;
-  /**
-   * A list of kernel capabilities to drop from the container. Conflicts
-   * with option 'Capabilities'.
-   *
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  CapDrop?: Array<string>;
-  /**
-   * cgroup namespace mode for the container. Possible values are:
-   *
-   * - `"private"`: the container runs in its own private cgroup namespace
-   * - `"host"`: use the host system's cgroup namespace
-   *
-   * If not specified, the daemon default is used, which can either be `"private"`
-   * or `"host"`, depending on daemon version, kernel support and configuration.
-   *
-   * @type {string}
-   * @memberof HostConfig
-   */
-  CgroupnsMode?: HostConfigCgroupnsModeEnum;
-  /**
-   * A list of DNS servers for the container to use.
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  Dns?: Array<string>;
-  /**
-   * A list of DNS options.
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  DnsOptions?: Array<string>;
-  /**
-   * A list of DNS search domains.
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  DnsSearch?: Array<string>;
-  /**
-   * A list of hostnames/IP mappings to add to the container's `/etc/hosts`
-   * file. Specified in the form `["hostname:IP"]`.
-   *
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  ExtraHosts?: Array<string>;
-  /**
-   * A list of additional groups that the container process will run as.
-   *
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  GroupAdd?: Array<string>;
-  /**
-   * IPC sharing mode for the container. Possible values are:
-   *
-   * - `"none"`: own private IPC namespace, with /dev/shm not mounted
-   * - `"private"`: own private IPC namespace
-   * - `"shareable"`: own private IPC namespace, with a possibility to share it with other containers
-   * - `"container:<name|id>"`: join another (shareable) container's IPC namespace
-   * - `"host"`: use the host system's IPC namespace
-   *
-   * If not specified, daemon default is used, which can either be `"private"`
-   * or `"shareable"`, depending on daemon version and configuration.
-   *
-   * @type {string}
-   * @memberof HostConfig
-   */
-  IpcMode?: string;
-  /**
-   * Cgroup to use for the container.
-   * @type {string}
-   * @memberof HostConfig
-   */
-  Cgroup?: string;
-  /**
-   * A list of links for the container in the form `container_name:alias`.
-   *
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  Links?: Array<string>;
-  /**
-   * An integer value containing the score given to the container in
-   * order to tune OOM killer preferences.
-   *
-   * @type {number}
-   * @memberof HostConfig
-   */
-  OomScoreAdj?: number;
-  /**
-   * Set the PID (Process) Namespace mode for the container. It can be
-   * either:
-   *
-   * - `"container:<name|id>"`: joins another container's PID namespace
-   * - `"host"`: use the host's PID namespace inside the container
-   *
-   * @type {string}
-   * @memberof HostConfig
-   */
-  PidMode?: string;
-  /**
-   * Gives the container full access to the host.
-   * @type {boolean}
-   * @memberof HostConfig
-   */
-  Privileged?: boolean;
-  /**
-   * Allocates an ephemeral host port for all of a container's
-   * exposed ports.
-   *
-   * Ports are de-allocated when the container stops and allocated when
-   * the container starts. The allocated port might be changed when
-   * restarting the container.
-   *
-   * The port is selected from the ephemeral port range that depends on
-   * the kernel. For example, on Linux the range is defined by
-   * `/proc/sys/net/ipv4/ip_local_port_range`.
-   *
-   * @type {boolean}
-   * @memberof HostConfig
-   */
-  PublishAllPorts?: boolean;
-  /**
-   * Mount the container's root filesystem as read only.
-   * @type {boolean}
-   * @memberof HostConfig
-   */
-  ReadonlyRootfs?: boolean;
-  /**
-   * A list of string values to customize labels for MLS systems, such
-   * as SELinux.
-   *
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  SecurityOpt?: Array<string>;
-  /**
-   * Storage driver options for this container, in the form `{"size": "120G"}`.
-   *
-   * @type {{ [key: string]: string; }}
-   * @memberof HostConfig
-   */
-  StorageOpt?: { [key: string]: string };
-  /**
-   * A map of container directories which should be replaced by tmpfs
-   * mounts, and their corresponding mount options. For example:
-   *
-   * ```
-   * { "/run": "rw,noexec,nosuid,size=65536k" }
-   * ```
-   *
-   * @type {{ [key: string]: string; }}
-   * @memberof HostConfig
-   */
-  Tmpfs?: { [key: string]: string };
-  /**
-   * UTS namespace to use for the container.
-   * @type {string}
-   * @memberof HostConfig
-   */
-  UTSMode?: string;
-  /**
-   * Sets the usernamespace mode for the container when usernamespace
-   * remapping option is enabled.
-   *
-   * @type {string}
-   * @memberof HostConfig
-   */
-  UsernsMode?: string;
-  /**
-   * Size of `/dev/shm` in bytes. If omitted, the system uses 64MB.
-   *
-   * @type {number}
-   * @memberof HostConfig
-   */
-  ShmSize?: number;
-  /**
-   * A list of kernel parameters (sysctls) to set in the container.
-   * For example:
-   *
-   * ```
-   * {"net.ipv4.ip_forward": "1"}
-   * ```
-   *
-   * @type {{ [key: string]: string; }}
-   * @memberof HostConfig
-   */
-  Sysctls?: { [key: string]: string };
-  /**
-   * Runtime to use with this container.
-   * @type {string}
-   * @memberof HostConfig
-   */
-  Runtime?: string;
-  /**
-   * Isolation technology of the container. (Windows only)
-   *
-   * @type {string}
-   * @memberof HostConfig
-   */
-  Isolation?: HostConfigIsolationEnum;
-  /**
-   * The list of paths to be masked inside the container (this overrides
-   * the default set of paths).
-   *
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  MaskedPaths?: Array<string>;
-  /**
-   * The list of paths to be set as read-only inside the container
-   * (this overrides the default set of paths).
-   *
-   * @type {Array<string>}
-   * @memberof HostConfig
-   */
-  ReadonlyPaths?: Array<string>;
+    /**
+     * An integer value representing this container's relative CPU weight
+     * versus other containers.
+     * 
+     * @type {number}
+     * @memberof HostConfig
+     */
+    CpuShares?: number;
+    /**
+     * Memory limit in bytes.
+     * @type {number}
+     * @memberof HostConfig
+     */
+    Memory?: number;
+    /**
+     * Path to `cgroups` under which the container's `cgroup` is created. If
+     * the path is not absolute, the path is considered to be relative to the
+     * `cgroups` path of the init process. Cgroups are created if they do not
+     * already exist.
+     * 
+     * @type {string}
+     * @memberof HostConfig
+     */
+    CgroupParent?: string;
+    /**
+     * Block IO weight (relative weight).
+     * @type {number}
+     * @memberof HostConfig
+     */
+    BlkioWeight?: number;
+    /**
+     * Block IO weight (relative device weight) in the form:
+     * 
+     * ```
+     * [{"Path": "device_path", "Weight": weight}]
+     * ```
+     * 
+     * @type {Array<ResourcesBlkioWeightDeviceInner>}
+     * @memberof HostConfig
+     */
+    BlkioWeightDevice?: Array<ResourcesBlkioWeightDeviceInner>;
+    /**
+     * Limit read rate (bytes per second) from a device, in the form:
+     * 
+     * ```
+     * [{"Path": "device_path", "Rate": rate}]
+     * ```
+     * 
+     * @type {Array<ThrottleDevice>}
+     * @memberof HostConfig
+     */
+    BlkioDeviceReadBps?: Array<ThrottleDevice>;
+    /**
+     * Limit write rate (bytes per second) to a device, in the form:
+     * 
+     * ```
+     * [{"Path": "device_path", "Rate": rate}]
+     * ```
+     * 
+     * @type {Array<ThrottleDevice>}
+     * @memberof HostConfig
+     */
+    BlkioDeviceWriteBps?: Array<ThrottleDevice>;
+    /**
+     * Limit read rate (IO per second) from a device, in the form:
+     * 
+     * ```
+     * [{"Path": "device_path", "Rate": rate}]
+     * ```
+     * 
+     * @type {Array<ThrottleDevice>}
+     * @memberof HostConfig
+     */
+    BlkioDeviceReadIOps?: Array<ThrottleDevice>;
+    /**
+     * Limit write rate (IO per second) to a device, in the form:
+     * 
+     * ```
+     * [{"Path": "device_path", "Rate": rate}]
+     * ```
+     * 
+     * @type {Array<ThrottleDevice>}
+     * @memberof HostConfig
+     */
+    BlkioDeviceWriteIOps?: Array<ThrottleDevice>;
+    /**
+     * The length of a CPU period in microseconds.
+     * @type {number}
+     * @memberof HostConfig
+     */
+    CpuPeriod?: number;
+    /**
+     * Microseconds of CPU time that the container can get in a CPU period.
+     * 
+     * @type {number}
+     * @memberof HostConfig
+     */
+    CpuQuota?: number;
+    /**
+     * The length of a CPU real-time period in microseconds. Set to 0 to
+     * allocate no time allocated to real-time tasks.
+     * 
+     * @type {number}
+     * @memberof HostConfig
+     */
+    CpuRealtimePeriod?: number;
+    /**
+     * The length of a CPU real-time runtime in microseconds. Set to 0 to
+     * allocate no time allocated to real-time tasks.
+     * 
+     * @type {number}
+     * @memberof HostConfig
+     */
+    CpuRealtimeRuntime?: number;
+    /**
+     * CPUs in which to allow execution (e.g., `0-3`, `0,1`).
+     * 
+     * @type {string}
+     * @memberof HostConfig
+     */
+    CpusetCpus?: string;
+    /**
+     * Memory nodes (MEMs) in which to allow execution (0-3, 0,1). Only
+     * effective on NUMA systems.
+     * 
+     * @type {string}
+     * @memberof HostConfig
+     */
+    CpusetMems?: string;
+    /**
+     * A list of devices to add to the container.
+     * @type {Array<DeviceMapping>}
+     * @memberof HostConfig
+     */
+    Devices?: Array<DeviceMapping>;
+    /**
+     * a list of cgroup rules to apply to the container
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    DeviceCgroupRules?: Array<string>;
+    /**
+     * A list of requests for devices to be sent to device drivers.
+     * 
+     * @type {Array<DeviceRequest>}
+     * @memberof HostConfig
+     */
+    DeviceRequests?: Array<DeviceRequest>;
+    /**
+     * Hard limit for kernel TCP buffer memory (in bytes). Depending on the
+     * OCI runtime in use, this option may be ignored. It is no longer supported
+     * by the default (runc) runtime.
+     * 
+     * This field is omitted when empty.
+     * 
+     * @type {number}
+     * @memberof HostConfig
+     */
+    KernelMemoryTCP?: number;
+    /**
+     * Memory soft limit in bytes.
+     * @type {number}
+     * @memberof HostConfig
+     */
+    MemoryReservation?: number;
+    /**
+     * Total memory limit (memory + swap). Set as `-1` to enable unlimited
+     * swap.
+     * 
+     * @type {number}
+     * @memberof HostConfig
+     */
+    MemorySwap?: number;
+    /**
+     * Tune a container's memory swappiness behavior. Accepts an integer
+     * between 0 and 100.
+     * 
+     * @type {number}
+     * @memberof HostConfig
+     */
+    MemorySwappiness?: number;
+    /**
+     * CPU quota in units of 10<sup>-9</sup> CPUs.
+     * @type {number}
+     * @memberof HostConfig
+     */
+    NanoCpus?: number;
+    /**
+     * Disable OOM Killer for the container.
+     * @type {boolean}
+     * @memberof HostConfig
+     */
+    OomKillDisable?: boolean;
+    /**
+     * Run an init inside the container that forwards signals and reaps
+     * processes. This field is omitted if empty, and the default (as
+     * configured on the daemon) is used.
+     * 
+     * @type {boolean}
+     * @memberof HostConfig
+     */
+    Init?: boolean | null;
+    /**
+     * Tune a container's PIDs limit. Set `0` or `-1` for unlimited, or `null`
+     * to not change.
+     * 
+     * @type {number}
+     * @memberof HostConfig
+     */
+    PidsLimit?: number | null;
+    /**
+     * A list of resource limits to set in the container. For example:
+     * 
+     * ```
+     * {"Name": "nofile", "Soft": 1024, "Hard": 2048}
+     * ```
+     * 
+     * @type {Array<ResourcesUlimitsInner>}
+     * @memberof HostConfig
+     */
+    Ulimits?: Array<ResourcesUlimitsInner>;
+    /**
+     * The number of usable CPUs (Windows only).
+     * 
+     * On Windows Server containers, the processor resource controls are
+     * mutually exclusive. The order of precedence is `CPUCount` first, then
+     * `CPUShares`, and `CPUPercent` last.
+     * 
+     * @type {number}
+     * @memberof HostConfig
+     */
+    CpuCount?: number;
+    /**
+     * The usable percentage of the available CPUs (Windows only).
+     * 
+     * On Windows Server containers, the processor resource controls are
+     * mutually exclusive. The order of precedence is `CPUCount` first, then
+     * `CPUShares`, and `CPUPercent` last.
+     * 
+     * @type {number}
+     * @memberof HostConfig
+     */
+    CpuPercent?: number;
+    /**
+     * Maximum IOps for the container system drive (Windows only)
+     * @type {number}
+     * @memberof HostConfig
+     */
+    IOMaximumIOps?: number;
+    /**
+     * Maximum IO in bytes per second for the container system drive
+     * (Windows only).
+     * 
+     * @type {number}
+     * @memberof HostConfig
+     */
+    IOMaximumBandwidth?: number;
+    /**
+     * A list of volume bindings for this container. Each volume binding
+     * is a string in one of these forms:
+     * 
+     * - `host-src:container-dest[:options]` to bind-mount a host path
+     *   into the container. Both `host-src`, and `container-dest` must
+     *   be an _absolute_ path.
+     * - `volume-name:container-dest[:options]` to bind-mount a volume
+     *   managed by a volume driver into the container. `container-dest`
+     *   must be an _absolute_ path.
+     * 
+     * `options` is an optional, comma-delimited list of:
+     * 
+     * - `nocopy` disables automatic copying of data from the container
+     *   path to the volume. The `nocopy` flag only applies to named volumes.
+     * - `[ro|rw]` mounts a volume read-only or read-write, respectively.
+     *   If omitted or set to `rw`, volumes are mounted read-write.
+     * - `[z|Z]` applies SELinux labels to allow or deny multiple containers
+     *   to read and write to the same volume.
+     *     - `z`: a _shared_ content label is applied to the content. This
+     *       label indicates that multiple containers can share the volume
+     *       content, for both reading and writing.
+     *     - `Z`: a _private unshared_ label is applied to the content.
+     *       This label indicates that only the current container can use
+     *       a private volume. Labeling systems such as SELinux require
+     *       proper labels to be placed on volume content that is mounted
+     *       into a container. Without a label, the security system can
+     *       prevent a container's processes from using the content. By
+     *       default, the labels set by the host operating system are not
+     *       modified.
+     * - `[[r]shared|[r]slave|[r]private]` specifies mount
+     *   [propagation behavior](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt).
+     *   This only applies to bind-mounted volumes, not internal volumes
+     *   or named volumes. Mount propagation requires the source mount
+     *   point (the location where the source directory is mounted in the
+     *   host operating system) to have the correct propagation properties.
+     *   For shared volumes, the source mount point must be set to `shared`.
+     *   For slave volumes, the mount must be set to either `shared` or
+     *   `slave`.
+     * 
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    Binds?: Array<string>;
+    /**
+     * Path to a file where the container ID is written
+     * @type {string}
+     * @memberof HostConfig
+     */
+    ContainerIDFile?: string;
+    /**
+     * 
+     * @type {HostConfigAllOfLogConfig}
+     * @memberof HostConfig
+     */
+    LogConfig?: HostConfigAllOfLogConfig;
+    /**
+     * Network mode to use for this container. Supported standard values
+     * are: `bridge`, `host`, `none`, and `container:<name|id>`. Any
+     * other value is taken as a custom network's name to which this
+     * container should connect to.
+     * 
+     * @type {string}
+     * @memberof HostConfig
+     */
+    NetworkMode?: string;
+    /**
+     * PortMap describes the mapping of container ports to host ports, using the
+     * container's port-number and protocol as key in the format `<port>/<protocol>`,
+     * for example, `80/udp`.
+     * 
+     * If a container's port is mapped for multiple protocols, separate entries
+     * are added to the mapping table.
+     * 
+     * @type {{ [key: string]: Array<PortBinding> | null; }}
+     * @memberof HostConfig
+     */
+    PortBindings?: { [key: string]: Array<PortBinding> | null; };
+    /**
+     * 
+     * @type {RestartPolicy}
+     * @memberof HostConfig
+     */
+    RestartPolicy?: RestartPolicy;
+    /**
+     * Automatically remove the container when the container's process
+     * exits. This has no effect if `RestartPolicy` is set.
+     * 
+     * @type {boolean}
+     * @memberof HostConfig
+     */
+    AutoRemove?: boolean;
+    /**
+     * Driver that this container uses to mount volumes.
+     * @type {string}
+     * @memberof HostConfig
+     */
+    VolumeDriver?: string;
+    /**
+     * A list of volumes to inherit from another container, specified in
+     * the form `<container name>[:<ro|rw>]`.
+     * 
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    VolumesFrom?: Array<string>;
+    /**
+     * Specification for mounts to be added to the container.
+     * 
+     * @type {Array<Mount>}
+     * @memberof HostConfig
+     */
+    Mounts?: Array<Mount>;
+    /**
+     * Initial console size, as an `[height, width]` array.
+     * 
+     * @type {Array<number>}
+     * @memberof HostConfig
+     */
+    ConsoleSize?: Array<number> | null;
+    /**
+     * Arbitrary non-identifying metadata attached to container and
+     * provided to the runtime when the container is started.
+     * 
+     * @type {{ [key: string]: string; }}
+     * @memberof HostConfig
+     */
+    Annotations?: { [key: string]: string; };
+    /**
+     * A list of kernel capabilities to add to the container. Conflicts
+     * with option 'Capabilities'.
+     * 
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    CapAdd?: Array<string>;
+    /**
+     * A list of kernel capabilities to drop from the container. Conflicts
+     * with option 'Capabilities'.
+     * 
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    CapDrop?: Array<string>;
+    /**
+     * cgroup namespace mode for the container. Possible values are:
+     * 
+     * - `"private"`: the container runs in its own private cgroup namespace
+     * - `"host"`: use the host system's cgroup namespace
+     * 
+     * If not specified, the daemon default is used, which can either be `"private"`
+     * or `"host"`, depending on daemon version, kernel support and configuration.
+     * 
+     * @type {string}
+     * @memberof HostConfig
+     */
+    CgroupnsMode?: HostConfigCgroupnsModeEnum;
+    /**
+     * A list of DNS servers for the container to use.
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    Dns?: Array<string>;
+    /**
+     * A list of DNS options.
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    DnsOptions?: Array<string>;
+    /**
+     * A list of DNS search domains.
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    DnsSearch?: Array<string>;
+    /**
+     * A list of hostnames/IP mappings to add to the container's `/etc/hosts`
+     * file. Specified in the form `["hostname:IP"]`.
+     * 
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    ExtraHosts?: Array<string>;
+    /**
+     * A list of additional groups that the container process will run as.
+     * 
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    GroupAdd?: Array<string>;
+    /**
+     * IPC sharing mode for the container. Possible values are:
+     * 
+     * - `"none"`: own private IPC namespace, with /dev/shm not mounted
+     * - `"private"`: own private IPC namespace
+     * - `"shareable"`: own private IPC namespace, with a possibility to share it with other containers
+     * - `"container:<name|id>"`: join another (shareable) container's IPC namespace
+     * - `"host"`: use the host system's IPC namespace
+     * 
+     * If not specified, daemon default is used, which can either be `"private"`
+     * or `"shareable"`, depending on daemon version and configuration.
+     * 
+     * @type {string}
+     * @memberof HostConfig
+     */
+    IpcMode?: string;
+    /**
+     * Cgroup to use for the container.
+     * @type {string}
+     * @memberof HostConfig
+     */
+    Cgroup?: string;
+    /**
+     * A list of links for the container in the form `container_name:alias`.
+     * 
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    Links?: Array<string>;
+    /**
+     * An integer value containing the score given to the container in
+     * order to tune OOM killer preferences.
+     * 
+     * @type {number}
+     * @memberof HostConfig
+     */
+    OomScoreAdj?: number;
+    /**
+     * Set the PID (Process) Namespace mode for the container. It can be
+     * either:
+     * 
+     * - `"container:<name|id>"`: joins another container's PID namespace
+     * - `"host"`: use the host's PID namespace inside the container
+     * 
+     * @type {string}
+     * @memberof HostConfig
+     */
+    PidMode?: string;
+    /**
+     * Gives the container full access to the host.
+     * @type {boolean}
+     * @memberof HostConfig
+     */
+    Privileged?: boolean;
+    /**
+     * Allocates an ephemeral host port for all of a container's
+     * exposed ports.
+     * 
+     * Ports are de-allocated when the container stops and allocated when
+     * the container starts. The allocated port might be changed when
+     * restarting the container.
+     * 
+     * The port is selected from the ephemeral port range that depends on
+     * the kernel. For example, on Linux the range is defined by
+     * `/proc/sys/net/ipv4/ip_local_port_range`.
+     * 
+     * @type {boolean}
+     * @memberof HostConfig
+     */
+    PublishAllPorts?: boolean;
+    /**
+     * Mount the container's root filesystem as read only.
+     * @type {boolean}
+     * @memberof HostConfig
+     */
+    ReadonlyRootfs?: boolean;
+    /**
+     * A list of string values to customize labels for MLS systems, such
+     * as SELinux.
+     * 
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    SecurityOpt?: Array<string>;
+    /**
+     * Storage driver options for this container, in the form `{"size": "120G"}`.
+     * 
+     * @type {{ [key: string]: string; }}
+     * @memberof HostConfig
+     */
+    StorageOpt?: { [key: string]: string; };
+    /**
+     * A map of container directories which should be replaced by tmpfs
+     * mounts, and their corresponding mount options. For example:
+     * 
+     * ```
+     * { "/run": "rw,noexec,nosuid,size=65536k" }
+     * ```
+     * 
+     * @type {{ [key: string]: string; }}
+     * @memberof HostConfig
+     */
+    Tmpfs?: { [key: string]: string; };
+    /**
+     * UTS namespace to use for the container.
+     * @type {string}
+     * @memberof HostConfig
+     */
+    UTSMode?: string;
+    /**
+     * Sets the usernamespace mode for the container when usernamespace
+     * remapping option is enabled.
+     * 
+     * @type {string}
+     * @memberof HostConfig
+     */
+    UsernsMode?: string;
+    /**
+     * Size of `/dev/shm` in bytes. If omitted, the system uses 64MB.
+     * 
+     * @type {number}
+     * @memberof HostConfig
+     */
+    ShmSize?: number;
+    /**
+     * A list of kernel parameters (sysctls) to set in the container.
+     * For example:
+     * 
+     * ```
+     * {"net.ipv4.ip_forward": "1"}
+     * ```
+     * 
+     * @type {{ [key: string]: string; }}
+     * @memberof HostConfig
+     */
+    Sysctls?: { [key: string]: string; };
+    /**
+     * Runtime to use with this container.
+     * @type {string}
+     * @memberof HostConfig
+     */
+    Runtime?: string;
+    /**
+     * Isolation technology of the container. (Windows only)
+     * 
+     * @type {string}
+     * @memberof HostConfig
+     */
+    Isolation?: HostConfigIsolationEnum;
+    /**
+     * The list of paths to be masked inside the container (this overrides
+     * the default set of paths).
+     * 
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    MaskedPaths?: Array<string>;
+    /**
+     * The list of paths to be set as read-only inside the container
+     * (this overrides the default set of paths).
+     * 
+     * @type {Array<string>}
+     * @memberof HostConfig
+     */
+    ReadonlyPaths?: Array<string>;
 }
 
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export enum HostConfigCgroupnsModeEnum {
-  Private = "private",
-  Host = "host",
+    Private = 'private',
+    Host = 'host'
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export enum HostConfigIsolationEnum {
-  Default = "default",
-  Process = "process",
-  Hyperv = "hyperv",
+    Default = 'default',
+    Process = 'process',
+    Hyperv = 'hyperv'
 }
+
 
 /**
  * Check if a given object implements the HostConfig interface.
  */
 export function instanceOfHostConfig(value: object): value is HostConfig {
-  return true;
+    return true;
 }
 
 export function HostConfigFromJSON(json: any): HostConfig {
-  return HostConfigFromJSONTyped(json, false);
+    return HostConfigFromJSONTyped(json, false);
 }
 
 export function HostConfigFromJSONTyped(json: any, ignoreDiscriminator: boolean): HostConfig {
-  if (json == null) {
-    return json;
-  }
-  return {
-    CpuShares: json["CpuShares"] == null ? undefined : json["CpuShares"],
-    Memory: json["Memory"] == null ? undefined : json["Memory"],
-    CgroupParent: json["CgroupParent"] == null ? undefined : json["CgroupParent"],
-    BlkioWeight: json["BlkioWeight"] == null ? undefined : json["BlkioWeight"],
-    BlkioWeightDevice:
-      json["BlkioWeightDevice"] == null
-        ? undefined
-        : (json["BlkioWeightDevice"] as Array<any>).map(ResourcesBlkioWeightDeviceInnerFromJSON),
-    BlkioDeviceReadBps:
-      json["BlkioDeviceReadBps"] == null
-        ? undefined
-        : (json["BlkioDeviceReadBps"] as Array<any>).map(ThrottleDeviceFromJSON),
-    BlkioDeviceWriteBps:
-      json["BlkioDeviceWriteBps"] == null
-        ? undefined
-        : (json["BlkioDeviceWriteBps"] as Array<any>).map(ThrottleDeviceFromJSON),
-    BlkioDeviceReadIOps:
-      json["BlkioDeviceReadIOps"] == null
-        ? undefined
-        : (json["BlkioDeviceReadIOps"] as Array<any>).map(ThrottleDeviceFromJSON),
-    BlkioDeviceWriteIOps:
-      json["BlkioDeviceWriteIOps"] == null
-        ? undefined
-        : (json["BlkioDeviceWriteIOps"] as Array<any>).map(ThrottleDeviceFromJSON),
-    CpuPeriod: json["CpuPeriod"] == null ? undefined : json["CpuPeriod"],
-    CpuQuota: json["CpuQuota"] == null ? undefined : json["CpuQuota"],
-    CpuRealtimePeriod: json["CpuRealtimePeriod"] == null ? undefined : json["CpuRealtimePeriod"],
-    CpuRealtimeRuntime: json["CpuRealtimeRuntime"] == null ? undefined : json["CpuRealtimeRuntime"],
-    CpusetCpus: json["CpusetCpus"] == null ? undefined : json["CpusetCpus"],
-    CpusetMems: json["CpusetMems"] == null ? undefined : json["CpusetMems"],
-    Devices:
-      json["Devices"] == null
-        ? undefined
-        : (json["Devices"] as Array<any>).map(DeviceMappingFromJSON),
-    DeviceCgroupRules: json["DeviceCgroupRules"] == null ? undefined : json["DeviceCgroupRules"],
-    DeviceRequests:
-      json["DeviceRequests"] == null
-        ? undefined
-        : (json["DeviceRequests"] as Array<any>).map(DeviceRequestFromJSON),
-    KernelMemoryTCP: json["KernelMemoryTCP"] == null ? undefined : json["KernelMemoryTCP"],
-    MemoryReservation: json["MemoryReservation"] == null ? undefined : json["MemoryReservation"],
-    MemorySwap: json["MemorySwap"] == null ? undefined : json["MemorySwap"],
-    MemorySwappiness: json["MemorySwappiness"] == null ? undefined : json["MemorySwappiness"],
-    NanoCpus: json["NanoCpus"] == null ? undefined : json["NanoCpus"],
-    OomKillDisable: json["OomKillDisable"] == null ? undefined : json["OomKillDisable"],
-    Init: json["Init"] == null ? undefined : json["Init"],
-    PidsLimit: json["PidsLimit"] == null ? undefined : json["PidsLimit"],
-    Ulimits:
-      json["Ulimits"] == null
-        ? undefined
-        : (json["Ulimits"] as Array<any>).map(ResourcesUlimitsInnerFromJSON),
-    CpuCount: json["CpuCount"] == null ? undefined : json["CpuCount"],
-    CpuPercent: json["CpuPercent"] == null ? undefined : json["CpuPercent"],
-    IOMaximumIOps: json["IOMaximumIOps"] == null ? undefined : json["IOMaximumIOps"],
-    IOMaximumBandwidth: json["IOMaximumBandwidth"] == null ? undefined : json["IOMaximumBandwidth"],
-    Binds: json["Binds"] == null ? undefined : json["Binds"],
-    ContainerIDFile: json["ContainerIDFile"] == null ? undefined : json["ContainerIDFile"],
-    LogConfig:
-      json["LogConfig"] == null ? undefined : HostConfigAllOfLogConfigFromJSON(json["LogConfig"]),
-    NetworkMode: json["NetworkMode"] == null ? undefined : json["NetworkMode"],
-    PortBindings: json["PortBindings"] == null ? undefined : json["PortBindings"],
-    RestartPolicy:
-      json["RestartPolicy"] == null ? undefined : RestartPolicyFromJSON(json["RestartPolicy"]),
-    AutoRemove: json["AutoRemove"] == null ? undefined : json["AutoRemove"],
-    VolumeDriver: json["VolumeDriver"] == null ? undefined : json["VolumeDriver"],
-    VolumesFrom: json["VolumesFrom"] == null ? undefined : json["VolumesFrom"],
-    Mounts: json["Mounts"] == null ? undefined : (json["Mounts"] as Array<any>).map(MountFromJSON),
-    ConsoleSize: json["ConsoleSize"] == null ? undefined : json["ConsoleSize"],
-    Annotations: json["Annotations"] == null ? undefined : json["Annotations"],
-    CapAdd: json["CapAdd"] == null ? undefined : json["CapAdd"],
-    CapDrop: json["CapDrop"] == null ? undefined : json["CapDrop"],
-    CgroupnsMode: json["CgroupnsMode"] == null ? undefined : json["CgroupnsMode"],
-    Dns: json["Dns"] == null ? undefined : json["Dns"],
-    DnsOptions: json["DnsOptions"] == null ? undefined : json["DnsOptions"],
-    DnsSearch: json["DnsSearch"] == null ? undefined : json["DnsSearch"],
-    ExtraHosts: json["ExtraHosts"] == null ? undefined : json["ExtraHosts"],
-    GroupAdd: json["GroupAdd"] == null ? undefined : json["GroupAdd"],
-    IpcMode: json["IpcMode"] == null ? undefined : json["IpcMode"],
-    Cgroup: json["Cgroup"] == null ? undefined : json["Cgroup"],
-    Links: json["Links"] == null ? undefined : json["Links"],
-    OomScoreAdj: json["OomScoreAdj"] == null ? undefined : json["OomScoreAdj"],
-    PidMode: json["PidMode"] == null ? undefined : json["PidMode"],
-    Privileged: json["Privileged"] == null ? undefined : json["Privileged"],
-    PublishAllPorts: json["PublishAllPorts"] == null ? undefined : json["PublishAllPorts"],
-    ReadonlyRootfs: json["ReadonlyRootfs"] == null ? undefined : json["ReadonlyRootfs"],
-    SecurityOpt: json["SecurityOpt"] == null ? undefined : json["SecurityOpt"],
-    StorageOpt: json["StorageOpt"] == null ? undefined : json["StorageOpt"],
-    Tmpfs: json["Tmpfs"] == null ? undefined : json["Tmpfs"],
-    UTSMode: json["UTSMode"] == null ? undefined : json["UTSMode"],
-    UsernsMode: json["UsernsMode"] == null ? undefined : json["UsernsMode"],
-    ShmSize: json["ShmSize"] == null ? undefined : json["ShmSize"],
-    Sysctls: json["Sysctls"] == null ? undefined : json["Sysctls"],
-    Runtime: json["Runtime"] == null ? undefined : json["Runtime"],
-    Isolation: json["Isolation"] == null ? undefined : json["Isolation"],
-    MaskedPaths: json["MaskedPaths"] == null ? undefined : json["MaskedPaths"],
-    ReadonlyPaths: json["ReadonlyPaths"] == null ? undefined : json["ReadonlyPaths"],
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'CpuShares': json['CpuShares'] == null ? undefined : json['CpuShares'],
+        'Memory': json['Memory'] == null ? undefined : json['Memory'],
+        'CgroupParent': json['CgroupParent'] == null ? undefined : json['CgroupParent'],
+        'BlkioWeight': json['BlkioWeight'] == null ? undefined : json['BlkioWeight'],
+        'BlkioWeightDevice': json['BlkioWeightDevice'] == null ? undefined : ((json['BlkioWeightDevice'] as Array<any>).map(ResourcesBlkioWeightDeviceInnerFromJSON)),
+        'BlkioDeviceReadBps': json['BlkioDeviceReadBps'] == null ? undefined : ((json['BlkioDeviceReadBps'] as Array<any>).map(ThrottleDeviceFromJSON)),
+        'BlkioDeviceWriteBps': json['BlkioDeviceWriteBps'] == null ? undefined : ((json['BlkioDeviceWriteBps'] as Array<any>).map(ThrottleDeviceFromJSON)),
+        'BlkioDeviceReadIOps': json['BlkioDeviceReadIOps'] == null ? undefined : ((json['BlkioDeviceReadIOps'] as Array<any>).map(ThrottleDeviceFromJSON)),
+        'BlkioDeviceWriteIOps': json['BlkioDeviceWriteIOps'] == null ? undefined : ((json['BlkioDeviceWriteIOps'] as Array<any>).map(ThrottleDeviceFromJSON)),
+        'CpuPeriod': json['CpuPeriod'] == null ? undefined : json['CpuPeriod'],
+        'CpuQuota': json['CpuQuota'] == null ? undefined : json['CpuQuota'],
+        'CpuRealtimePeriod': json['CpuRealtimePeriod'] == null ? undefined : json['CpuRealtimePeriod'],
+        'CpuRealtimeRuntime': json['CpuRealtimeRuntime'] == null ? undefined : json['CpuRealtimeRuntime'],
+        'CpusetCpus': json['CpusetCpus'] == null ? undefined : json['CpusetCpus'],
+        'CpusetMems': json['CpusetMems'] == null ? undefined : json['CpusetMems'],
+        'Devices': json['Devices'] == null ? undefined : ((json['Devices'] as Array<any>).map(DeviceMappingFromJSON)),
+        'DeviceCgroupRules': json['DeviceCgroupRules'] == null ? undefined : json['DeviceCgroupRules'],
+        'DeviceRequests': json['DeviceRequests'] == null ? undefined : ((json['DeviceRequests'] as Array<any>).map(DeviceRequestFromJSON)),
+        'KernelMemoryTCP': json['KernelMemoryTCP'] == null ? undefined : json['KernelMemoryTCP'],
+        'MemoryReservation': json['MemoryReservation'] == null ? undefined : json['MemoryReservation'],
+        'MemorySwap': json['MemorySwap'] == null ? undefined : json['MemorySwap'],
+        'MemorySwappiness': json['MemorySwappiness'] == null ? undefined : json['MemorySwappiness'],
+        'NanoCpus': json['NanoCpus'] == null ? undefined : json['NanoCpus'],
+        'OomKillDisable': json['OomKillDisable'] == null ? undefined : json['OomKillDisable'],
+        'Init': json['Init'] == null ? undefined : json['Init'],
+        'PidsLimit': json['PidsLimit'] == null ? undefined : json['PidsLimit'],
+        'Ulimits': json['Ulimits'] == null ? undefined : ((json['Ulimits'] as Array<any>).map(ResourcesUlimitsInnerFromJSON)),
+        'CpuCount': json['CpuCount'] == null ? undefined : json['CpuCount'],
+        'CpuPercent': json['CpuPercent'] == null ? undefined : json['CpuPercent'],
+        'IOMaximumIOps': json['IOMaximumIOps'] == null ? undefined : json['IOMaximumIOps'],
+        'IOMaximumBandwidth': json['IOMaximumBandwidth'] == null ? undefined : json['IOMaximumBandwidth'],
+        'Binds': json['Binds'] == null ? undefined : json['Binds'],
+        'ContainerIDFile': json['ContainerIDFile'] == null ? undefined : json['ContainerIDFile'],
+        'LogConfig': json['LogConfig'] == null ? undefined : HostConfigAllOfLogConfigFromJSON(json['LogConfig']),
+        'NetworkMode': json['NetworkMode'] == null ? undefined : json['NetworkMode'],
+        'PortBindings': json['PortBindings'] == null ? undefined : json['PortBindings'],
+        'RestartPolicy': json['RestartPolicy'] == null ? undefined : RestartPolicyFromJSON(json['RestartPolicy']),
+        'AutoRemove': json['AutoRemove'] == null ? undefined : json['AutoRemove'],
+        'VolumeDriver': json['VolumeDriver'] == null ? undefined : json['VolumeDriver'],
+        'VolumesFrom': json['VolumesFrom'] == null ? undefined : json['VolumesFrom'],
+        'Mounts': json['Mounts'] == null ? undefined : ((json['Mounts'] as Array<any>).map(MountFromJSON)),
+        'ConsoleSize': json['ConsoleSize'] == null ? undefined : json['ConsoleSize'],
+        'Annotations': json['Annotations'] == null ? undefined : json['Annotations'],
+        'CapAdd': json['CapAdd'] == null ? undefined : json['CapAdd'],
+        'CapDrop': json['CapDrop'] == null ? undefined : json['CapDrop'],
+        'CgroupnsMode': json['CgroupnsMode'] == null ? undefined : json['CgroupnsMode'],
+        'Dns': json['Dns'] == null ? undefined : json['Dns'],
+        'DnsOptions': json['DnsOptions'] == null ? undefined : json['DnsOptions'],
+        'DnsSearch': json['DnsSearch'] == null ? undefined : json['DnsSearch'],
+        'ExtraHosts': json['ExtraHosts'] == null ? undefined : json['ExtraHosts'],
+        'GroupAdd': json['GroupAdd'] == null ? undefined : json['GroupAdd'],
+        'IpcMode': json['IpcMode'] == null ? undefined : json['IpcMode'],
+        'Cgroup': json['Cgroup'] == null ? undefined : json['Cgroup'],
+        'Links': json['Links'] == null ? undefined : json['Links'],
+        'OomScoreAdj': json['OomScoreAdj'] == null ? undefined : json['OomScoreAdj'],
+        'PidMode': json['PidMode'] == null ? undefined : json['PidMode'],
+        'Privileged': json['Privileged'] == null ? undefined : json['Privileged'],
+        'PublishAllPorts': json['PublishAllPorts'] == null ? undefined : json['PublishAllPorts'],
+        'ReadonlyRootfs': json['ReadonlyRootfs'] == null ? undefined : json['ReadonlyRootfs'],
+        'SecurityOpt': json['SecurityOpt'] == null ? undefined : json['SecurityOpt'],
+        'StorageOpt': json['StorageOpt'] == null ? undefined : json['StorageOpt'],
+        'Tmpfs': json['Tmpfs'] == null ? undefined : json['Tmpfs'],
+        'UTSMode': json['UTSMode'] == null ? undefined : json['UTSMode'],
+        'UsernsMode': json['UsernsMode'] == null ? undefined : json['UsernsMode'],
+        'ShmSize': json['ShmSize'] == null ? undefined : json['ShmSize'],
+        'Sysctls': json['Sysctls'] == null ? undefined : json['Sysctls'],
+        'Runtime': json['Runtime'] == null ? undefined : json['Runtime'],
+        'Isolation': json['Isolation'] == null ? undefined : json['Isolation'],
+        'MaskedPaths': json['MaskedPaths'] == null ? undefined : json['MaskedPaths'],
+        'ReadonlyPaths': json['ReadonlyPaths'] == null ? undefined : json['ReadonlyPaths'],
+    };
 }
 
 export function HostConfigToJSON(json: any): HostConfig {
-  return HostConfigToJSONTyped(json, false);
+    return HostConfigToJSONTyped(json, false);
 }
 
-export function HostConfigToJSONTyped(
-  value?: HostConfig | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function HostConfigToJSONTyped(value?: HostConfig | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    CpuShares: value["CpuShares"],
-    Memory: value["Memory"],
-    CgroupParent: value["CgroupParent"],
-    BlkioWeight: value["BlkioWeight"],
-    BlkioWeightDevice:
-      value["BlkioWeightDevice"] == null
-        ? undefined
-        : (value["BlkioWeightDevice"] as Array<any>).map(ResourcesBlkioWeightDeviceInnerToJSON),
-    BlkioDeviceReadBps:
-      value["BlkioDeviceReadBps"] == null
-        ? undefined
-        : (value["BlkioDeviceReadBps"] as Array<any>).map(ThrottleDeviceToJSON),
-    BlkioDeviceWriteBps:
-      value["BlkioDeviceWriteBps"] == null
-        ? undefined
-        : (value["BlkioDeviceWriteBps"] as Array<any>).map(ThrottleDeviceToJSON),
-    BlkioDeviceReadIOps:
-      value["BlkioDeviceReadIOps"] == null
-        ? undefined
-        : (value["BlkioDeviceReadIOps"] as Array<any>).map(ThrottleDeviceToJSON),
-    BlkioDeviceWriteIOps:
-      value["BlkioDeviceWriteIOps"] == null
-        ? undefined
-        : (value["BlkioDeviceWriteIOps"] as Array<any>).map(ThrottleDeviceToJSON),
-    CpuPeriod: value["CpuPeriod"],
-    CpuQuota: value["CpuQuota"],
-    CpuRealtimePeriod: value["CpuRealtimePeriod"],
-    CpuRealtimeRuntime: value["CpuRealtimeRuntime"],
-    CpusetCpus: value["CpusetCpus"],
-    CpusetMems: value["CpusetMems"],
-    Devices:
-      value["Devices"] == null
-        ? undefined
-        : (value["Devices"] as Array<any>).map(DeviceMappingToJSON),
-    DeviceCgroupRules: value["DeviceCgroupRules"],
-    DeviceRequests:
-      value["DeviceRequests"] == null
-        ? undefined
-        : (value["DeviceRequests"] as Array<any>).map(DeviceRequestToJSON),
-    KernelMemoryTCP: value["KernelMemoryTCP"],
-    MemoryReservation: value["MemoryReservation"],
-    MemorySwap: value["MemorySwap"],
-    MemorySwappiness: value["MemorySwappiness"],
-    NanoCpus: value["NanoCpus"],
-    OomKillDisable: value["OomKillDisable"],
-    Init: value["Init"],
-    PidsLimit: value["PidsLimit"],
-    Ulimits:
-      value["Ulimits"] == null
-        ? undefined
-        : (value["Ulimits"] as Array<any>).map(ResourcesUlimitsInnerToJSON),
-    CpuCount: value["CpuCount"],
-    CpuPercent: value["CpuPercent"],
-    IOMaximumIOps: value["IOMaximumIOps"],
-    IOMaximumBandwidth: value["IOMaximumBandwidth"],
-    Binds: value["Binds"],
-    ContainerIDFile: value["ContainerIDFile"],
-    LogConfig: HostConfigAllOfLogConfigToJSON(value["LogConfig"]),
-    NetworkMode: value["NetworkMode"],
-    PortBindings: value["PortBindings"],
-    RestartPolicy: RestartPolicyToJSON(value["RestartPolicy"]),
-    AutoRemove: value["AutoRemove"],
-    VolumeDriver: value["VolumeDriver"],
-    VolumesFrom: value["VolumesFrom"],
-    Mounts: value["Mounts"] == null ? undefined : (value["Mounts"] as Array<any>).map(MountToJSON),
-    ConsoleSize: value["ConsoleSize"],
-    Annotations: value["Annotations"],
-    CapAdd: value["CapAdd"],
-    CapDrop: value["CapDrop"],
-    CgroupnsMode: value["CgroupnsMode"],
-    Dns: value["Dns"],
-    DnsOptions: value["DnsOptions"],
-    DnsSearch: value["DnsSearch"],
-    ExtraHosts: value["ExtraHosts"],
-    GroupAdd: value["GroupAdd"],
-    IpcMode: value["IpcMode"],
-    Cgroup: value["Cgroup"],
-    Links: value["Links"],
-    OomScoreAdj: value["OomScoreAdj"],
-    PidMode: value["PidMode"],
-    Privileged: value["Privileged"],
-    PublishAllPorts: value["PublishAllPorts"],
-    ReadonlyRootfs: value["ReadonlyRootfs"],
-    SecurityOpt: value["SecurityOpt"],
-    StorageOpt: value["StorageOpt"],
-    Tmpfs: value["Tmpfs"],
-    UTSMode: value["UTSMode"],
-    UsernsMode: value["UsernsMode"],
-    ShmSize: value["ShmSize"],
-    Sysctls: value["Sysctls"],
-    Runtime: value["Runtime"],
-    Isolation: value["Isolation"],
-    MaskedPaths: value["MaskedPaths"],
-    ReadonlyPaths: value["ReadonlyPaths"],
-  };
+    return {
+        
+        'CpuShares': value['CpuShares'],
+        'Memory': value['Memory'],
+        'CgroupParent': value['CgroupParent'],
+        'BlkioWeight': value['BlkioWeight'],
+        'BlkioWeightDevice': value['BlkioWeightDevice'] == null ? undefined : ((value['BlkioWeightDevice'] as Array<any>).map(ResourcesBlkioWeightDeviceInnerToJSON)),
+        'BlkioDeviceReadBps': value['BlkioDeviceReadBps'] == null ? undefined : ((value['BlkioDeviceReadBps'] as Array<any>).map(ThrottleDeviceToJSON)),
+        'BlkioDeviceWriteBps': value['BlkioDeviceWriteBps'] == null ? undefined : ((value['BlkioDeviceWriteBps'] as Array<any>).map(ThrottleDeviceToJSON)),
+        'BlkioDeviceReadIOps': value['BlkioDeviceReadIOps'] == null ? undefined : ((value['BlkioDeviceReadIOps'] as Array<any>).map(ThrottleDeviceToJSON)),
+        'BlkioDeviceWriteIOps': value['BlkioDeviceWriteIOps'] == null ? undefined : ((value['BlkioDeviceWriteIOps'] as Array<any>).map(ThrottleDeviceToJSON)),
+        'CpuPeriod': value['CpuPeriod'],
+        'CpuQuota': value['CpuQuota'],
+        'CpuRealtimePeriod': value['CpuRealtimePeriod'],
+        'CpuRealtimeRuntime': value['CpuRealtimeRuntime'],
+        'CpusetCpus': value['CpusetCpus'],
+        'CpusetMems': value['CpusetMems'],
+        'Devices': value['Devices'] == null ? undefined : ((value['Devices'] as Array<any>).map(DeviceMappingToJSON)),
+        'DeviceCgroupRules': value['DeviceCgroupRules'],
+        'DeviceRequests': value['DeviceRequests'] == null ? undefined : ((value['DeviceRequests'] as Array<any>).map(DeviceRequestToJSON)),
+        'KernelMemoryTCP': value['KernelMemoryTCP'],
+        'MemoryReservation': value['MemoryReservation'],
+        'MemorySwap': value['MemorySwap'],
+        'MemorySwappiness': value['MemorySwappiness'],
+        'NanoCpus': value['NanoCpus'],
+        'OomKillDisable': value['OomKillDisable'],
+        'Init': value['Init'],
+        'PidsLimit': value['PidsLimit'],
+        'Ulimits': value['Ulimits'] == null ? undefined : ((value['Ulimits'] as Array<any>).map(ResourcesUlimitsInnerToJSON)),
+        'CpuCount': value['CpuCount'],
+        'CpuPercent': value['CpuPercent'],
+        'IOMaximumIOps': value['IOMaximumIOps'],
+        'IOMaximumBandwidth': value['IOMaximumBandwidth'],
+        'Binds': value['Binds'],
+        'ContainerIDFile': value['ContainerIDFile'],
+        'LogConfig': HostConfigAllOfLogConfigToJSON(value['LogConfig']),
+        'NetworkMode': value['NetworkMode'],
+        'PortBindings': value['PortBindings'],
+        'RestartPolicy': RestartPolicyToJSON(value['RestartPolicy']),
+        'AutoRemove': value['AutoRemove'],
+        'VolumeDriver': value['VolumeDriver'],
+        'VolumesFrom': value['VolumesFrom'],
+        'Mounts': value['Mounts'] == null ? undefined : ((value['Mounts'] as Array<any>).map(MountToJSON)),
+        'ConsoleSize': value['ConsoleSize'],
+        'Annotations': value['Annotations'],
+        'CapAdd': value['CapAdd'],
+        'CapDrop': value['CapDrop'],
+        'CgroupnsMode': value['CgroupnsMode'],
+        'Dns': value['Dns'],
+        'DnsOptions': value['DnsOptions'],
+        'DnsSearch': value['DnsSearch'],
+        'ExtraHosts': value['ExtraHosts'],
+        'GroupAdd': value['GroupAdd'],
+        'IpcMode': value['IpcMode'],
+        'Cgroup': value['Cgroup'],
+        'Links': value['Links'],
+        'OomScoreAdj': value['OomScoreAdj'],
+        'PidMode': value['PidMode'],
+        'Privileged': value['Privileged'],
+        'PublishAllPorts': value['PublishAllPorts'],
+        'ReadonlyRootfs': value['ReadonlyRootfs'],
+        'SecurityOpt': value['SecurityOpt'],
+        'StorageOpt': value['StorageOpt'],
+        'Tmpfs': value['Tmpfs'],
+        'UTSMode': value['UTSMode'],
+        'UsernsMode': value['UsernsMode'],
+        'ShmSize': value['ShmSize'],
+        'Sysctls': value['Sysctls'],
+        'Runtime': value['Runtime'],
+        'Isolation': value['Isolation'],
+        'MaskedPaths': value['MaskedPaths'],
+        'ReadonlyPaths': value['ReadonlyPaths'],
+    };
 }
+

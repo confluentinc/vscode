@@ -12,84 +12,80 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { HealthCheck } from "./HealthCheck";
+import { mapValues } from '../runtime';
+import type { HealthCheck } from './HealthCheck';
 import {
-  HealthCheckFromJSON,
-  HealthCheckFromJSONTyped,
-  HealthCheckToJSON,
-  HealthCheckToJSONTyped,
-} from "./HealthCheck";
+    HealthCheckFromJSON,
+    HealthCheckFromJSONTyped,
+    HealthCheckToJSON,
+    HealthCheckToJSONTyped,
+} from './HealthCheck';
 
 /**
- *
+ * 
  * @export
  * @interface HealthResponse
  */
 export interface HealthResponse {
-  /**
-   *
-   * @type {Array<HealthCheck>}
-   * @memberof HealthResponse
-   */
-  checks?: Array<HealthCheck>;
-  /**
-   *
-   * @type {string}
-   * @memberof HealthResponse
-   */
-  status?: HealthResponseStatusEnum;
+    /**
+     * 
+     * @type {Array<HealthCheck>}
+     * @memberof HealthResponse
+     */
+    checks?: Array<HealthCheck>;
+    /**
+     * 
+     * @type {string}
+     * @memberof HealthResponse
+     */
+    status?: HealthResponseStatusEnum;
 }
 
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export enum HealthResponseStatusEnum {
-  Up = "UP",
-  Down = "DOWN",
+    Up = 'UP',
+    Down = 'DOWN'
 }
+
 
 /**
  * Check if a given object implements the HealthResponse interface.
  */
 export function instanceOfHealthResponse(value: object): value is HealthResponse {
-  return true;
+    return true;
 }
 
 export function HealthResponseFromJSON(json: any): HealthResponse {
-  return HealthResponseFromJSONTyped(json, false);
+    return HealthResponseFromJSONTyped(json, false);
 }
 
-export function HealthResponseFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): HealthResponse {
-  if (json == null) {
-    return json;
-  }
-  return {
-    checks:
-      json["checks"] == null ? undefined : (json["checks"] as Array<any>).map(HealthCheckFromJSON),
-    status: json["status"] == null ? undefined : json["status"],
-  };
+export function HealthResponseFromJSONTyped(json: any, ignoreDiscriminator: boolean): HealthResponse {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'checks': json['checks'] == null ? undefined : ((json['checks'] as Array<any>).map(HealthCheckFromJSON)),
+        'status': json['status'] == null ? undefined : json['status'],
+    };
 }
 
 export function HealthResponseToJSON(json: any): HealthResponse {
-  return HealthResponseToJSONTyped(json, false);
+    return HealthResponseToJSONTyped(json, false);
 }
 
-export function HealthResponseToJSONTyped(
-  value?: HealthResponse | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function HealthResponseToJSONTyped(value?: HealthResponse | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    checks:
-      value["checks"] == null ? undefined : (value["checks"] as Array<any>).map(HealthCheckToJSON),
-    status: value["status"],
-  };
+    return {
+        
+        'checks': value['checks'] == null ? undefined : ((value['checks'] as Array<any>).map(HealthCheckToJSON)),
+        'status': value['status'],
+    };
 }
+

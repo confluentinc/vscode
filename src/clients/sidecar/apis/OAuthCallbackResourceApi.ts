@@ -12,61 +12,55 @@
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
+
+import * as runtime from '../runtime';
 
 export interface GatewayV1CallbackVscodeDocsGetRequest {
-  code?: string;
-  state?: string;
+    code?: string;
+    state?: string;
 }
 
 /**
- *
+ * 
  */
 export class OAuthCallbackResourceApi extends runtime.BaseAPI {
-  /**
-   * Callback
-   */
-  async gatewayV1CallbackVscodeDocsGetRaw(
-    requestParameters: GatewayV1CallbackVscodeDocsGetRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<string>> {
-    const queryParameters: any = {};
 
-    if (requestParameters["code"] != null) {
-      queryParameters["code"] = requestParameters["code"];
+    /**
+     * Callback
+     */
+    async gatewayV1CallbackVscodeDocsGetRaw(requestParameters: GatewayV1CallbackVscodeDocsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
+        const queryParameters: any = {};
+
+        if (requestParameters['code'] != null) {
+            queryParameters['code'] = requestParameters['code'];
+        }
+
+        if (requestParameters['state'] != null) {
+            queryParameters['state'] = requestParameters['state'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/gateway/v1/callback-vscode-docs`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<string>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
     }
 
-    if (requestParameters["state"] != null) {
-      queryParameters["state"] = requestParameters["state"];
+    /**
+     * Callback
+     */
+    async gatewayV1CallbackVscodeDocsGet(requestParameters: GatewayV1CallbackVscodeDocsGetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
+        const response = await this.gatewayV1CallbackVscodeDocsGetRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/gateway/v1/callback-vscode-docs`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    if (this.isJsonMime(response.headers.get("content-type"))) {
-      return new runtime.JSONApiResponse<string>(response);
-    } else {
-      return new runtime.TextApiResponse(response) as any;
-    }
-  }
-
-  /**
-   * Callback
-   */
-  async gatewayV1CallbackVscodeDocsGet(
-    requestParameters: GatewayV1CallbackVscodeDocsGetRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<string> {
-    const response = await this.gatewayV1CallbackVscodeDocsGetRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
 }

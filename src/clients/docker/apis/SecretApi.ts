@@ -2,284 +2,233 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
+
+import * as runtime from '../runtime';
 import type {
   ErrorResponse,
   IdResponse,
   Secret,
   SecretCreateRequest,
   SecretSpec,
-} from "../models/index";
+} from '../models/index';
 import {
-  ErrorResponseFromJSON,
-  ErrorResponseToJSON,
-  IdResponseFromJSON,
-  IdResponseToJSON,
-  SecretFromJSON,
-  SecretToJSON,
-  SecretCreateRequestFromJSON,
-  SecretCreateRequestToJSON,
-  SecretSpecFromJSON,
-  SecretSpecToJSON,
-} from "../models/index";
+    ErrorResponseFromJSON,
+    ErrorResponseToJSON,
+    IdResponseFromJSON,
+    IdResponseToJSON,
+    SecretFromJSON,
+    SecretToJSON,
+    SecretCreateRequestFromJSON,
+    SecretCreateRequestToJSON,
+    SecretSpecFromJSON,
+    SecretSpecToJSON,
+} from '../models/index';
 
 export interface SecretCreateOperationRequest {
-  body?: SecretCreateRequest;
+    body?: SecretCreateRequest;
 }
 
 export interface SecretDeleteRequest {
-  id: string;
+    id: string;
 }
 
 export interface SecretInspectRequest {
-  id: string;
+    id: string;
 }
 
 export interface SecretListRequest {
-  filters?: string;
+    filters?: string;
 }
 
 export interface SecretUpdateRequest {
-  id: string;
-  version: number;
-  body?: SecretSpec;
+    id: string;
+    version: number;
+    body?: SecretSpec;
 }
 
 /**
- *
+ * 
  */
 export class SecretApi extends runtime.BaseAPI {
-  /**
-   * Create a secret
-   */
-  async secretCreateRaw(
-    requestParameters: SecretCreateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<IdResponse>> {
-    const queryParameters: any = {};
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * Create a secret
+     */
+    async secretCreateRaw(requestParameters: SecretCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<IdResponse>> {
+        const queryParameters: any = {};
 
-    headerParameters["Content-Type"] = "application/json";
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    const response = await this.request(
-      {
-        path: `/secrets/create`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: SecretCreateRequestToJSON(requestParameters["body"]),
-      },
-      initOverrides,
-    );
+        headerParameters['Content-Type'] = 'application/json';
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => IdResponseFromJSON(jsonValue));
-  }
+        const response = await this.request({
+            path: `/secrets/create`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SecretCreateRequestToJSON(requestParameters['body']),
+        }, initOverrides);
 
-  /**
-   * Create a secret
-   */
-  async secretCreate(
-    requestParameters: SecretCreateOperationRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<IdResponse> {
-    const response = await this.secretCreateRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Delete a secret
-   */
-  async secretDeleteRaw(
-    requestParameters: SecretDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling secretDelete().',
-      );
+        return new runtime.JSONApiResponse(response, (jsonValue) => IdResponseFromJSON(jsonValue));
     }
 
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/secrets/{id}`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "DELETE",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Delete a secret
-   */
-  async secretDelete(
-    requestParameters: SecretDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.secretDeleteRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Inspect a secret
-   */
-  async secretInspectRaw(
-    requestParameters: SecretInspectRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Secret>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling secretInspect().',
-      );
+    /**
+     * Create a secret
+     */
+    async secretCreate(requestParameters: SecretCreateOperationRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<IdResponse> {
+        const response = await this.secretCreateRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    const queryParameters: any = {};
+    /**
+     * Delete a secret
+     */
+    async secretDeleteRaw(requestParameters: SecretDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling secretDelete().'
+            );
+        }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/secrets/{id}`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => SecretFromJSON(jsonValue));
-  }
+        const response = await this.request({
+            path: `/secrets/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   * Inspect a secret
-   */
-  async secretInspect(
-    requestParameters: SecretInspectRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Secret> {
-    const response = await this.secretInspectRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * List secrets
-   */
-  async secretListRaw(
-    requestParameters: SecretListRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Array<Secret>>> {
-    const queryParameters: any = {};
-
-    if (requestParameters["filters"] != null) {
-      queryParameters["filters"] = requestParameters["filters"];
+        return new runtime.VoidApiResponse(response);
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/secrets`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(SecretFromJSON));
-  }
-
-  /**
-   * List secrets
-   */
-  async secretList(
-    requestParameters: SecretListRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Array<Secret>> {
-    const response = await this.secretListRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Update a Secret
-   */
-  async secretUpdateRaw(
-    requestParameters: SecretUpdateRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling secretUpdate().',
-      );
+    /**
+     * Delete a secret
+     */
+    async secretDelete(requestParameters: SecretDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.secretDeleteRaw(requestParameters, initOverrides);
     }
 
-    if (requestParameters["version"] == null) {
-      throw new runtime.RequiredError(
-        "version",
-        'Required parameter "version" was null or undefined when calling secretUpdate().',
-      );
+    /**
+     * Inspect a secret
+     */
+    async secretInspectRaw(requestParameters: SecretInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Secret>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling secretInspect().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/secrets/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SecretFromJSON(jsonValue));
     }
 
-    const queryParameters: any = {};
-
-    if (requestParameters["version"] != null) {
-      queryParameters["version"] = requestParameters["version"];
+    /**
+     * Inspect a secret
+     */
+    async secretInspect(requestParameters: SecretInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Secret> {
+        const response = await this.secretInspectRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * List secrets
+     */
+    async secretListRaw(requestParameters: SecretListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Secret>>> {
+        const queryParameters: any = {};
 
-    headerParameters["Content-Type"] = "application/json";
+        if (requestParameters['filters'] != null) {
+            queryParameters['filters'] = requestParameters['filters'];
+        }
 
-    const response = await this.request(
-      {
-        path: `/secrets/{id}/update`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: SecretSpecToJSON(requestParameters["body"]),
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.VoidApiResponse(response);
-  }
+        const response = await this.request({
+            path: `/secrets`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   * Update a Secret
-   */
-  async secretUpdate(
-    requestParameters: SecretUpdateRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.secretUpdateRaw(requestParameters, initOverrides);
-  }
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(SecretFromJSON));
+    }
+
+    /**
+     * List secrets
+     */
+    async secretList(requestParameters: SecretListRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Secret>> {
+        const response = await this.secretListRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Update a Secret
+     */
+    async secretUpdateRaw(requestParameters: SecretUpdateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling secretUpdate().'
+            );
+        }
+
+        if (requestParameters['version'] == null) {
+            throw new runtime.RequiredError(
+                'version',
+                'Required parameter "version" was null or undefined when calling secretUpdate().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['version'] != null) {
+            queryParameters['version'] = requestParameters['version'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/secrets/{id}/update`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SecretSpecToJSON(requestParameters['body']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Update a Secret
+     */
+    async secretUpdate(requestParameters: SecretUpdateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.secretUpdateRaw(requestParameters, initOverrides);
+    }
+
 }

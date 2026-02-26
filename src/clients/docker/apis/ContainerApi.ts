@@ -2,17 +2,18 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
+
+import * as runtime from '../runtime';
 import type {
   ContainerCreateRequest,
   ContainerCreateResponse,
@@ -25,1571 +26,1266 @@ import type {
   ContainerWaitResponse,
   ErrorResponse,
   FilesystemChange,
-} from "../models/index";
+} from '../models/index';
 import {
-  ContainerCreateRequestFromJSON,
-  ContainerCreateRequestToJSON,
-  ContainerCreateResponseFromJSON,
-  ContainerCreateResponseToJSON,
-  ContainerInspectResponseFromJSON,
-  ContainerInspectResponseToJSON,
-  ContainerPruneResponseFromJSON,
-  ContainerPruneResponseToJSON,
-  ContainerSummaryFromJSON,
-  ContainerSummaryToJSON,
-  ContainerTopResponseFromJSON,
-  ContainerTopResponseToJSON,
-  ContainerUpdateRequestFromJSON,
-  ContainerUpdateRequestToJSON,
-  ContainerUpdateResponseFromJSON,
-  ContainerUpdateResponseToJSON,
-  ContainerWaitResponseFromJSON,
-  ContainerWaitResponseToJSON,
-  ErrorResponseFromJSON,
-  ErrorResponseToJSON,
-  FilesystemChangeFromJSON,
-  FilesystemChangeToJSON,
-} from "../models/index";
+    ContainerCreateRequestFromJSON,
+    ContainerCreateRequestToJSON,
+    ContainerCreateResponseFromJSON,
+    ContainerCreateResponseToJSON,
+    ContainerInspectResponseFromJSON,
+    ContainerInspectResponseToJSON,
+    ContainerPruneResponseFromJSON,
+    ContainerPruneResponseToJSON,
+    ContainerSummaryFromJSON,
+    ContainerSummaryToJSON,
+    ContainerTopResponseFromJSON,
+    ContainerTopResponseToJSON,
+    ContainerUpdateRequestFromJSON,
+    ContainerUpdateRequestToJSON,
+    ContainerUpdateResponseFromJSON,
+    ContainerUpdateResponseToJSON,
+    ContainerWaitResponseFromJSON,
+    ContainerWaitResponseToJSON,
+    ErrorResponseFromJSON,
+    ErrorResponseToJSON,
+    FilesystemChangeFromJSON,
+    FilesystemChangeToJSON,
+} from '../models/index';
 
 export interface ContainerArchiveRequest {
-  id: string;
-  path: string;
+    id: string;
+    path: string;
 }
 
 export interface ContainerArchiveInfoRequest {
-  id: string;
-  path: string;
+    id: string;
+    path: string;
 }
 
 export interface ContainerAttachRequest {
-  id: string;
-  detachKeys?: string;
-  logs?: boolean;
-  stream?: boolean;
-  stdin?: boolean;
-  stdout?: boolean;
-  stderr?: boolean;
+    id: string;
+    detachKeys?: string;
+    logs?: boolean;
+    stream?: boolean;
+    stdin?: boolean;
+    stdout?: boolean;
+    stderr?: boolean;
 }
 
 export interface ContainerAttachWebsocketRequest {
-  id: string;
-  detachKeys?: string;
-  logs?: boolean;
-  stream?: boolean;
-  stdin?: boolean;
-  stdout?: boolean;
-  stderr?: boolean;
+    id: string;
+    detachKeys?: string;
+    logs?: boolean;
+    stream?: boolean;
+    stdin?: boolean;
+    stdout?: boolean;
+    stderr?: boolean;
 }
 
 export interface ContainerChangesRequest {
-  id: string;
+    id: string;
 }
 
 export interface ContainerCreateOperationRequest {
-  body: ContainerCreateRequest;
-  name?: string;
-  platform?: string;
+    body: ContainerCreateRequest;
+    name?: string;
+    platform?: string;
 }
 
 export interface ContainerDeleteRequest {
-  id: string;
-  v?: boolean;
-  force?: boolean;
-  link?: boolean;
+    id: string;
+    v?: boolean;
+    force?: boolean;
+    link?: boolean;
 }
 
 export interface ContainerExportRequest {
-  id: string;
+    id: string;
 }
 
 export interface ContainerInspectRequest {
-  id: string;
-  size?: boolean;
+    id: string;
+    size?: boolean;
 }
 
 export interface ContainerKillRequest {
-  id: string;
-  signal?: string;
+    id: string;
+    signal?: string;
 }
 
 export interface ContainerListRequest {
-  all?: boolean;
-  limit?: number;
-  size?: boolean;
-  filters?: string;
+    all?: boolean;
+    limit?: number;
+    size?: boolean;
+    filters?: string;
 }
 
 export interface ContainerLogsRequest {
-  id: string;
-  follow?: boolean;
-  stdout?: boolean;
-  stderr?: boolean;
-  since?: number;
-  until?: number;
-  timestamps?: boolean;
-  tail?: string;
+    id: string;
+    follow?: boolean;
+    stdout?: boolean;
+    stderr?: boolean;
+    since?: number;
+    until?: number;
+    timestamps?: boolean;
+    tail?: string;
 }
 
 export interface ContainerPauseRequest {
-  id: string;
+    id: string;
 }
 
 export interface ContainerPruneRequest {
-  filters?: string;
+    filters?: string;
 }
 
 export interface ContainerRenameRequest {
-  id: string;
-  name: string;
+    id: string;
+    name: string;
 }
 
 export interface ContainerResizeRequest {
-  id: string;
-  h?: number;
-  w?: number;
+    id: string;
+    h?: number;
+    w?: number;
 }
 
 export interface ContainerRestartRequest {
-  id: string;
-  signal?: string;
-  t?: number;
+    id: string;
+    signal?: string;
+    t?: number;
 }
 
 export interface ContainerStartRequest {
-  id: string;
-  detachKeys?: string;
+    id: string;
+    detachKeys?: string;
 }
 
 export interface ContainerStatsRequest {
-  id: string;
-  stream?: boolean;
-  one_shot?: boolean;
+    id: string;
+    stream?: boolean;
+    one_shot?: boolean;
 }
 
 export interface ContainerStopRequest {
-  id: string;
-  signal?: string;
-  t?: number;
+    id: string;
+    signal?: string;
+    t?: number;
 }
 
 export interface ContainerTopRequest {
-  id: string;
-  ps_args?: string;
+    id: string;
+    ps_args?: string;
 }
 
 export interface ContainerUnpauseRequest {
-  id: string;
+    id: string;
 }
 
 export interface ContainerUpdateOperationRequest {
-  id: string;
-  update: ContainerUpdateRequest;
+    id: string;
+    update: ContainerUpdateRequest;
 }
 
 export interface ContainerWaitRequest {
-  id: string;
-  condition?: ContainerWaitConditionEnum;
+    id: string;
+    condition?: ContainerWaitConditionEnum;
 }
 
 export interface PutContainerArchiveRequest {
-  id: string;
-  path: string;
-  inputStream: Blob;
-  noOverwriteDirNonDir?: string;
-  copyUIDGID?: string;
+    id: string;
+    path: string;
+    inputStream: Blob;
+    noOverwriteDirNonDir?: string;
+    copyUIDGID?: string;
 }
 
 /**
- *
+ * 
  */
 export class ContainerApi extends runtime.BaseAPI {
-  /**
-   * Get a tar archive of a resource in the filesystem of container id.
-   * Get an archive of a filesystem resource in a container
-   */
-  async containerArchiveRaw(
-    requestParameters: ContainerArchiveRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerArchive().',
-      );
-    }
-
-    if (requestParameters["path"] == null) {
-      throw new runtime.RequiredError(
-        "path",
-        'Required parameter "path" was null or undefined when calling containerArchive().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["path"] != null) {
-      queryParameters["path"] = requestParameters["path"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/archive`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Get a tar archive of a resource in the filesystem of container id.
-   * Get an archive of a filesystem resource in a container
-   */
-  async containerArchive(
-    requestParameters: ContainerArchiveRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerArchiveRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * A response header `X-Docker-Container-Path-Stat` is returned, containing a base64 - encoded JSON object with some filesystem header information about the path.
-   * Get information about files in a container
-   */
-  async containerArchiveInfoRaw(
-    requestParameters: ContainerArchiveInfoRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerArchiveInfo().',
-      );
-    }
-
-    if (requestParameters["path"] == null) {
-      throw new runtime.RequiredError(
-        "path",
-        'Required parameter "path" was null or undefined when calling containerArchiveInfo().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["path"] != null) {
-      queryParameters["path"] = requestParameters["path"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/archive`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "HEAD",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * A response header `X-Docker-Container-Path-Stat` is returned, containing a base64 - encoded JSON object with some filesystem header information about the path.
-   * Get information about files in a container
-   */
-  async containerArchiveInfo(
-    requestParameters: ContainerArchiveInfoRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerArchiveInfoRaw(requestParameters, initOverrides);
-  }
 
-  /**
-   * Attach to a container to read its output or send it input. You can attach to the same container multiple times and you can reattach to containers that have been detached.  Either the `stream` or `logs` parameter must be `true` for this endpoint to do anything.  See the [documentation for the `docker attach` command](https://docs.docker.com/engine/reference/commandline/attach/) for more details.  ### Hijacking  This endpoint hijacks the HTTP connection to transport `stdin`, `stdout`, and `stderr` on the same socket.  This is the response from the daemon for an attach request:  ``` HTTP/1.1 200 OK Content-Type: application/vnd.docker.raw-stream  [STREAM] ```  After the headers and two new lines, the TCP connection can now be used for raw, bidirectional communication between the client and server.  To hint potential proxies about connection hijacking, the Docker client can also optionally send connection upgrade headers.  For example, the client sends this request to upgrade the connection:  ``` POST /containers/16253994b7c4/attach?stream=1&stdout=1 HTTP/1.1 Upgrade: tcp Connection: Upgrade ```  The Docker daemon will respond with a `101 UPGRADED` response, and will similarly follow with the raw stream:  ``` HTTP/1.1 101 UPGRADED Content-Type: application/vnd.docker.raw-stream Connection: Upgrade Upgrade: tcp  [STREAM] ```  ### Stream format  When the TTY setting is disabled in [`POST /containers/create`](#operation/ContainerCreate), the HTTP Content-Type header is set to application/vnd.docker.multiplexed-stream and the stream over the hijacked connected is multiplexed to separate out `stdout` and `stderr`. The stream consists of a series of frames, each containing a header and a payload.  The header contains the information which the stream writes (`stdout` or `stderr`). It also contains the size of the associated frame encoded in the last four bytes (`uint32`).  It is encoded on the first eight bytes like this:  ```go header := [8]byte{STREAM_TYPE, 0, 0, 0, SIZE1, SIZE2, SIZE3, SIZE4} ```  `STREAM_TYPE` can be:  - 0: `stdin` (is written on `stdout`) - 1: `stdout` - 2: `stderr`  `SIZE1, SIZE2, SIZE3, SIZE4` are the four bytes of the `uint32` size encoded as big endian.  Following the header is the payload, which is the specified number of bytes of `STREAM_TYPE`.  The simplest way to implement this protocol is the following:  1. Read 8 bytes. 2. Choose `stdout` or `stderr` depending on the first byte. 3. Extract the frame size from the last four bytes. 4. Read the extracted size and output it on the correct output. 5. Goto 1.  ### Stream format when using a TTY  When the TTY setting is enabled in [`POST /containers/create`](#operation/ContainerCreate), the stream is not multiplexed. The data exchanged over the hijacked connection is simply the raw data from the process PTY and client\'s `stdin`.
-   * Attach to a container
-   */
-  async containerAttachRaw(
-    requestParameters: ContainerAttachRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerAttach().',
-      );
-    }
+    /**
+     * Get a tar archive of a resource in the filesystem of container id.
+     * Get an archive of a filesystem resource in a container
+     */
+    async containerArchiveRaw(requestParameters: ContainerArchiveRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerArchive().'
+            );
+        }
+
+        if (requestParameters['path'] == null) {
+            throw new runtime.RequiredError(
+                'path',
+                'Required parameter "path" was null or undefined when calling containerArchive().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['path'] != null) {
+            queryParameters['path'] = requestParameters['path'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/archive`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Get a tar archive of a resource in the filesystem of container id.
+     * Get an archive of a filesystem resource in a container
+     */
+    async containerArchive(requestParameters: ContainerArchiveRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerArchiveRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * A response header `X-Docker-Container-Path-Stat` is returned, containing a base64 - encoded JSON object with some filesystem header information about the path. 
+     * Get information about files in a container
+     */
+    async containerArchiveInfoRaw(requestParameters: ContainerArchiveInfoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerArchiveInfo().'
+            );
+        }
+
+        if (requestParameters['path'] == null) {
+            throw new runtime.RequiredError(
+                'path',
+                'Required parameter "path" was null or undefined when calling containerArchiveInfo().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['path'] != null) {
+            queryParameters['path'] = requestParameters['path'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/archive`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'HEAD',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * A response header `X-Docker-Container-Path-Stat` is returned, containing a base64 - encoded JSON object with some filesystem header information about the path. 
+     * Get information about files in a container
+     */
+    async containerArchiveInfo(requestParameters: ContainerArchiveInfoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerArchiveInfoRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Attach to a container to read its output or send it input. You can attach to the same container multiple times and you can reattach to containers that have been detached.  Either the `stream` or `logs` parameter must be `true` for this endpoint to do anything.  See the [documentation for the `docker attach` command](https://docs.docker.com/engine/reference/commandline/attach/) for more details.  ### Hijacking  This endpoint hijacks the HTTP connection to transport `stdin`, `stdout`, and `stderr` on the same socket.  This is the response from the daemon for an attach request:  ``` HTTP/1.1 200 OK Content-Type: application/vnd.docker.raw-stream  [STREAM] ```  After the headers and two new lines, the TCP connection can now be used for raw, bidirectional communication between the client and server.  To hint potential proxies about connection hijacking, the Docker client can also optionally send connection upgrade headers.  For example, the client sends this request to upgrade the connection:  ``` POST /containers/16253994b7c4/attach?stream=1&stdout=1 HTTP/1.1 Upgrade: tcp Connection: Upgrade ```  The Docker daemon will respond with a `101 UPGRADED` response, and will similarly follow with the raw stream:  ``` HTTP/1.1 101 UPGRADED Content-Type: application/vnd.docker.raw-stream Connection: Upgrade Upgrade: tcp  [STREAM] ```  ### Stream format  When the TTY setting is disabled in [`POST /containers/create`](#operation/ContainerCreate), the HTTP Content-Type header is set to application/vnd.docker.multiplexed-stream and the stream over the hijacked connected is multiplexed to separate out `stdout` and `stderr`. The stream consists of a series of frames, each containing a header and a payload.  The header contains the information which the stream writes (`stdout` or `stderr`). It also contains the size of the associated frame encoded in the last four bytes (`uint32`).  It is encoded on the first eight bytes like this:  ```go header := [8]byte{STREAM_TYPE, 0, 0, 0, SIZE1, SIZE2, SIZE3, SIZE4} ```  `STREAM_TYPE` can be:  - 0: `stdin` (is written on `stdout`) - 1: `stdout` - 2: `stderr`  `SIZE1, SIZE2, SIZE3, SIZE4` are the four bytes of the `uint32` size encoded as big endian.  Following the header is the payload, which is the specified number of bytes of `STREAM_TYPE`.  The simplest way to implement this protocol is the following:  1. Read 8 bytes. 2. Choose `stdout` or `stderr` depending on the first byte. 3. Extract the frame size from the last four bytes. 4. Read the extracted size and output it on the correct output. 5. Goto 1.  ### Stream format when using a TTY  When the TTY setting is enabled in [`POST /containers/create`](#operation/ContainerCreate), the stream is not multiplexed. The data exchanged over the hijacked connection is simply the raw data from the process PTY and client\'s `stdin`. 
+     * Attach to a container
+     */
+    async containerAttachRaw(requestParameters: ContainerAttachRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerAttach().'
+            );
+        }
 
-    const queryParameters: any = {};
+        const queryParameters: any = {};
 
-    if (requestParameters["detachKeys"] != null) {
-      queryParameters["detachKeys"] = requestParameters["detachKeys"];
-    }
+        if (requestParameters['detachKeys'] != null) {
+            queryParameters['detachKeys'] = requestParameters['detachKeys'];
+        }
 
-    if (requestParameters["logs"] != null) {
-      queryParameters["logs"] = requestParameters["logs"];
-    }
+        if (requestParameters['logs'] != null) {
+            queryParameters['logs'] = requestParameters['logs'];
+        }
 
-    if (requestParameters["stream"] != null) {
-      queryParameters["stream"] = requestParameters["stream"];
-    }
+        if (requestParameters['stream'] != null) {
+            queryParameters['stream'] = requestParameters['stream'];
+        }
+
+        if (requestParameters['stdin'] != null) {
+            queryParameters['stdin'] = requestParameters['stdin'];
+        }
 
-    if (requestParameters["stdin"] != null) {
-      queryParameters["stdin"] = requestParameters["stdin"];
-    }
+        if (requestParameters['stdout'] != null) {
+            queryParameters['stdout'] = requestParameters['stdout'];
+        }
+
+        if (requestParameters['stderr'] != null) {
+            queryParameters['stderr'] = requestParameters['stderr'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    if (requestParameters["stdout"] != null) {
-      queryParameters["stdout"] = requestParameters["stdout"];
+        const response = await this.request({
+            path: `/containers/{id}/attach`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
     }
 
-    if (requestParameters["stderr"] != null) {
-      queryParameters["stderr"] = requestParameters["stderr"];
+    /**
+     * Attach to a container to read its output or send it input. You can attach to the same container multiple times and you can reattach to containers that have been detached.  Either the `stream` or `logs` parameter must be `true` for this endpoint to do anything.  See the [documentation for the `docker attach` command](https://docs.docker.com/engine/reference/commandline/attach/) for more details.  ### Hijacking  This endpoint hijacks the HTTP connection to transport `stdin`, `stdout`, and `stderr` on the same socket.  This is the response from the daemon for an attach request:  ``` HTTP/1.1 200 OK Content-Type: application/vnd.docker.raw-stream  [STREAM] ```  After the headers and two new lines, the TCP connection can now be used for raw, bidirectional communication between the client and server.  To hint potential proxies about connection hijacking, the Docker client can also optionally send connection upgrade headers.  For example, the client sends this request to upgrade the connection:  ``` POST /containers/16253994b7c4/attach?stream=1&stdout=1 HTTP/1.1 Upgrade: tcp Connection: Upgrade ```  The Docker daemon will respond with a `101 UPGRADED` response, and will similarly follow with the raw stream:  ``` HTTP/1.1 101 UPGRADED Content-Type: application/vnd.docker.raw-stream Connection: Upgrade Upgrade: tcp  [STREAM] ```  ### Stream format  When the TTY setting is disabled in [`POST /containers/create`](#operation/ContainerCreate), the HTTP Content-Type header is set to application/vnd.docker.multiplexed-stream and the stream over the hijacked connected is multiplexed to separate out `stdout` and `stderr`. The stream consists of a series of frames, each containing a header and a payload.  The header contains the information which the stream writes (`stdout` or `stderr`). It also contains the size of the associated frame encoded in the last four bytes (`uint32`).  It is encoded on the first eight bytes like this:  ```go header := [8]byte{STREAM_TYPE, 0, 0, 0, SIZE1, SIZE2, SIZE3, SIZE4} ```  `STREAM_TYPE` can be:  - 0: `stdin` (is written on `stdout`) - 1: `stdout` - 2: `stderr`  `SIZE1, SIZE2, SIZE3, SIZE4` are the four bytes of the `uint32` size encoded as big endian.  Following the header is the payload, which is the specified number of bytes of `STREAM_TYPE`.  The simplest way to implement this protocol is the following:  1. Read 8 bytes. 2. Choose `stdout` or `stderr` depending on the first byte. 3. Extract the frame size from the last four bytes. 4. Read the extracted size and output it on the correct output. 5. Goto 1.  ### Stream format when using a TTY  When the TTY setting is enabled in [`POST /containers/create`](#operation/ContainerCreate), the stream is not multiplexed. The data exchanged over the hijacked connection is simply the raw data from the process PTY and client\'s `stdin`. 
+     * Attach to a container
+     */
+    async containerAttach(requestParameters: ContainerAttachRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerAttachRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Attach to a container via a websocket
+     */
+    async containerAttachWebsocketRaw(requestParameters: ContainerAttachWebsocketRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerAttachWebsocket().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['detachKeys'] != null) {
+            queryParameters['detachKeys'] = requestParameters['detachKeys'];
+        }
+
+        if (requestParameters['logs'] != null) {
+            queryParameters['logs'] = requestParameters['logs'];
+        }
+
+        if (requestParameters['stream'] != null) {
+            queryParameters['stream'] = requestParameters['stream'];
+        }
+
+        if (requestParameters['stdin'] != null) {
+            queryParameters['stdin'] = requestParameters['stdin'];
+        }
+
+        if (requestParameters['stdout'] != null) {
+            queryParameters['stdout'] = requestParameters['stdout'];
+        }
+
+        if (requestParameters['stderr'] != null) {
+            queryParameters['stderr'] = requestParameters['stderr'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/attach/ws`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Attach to a container via a websocket
+     */
+    async containerAttachWebsocket(requestParameters: ContainerAttachWebsocketRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerAttachWebsocketRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Returns which files in a container\'s filesystem have been added, deleted, or modified. The `Kind` of modification can be one of:  - `0`: Modified (\"C\") - `1`: Added (\"A\") - `2`: Deleted (\"D\") 
+     * Get changes on a container’s filesystem
+     */
+    async containerChangesRaw(requestParameters: ContainerChangesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<FilesystemChange>>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerChanges().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/changes`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(FilesystemChangeFromJSON));
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * Returns which files in a container\'s filesystem have been added, deleted, or modified. The `Kind` of modification can be one of:  - `0`: Modified (\"C\") - `1`: Added (\"A\") - `2`: Deleted (\"D\") 
+     * Get changes on a container’s filesystem
+     */
+    async containerChanges(requestParameters: ContainerChangesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<FilesystemChange>> {
+        const response = await this.containerChangesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Create a container
+     */
+    async containerCreateRaw(requestParameters: ContainerCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ContainerCreateResponse>> {
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling containerCreate().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['name'] != null) {
+            queryParameters['name'] = requestParameters['name'];
+        }
 
-    const response = await this.request(
-      {
-        path: `/containers/{id}/attach`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        if (requestParameters['platform'] != null) {
+            queryParameters['platform'] = requestParameters['platform'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.VoidApiResponse(response);
-  }
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/containers/create`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ContainerCreateRequestToJSON(requestParameters['body']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ContainerCreateResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Create a container
+     */
+    async containerCreate(requestParameters: ContainerCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ContainerCreateResponse> {
+        const response = await this.containerCreateRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Remove a container
+     */
+    async containerDeleteRaw(requestParameters: ContainerDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerDelete().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['v'] != null) {
+            queryParameters['v'] = requestParameters['v'];
+        }
+
+        if (requestParameters['force'] != null) {
+            queryParameters['force'] = requestParameters['force'];
+        }
+
+        if (requestParameters['link'] != null) {
+            queryParameters['link'] = requestParameters['link'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Remove a container
+     */
+    async containerDelete(requestParameters: ContainerDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerDeleteRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Export the contents of a container as a tarball.
+     * Export a container
+     */
+    async containerExportRaw(requestParameters: ContainerExportRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerExport().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/export`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Export the contents of a container as a tarball.
+     * Export a container
+     */
+    async containerExport(requestParameters: ContainerExportRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerExportRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Return low-level information about a container.
+     * Inspect a container
+     */
+    async containerInspectRaw(requestParameters: ContainerInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ContainerInspectResponse>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerInspect().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['size'] != null) {
+            queryParameters['size'] = requestParameters['size'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/json`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ContainerInspectResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Return low-level information about a container.
+     * Inspect a container
+     */
+    async containerInspect(requestParameters: ContainerInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ContainerInspectResponse> {
+        const response = await this.containerInspectRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Send a POSIX signal to a container, defaulting to killing to the container. 
+     * Kill a container
+     */
+    async containerKillRaw(requestParameters: ContainerKillRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerKill().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['signal'] != null) {
+            queryParameters['signal'] = requestParameters['signal'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/kill`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Send a POSIX signal to a container, defaulting to killing to the container. 
+     * Kill a container
+     */
+    async containerKill(requestParameters: ContainerKillRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerKillRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Returns a list of containers. For details on the format, see the [inspect endpoint](#operation/ContainerInspect).  Note that it uses a different, smaller representation of a container than inspecting a single container. For example, the list of linked containers is not propagated . 
+     * List containers
+     */
+    async containerListRaw(requestParameters: ContainerListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ContainerSummary>>> {
+        const queryParameters: any = {};
+
+        if (requestParameters['all'] != null) {
+            queryParameters['all'] = requestParameters['all'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['size'] != null) {
+            queryParameters['size'] = requestParameters['size'];
+        }
+
+        if (requestParameters['filters'] != null) {
+            queryParameters['filters'] = requestParameters['filters'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/json`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ContainerSummaryFromJSON));
+    }
+
+    /**
+     * Returns a list of containers. For details on the format, see the [inspect endpoint](#operation/ContainerInspect).  Note that it uses a different, smaller representation of a container than inspecting a single container. For example, the list of linked containers is not propagated . 
+     * List containers
+     */
+    async containerList(requestParameters: ContainerListRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ContainerSummary>> {
+        const response = await this.containerListRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get `stdout` and `stderr` logs from a container.  Note: This endpoint works only for containers with the `json-file` or `journald` logging driver. 
+     * Get container logs
+     */
+    async containerLogsRaw(requestParameters: ContainerLogsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerLogs().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['follow'] != null) {
+            queryParameters['follow'] = requestParameters['follow'];
+        }
+
+        if (requestParameters['stdout'] != null) {
+            queryParameters['stdout'] = requestParameters['stdout'];
+        }
+
+        if (requestParameters['stderr'] != null) {
+            queryParameters['stderr'] = requestParameters['stderr'];
+        }
+
+        if (requestParameters['since'] != null) {
+            queryParameters['since'] = requestParameters['since'];
+        }
+
+        if (requestParameters['until'] != null) {
+            queryParameters['until'] = requestParameters['until'];
+        }
+
+        if (requestParameters['timestamps'] != null) {
+            queryParameters['timestamps'] = requestParameters['timestamps'];
+        }
+
+        if (requestParameters['tail'] != null) {
+            queryParameters['tail'] = requestParameters['tail'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/logs`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     * Get `stdout` and `stderr` logs from a container.  Note: This endpoint works only for containers with the `json-file` or `journald` logging driver. 
+     * Get container logs
+     */
+    async containerLogs(requestParameters: ContainerLogsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.containerLogsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Use the freezer cgroup to suspend all processes in a container.  Traditionally, when suspending a process the `SIGSTOP` signal is used, which is observable by the process being suspended. With the freezer cgroup the process is unaware, and unable to capture, that it is being suspended, and subsequently resumed. 
+     * Pause a container
+     */
+    async containerPauseRaw(requestParameters: ContainerPauseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerPause().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/pause`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Use the freezer cgroup to suspend all processes in a container.  Traditionally, when suspending a process the `SIGSTOP` signal is used, which is observable by the process being suspended. With the freezer cgroup the process is unaware, and unable to capture, that it is being suspended, and subsequently resumed. 
+     * Pause a container
+     */
+    async containerPause(requestParameters: ContainerPauseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerPauseRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Delete stopped containers
+     */
+    async containerPruneRaw(requestParameters: ContainerPruneRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ContainerPruneResponse>> {
+        const queryParameters: any = {};
+
+        if (requestParameters['filters'] != null) {
+            queryParameters['filters'] = requestParameters['filters'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/prune`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ContainerPruneResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Delete stopped containers
+     */
+    async containerPrune(requestParameters: ContainerPruneRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ContainerPruneResponse> {
+        const response = await this.containerPruneRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Rename a container
+     */
+    async containerRenameRaw(requestParameters: ContainerRenameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerRename().'
+            );
+        }
+
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling containerRename().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['name'] != null) {
+            queryParameters['name'] = requestParameters['name'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/rename`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Rename a container
+     */
+    async containerRename(requestParameters: ContainerRenameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerRenameRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Resize the TTY for a container.
+     * Resize a container TTY
+     */
+    async containerResizeRaw(requestParameters: ContainerResizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerResize().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['h'] != null) {
+            queryParameters['h'] = requestParameters['h'];
+        }
+
+        if (requestParameters['w'] != null) {
+            queryParameters['w'] = requestParameters['w'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/resize`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Resize the TTY for a container.
+     * Resize a container TTY
+     */
+    async containerResize(requestParameters: ContainerResizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerResizeRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Restart a container
+     */
+    async containerRestartRaw(requestParameters: ContainerRestartRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerRestart().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['signal'] != null) {
+            queryParameters['signal'] = requestParameters['signal'];
+        }
+
+        if (requestParameters['t'] != null) {
+            queryParameters['t'] = requestParameters['t'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/restart`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Restart a container
+     */
+    async containerRestart(requestParameters: ContainerRestartRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerRestartRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Start a container
+     */
+    async containerStartRaw(requestParameters: ContainerStartRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerStart().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['detachKeys'] != null) {
+            queryParameters['detachKeys'] = requestParameters['detachKeys'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/start`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Start a container
+     */
+    async containerStart(requestParameters: ContainerStartRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerStartRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * This endpoint returns a live stream of a container’s resource usage statistics.  The `precpu_stats` is the CPU statistic of the *previous* read, and is used to calculate the CPU usage percentage. It is not an exact copy of the `cpu_stats` field.  If either `precpu_stats.online_cpus` or `cpu_stats.online_cpus` is nil then for compatibility with older daemons the length of the corresponding `cpu_usage.percpu_usage` array should be used.  On a cgroup v2 host, the following fields are not set * `blkio_stats`: all fields other than `io_service_bytes_recursive` * `cpu_stats`: `cpu_usage.percpu_usage` * `memory_stats`: `max_usage` and `failcnt` Also, `memory_stats.stats` fields are incompatible with cgroup v1.  To calculate the values shown by the `stats` command of the docker cli tool the following formulas can be used: * used_memory = `memory_stats.usage - memory_stats.stats.cache` * available_memory = `memory_stats.limit` * Memory usage % = `(used_memory / available_memory) * 100.0` * cpu_delta = `cpu_stats.cpu_usage.total_usage - precpu_stats.cpu_usage.total_usage` * system_cpu_delta = `cpu_stats.system_cpu_usage - precpu_stats.system_cpu_usage` * number_cpus = `length(cpu_stats.cpu_usage.percpu_usage)` or `cpu_stats.online_cpus` * CPU usage % = `(cpu_delta / system_cpu_delta) * number_cpus * 100.0` 
+     * Get container stats based on resource usage
+     */
+    async containerStatsRaw(requestParameters: ContainerStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<object>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerStats().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['stream'] != null) {
+            queryParameters['stream'] = requestParameters['stream'];
+        }
+
+        if (requestParameters['one_shot'] != null) {
+            queryParameters['one-shot'] = requestParameters['one_shot'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/stats`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse<any>(response);
+    }
+
+    /**
+     * This endpoint returns a live stream of a container’s resource usage statistics.  The `precpu_stats` is the CPU statistic of the *previous* read, and is used to calculate the CPU usage percentage. It is not an exact copy of the `cpu_stats` field.  If either `precpu_stats.online_cpus` or `cpu_stats.online_cpus` is nil then for compatibility with older daemons the length of the corresponding `cpu_usage.percpu_usage` array should be used.  On a cgroup v2 host, the following fields are not set * `blkio_stats`: all fields other than `io_service_bytes_recursive` * `cpu_stats`: `cpu_usage.percpu_usage` * `memory_stats`: `max_usage` and `failcnt` Also, `memory_stats.stats` fields are incompatible with cgroup v1.  To calculate the values shown by the `stats` command of the docker cli tool the following formulas can be used: * used_memory = `memory_stats.usage - memory_stats.stats.cache` * available_memory = `memory_stats.limit` * Memory usage % = `(used_memory / available_memory) * 100.0` * cpu_delta = `cpu_stats.cpu_usage.total_usage - precpu_stats.cpu_usage.total_usage` * system_cpu_delta = `cpu_stats.system_cpu_usage - precpu_stats.system_cpu_usage` * number_cpus = `length(cpu_stats.cpu_usage.percpu_usage)` or `cpu_stats.online_cpus` * CPU usage % = `(cpu_delta / system_cpu_delta) * number_cpus * 100.0` 
+     * Get container stats based on resource usage
+     */
+    async containerStats(requestParameters: ContainerStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<object> {
+        const response = await this.containerStatsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Stop a container
+     */
+    async containerStopRaw(requestParameters: ContainerStopRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerStop().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['signal'] != null) {
+            queryParameters['signal'] = requestParameters['signal'];
+        }
+
+        if (requestParameters['t'] != null) {
+            queryParameters['t'] = requestParameters['t'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/stop`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Stop a container
+     */
+    async containerStop(requestParameters: ContainerStopRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerStopRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * On Unix systems, this is done by running the `ps` command. This endpoint is not supported on Windows. 
+     * List processes running inside a container
+     */
+    async containerTopRaw(requestParameters: ContainerTopRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ContainerTopResponse>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerTop().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['ps_args'] != null) {
+            queryParameters['ps_args'] = requestParameters['ps_args'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/top`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ContainerTopResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * On Unix systems, this is done by running the `ps` command. This endpoint is not supported on Windows. 
+     * List processes running inside a container
+     */
+    async containerTop(requestParameters: ContainerTopRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ContainerTopResponse> {
+        const response = await this.containerTopRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Resume a container which has been paused.
+     * Unpause a container
+     */
+    async containerUnpauseRaw(requestParameters: ContainerUnpauseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerUnpause().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/unpause`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Resume a container which has been paused.
+     * Unpause a container
+     */
+    async containerUnpause(requestParameters: ContainerUnpauseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.containerUnpauseRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Change various configuration options of a container without having to recreate it. 
+     * Update a container
+     */
+    async containerUpdateRaw(requestParameters: ContainerUpdateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ContainerUpdateResponse>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerUpdate().'
+            );
+        }
+
+        if (requestParameters['update'] == null) {
+            throw new runtime.RequiredError(
+                'update',
+                'Required parameter "update" was null or undefined when calling containerUpdate().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/containers/{id}/update`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ContainerUpdateRequestToJSON(requestParameters['update']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ContainerUpdateResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Change various configuration options of a container without having to recreate it. 
+     * Update a container
+     */
+    async containerUpdate(requestParameters: ContainerUpdateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ContainerUpdateResponse> {
+        const response = await this.containerUpdateRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Block until a container stops, then returns the exit code.
+     * Wait for a container
+     */
+    async containerWaitRaw(requestParameters: ContainerWaitRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ContainerWaitResponse>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling containerWait().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['condition'] != null) {
+            queryParameters['condition'] = requestParameters['condition'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/containers/{id}/wait`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ContainerWaitResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Block until a container stops, then returns the exit code.
+     * Wait for a container
+     */
+    async containerWait(requestParameters: ContainerWaitRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ContainerWaitResponse> {
+        const response = await this.containerWaitRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Upload a tar archive to be extracted to a path in the filesystem of container id. `path` parameter is asserted to be a directory. If it exists as a file, 400 error will be returned with message \"not a directory\". 
+     * Extract an archive of files or folders to a directory in a container
+     */
+    async putContainerArchiveRaw(requestParameters: PutContainerArchiveRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling putContainerArchive().'
+            );
+        }
+
+        if (requestParameters['path'] == null) {
+            throw new runtime.RequiredError(
+                'path',
+                'Required parameter "path" was null or undefined when calling putContainerArchive().'
+            );
+        }
+
+        if (requestParameters['inputStream'] == null) {
+            throw new runtime.RequiredError(
+                'inputStream',
+                'Required parameter "inputStream" was null or undefined when calling putContainerArchive().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['path'] != null) {
+            queryParameters['path'] = requestParameters['path'];
+        }
+
+        if (requestParameters['noOverwriteDirNonDir'] != null) {
+            queryParameters['noOverwriteDirNonDir'] = requestParameters['noOverwriteDirNonDir'];
+        }
+
+        if (requestParameters['copyUIDGID'] != null) {
+            queryParameters['copyUIDGID'] = requestParameters['copyUIDGID'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/x-tar';
+
+        const response = await this.request({
+            path: `/containers/{id}/archive`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['inputStream'] as any,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Upload a tar archive to be extracted to a path in the filesystem of container id. `path` parameter is asserted to be a directory. If it exists as a file, 400 error will be returned with message \"not a directory\". 
+     * Extract an archive of files or folders to a directory in a container
+     */
+    async putContainerArchive(requestParameters: PutContainerArchiveRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.putContainerArchiveRaw(requestParameters, initOverrides);
+    }
 
-  /**
-   * Attach to a container to read its output or send it input. You can attach to the same container multiple times and you can reattach to containers that have been detached.  Either the `stream` or `logs` parameter must be `true` for this endpoint to do anything.  See the [documentation for the `docker attach` command](https://docs.docker.com/engine/reference/commandline/attach/) for more details.  ### Hijacking  This endpoint hijacks the HTTP connection to transport `stdin`, `stdout`, and `stderr` on the same socket.  This is the response from the daemon for an attach request:  ``` HTTP/1.1 200 OK Content-Type: application/vnd.docker.raw-stream  [STREAM] ```  After the headers and two new lines, the TCP connection can now be used for raw, bidirectional communication between the client and server.  To hint potential proxies about connection hijacking, the Docker client can also optionally send connection upgrade headers.  For example, the client sends this request to upgrade the connection:  ``` POST /containers/16253994b7c4/attach?stream=1&stdout=1 HTTP/1.1 Upgrade: tcp Connection: Upgrade ```  The Docker daemon will respond with a `101 UPGRADED` response, and will similarly follow with the raw stream:  ``` HTTP/1.1 101 UPGRADED Content-Type: application/vnd.docker.raw-stream Connection: Upgrade Upgrade: tcp  [STREAM] ```  ### Stream format  When the TTY setting is disabled in [`POST /containers/create`](#operation/ContainerCreate), the HTTP Content-Type header is set to application/vnd.docker.multiplexed-stream and the stream over the hijacked connected is multiplexed to separate out `stdout` and `stderr`. The stream consists of a series of frames, each containing a header and a payload.  The header contains the information which the stream writes (`stdout` or `stderr`). It also contains the size of the associated frame encoded in the last four bytes (`uint32`).  It is encoded on the first eight bytes like this:  ```go header := [8]byte{STREAM_TYPE, 0, 0, 0, SIZE1, SIZE2, SIZE3, SIZE4} ```  `STREAM_TYPE` can be:  - 0: `stdin` (is written on `stdout`) - 1: `stdout` - 2: `stderr`  `SIZE1, SIZE2, SIZE3, SIZE4` are the four bytes of the `uint32` size encoded as big endian.  Following the header is the payload, which is the specified number of bytes of `STREAM_TYPE`.  The simplest way to implement this protocol is the following:  1. Read 8 bytes. 2. Choose `stdout` or `stderr` depending on the first byte. 3. Extract the frame size from the last four bytes. 4. Read the extracted size and output it on the correct output. 5. Goto 1.  ### Stream format when using a TTY  When the TTY setting is enabled in [`POST /containers/create`](#operation/ContainerCreate), the stream is not multiplexed. The data exchanged over the hijacked connection is simply the raw data from the process PTY and client\'s `stdin`.
-   * Attach to a container
-   */
-  async containerAttach(
-    requestParameters: ContainerAttachRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerAttachRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Attach to a container via a websocket
-   */
-  async containerAttachWebsocketRaw(
-    requestParameters: ContainerAttachWebsocketRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerAttachWebsocket().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["detachKeys"] != null) {
-      queryParameters["detachKeys"] = requestParameters["detachKeys"];
-    }
-
-    if (requestParameters["logs"] != null) {
-      queryParameters["logs"] = requestParameters["logs"];
-    }
-
-    if (requestParameters["stream"] != null) {
-      queryParameters["stream"] = requestParameters["stream"];
-    }
-
-    if (requestParameters["stdin"] != null) {
-      queryParameters["stdin"] = requestParameters["stdin"];
-    }
-
-    if (requestParameters["stdout"] != null) {
-      queryParameters["stdout"] = requestParameters["stdout"];
-    }
-
-    if (requestParameters["stderr"] != null) {
-      queryParameters["stderr"] = requestParameters["stderr"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/attach/ws`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Attach to a container via a websocket
-   */
-  async containerAttachWebsocket(
-    requestParameters: ContainerAttachWebsocketRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerAttachWebsocketRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Returns which files in a container\'s filesystem have been added, deleted, or modified. The `Kind` of modification can be one of:  - `0`: Modified (\"C\") - `1`: Added (\"A\") - `2`: Deleted (\"D\")
-   * Get changes on a container’s filesystem
-   */
-  async containerChangesRaw(
-    requestParameters: ContainerChangesRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Array<FilesystemChange>>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerChanges().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/changes`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      jsonValue.map(FilesystemChangeFromJSON),
-    );
-  }
-
-  /**
-   * Returns which files in a container\'s filesystem have been added, deleted, or modified. The `Kind` of modification can be one of:  - `0`: Modified (\"C\") - `1`: Added (\"A\") - `2`: Deleted (\"D\")
-   * Get changes on a container’s filesystem
-   */
-  async containerChanges(
-    requestParameters: ContainerChangesRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Array<FilesystemChange>> {
-    const response = await this.containerChangesRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Create a container
-   */
-  async containerCreateRaw(
-    requestParameters: ContainerCreateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<ContainerCreateResponse>> {
-    if (requestParameters["body"] == null) {
-      throw new runtime.RequiredError(
-        "body",
-        'Required parameter "body" was null or undefined when calling containerCreate().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["name"] != null) {
-      queryParameters["name"] = requestParameters["name"];
-    }
-
-    if (requestParameters["platform"] != null) {
-      queryParameters["platform"] = requestParameters["platform"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    headerParameters["Content-Type"] = "application/json";
-
-    const response = await this.request(
-      {
-        path: `/containers/create`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: ContainerCreateRequestToJSON(requestParameters["body"]),
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      ContainerCreateResponseFromJSON(jsonValue),
-    );
-  }
-
-  /**
-   * Create a container
-   */
-  async containerCreate(
-    requestParameters: ContainerCreateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<ContainerCreateResponse> {
-    const response = await this.containerCreateRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Remove a container
-   */
-  async containerDeleteRaw(
-    requestParameters: ContainerDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerDelete().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["v"] != null) {
-      queryParameters["v"] = requestParameters["v"];
-    }
-
-    if (requestParameters["force"] != null) {
-      queryParameters["force"] = requestParameters["force"];
-    }
-
-    if (requestParameters["link"] != null) {
-      queryParameters["link"] = requestParameters["link"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "DELETE",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Remove a container
-   */
-  async containerDelete(
-    requestParameters: ContainerDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerDeleteRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Export the contents of a container as a tarball.
-   * Export a container
-   */
-  async containerExportRaw(
-    requestParameters: ContainerExportRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerExport().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/export`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Export the contents of a container as a tarball.
-   * Export a container
-   */
-  async containerExport(
-    requestParameters: ContainerExportRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerExportRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Return low-level information about a container.
-   * Inspect a container
-   */
-  async containerInspectRaw(
-    requestParameters: ContainerInspectRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<ContainerInspectResponse>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerInspect().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["size"] != null) {
-      queryParameters["size"] = requestParameters["size"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/json`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      ContainerInspectResponseFromJSON(jsonValue),
-    );
-  }
-
-  /**
-   * Return low-level information about a container.
-   * Inspect a container
-   */
-  async containerInspect(
-    requestParameters: ContainerInspectRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<ContainerInspectResponse> {
-    const response = await this.containerInspectRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Send a POSIX signal to a container, defaulting to killing to the container.
-   * Kill a container
-   */
-  async containerKillRaw(
-    requestParameters: ContainerKillRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerKill().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["signal"] != null) {
-      queryParameters["signal"] = requestParameters["signal"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/kill`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Send a POSIX signal to a container, defaulting to killing to the container.
-   * Kill a container
-   */
-  async containerKill(
-    requestParameters: ContainerKillRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerKillRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Returns a list of containers. For details on the format, see the [inspect endpoint](#operation/ContainerInspect).  Note that it uses a different, smaller representation of a container than inspecting a single container. For example, the list of linked containers is not propagated .
-   * List containers
-   */
-  async containerListRaw(
-    requestParameters: ContainerListRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Array<ContainerSummary>>> {
-    const queryParameters: any = {};
-
-    if (requestParameters["all"] != null) {
-      queryParameters["all"] = requestParameters["all"];
-    }
-
-    if (requestParameters["limit"] != null) {
-      queryParameters["limit"] = requestParameters["limit"];
-    }
-
-    if (requestParameters["size"] != null) {
-      queryParameters["size"] = requestParameters["size"];
-    }
-
-    if (requestParameters["filters"] != null) {
-      queryParameters["filters"] = requestParameters["filters"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/json`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      jsonValue.map(ContainerSummaryFromJSON),
-    );
-  }
-
-  /**
-   * Returns a list of containers. For details on the format, see the [inspect endpoint](#operation/ContainerInspect).  Note that it uses a different, smaller representation of a container than inspecting a single container. For example, the list of linked containers is not propagated .
-   * List containers
-   */
-  async containerList(
-    requestParameters: ContainerListRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Array<ContainerSummary>> {
-    const response = await this.containerListRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Get `stdout` and `stderr` logs from a container.  Note: This endpoint works only for containers with the `json-file` or `journald` logging driver.
-   * Get container logs
-   */
-  async containerLogsRaw(
-    requestParameters: ContainerLogsRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Blob>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerLogs().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["follow"] != null) {
-      queryParameters["follow"] = requestParameters["follow"];
-    }
-
-    if (requestParameters["stdout"] != null) {
-      queryParameters["stdout"] = requestParameters["stdout"];
-    }
-
-    if (requestParameters["stderr"] != null) {
-      queryParameters["stderr"] = requestParameters["stderr"];
-    }
-
-    if (requestParameters["since"] != null) {
-      queryParameters["since"] = requestParameters["since"];
-    }
-
-    if (requestParameters["until"] != null) {
-      queryParameters["until"] = requestParameters["until"];
-    }
-
-    if (requestParameters["timestamps"] != null) {
-      queryParameters["timestamps"] = requestParameters["timestamps"];
-    }
-
-    if (requestParameters["tail"] != null) {
-      queryParameters["tail"] = requestParameters["tail"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/logs`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.BlobApiResponse(response);
-  }
-
-  /**
-   * Get `stdout` and `stderr` logs from a container.  Note: This endpoint works only for containers with the `json-file` or `journald` logging driver.
-   * Get container logs
-   */
-  async containerLogs(
-    requestParameters: ContainerLogsRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Blob> {
-    const response = await this.containerLogsRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Use the freezer cgroup to suspend all processes in a container.  Traditionally, when suspending a process the `SIGSTOP` signal is used, which is observable by the process being suspended. With the freezer cgroup the process is unaware, and unable to capture, that it is being suspended, and subsequently resumed.
-   * Pause a container
-   */
-  async containerPauseRaw(
-    requestParameters: ContainerPauseRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerPause().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/pause`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Use the freezer cgroup to suspend all processes in a container.  Traditionally, when suspending a process the `SIGSTOP` signal is used, which is observable by the process being suspended. With the freezer cgroup the process is unaware, and unable to capture, that it is being suspended, and subsequently resumed.
-   * Pause a container
-   */
-  async containerPause(
-    requestParameters: ContainerPauseRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerPauseRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Delete stopped containers
-   */
-  async containerPruneRaw(
-    requestParameters: ContainerPruneRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<ContainerPruneResponse>> {
-    const queryParameters: any = {};
-
-    if (requestParameters["filters"] != null) {
-      queryParameters["filters"] = requestParameters["filters"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/prune`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      ContainerPruneResponseFromJSON(jsonValue),
-    );
-  }
-
-  /**
-   * Delete stopped containers
-   */
-  async containerPrune(
-    requestParameters: ContainerPruneRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<ContainerPruneResponse> {
-    const response = await this.containerPruneRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Rename a container
-   */
-  async containerRenameRaw(
-    requestParameters: ContainerRenameRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerRename().',
-      );
-    }
-
-    if (requestParameters["name"] == null) {
-      throw new runtime.RequiredError(
-        "name",
-        'Required parameter "name" was null or undefined when calling containerRename().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["name"] != null) {
-      queryParameters["name"] = requestParameters["name"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/rename`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Rename a container
-   */
-  async containerRename(
-    requestParameters: ContainerRenameRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerRenameRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Resize the TTY for a container.
-   * Resize a container TTY
-   */
-  async containerResizeRaw(
-    requestParameters: ContainerResizeRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerResize().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["h"] != null) {
-      queryParameters["h"] = requestParameters["h"];
-    }
-
-    if (requestParameters["w"] != null) {
-      queryParameters["w"] = requestParameters["w"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/resize`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Resize the TTY for a container.
-   * Resize a container TTY
-   */
-  async containerResize(
-    requestParameters: ContainerResizeRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerResizeRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Restart a container
-   */
-  async containerRestartRaw(
-    requestParameters: ContainerRestartRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerRestart().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["signal"] != null) {
-      queryParameters["signal"] = requestParameters["signal"];
-    }
-
-    if (requestParameters["t"] != null) {
-      queryParameters["t"] = requestParameters["t"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/restart`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Restart a container
-   */
-  async containerRestart(
-    requestParameters: ContainerRestartRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerRestartRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Start a container
-   */
-  async containerStartRaw(
-    requestParameters: ContainerStartRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerStart().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["detachKeys"] != null) {
-      queryParameters["detachKeys"] = requestParameters["detachKeys"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/start`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Start a container
-   */
-  async containerStart(
-    requestParameters: ContainerStartRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerStartRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * This endpoint returns a live stream of a container’s resource usage statistics.  The `precpu_stats` is the CPU statistic of the *previous* read, and is used to calculate the CPU usage percentage. It is not an exact copy of the `cpu_stats` field.  If either `precpu_stats.online_cpus` or `cpu_stats.online_cpus` is nil then for compatibility with older daemons the length of the corresponding `cpu_usage.percpu_usage` array should be used.  On a cgroup v2 host, the following fields are not set * `blkio_stats`: all fields other than `io_service_bytes_recursive` * `cpu_stats`: `cpu_usage.percpu_usage` * `memory_stats`: `max_usage` and `failcnt` Also, `memory_stats.stats` fields are incompatible with cgroup v1.  To calculate the values shown by the `stats` command of the docker cli tool the following formulas can be used: * used_memory = `memory_stats.usage - memory_stats.stats.cache` * available_memory = `memory_stats.limit` * Memory usage % = `(used_memory / available_memory) * 100.0` * cpu_delta = `cpu_stats.cpu_usage.total_usage - precpu_stats.cpu_usage.total_usage` * system_cpu_delta = `cpu_stats.system_cpu_usage - precpu_stats.system_cpu_usage` * number_cpus = `length(cpu_stats.cpu_usage.percpu_usage)` or `cpu_stats.online_cpus` * CPU usage % = `(cpu_delta / system_cpu_delta) * number_cpus * 100.0`
-   * Get container stats based on resource usage
-   */
-  async containerStatsRaw(
-    requestParameters: ContainerStatsRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<object>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerStats().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["stream"] != null) {
-      queryParameters["stream"] = requestParameters["stream"];
-    }
-
-    if (requestParameters["one_shot"] != null) {
-      queryParameters["one-shot"] = requestParameters["one_shot"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/stats`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse<any>(response);
-  }
-
-  /**
-   * This endpoint returns a live stream of a container’s resource usage statistics.  The `precpu_stats` is the CPU statistic of the *previous* read, and is used to calculate the CPU usage percentage. It is not an exact copy of the `cpu_stats` field.  If either `precpu_stats.online_cpus` or `cpu_stats.online_cpus` is nil then for compatibility with older daemons the length of the corresponding `cpu_usage.percpu_usage` array should be used.  On a cgroup v2 host, the following fields are not set * `blkio_stats`: all fields other than `io_service_bytes_recursive` * `cpu_stats`: `cpu_usage.percpu_usage` * `memory_stats`: `max_usage` and `failcnt` Also, `memory_stats.stats` fields are incompatible with cgroup v1.  To calculate the values shown by the `stats` command of the docker cli tool the following formulas can be used: * used_memory = `memory_stats.usage - memory_stats.stats.cache` * available_memory = `memory_stats.limit` * Memory usage % = `(used_memory / available_memory) * 100.0` * cpu_delta = `cpu_stats.cpu_usage.total_usage - precpu_stats.cpu_usage.total_usage` * system_cpu_delta = `cpu_stats.system_cpu_usage - precpu_stats.system_cpu_usage` * number_cpus = `length(cpu_stats.cpu_usage.percpu_usage)` or `cpu_stats.online_cpus` * CPU usage % = `(cpu_delta / system_cpu_delta) * number_cpus * 100.0`
-   * Get container stats based on resource usage
-   */
-  async containerStats(
-    requestParameters: ContainerStatsRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<object> {
-    const response = await this.containerStatsRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Stop a container
-   */
-  async containerStopRaw(
-    requestParameters: ContainerStopRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerStop().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["signal"] != null) {
-      queryParameters["signal"] = requestParameters["signal"];
-    }
-
-    if (requestParameters["t"] != null) {
-      queryParameters["t"] = requestParameters["t"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/stop`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Stop a container
-   */
-  async containerStop(
-    requestParameters: ContainerStopRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerStopRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * On Unix systems, this is done by running the `ps` command. This endpoint is not supported on Windows.
-   * List processes running inside a container
-   */
-  async containerTopRaw(
-    requestParameters: ContainerTopRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<ContainerTopResponse>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerTop().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["ps_args"] != null) {
-      queryParameters["ps_args"] = requestParameters["ps_args"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/top`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      ContainerTopResponseFromJSON(jsonValue),
-    );
-  }
-
-  /**
-   * On Unix systems, this is done by running the `ps` command. This endpoint is not supported on Windows.
-   * List processes running inside a container
-   */
-  async containerTop(
-    requestParameters: ContainerTopRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<ContainerTopResponse> {
-    const response = await this.containerTopRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Resume a container which has been paused.
-   * Unpause a container
-   */
-  async containerUnpauseRaw(
-    requestParameters: ContainerUnpauseRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerUnpause().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/unpause`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Resume a container which has been paused.
-   * Unpause a container
-   */
-  async containerUnpause(
-    requestParameters: ContainerUnpauseRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.containerUnpauseRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Change various configuration options of a container without having to recreate it.
-   * Update a container
-   */
-  async containerUpdateRaw(
-    requestParameters: ContainerUpdateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<ContainerUpdateResponse>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerUpdate().',
-      );
-    }
-
-    if (requestParameters["update"] == null) {
-      throw new runtime.RequiredError(
-        "update",
-        'Required parameter "update" was null or undefined when calling containerUpdate().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    headerParameters["Content-Type"] = "application/json";
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/update`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: ContainerUpdateRequestToJSON(requestParameters["update"]),
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      ContainerUpdateResponseFromJSON(jsonValue),
-    );
-  }
-
-  /**
-   * Change various configuration options of a container without having to recreate it.
-   * Update a container
-   */
-  async containerUpdate(
-    requestParameters: ContainerUpdateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<ContainerUpdateResponse> {
-    const response = await this.containerUpdateRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Block until a container stops, then returns the exit code.
-   * Wait for a container
-   */
-  async containerWaitRaw(
-    requestParameters: ContainerWaitRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<ContainerWaitResponse>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling containerWait().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["condition"] != null) {
-      queryParameters["condition"] = requestParameters["condition"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/wait`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      ContainerWaitResponseFromJSON(jsonValue),
-    );
-  }
-
-  /**
-   * Block until a container stops, then returns the exit code.
-   * Wait for a container
-   */
-  async containerWait(
-    requestParameters: ContainerWaitRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<ContainerWaitResponse> {
-    const response = await this.containerWaitRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Upload a tar archive to be extracted to a path in the filesystem of container id. `path` parameter is asserted to be a directory. If it exists as a file, 400 error will be returned with message \"not a directory\".
-   * Extract an archive of files or folders to a directory in a container
-   */
-  async putContainerArchiveRaw(
-    requestParameters: PutContainerArchiveRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling putContainerArchive().',
-      );
-    }
-
-    if (requestParameters["path"] == null) {
-      throw new runtime.RequiredError(
-        "path",
-        'Required parameter "path" was null or undefined when calling putContainerArchive().',
-      );
-    }
-
-    if (requestParameters["inputStream"] == null) {
-      throw new runtime.RequiredError(
-        "inputStream",
-        'Required parameter "inputStream" was null or undefined when calling putContainerArchive().',
-      );
-    }
-
-    const queryParameters: any = {};
-
-    if (requestParameters["path"] != null) {
-      queryParameters["path"] = requestParameters["path"];
-    }
-
-    if (requestParameters["noOverwriteDirNonDir"] != null) {
-      queryParameters["noOverwriteDirNonDir"] = requestParameters["noOverwriteDirNonDir"];
-    }
-
-    if (requestParameters["copyUIDGID"] != null) {
-      queryParameters["copyUIDGID"] = requestParameters["copyUIDGID"];
-    }
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    headerParameters["Content-Type"] = "application/x-tar";
-
-    const response = await this.request(
-      {
-        path: `/containers/{id}/archive`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "PUT",
-        headers: headerParameters,
-        query: queryParameters,
-        body: requestParameters["inputStream"] as any,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Upload a tar archive to be extracted to a path in the filesystem of container id. `path` parameter is asserted to be a directory. If it exists as a file, 400 error will be returned with message \"not a directory\".
-   * Extract an archive of files or folders to a directory in a container
-   */
-  async putContainerArchive(
-    requestParameters: PutContainerArchiveRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.putContainerArchiveRaw(requestParameters, initOverrides);
-  }
 }
 
 /**
- * @export
- * @enum {string}
- */
+  * @export
+  * @enum {string}
+  */
 export enum ContainerWaitConditionEnum {
-  NotRunning = "not-running",
-  NextExit = "next-exit",
-  Removed = "removed",
+    NotRunning = 'not-running',
+    NextExit = 'next-exit',
+    Removed = 'removed'
 }

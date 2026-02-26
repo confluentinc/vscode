@@ -2,190 +2,183 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { SystemVersionPlatform } from "./SystemVersionPlatform";
+import { mapValues } from '../runtime';
+import type { SystemVersionPlatform } from './SystemVersionPlatform';
 import {
-  SystemVersionPlatformFromJSON,
-  SystemVersionPlatformFromJSONTyped,
-  SystemVersionPlatformToJSON,
-  SystemVersionPlatformToJSONTyped,
-} from "./SystemVersionPlatform";
-import type { SystemVersionComponentsInner } from "./SystemVersionComponentsInner";
+    SystemVersionPlatformFromJSON,
+    SystemVersionPlatformFromJSONTyped,
+    SystemVersionPlatformToJSON,
+    SystemVersionPlatformToJSONTyped,
+} from './SystemVersionPlatform';
+import type { SystemVersionComponentsInner } from './SystemVersionComponentsInner';
 import {
-  SystemVersionComponentsInnerFromJSON,
-  SystemVersionComponentsInnerFromJSONTyped,
-  SystemVersionComponentsInnerToJSON,
-  SystemVersionComponentsInnerToJSONTyped,
-} from "./SystemVersionComponentsInner";
+    SystemVersionComponentsInnerFromJSON,
+    SystemVersionComponentsInnerFromJSONTyped,
+    SystemVersionComponentsInnerToJSON,
+    SystemVersionComponentsInnerToJSONTyped,
+} from './SystemVersionComponentsInner';
 
 /**
  * Response of Engine API: GET "/version"
- *
+ * 
  * @export
  * @interface SystemVersion
  */
 export interface SystemVersion {
-  /**
-   *
-   * @type {SystemVersionPlatform}
-   * @memberof SystemVersion
-   */
-  Platform?: SystemVersionPlatform;
-  /**
-   * Information about system components
-   *
-   * @type {Array<SystemVersionComponentsInner>}
-   * @memberof SystemVersion
-   */
-  Components?: Array<SystemVersionComponentsInner>;
-  /**
-   * The version of the daemon
-   * @type {string}
-   * @memberof SystemVersion
-   */
-  Version?: string;
-  /**
-   * The default (and highest) API version that is supported by the daemon
-   *
-   * @type {string}
-   * @memberof SystemVersion
-   */
-  ApiVersion?: string;
-  /**
-   * The minimum API version that is supported by the daemon
-   *
-   * @type {string}
-   * @memberof SystemVersion
-   */
-  MinAPIVersion?: string;
-  /**
-   * The Git commit of the source code that was used to build the daemon
-   *
-   * @type {string}
-   * @memberof SystemVersion
-   */
-  GitCommit?: string;
-  /**
-   * The version Go used to compile the daemon, and the version of the Go
-   * runtime in use.
-   *
-   * @type {string}
-   * @memberof SystemVersion
-   */
-  GoVersion?: string;
-  /**
-   * The operating system that the daemon is running on ("linux" or "windows")
-   *
-   * @type {string}
-   * @memberof SystemVersion
-   */
-  Os?: string;
-  /**
-   * The architecture that the daemon is running on
-   *
-   * @type {string}
-   * @memberof SystemVersion
-   */
-  Arch?: string;
-  /**
-   * The kernel version (`uname -r`) that the daemon is running on.
-   *
-   * This field is omitted when empty.
-   *
-   * @type {string}
-   * @memberof SystemVersion
-   */
-  KernelVersion?: string;
-  /**
-   * Indicates if the daemon is started with experimental features enabled.
-   *
-   * This field is omitted when empty / false.
-   *
-   * @type {boolean}
-   * @memberof SystemVersion
-   */
-  Experimental?: boolean;
-  /**
-   * The date and time that the daemon was compiled.
-   *
-   * @type {string}
-   * @memberof SystemVersion
-   */
-  BuildTime?: string;
+    /**
+     * 
+     * @type {SystemVersionPlatform}
+     * @memberof SystemVersion
+     */
+    Platform?: SystemVersionPlatform;
+    /**
+     * Information about system components
+     * 
+     * @type {Array<SystemVersionComponentsInner>}
+     * @memberof SystemVersion
+     */
+    Components?: Array<SystemVersionComponentsInner>;
+    /**
+     * The version of the daemon
+     * @type {string}
+     * @memberof SystemVersion
+     */
+    Version?: string;
+    /**
+     * The default (and highest) API version that is supported by the daemon
+     * 
+     * @type {string}
+     * @memberof SystemVersion
+     */
+    ApiVersion?: string;
+    /**
+     * The minimum API version that is supported by the daemon
+     * 
+     * @type {string}
+     * @memberof SystemVersion
+     */
+    MinAPIVersion?: string;
+    /**
+     * The Git commit of the source code that was used to build the daemon
+     * 
+     * @type {string}
+     * @memberof SystemVersion
+     */
+    GitCommit?: string;
+    /**
+     * The version Go used to compile the daemon, and the version of the Go
+     * runtime in use.
+     * 
+     * @type {string}
+     * @memberof SystemVersion
+     */
+    GoVersion?: string;
+    /**
+     * The operating system that the daemon is running on ("linux" or "windows")
+     * 
+     * @type {string}
+     * @memberof SystemVersion
+     */
+    Os?: string;
+    /**
+     * The architecture that the daemon is running on
+     * 
+     * @type {string}
+     * @memberof SystemVersion
+     */
+    Arch?: string;
+    /**
+     * The kernel version (`uname -r`) that the daemon is running on.
+     * 
+     * This field is omitted when empty.
+     * 
+     * @type {string}
+     * @memberof SystemVersion
+     */
+    KernelVersion?: string;
+    /**
+     * Indicates if the daemon is started with experimental features enabled.
+     * 
+     * This field is omitted when empty / false.
+     * 
+     * @type {boolean}
+     * @memberof SystemVersion
+     */
+    Experimental?: boolean;
+    /**
+     * The date and time that the daemon was compiled.
+     * 
+     * @type {string}
+     * @memberof SystemVersion
+     */
+    BuildTime?: string;
 }
 
 /**
  * Check if a given object implements the SystemVersion interface.
  */
 export function instanceOfSystemVersion(value: object): value is SystemVersion {
-  return true;
+    return true;
 }
 
 export function SystemVersionFromJSON(json: any): SystemVersion {
-  return SystemVersionFromJSONTyped(json, false);
+    return SystemVersionFromJSONTyped(json, false);
 }
 
 export function SystemVersionFromJSONTyped(json: any, ignoreDiscriminator: boolean): SystemVersion {
-  if (json == null) {
-    return json;
-  }
-  return {
-    Platform:
-      json["Platform"] == null ? undefined : SystemVersionPlatformFromJSON(json["Platform"]),
-    Components:
-      json["Components"] == null
-        ? undefined
-        : (json["Components"] as Array<any>).map(SystemVersionComponentsInnerFromJSON),
-    Version: json["Version"] == null ? undefined : json["Version"],
-    ApiVersion: json["ApiVersion"] == null ? undefined : json["ApiVersion"],
-    MinAPIVersion: json["MinAPIVersion"] == null ? undefined : json["MinAPIVersion"],
-    GitCommit: json["GitCommit"] == null ? undefined : json["GitCommit"],
-    GoVersion: json["GoVersion"] == null ? undefined : json["GoVersion"],
-    Os: json["Os"] == null ? undefined : json["Os"],
-    Arch: json["Arch"] == null ? undefined : json["Arch"],
-    KernelVersion: json["KernelVersion"] == null ? undefined : json["KernelVersion"],
-    Experimental: json["Experimental"] == null ? undefined : json["Experimental"],
-    BuildTime: json["BuildTime"] == null ? undefined : json["BuildTime"],
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'Platform': json['Platform'] == null ? undefined : SystemVersionPlatformFromJSON(json['Platform']),
+        'Components': json['Components'] == null ? undefined : ((json['Components'] as Array<any>).map(SystemVersionComponentsInnerFromJSON)),
+        'Version': json['Version'] == null ? undefined : json['Version'],
+        'ApiVersion': json['ApiVersion'] == null ? undefined : json['ApiVersion'],
+        'MinAPIVersion': json['MinAPIVersion'] == null ? undefined : json['MinAPIVersion'],
+        'GitCommit': json['GitCommit'] == null ? undefined : json['GitCommit'],
+        'GoVersion': json['GoVersion'] == null ? undefined : json['GoVersion'],
+        'Os': json['Os'] == null ? undefined : json['Os'],
+        'Arch': json['Arch'] == null ? undefined : json['Arch'],
+        'KernelVersion': json['KernelVersion'] == null ? undefined : json['KernelVersion'],
+        'Experimental': json['Experimental'] == null ? undefined : json['Experimental'],
+        'BuildTime': json['BuildTime'] == null ? undefined : json['BuildTime'],
+    };
 }
 
 export function SystemVersionToJSON(json: any): SystemVersion {
-  return SystemVersionToJSONTyped(json, false);
+    return SystemVersionToJSONTyped(json, false);
 }
 
-export function SystemVersionToJSONTyped(
-  value?: SystemVersion | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function SystemVersionToJSONTyped(value?: SystemVersion | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    Platform: SystemVersionPlatformToJSON(value["Platform"]),
-    Components:
-      value["Components"] == null
-        ? undefined
-        : (value["Components"] as Array<any>).map(SystemVersionComponentsInnerToJSON),
-    Version: value["Version"],
-    ApiVersion: value["ApiVersion"],
-    MinAPIVersion: value["MinAPIVersion"],
-    GitCommit: value["GitCommit"],
-    GoVersion: value["GoVersion"],
-    Os: value["Os"],
-    Arch: value["Arch"],
-    KernelVersion: value["KernelVersion"],
-    Experimental: value["Experimental"],
-    BuildTime: value["BuildTime"],
-  };
+    return {
+        
+        'Platform': SystemVersionPlatformToJSON(value['Platform']),
+        'Components': value['Components'] == null ? undefined : ((value['Components'] as Array<any>).map(SystemVersionComponentsInnerToJSON)),
+        'Version': value['Version'],
+        'ApiVersion': value['ApiVersion'],
+        'MinAPIVersion': value['MinAPIVersion'],
+        'GitCommit': value['GitCommit'],
+        'GoVersion': value['GoVersion'],
+        'Os': value['Os'],
+        'Arch': value['Arch'],
+        'KernelVersion': value['KernelVersion'],
+        'Experimental': value['Experimental'],
+        'BuildTime': value['BuildTime'],
+    };
 }
+

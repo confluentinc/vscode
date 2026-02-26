@@ -12,21 +12,21 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { TLSConfig } from "./TLSConfig";
+import { mapValues } from '../runtime';
+import type { TLSConfig } from './TLSConfig';
 import {
-  TLSConfigFromJSON,
-  TLSConfigFromJSONTyped,
-  TLSConfigToJSON,
-  TLSConfigToJSONTyped,
-} from "./TLSConfig";
-import type { KafkaClusterConfigCredentials } from "./KafkaClusterConfigCredentials";
+    TLSConfigFromJSON,
+    TLSConfigFromJSONTyped,
+    TLSConfigToJSON,
+    TLSConfigToJSONTyped,
+} from './TLSConfig';
+import type { KafkaClusterConfigCredentials } from './KafkaClusterConfigCredentials';
 import {
-  KafkaClusterConfigCredentialsFromJSON,
-  KafkaClusterConfigCredentialsFromJSONTyped,
-  KafkaClusterConfigCredentialsToJSON,
-  KafkaClusterConfigCredentialsToJSONTyped,
-} from "./KafkaClusterConfigCredentials";
+    KafkaClusterConfigCredentialsFromJSON,
+    KafkaClusterConfigCredentialsFromJSONTyped,
+    KafkaClusterConfigCredentialsToJSON,
+    KafkaClusterConfigCredentialsToJSONTyped,
+} from './KafkaClusterConfigCredentials';
 
 /**
  * Kafka cluster configuration.
@@ -34,78 +34,72 @@ import {
  * @interface KafkaClusterConfig
  */
 export interface KafkaClusterConfig {
-  /**
-   * A list of host/port pairs to use for establishing the initial connection to the Kafka cluster.
-   * @type {string}
-   * @memberof KafkaClusterConfig
-   */
-  bootstrap_servers: string;
-  /**
-   *
-   * @type {KafkaClusterConfigCredentials}
-   * @memberof KafkaClusterConfig
-   */
-  credentials?: KafkaClusterConfigCredentials;
-  /**
-   * The SSL configuration for connecting to the Kafka cluster. To disable, set `enabled` to false. To use the default SSL settings, set `enabled` to true and leave the `truststore` and `keystore` fields unset.
-   * @type {TLSConfig}
-   * @memberof KafkaClusterConfig
-   */
-  ssl?: TLSConfig | null;
-  /**
-   * The suffix to append to the Kafka client config option client.id when interacting with this Kafka cluster. Is useful when, for instance, connecting to WarpStream agents via Kubernetes port-forwarding.
-   * @type {string}
-   * @memberof KafkaClusterConfig
-   */
-  client_id_suffix?: string | null;
+    /**
+     * A list of host/port pairs to use for establishing the initial connection to the Kafka cluster.
+     * @type {string}
+     * @memberof KafkaClusterConfig
+     */
+    bootstrap_servers: string;
+    /**
+     * 
+     * @type {KafkaClusterConfigCredentials}
+     * @memberof KafkaClusterConfig
+     */
+    credentials?: KafkaClusterConfigCredentials;
+    /**
+     * The SSL configuration for connecting to the Kafka cluster. To disable, set `enabled` to false. To use the default SSL settings, set `enabled` to true and leave the `truststore` and `keystore` fields unset.
+     * @type {TLSConfig}
+     * @memberof KafkaClusterConfig
+     */
+    ssl?: TLSConfig | null;
+    /**
+     * The suffix to append to the Kafka client config option client.id when interacting with this Kafka cluster. Is useful when, for instance, connecting to WarpStream agents via Kubernetes port-forwarding.
+     * @type {string}
+     * @memberof KafkaClusterConfig
+     */
+    client_id_suffix?: string | null;
 }
 
 /**
  * Check if a given object implements the KafkaClusterConfig interface.
  */
 export function instanceOfKafkaClusterConfig(value: object): value is KafkaClusterConfig {
-  if (!("bootstrap_servers" in value) || value["bootstrap_servers"] === undefined) return false;
-  return true;
+    if (!('bootstrap_servers' in value) || value['bootstrap_servers'] === undefined) return false;
+    return true;
 }
 
 export function KafkaClusterConfigFromJSON(json: any): KafkaClusterConfig {
-  return KafkaClusterConfigFromJSONTyped(json, false);
+    return KafkaClusterConfigFromJSONTyped(json, false);
 }
 
-export function KafkaClusterConfigFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): KafkaClusterConfig {
-  if (json == null) {
-    return json;
-  }
-  return {
-    bootstrap_servers: json["bootstrap_servers"],
-    credentials:
-      json["credentials"] == null
-        ? undefined
-        : KafkaClusterConfigCredentialsFromJSON(json["credentials"]),
-    ssl: json["ssl"] == null ? undefined : TLSConfigFromJSON(json["ssl"]),
-    client_id_suffix: json["client_id_suffix"] == null ? undefined : json["client_id_suffix"],
-  };
+export function KafkaClusterConfigFromJSONTyped(json: any, ignoreDiscriminator: boolean): KafkaClusterConfig {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'bootstrap_servers': json['bootstrap_servers'],
+        'credentials': json['credentials'] == null ? undefined : KafkaClusterConfigCredentialsFromJSON(json['credentials']),
+        'ssl': json['ssl'] == null ? undefined : TLSConfigFromJSON(json['ssl']),
+        'client_id_suffix': json['client_id_suffix'] == null ? undefined : json['client_id_suffix'],
+    };
 }
 
 export function KafkaClusterConfigToJSON(json: any): KafkaClusterConfig {
-  return KafkaClusterConfigToJSONTyped(json, false);
+    return KafkaClusterConfigToJSONTyped(json, false);
 }
 
-export function KafkaClusterConfigToJSONTyped(
-  value?: KafkaClusterConfig | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function KafkaClusterConfigToJSONTyped(value?: KafkaClusterConfig | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    bootstrap_servers: value["bootstrap_servers"],
-    credentials: KafkaClusterConfigCredentialsToJSON(value["credentials"]),
-    ssl: TLSConfigToJSON(value["ssl"]),
-    client_id_suffix: value["client_id_suffix"],
-  };
+    return {
+        
+        'bootstrap_servers': value['bootstrap_servers'],
+        'credentials': KafkaClusterConfigCredentialsToJSON(value['credentials']),
+        'ssl': TLSConfigToJSON(value['ssl']),
+        'client_id_suffix': value['client_id_suffix'],
+    };
 }
+

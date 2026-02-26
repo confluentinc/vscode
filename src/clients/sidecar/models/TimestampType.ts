@@ -13,39 +13,41 @@
  */
 
 /**
- *
+ * 
  * @export
  * @enum {string}
  */
 export enum TimestampType {
-  NoTimestampType = "NO_TIMESTAMP_TYPE",
-  CreateTime = "CREATE_TIME",
-  LogAppendTime = "LOG_APPEND_TIME",
+    NoTimestampType = 'NO_TIMESTAMP_TYPE',
+    CreateTime = 'CREATE_TIME',
+    LogAppendTime = 'LOG_APPEND_TIME'
 }
 
+
 export function instanceOfTimestampType(value: any): boolean {
-  for (const key in TimestampType) {
-    if (Object.prototype.hasOwnProperty.call(TimestampType, key)) {
-      if (TimestampType[key as keyof typeof TimestampType] === value) {
-        return true;
-      }
+    for (const key in TimestampType) {
+        if (Object.prototype.hasOwnProperty.call(TimestampType, key)) {
+            if (TimestampType[key as keyof typeof TimestampType] === value) {
+                return true;
+            }
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 export function TimestampTypeFromJSON(json: any): TimestampType {
-  return TimestampTypeFromJSONTyped(json, false);
+    return TimestampTypeFromJSONTyped(json, false);
 }
 
 export function TimestampTypeFromJSONTyped(json: any, ignoreDiscriminator: boolean): TimestampType {
-  return json as TimestampType;
+    return json as TimestampType;
 }
 
 export function TimestampTypeToJSON(value?: TimestampType | null): any {
-  return value as any;
+    return value as any;
 }
 
 export function TimestampTypeToJSONTyped(value: any, ignoreDiscriminator: boolean): TimestampType {
-  return value as TimestampType;
+    return value as TimestampType;
 }
+

@@ -12,28 +12,28 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { AuthErrors } from "./AuthErrors";
+import { mapValues } from '../runtime';
+import type { AuthErrors } from './AuthErrors';
 import {
-  AuthErrorsFromJSON,
-  AuthErrorsFromJSONTyped,
-  AuthErrorsToJSON,
-  AuthErrorsToJSONTyped,
-} from "./AuthErrors";
-import type { ConnectedState } from "./ConnectedState";
+    AuthErrorsFromJSON,
+    AuthErrorsFromJSONTyped,
+    AuthErrorsToJSON,
+    AuthErrorsToJSONTyped,
+} from './AuthErrors';
+import type { ConnectedState } from './ConnectedState';
 import {
-  ConnectedStateFromJSON,
-  ConnectedStateFromJSONTyped,
-  ConnectedStateToJSON,
-  ConnectedStateToJSONTyped,
-} from "./ConnectedState";
-import type { UserInfo } from "./UserInfo";
+    ConnectedStateFromJSON,
+    ConnectedStateFromJSONTyped,
+    ConnectedStateToJSON,
+    ConnectedStateToJSONTyped,
+} from './ConnectedState';
+import type { UserInfo } from './UserInfo';
 import {
-  UserInfoFromJSON,
-  UserInfoFromJSONTyped,
-  UserInfoToJSON,
-  UserInfoToJSONTyped,
-} from "./UserInfo";
+    UserInfoFromJSON,
+    UserInfoFromJSONTyped,
+    UserInfoToJSON,
+    UserInfoToJSONTyped,
+} from './UserInfo';
 
 /**
  * The status related to the specified Schema Registry.
@@ -41,67 +41,66 @@ import {
  * @interface SchemaRegistryStatus
  */
 export interface SchemaRegistryStatus {
-  /**
-   * The state of the connection to the Schema Registry.
-   * @type {ConnectedState}
-   * @memberof SchemaRegistryStatus
-   */
-  state: ConnectedState;
-  /**
-   * Information about the authenticated principal, if known.
-   * @type {UserInfo}
-   * @memberof SchemaRegistryStatus
-   */
-  user?: UserInfo;
-  /**
-   * Errors related to the connection to the Schema Registry.
-   * @type {AuthErrors}
-   * @memberof SchemaRegistryStatus
-   */
-  errors?: AuthErrors;
+    /**
+     * The state of the connection to the Schema Registry.
+     * @type {ConnectedState}
+     * @memberof SchemaRegistryStatus
+     */
+    state: ConnectedState;
+    /**
+     * Information about the authenticated principal, if known.
+     * @type {UserInfo}
+     * @memberof SchemaRegistryStatus
+     */
+    user?: UserInfo;
+    /**
+     * Errors related to the connection to the Schema Registry.
+     * @type {AuthErrors}
+     * @memberof SchemaRegistryStatus
+     */
+    errors?: AuthErrors;
 }
+
+
 
 /**
  * Check if a given object implements the SchemaRegistryStatus interface.
  */
 export function instanceOfSchemaRegistryStatus(value: object): value is SchemaRegistryStatus {
-  if (!("state" in value) || value["state"] === undefined) return false;
-  return true;
+    if (!('state' in value) || value['state'] === undefined) return false;
+    return true;
 }
 
 export function SchemaRegistryStatusFromJSON(json: any): SchemaRegistryStatus {
-  return SchemaRegistryStatusFromJSONTyped(json, false);
+    return SchemaRegistryStatusFromJSONTyped(json, false);
 }
 
-export function SchemaRegistryStatusFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): SchemaRegistryStatus {
-  if (json == null) {
-    return json;
-  }
-  return {
-    state: ConnectedStateFromJSON(json["state"]),
-    user: json["user"] == null ? undefined : UserInfoFromJSON(json["user"]),
-    errors: json["errors"] == null ? undefined : AuthErrorsFromJSON(json["errors"]),
-  };
+export function SchemaRegistryStatusFromJSONTyped(json: any, ignoreDiscriminator: boolean): SchemaRegistryStatus {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'state': ConnectedStateFromJSON(json['state']),
+        'user': json['user'] == null ? undefined : UserInfoFromJSON(json['user']),
+        'errors': json['errors'] == null ? undefined : AuthErrorsFromJSON(json['errors']),
+    };
 }
 
 export function SchemaRegistryStatusToJSON(json: any): SchemaRegistryStatus {
-  return SchemaRegistryStatusToJSONTyped(json, false);
+    return SchemaRegistryStatusToJSONTyped(json, false);
 }
 
-export function SchemaRegistryStatusToJSONTyped(
-  value?: SchemaRegistryStatus | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function SchemaRegistryStatusToJSONTyped(value?: SchemaRegistryStatus | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    state: ConnectedStateToJSON(value["state"]),
-    user: UserInfoToJSON(value["user"]),
-    errors: AuthErrorsToJSON(value["errors"]),
-  };
+    return {
+        
+        'state': ConnectedStateToJSON(value['state']),
+        'user': UserInfoToJSON(value['user']),
+        'errors': AuthErrorsToJSON(value['errors']),
+    };
 }
+
