@@ -314,6 +314,16 @@ export async function parseAllFlinkStatementResults<RT>(
 }
 
 /**
+ * Returns true if the given URI metadata indicates the document was opened from a Flink workspace
+ * deep link, false otherwise.
+ *
+ * @param metadata The URI metadata to check.
+ */
+export function isFromFlinkWorkspace(metadata: UriMetadata | undefined): boolean {
+  return metadata?.[UriMetadataKeys.FLINK_FROM_WORKSPACE] === true;
+}
+
+/**
  * Set or reset the Flink-related metadata on a document to refer to
  * the given environment, database, and/or compute pool. Handles setting
  * the metadata, then fires uriMetadataSet to notify listeners of the change.
