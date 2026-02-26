@@ -197,13 +197,11 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
 
     const cluster: KafkaCluster = this.kafkaCluster;
     await this.withProgress("Loading topics and consumer groups...", async () => {
-      // set up containers before loading
+      // set up containers with the focused cluster's connection info
       this.topicsContainer = new KafkaClusterResourceContainer<KafkaTopic>(
         cluster.connectionId,
         cluster.connectionType,
-        cluster.id,
-        cluster.environmentId,
-        "Topics",
+        KafkaClusterContainerLabel.TOPICS,
         [],
         "topics-container",
         new ThemeIcon(IconNames.TOPIC),
@@ -213,11 +211,9 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
       this.consumerGroupsContainer = new KafkaClusterResourceContainer<ConsumerGroup>(
         cluster.connectionId,
         cluster.connectionType,
-        cluster.id,
-        cluster.environmentId,
-        "Consumer Groups",
+        KafkaClusterContainerLabel.CONSUMER_GROUPS,
         [],
-        undefined,
+        undefined, // no context value for now since no commands are needed yet for this container
         new ThemeIcon(IconNames.CONSUMER_GROUP),
       );
 
