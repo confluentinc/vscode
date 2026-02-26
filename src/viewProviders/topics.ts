@@ -265,7 +265,6 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
     this._onDidChangeTreeData.fire(this.topicsContainer);
   }
 
-  // similar to the Flink Database provider's refreshResourceContainer method:
   /** Fetch and cache consumer groups for the focused cluster. */
   async refreshConsumerGroups(
     cluster: KafkaCluster,
