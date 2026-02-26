@@ -31,6 +31,7 @@ import type { IFlinkStatementSubmitParameters } from "./statementUtils";
 import {
   determineFlinkStatementName,
   FlinkStatementWebviewPanelCache,
+  isFromFlinkWorkspace,
   MAX_WAIT_TIME_MS,
   parseAllFlinkStatementResults,
   REFRESH_STATEMENT_MAX_WAIT_MS,
@@ -477,6 +478,27 @@ describe("flinkSql/statementUtils.ts", function () {
       });
 
       sinon.assert.calledWith(uriMetadataSetFireStub, uri);
+    });
+  });
+
+  describe("isFromFlinkWorkspace()", function () {
+    it("should return true when FLINK_FROM_WORKSPACE is true", function () {
+      const metadata = { [UriMetadataKeys.FLINK_FROM_WORKSPACE]: true };
+      assert.strictEqual(isFromFlinkWorkspace(metadata), true);
+    });
+
+    it("should return false when FLINK_FROM_WORKSPACE is false", function () {
+      const metadata = { [UriMetadataKeys.FLINK_FROM_WORKSPACE]: false };
+      assert.strictEqual(isFromFlinkWorkspace(metadata), false);
+    });
+
+    it("should return false when FLINK_FROM_WORKSPACE is absent", function () {
+      const metadata = { [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "pool-123" };
+      assert.strictEqual(isFromFlinkWorkspace(metadata), false);
+    });
+
+    it("should return false when metadata is undefined", function () {
+      assert.strictEqual(isFromFlinkWorkspace(undefined), false);
     });
   });
 });
