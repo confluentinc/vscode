@@ -69,7 +69,7 @@ class FlinkTypeParser {
   /**
    * Parse an ARRAY<T> type.
    */
-  private parseArrayType(): FlinkType {
+  private parseArrayType(): CompoundFlinkType {
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after ARRAY");
@@ -84,14 +84,14 @@ class FlinkTypeParser {
       dataType: "ARRAY",
       isFieldNullable,
       kind: FlinkTypeKind.ARRAY,
-      areMembersNullable: innerType.isFieldNullable,
+      members: [innerType],
     };
   }
 
   /**
    * Parse a MULTISET<T> type.
    */
-  private parseMultisetType(): FlinkType {
+  private parseMultisetType(): CompoundFlinkType {
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after MULTISET");
@@ -106,7 +106,7 @@ class FlinkTypeParser {
       dataType: "MULTISET",
       isFieldNullable,
       kind: FlinkTypeKind.MULTISET,
-      areMembersNullable: innerType.isFieldNullable,
+      members: [innerType],
     };
   }
 

@@ -24,6 +24,7 @@ export enum FlinkTypeKind {
 /**
  * Base interface for all Flink types.
  *
+ * Represents either a standalone type or a member within a compound type.
  * Common fields present on all type variants, whether scalar or composite.
  */
 export interface FlinkType {
@@ -47,16 +48,17 @@ export interface FlinkType {
   kind: FlinkTypeKind;
 
   /**
-   * For ARRAY or MULTISET types: are the individual members allowed to be null?
-   * For other types: not applicable (undefined).
-   * This is separate from isFieldNullable, which applies to the container itself.
+   * For ROW, MAP, ARRAY, or MULTISET types: the contained member types.
+   * - For ROW: each element has a fieldName
+   * - For MAP: exactly 2 elements with fieldNames "key" and "value" (key first)
+   * - For ARRAY/MULTISET: exactly 1 element (no fieldName)
    */
-  areMembersNullable?: boolean;
+  members?: FlinkType[];
 
   /**
    * For ROW/MAP member fields: the field/member name.
    * For MAP specifically, this will be "key" or "value".
-   * Undefined for standalone types or scalar types.
+   * Undefined for standalone types, scalar types, or ARRAY/MULTISET element types.
    */
   fieldName?: string;
 
@@ -69,16 +71,17 @@ export interface FlinkType {
 }
 
 /**
- * Composite Flink type (subinterface of FlinkType).
+ * Compound Flink type (subinterface of FlinkType).
  *
- * Extends FlinkType for types that contain sub-members: ROW and MAP.
+ * Extends FlinkType for types that contain sub-members: ROW, MAP, ARRAY, and MULTISET.
  * The members array provides structured access to nested types.
  */
 export interface CompoundFlinkType extends FlinkType {
   /**
-   * Array of member types.
+   * Array of member types (required for compound types).
    * - For ROW: each element has a fieldName
    * - For MAP: exactly 2 elements with fieldNames "key" and "value" (key first)
+   * - For ARRAY/MULTISET: exactly 1 element (no fieldName)
    */
   members: FlinkType[];
 }

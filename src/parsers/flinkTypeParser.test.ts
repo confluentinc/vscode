@@ -91,34 +91,50 @@ describe("flinkTypeParser", () => {
       const result = parseFlinkType("ARRAY<INT>");
       assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
       assert.strictEqual(result.dataType, "ARRAY");
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members.length, 1);
+      assert.strictEqual(result.members[0].dataType, "INT");
+      assert.strictEqual(result.members[0].kind, FlinkTypeKind.SCALAR);
     });
 
     it("parses ARRAY<VARCHAR(256)>", () => {
       const result = parseFlinkType("ARRAY<VARCHAR(256)>");
       assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members.length, 1);
+      assert.strictEqual(result.members[0].dataType, "VARCHAR(256)");
     });
 
     it("parses ARRAY<INT NULL>", () => {
       const result = parseFlinkType("ARRAY<INT NULL>");
       assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
-      assert.strictEqual(result.areMembersNullable, true);
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members.length, 1);
+      assert.strictEqual(result.members[0].isFieldNullable, true);
     });
 
     it("parses ARRAY<VARCHAR(256) NULL>", () => {
       const result = parseFlinkType("ARRAY<VARCHAR(256) NULL>");
       assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
-      assert.strictEqual(result.areMembersNullable, true);
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members.length, 1);
+      assert.strictEqual(result.members[0].isFieldNullable, true);
     });
 
     it("parses MULTISET<BIGINT>", () => {
       const result = parseFlinkType("MULTISET<BIGINT>");
       assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members.length, 1);
+      assert.strictEqual(result.members[0].dataType, "BIGINT");
     });
 
     it("parses MULTISET<CHAR NOT NULL>", () => {
       const result = parseFlinkType("MULTISET<CHAR NOT NULL>");
       assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
-      assert.strictEqual(result.areMembersNullable, false);
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members.length, 1);
+      assert.strictEqual(result.members[0].isFieldNullable, false);
     });
   });
 
@@ -221,6 +237,113 @@ describe("flinkTypeParser", () => {
       assert.strictEqual(map.members[1].fieldName, "value");
       const fieldNames = map.members.map((m) => m.fieldName);
       assert.deepStrictEqual(fieldNames, ["key", "value"]);
+    });
+  });
+
+  describe("nested container types", () => {
+    it("parses ARRAY<ROW<id INT, name VARCHAR>>", () => {
+      const result = parseFlinkType("ARRAY<ROW<`id` INT, `name` VARCHAR>>");
+      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members.length, 1);
+      const elementType = result.members[0];
+      assert.strictEqual(elementType.kind, FlinkTypeKind.ROW);
+      assert(isCompoundFlinkType(elementType));
+      assert.strictEqual(elementType.members.length, 2);
+      // Verify leaf nodes are scalars and NOT compound
+      const idField = elementType.members[0];
+      assert.strictEqual(idField.fieldName, "id");
+      assert.strictEqual(idField.kind, FlinkTypeKind.SCALAR);
+      assert(!isCompoundFlinkType(idField));
+      const nameField = elementType.members[1];
+      assert.strictEqual(nameField.fieldName, "name");
+      assert.strictEqual(nameField.kind, FlinkTypeKind.SCALAR);
+      assert(!isCompoundFlinkType(nameField));
+    });
+
+    it("parses ARRAY<MAP<INT, VARCHAR>>", () => {
+      const result = parseFlinkType("ARRAY<MAP<INT, VARCHAR>>");
+      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members.length, 1);
+      const elementType = result.members[0];
+      assert.strictEqual(elementType.kind, FlinkTypeKind.MAP);
+      assert(isCompoundFlinkType(elementType));
+      assert.strictEqual(elementType.members.length, 2);
+      // Verify leaf nodes are scalars and NOT compound
+      const keyType = elementType.members[0];
+      assert.strictEqual(keyType.fieldName, "key");
+      assert.strictEqual(keyType.kind, FlinkTypeKind.SCALAR);
+      assert(!isCompoundFlinkType(keyType));
+      const valueType = elementType.members[1];
+      assert.strictEqual(valueType.fieldName, "value");
+      assert.strictEqual(valueType.kind, FlinkTypeKind.SCALAR);
+      assert(!isCompoundFlinkType(valueType));
+    });
+
+    it("parses ARRAY<MULTISET<INT>>", () => {
+      const result = parseFlinkType("ARRAY<MULTISET<INT>>");
+      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members.length, 1);
+      const elementType = result.members[0];
+      assert.strictEqual(elementType.kind, FlinkTypeKind.MULTISET);
+      assert(isCompoundFlinkType(elementType));
+      assert.strictEqual(elementType.members.length, 1);
+      // Verify leaf node is scalar and NOT compound
+      const intType = elementType.members[0];
+      assert.strictEqual(intType.dataType, "INT");
+      assert.strictEqual(intType.kind, FlinkTypeKind.SCALAR);
+      assert(!isCompoundFlinkType(intType));
+    });
+
+    it("parses MULTISET<ARRAY<INT>>", () => {
+      const result = parseFlinkType("MULTISET<ARRAY<INT>>");
+      assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members.length, 1);
+      const elementType = result.members[0];
+      assert.strictEqual(elementType.kind, FlinkTypeKind.ARRAY);
+      assert(isCompoundFlinkType(elementType));
+      assert.strictEqual(elementType.members.length, 1);
+      // Verify leaf node is scalar and NOT compound
+      const intType = elementType.members[0];
+      assert.strictEqual(intType.dataType, "INT");
+      assert.strictEqual(intType.kind, FlinkTypeKind.SCALAR);
+      assert(!isCompoundFlinkType(intType));
+    });
+
+    it("parses MULTISET<ROW<id BIGINT>>", () => {
+      const result = parseFlinkType("MULTISET<ROW<`id` BIGINT>>");
+      assert.strictEqual(result.kind, FlinkTypeKind.MULTISET);
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members.length, 1);
+      const elementType = result.members[0];
+      assert.strictEqual(elementType.kind, FlinkTypeKind.ROW);
+      assert(isCompoundFlinkType(elementType));
+      assert.strictEqual(elementType.members.length, 1);
+      // Verify leaf node is scalar and NOT compound
+      const idField = elementType.members[0];
+      assert.strictEqual(idField.fieldName, "id");
+      assert.strictEqual(idField.dataType, "BIGINT");
+      assert.strictEqual(idField.kind, FlinkTypeKind.SCALAR);
+      assert(!isCompoundFlinkType(idField));
+    });
+
+    it("parses ARRAY<ARRAY<INT>>", () => {
+      const result = parseFlinkType("ARRAY<ARRAY<INT>>");
+      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members.length, 1);
+      const elementType = result.members[0];
+      assert.strictEqual(elementType.kind, FlinkTypeKind.ARRAY);
+      assert(isCompoundFlinkType(elementType));
+      assert.strictEqual(elementType.members.length, 1);
+      // Verify leaf node is scalar and NOT compound
+      const intType = elementType.members[0];
+      assert.strictEqual(intType.dataType, "INT");
+      assert.strictEqual(intType.kind, FlinkTypeKind.SCALAR);
+      assert(!isCompoundFlinkType(intType));
     });
   });
 
