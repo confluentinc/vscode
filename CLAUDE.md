@@ -15,7 +15,6 @@ Confluent Cloud products and Apache Kafka-compatible clusters within VS Code.
 
 ```bash
 npx gulp build          # Development build (same as "Build for development")
-npx gulp build -w       # Watch mode
 npx gulp check          # TypeScript type checking
 npx gulp lint           # ESLint (add -f for auto-fix)
 ```
@@ -29,27 +28,6 @@ npx gulp functional                   # Webview tests (Playwright) - same as fun
 npx gulp e2e                          # End-to-end tests (Playwright)
 npx gulp e2e -t "test name"           # Run specific end-to-end tests by name
 npx gulp test --coverage              # Generate Istanbul coverage reports
-```
-
-### Cleaning & Formatting
-
-```bash
-npx gulp clean          # Remove build artifacts
-npx gulp format         # Format code with Prettier
-```
-
-### API Client Generation
-
-```bash
-npx gulp apigen                       # Generate TypeScript clients from OpenAPI specs
-npx gql-tada generate output          # Regenerate GraphQL types from src/graphql/sidecar.graphql
-```
-
-### Packaging
-
-```bash
-npx gulp bundle         # Create .vsix package for distribution
-npx gulp clicktest      # Package and install locally for manual testing
 ```
 
 ## Architecture Overview
