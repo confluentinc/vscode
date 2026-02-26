@@ -781,6 +781,28 @@ describe("flinkTypeParser", () => {
     it("throws error on MAP with missing opening angle bracket", () => {
       assert.throws(() => parseFlinkType("MAP INT, VARCHAR"), /Expected '<' after MAP/);
     });
+
+    it("throws error on unterminated backtick-quoted ROW field name", () => {
+      assert.throws(
+        () => parseFlinkType("ROW<`id INT>"),
+        /Unterminated backtick-quoted ROW field name/,
+      );
+    });
+
+    it("throws error on backtick-quoted ROW field name missing closing backtick at EOF", () => {
+      assert.throws(() => parseFlinkType("ROW<`id"), /Unterminated backtick-quoted ROW field name/);
+    });
+
+    it("throws error on unterminated field comment", () => {
+      assert.throws(
+        () => parseFlinkType("ROW<`id` INT 'missing closing quote>"),
+        /Unterminated field comment/,
+      );
+    });
+
+    it("throws error on field comment EOF without closing quote", () => {
+      assert.throws(() => parseFlinkType("ROW<`id` INT 'unclosed"), /Unterminated field comment/);
+    });
   });
 
   describe("degenerate inputs", () => {

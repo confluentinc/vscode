@@ -234,6 +234,12 @@ class FlinkTypeParser {
       if (this.state.peek() === "`") {
         this.state.consume(); // consume opening backtick
         fieldName = this.state.parseUntilChar("`");
+        // Ensure a closing backtick is actually present to avoid confusing downstream errors
+        if (this.state.isEof() || this.state.peek() !== "`") {
+          throw new Error(
+            "Unterminated backtick-quoted ROW field name; expected '`' before end of input.",
+          );
+        }
         this.state.consume(); // consume closing backtick
       } else {
         fieldName = this.state.parseIdentifier();
@@ -318,14 +324,17 @@ class FlinkTypeParser {
           this.state.consume(); // consume second quote
         } else {
           // End of comment
-          break;
+          return comment;
         }
       } else {
         comment += this.state.consume();
       }
     }
 
-    return comment;
+    // Reached EOF without finding closing quote
+    throw new Error(
+      "Unterminated field comment; expected closing single quote before end of input.",
+    );
   }
 
   /**
