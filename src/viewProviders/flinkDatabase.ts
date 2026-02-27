@@ -24,8 +24,8 @@ import {
   FlinkDatabaseResourceContainer,
 } from "../models/flinkDatabaseResourceContainer";
 import { FlinkRelation, FlinkRelationColumn } from "../models/flinkRelation";
-import { FlinkUdf, FlinkUdfTreeItem } from "../models/flinkUDF";
 import { FlinkTypeNode } from "../models/flinkTypeNode";
+import { FlinkUdf, FlinkUdfTreeItem } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CustomMarkdownString } from "../models/main";
 import type { IEnvProviderRegion } from "../models/resource";
@@ -161,9 +161,11 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
       // already a TreeItem (subclass)
       treeItem = element;
     } else if ("getTreeItem" in element && typeof element.getTreeItem === "function") {
-      // just for FlinkRelations/FlinkRelationColumn since they use getTreeItem() instead of separate
-      // classes, but we might migrate other classes to this pattern in the future
+      // FlinkRelations/FlinkRelationColumn/FlinkTypeNode since they can produce their own TreeItems.
       treeItem = element.getTreeItem();
+      this.logger.debug(
+        `generated TreeItem for ${treeItem.label} ${treeItem.id} with icon ${treeItem.iconPath}`,
+      );
     } else if (element instanceof FlinkArtifact) {
       treeItem = new FlinkArtifactTreeItem(element);
     } else if (element instanceof FlinkUdf) {

@@ -6,14 +6,14 @@
  */
 
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
-import { formatSqlType, formatFlinkTypeForDisplay, getIconForFlinkType } from "../utils/flinkTypes";
+import { ConnectionType } from "../clients/sidecar";
+import { CCLOUD_CONNECTION_ID } from "../constants";
+import { formatFlinkTypeForDisplay, formatSqlType, getIconForFlinkType } from "../utils/flinkTypes";
+import type { FlinkRelationColumn } from "./flinkRelation";
 import type { FlinkType } from "./flinkTypes";
 import { FlinkTypeKind, isCompoundFlinkType } from "./flinkTypes";
 import { CustomMarkdownString } from "./main";
-import type { FlinkRelationColumn } from "./flinkRelation";
 import type { ConnectionId, IResourceBase } from "./resource";
-import { CCLOUD_CONNECTION_ID } from "../constants";
-import { ConnectionType } from "../clients/sidecar";
 
 /**
  * Represents a parsed Flink type node in the tree hierarchy.
@@ -77,11 +77,10 @@ export class FlinkTypeNode implements IResourceBase {
     const path: string[] = [];
 
     // Collect all parent nodes in order from root to this node
-    const nodeChain: FlinkTypeNode[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    let node: FlinkTypeNode | null = this;
+    const nodeChain: FlinkTypeNode[] = [this];
+    let node: FlinkTypeNode | null = this.parentNode;
     while (node) {
-      nodeChain.unshift(node);
+      nodeChain.unshift(node); // prepends to maintain root-to-leaf order
       node = node.parentNode;
     }
 
@@ -152,7 +151,7 @@ export class FlinkTypeNode implements IResourceBase {
       return this.parsedType.fieldName;
     }
 
-    // Use unified formatter for consistent display across all type contexts
+    // Otherwise use the formatted type for display (e.g., "INT[]", "ROW", "VARCHAR(255)")
     return formatFlinkTypeForDisplay(this.parsedType);
   }
 
@@ -171,15 +170,6 @@ export class FlinkTypeNode implements IResourceBase {
     }
 
     return desc;
-  }
-
-  /**
-   * Get the icon for this node based on type kind.
-   * Uses unified icon resolution strategy via getIconForFlinkType().
-   * Special handling for ROW and ARRAY/MULTISET types, otherwise uses column icon.
-   */
-  private getIcon(): string {
-    return getIconForFlinkType(this.parsedType);
   }
 
   /**
@@ -281,7 +271,7 @@ export class FlinkTypeNode implements IResourceBase {
       );
     }
 
-    // For ROW and MAP, return their members as children
+    // For ROW and MAP, return their members as children.
     return members.map(
       (member) =>
         new FlinkTypeNode({
@@ -304,7 +294,8 @@ export class FlinkTypeNode implements IResourceBase {
 
     const item = new TreeItem(this.getLabel(), collapsibleState);
 
-    item.iconPath = this.getIcon();
+    item.iconPath = new ThemeIcon(getIconForFlinkType(this.parsedType));
+
     item.id = this.id;
     item.description = this.getDescription();
     item.tooltip = this.getTooltip();

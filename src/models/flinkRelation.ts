@@ -5,7 +5,7 @@ import { logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { IconNames } from "../icons";
 import { parseFlinkType } from "../parsers/flinkTypeParser";
-import { formatSqlType, formatFlinkTypeForDisplay, getIconForFlinkType } from "../utils/flinkTypes";
+import { formatFlinkTypeForDisplay, formatSqlType, getIconForFlinkType } from "../utils/flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
 import type { FlinkType } from "./flinkTypes";
 import { FlinkTypeKind, isCompoundFlinkType } from "./flinkTypes";
@@ -243,7 +243,7 @@ export class FlinkRelationColumn {
 
     // Determine icon based on the parsed type
     const parsed = this.getParsedType();
-    const iconName = parsed ? getIconForFlinkType(parsed) : "symbol-constant";
+    const iconName = parsed ? getIconForFlinkType(parsed) : IconNames.PLACEHOLDER;
     item.iconPath = new ThemeIcon(iconName);
 
     item.id = this.id;
