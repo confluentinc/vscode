@@ -1,5 +1,5 @@
 import type { Disposable, TreeItem } from "vscode";
-import { window } from "vscode";
+import { ThemeIcon, TreeItemCollapsibleState, window } from "vscode";
 import { ContextValues } from "../context/values";
 import type {
   EnvironmentChangeEvent,
@@ -8,6 +8,7 @@ import type {
   TopicChangeEvent,
 } from "../emitters";
 import {
+  consumerGroupsChanged,
   environmentChanged,
   localKafkaConnected,
   schemaSubjectChanged,
@@ -16,9 +17,21 @@ import {
   topicSearchSet,
   topicsViewResourceChanged,
 } from "../emitters";
+import { IconNames } from "../icons";
 import { ResourceLoader } from "../loaders";
 import { TopicFetchError } from "../loaders/utils/loaderUtils";
+import {
+  Consumer,
+  ConsumerGroup,
+  ConsumerGroupTreeItem,
+  ConsumerTreeItem,
+} from "../models/consumerGroup";
+import {
+  KafkaClusterContainerLabel,
+  KafkaClusterResourceContainer,
+} from "../models/containers/kafkaClusterResourceContainer";
 import { KafkaCluster } from "../models/kafkaCluster";
+import { CustomMarkdownString } from "../models/main";
 import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
@@ -28,7 +41,14 @@ import { ParentedBaseViewProvider } from "./baseModels/parentedBase";
  * The types managed by the {@link TopicViewProvider}, which are converted to their appropriate tree item
  * type via the {@link TopicViewProvider provider's} {@linkcode TopicViewProvider.getTreeItem() .getTreeItem()} method.
  */
-type TopicViewProviderData = KafkaTopic | Subject | Schema;
+type TopicViewProviderData =
+  | KafkaClusterResourceContainer<KafkaTopic>
+  | KafkaClusterResourceContainer<ConsumerGroup>
+  | ConsumerGroup
+  | Consumer
+  | KafkaTopic
+  | Subject
+  | Schema;
 
 /**
  * Provider for the "Topics" view resources.
@@ -48,6 +68,8 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
   searchContextValue = ContextValues.topicSearchApplied;
   searchChangedEmitter = topicSearchSet;
 
+  /** Container for topics in this cluster (expanded by default). */
+  private topicsContainer: KafkaClusterResourceContainer<KafkaTopic> | null = null;
   /** Map of topic name -> {@link KafkaTopic} instance currently in the tree view. */
   private topicsInTreeView: Map<string, KafkaTopic> = new Map();
   /** Map of subject name -> {@link Subject} instance currently in the tree view. */
@@ -55,10 +77,18 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
   /** Map of subject name -> parent {@link KafkaTopic} for easy parent lookup. */
   private subjectToTopicMap: Map<string, KafkaTopic> = new Map();
 
+  /** Container for consumer groups in this cluster. */
+  private consumerGroupsContainer: KafkaClusterResourceContainer<ConsumerGroup> | null = null;
+  /** Map of consumer group ID -> {@link ConsumerGroup} instance currently in the tree view. */
+  private consumerGroupsInTreeView: Map<string, ConsumerGroup> = new Map();
+
   private clearCaches(): void {
+    this.topicsContainer = null;
     this.topicsInTreeView.clear();
     this.subjectsInTreeView.clear();
     this.subjectToTopicMap.clear();
+    this.consumerGroupsContainer = null;
+    this.consumerGroupsInTreeView.clear();
   }
 
   get kafkaCluster(): KafkaCluster | null {
@@ -77,8 +107,20 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
     let children: TopicViewProviderData[] = [];
 
     if (!element) {
-      // top-level: show topics
-      children = Array.from(this.topicsInTreeView.values());
+      // top-level: show consumer groups first, then topics
+      const containers: TopicViewProviderData[] = [];
+      if (this.consumerGroupsContainer) containers.push(this.consumerGroupsContainer);
+      if (this.topicsContainer) containers.push(this.topicsContainer);
+      children = containers;
+    } else if (element instanceof KafkaClusterResourceContainer) {
+      // expanding a container to show its children (topics or consumer groups)
+      children = element.children;
+    } else if (element instanceof ConsumerGroup) {
+      // expanding a consumer group to show its members
+      const cachedGroup = this.consumerGroupsInTreeView.get(element.consumerGroupId);
+      if (cachedGroup) {
+        children = cachedGroup.members;
+      }
     } else if (element instanceof KafkaTopic) {
       // expanding a topic to show its subject(s)
       const cachedTopic: KafkaTopic | undefined = this.topicsInTreeView.get(element.name);
@@ -107,7 +149,13 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
 
   getTreeItem(element: TopicViewProviderData): TreeItem {
     let treeItem: TreeItem;
-    if (element instanceof KafkaTopic) {
+    if (element instanceof KafkaClusterResourceContainer) {
+      treeItem = element;
+    } else if (element instanceof ConsumerGroup) {
+      treeItem = new ConsumerGroupTreeItem(element);
+    } else if (element instanceof Consumer) {
+      treeItem = new ConsumerTreeItem(element);
+    } else if (element instanceof KafkaTopic) {
       treeItem = new KafkaTopicTreeItem(element);
     } else if (element instanceof Subject) {
       treeItem = new SubjectTreeItem(element);
@@ -152,17 +200,50 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
     }
 
     const cluster: KafkaCluster = this.kafkaCluster;
-    await this.withProgress("Loading topics...", async () => {
-      await this.refreshTopics(cluster, forceDeepRefresh);
+    await this.withProgress("Loading topics and consumer groups...", async () => {
+      // set up containers with the focused cluster's connection info
+      this.topicsContainer = new KafkaClusterResourceContainer<KafkaTopic>(
+        cluster.connectionId,
+        cluster.connectionType,
+        KafkaClusterContainerLabel.TOPICS,
+        [],
+        "topics-container",
+        new ThemeIcon(IconNames.TOPIC),
+      );
+      this.topicsContainer.collapsibleState = TreeItemCollapsibleState.Expanded;
+
+      this.consumerGroupsContainer = new KafkaClusterResourceContainer<ConsumerGroup>(
+        cluster.connectionId,
+        cluster.connectionType,
+        KafkaClusterContainerLabel.CONSUMER_GROUPS,
+        [],
+        undefined, // no context value for now since no commands are needed yet for this container
+        new ThemeIcon(IconNames.CONSUMER_GROUP),
+      );
+
+      await Promise.allSettled([
+        this.refreshTopics(cluster, forceDeepRefresh),
+        this.refreshConsumerGroups(cluster, forceDeepRefresh),
+      ]);
     });
   }
 
   async refreshTopics(cluster: KafkaCluster, forceDeepRefresh: boolean): Promise<void> {
+    if (!this.topicsContainer) {
+      return;
+    }
+    this.topicsContainer.setLoading();
+    this._onDidChangeTreeData.fire(this.topicsContainer);
+
+    // clear stale entries before repopulating
+    this.topicsInTreeView.clear();
+    this.subjectsInTreeView.clear();
+    this.subjectToTopicMap.clear();
+
     const loader = ResourceLoader.getInstance(cluster.connectionId);
     try {
       const topics = await loader.getTopicsForCluster(cluster, forceDeepRefresh);
       topics.forEach((topic) => {
-        // update topic and subject caches before firing change event
         this.topicsInTreeView.set(topic.name, topic);
         if (topic.children && topic.children.length > 0) {
           topic.children.forEach((subject) => {
@@ -171,8 +252,15 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
           });
         }
       });
+      this.topicsContainer.setLoaded(topics);
     } catch (err) {
       this.logger.error("Error fetching topics for cluster", cluster, err);
+      const message = err instanceof Error ? err.message : String(err);
+      this.topicsContainer.setError(
+        new CustomMarkdownString()
+          .addWarning(`Failed to load topics for **${cluster.name}**:`)
+          .addCodeBlock(message),
+      );
       if (err instanceof TopicFetchError) {
         window.showErrorMessage(
           `Failed to list topics for cluster "${cluster.name}": ${err.message}`,
@@ -180,7 +268,41 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
       }
     }
 
-    this._onDidChangeTreeData.fire();
+    this._onDidChangeTreeData.fire(this.topicsContainer);
+  }
+
+  /** Fetch and cache consumer groups for the focused cluster. */
+  async refreshConsumerGroups(
+    cluster: KafkaCluster,
+    forceDeepRefresh: boolean = false,
+  ): Promise<void> {
+    if (!this.consumerGroupsContainer) {
+      return;
+    }
+    this.consumerGroupsContainer.setLoading();
+    this._onDidChangeTreeData.fire(this.consumerGroupsContainer);
+
+    // clear stale entries before repopulating
+    this.consumerGroupsInTreeView.clear();
+
+    const loader = ResourceLoader.getInstance(cluster.connectionId);
+    try {
+      const consumerGroups = await loader.getConsumerGroupsForCluster(cluster, forceDeepRefresh);
+      consumerGroups.forEach((group) => {
+        this.consumerGroupsInTreeView.set(group.consumerGroupId, group);
+      });
+      this.consumerGroupsContainer.setLoaded(consumerGroups);
+    } catch (err) {
+      this.logger.error("Error fetching consumer groups for cluster", cluster, err);
+      const message = err instanceof Error ? err.message : String(err);
+      this.consumerGroupsContainer.setError(
+        new CustomMarkdownString()
+          .addWarning(`Failed to load consumer groups for **${cluster.name}**:`)
+          .addCodeBlock(message),
+      );
+    }
+
+    this._onDidChangeTreeData.fire(this.consumerGroupsContainer);
   }
 
   /** Fetch and cache {@link Schema schemas} for a specific {@link Subject subject}. */
@@ -202,9 +324,18 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
 
   /** Get the parent of the given element, or `undefined` if it's a root-level item. */
   getParent(element: TopicViewProviderData): TopicViewProviderData | undefined {
-    if (element instanceof KafkaTopic) {
+    if (element instanceof KafkaClusterResourceContainer) {
       // root-level item
       return;
+    }
+    if (element instanceof ConsumerGroup) {
+      return this.consumerGroupsContainer ?? undefined;
+    }
+    if (element instanceof Consumer) {
+      return this.consumerGroupsInTreeView.get(element.consumerGroupId);
+    }
+    if (element instanceof KafkaTopic) {
+      return this.topicsContainer ?? undefined;
     }
     if (element instanceof Subject) {
       return this.subjectToTopicMap.get(element.name);
@@ -220,10 +351,24 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
     options?: { select?: boolean; focus?: boolean },
   ): Promise<void> {
     // callers likely won't have the exact instance in the provider's cache(s), so we need to
-    // find the instance (originally returned by getChildren()) by name
+    // find the instance (originally returned by getChildren()) by name/id
     let itemToReveal: TopicViewProviderData | undefined;
 
-    if (item instanceof KafkaTopic) {
+    if (item instanceof KafkaClusterResourceContainer) {
+      // match by tree item id against the known container instances
+      if (this.topicsContainer?.id === item.id) {
+        itemToReveal = this.topicsContainer;
+      } else if (this.consumerGroupsContainer?.id === item.id) {
+        itemToReveal = this.consumerGroupsContainer;
+      }
+    } else if (item instanceof ConsumerGroup) {
+      itemToReveal = this.consumerGroupsInTreeView.get(item.consumerGroupId);
+    } else if (item instanceof Consumer) {
+      const parentGroup = this.consumerGroupsInTreeView.get(item.consumerGroupId);
+      if (parentGroup) {
+        itemToReveal = parentGroup.members.find((member) => member.consumerId === item.consumerId);
+      }
+    } else if (item instanceof KafkaTopic) {
       itemToReveal = this.topicsInTreeView.get(item.name);
     } else if (item instanceof Subject) {
       itemToReveal = this.subjectsInTreeView.get(item.name);
@@ -255,6 +400,7 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
       schemaSubjectChanged.event(this.subjectChangeHandler.bind(this)),
       schemaVersionsChanged.event(this.subjectChangeHandler.bind(this)),
       topicChanged.event(this.topicChangedHandler.bind(this)),
+      consumerGroupsChanged.event(this.consumerGroupsChangedHandler.bind(this)),
     ];
   }
 
@@ -265,6 +411,16 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
         cluster: event.cluster.name,
       });
       await this.refresh(true);
+    }
+  }
+
+  async consumerGroupsChangedHandler(cluster: KafkaCluster): Promise<void> {
+    if (this.kafkaCluster && this.kafkaCluster.equals(cluster)) {
+      this.logger.debug(
+        "consumerGroupsChanged event fired for the focused cluster, refreshing consumer groups",
+        { clusterId: cluster.id },
+      );
+      await this.refreshConsumerGroups(cluster, true);
     }
   }
 

@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Consumer groups and their members are now visible in the Topics view under a collapsible "Consumer
+  Groups" container
+
 ## 2.2.0
 
 ### Added
