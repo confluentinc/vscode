@@ -221,7 +221,7 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
         new ThemeIcon(IconNames.CONSUMER_GROUP),
       );
 
-      await Promise.all([
+      await Promise.allSettled([
         this.refreshTopics(cluster, forceDeepRefresh),
         this.refreshConsumerGroups(cluster, forceDeepRefresh),
       ]);
