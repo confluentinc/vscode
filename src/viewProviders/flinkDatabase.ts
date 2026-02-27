@@ -25,6 +25,7 @@ import {
 } from "../models/flinkDatabaseResourceContainer";
 import { FlinkRelation, FlinkRelationColumn } from "../models/flinkRelation";
 import { FlinkUdf, FlinkUdfTreeItem } from "../models/flinkUDF";
+import { FlinkTypeNode } from "../models/flinkTypeNode";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CustomMarkdownString } from "../models/main";
 import type { IEnvProviderRegion } from "../models/resource";
@@ -37,7 +38,9 @@ export type DatabaseChildrenType =
   // not specifically a FlinkDatabaseResource, but it's being handled here for now:
   | FlinkArtifact
   // visible when a FlinkRelation is expanded:
-  | FlinkRelationColumn;
+  | FlinkRelationColumn
+  // visible when a FlinkRelationColumn or FlinkTypeNode is expanded:
+  | FlinkTypeNode;
 
 // top-level container tree items with context values for attaching commands
 const RELATIONS_CONTAINER = new FlinkDatabaseResourceContainer<FlinkRelation>(
@@ -140,6 +143,12 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     } else if (element instanceof FlinkRelation) {
       // expanding a FlinkRelation to show its columns
       children = element.columns;
+    } else if (element instanceof FlinkRelationColumn) {
+      // expanding a column to show type structure
+      children = element.getTypeChildren();
+    } else if (element instanceof FlinkTypeNode) {
+      // expanding a type node to show nested structure
+      children = element.getChildren();
     }
 
     return this.filterChildren(element, children);
@@ -181,6 +190,14 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     if (element instanceof FlinkDatabaseResourceContainer) {
       // root-level item
       return;
+    }
+    if (element instanceof FlinkTypeNode) {
+      // If has immediate parent node, return it
+      if (element.parentNode) {
+        return element.parentNode;
+      }
+      // Otherwise, return the parent column
+      return element.parentColumn ?? undefined;
     }
     if (element instanceof FlinkRelationColumn) {
       // look up the FlinkRelation parent
@@ -229,12 +246,19 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
 
     // just for logging:
     const resourceLogLabel =
-      resource instanceof FlinkDatabaseResourceContainer ? resource.label : resource.name;
+      resource instanceof FlinkDatabaseResourceContainer
+        ? resource.label
+        : resource instanceof FlinkTypeNode
+          ? resource.id
+          : resource.name;
 
     // look up the instance and reveal the item instead of the instance that was passed in since
     // VS Code needs the exact same object reference to find it in the tree
     let exactInstance: DatabaseChildrenType | undefined;
-    if (resource instanceof FlinkDatabaseResourceContainer) {
+    if (resource instanceof FlinkTypeNode) {
+      // FlinkTypeNode instances are not stored anywhere, so just use the passed-in instance
+      exactInstance = resource;
+    } else if (resource instanceof FlinkDatabaseResourceContainer) {
       // reveal the container directly
       exactInstance = resource;
     } else if (resource instanceof FlinkRelationColumn) {

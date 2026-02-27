@@ -120,22 +120,22 @@ describe("flinkRelation.ts", () => {
           assert.strictEqual(simpleType, "MAP");
         });
 
-        it("should simplify ARRAY types", () => {
+        it("should simplify ARRAY types with element type", () => {
           const column = new FlinkRelationColumn({
             ...TEST_VARCHAR_COLUMN,
             fullDataType: "ARRAY<INT>",
           });
           const simpleType = column.simpleDataType;
-          assert.strictEqual(simpleType, "ARRAY");
+          assert.strictEqual(simpleType, "INT[]");
         });
 
-        it("should simplify MULTISET types", () => {
+        it("should simplify MULTISET types with element type", () => {
           const column = new FlinkRelationColumn({
             ...TEST_VARCHAR_COLUMN,
             fullDataType: "MULTISET<STRING>",
           });
           const simpleType = column.simpleDataType;
-          assert.strictEqual(simpleType, "MULTISET");
+          assert.strictEqual(simpleType, "STRING MULTISET");
         });
 
         for (const type of ["INT", "VARCHAR(100)", "BOOLEAN", "TIMESTAMP(3)"]) {
