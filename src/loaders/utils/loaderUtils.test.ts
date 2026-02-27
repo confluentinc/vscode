@@ -399,6 +399,14 @@ describe("loaderUtils.ts", () => {
 
       assert.strictEqual(result.length, 0);
     });
+
+    it("should propagate API errors from listKafkaConsumerGroups", async () => {
+      stubbedClient.listKafkaConsumerGroups.rejects(new Error("Connection refused"));
+
+      await assert.rejects(loaderUtils.fetchConsumerGroups(TEST_LOCAL_KAFKA_CLUSTER), {
+        message: "Connection refused",
+      });
+    });
   });
 
   describe("fetchConsumerGroupMembers()", () => {
@@ -474,6 +482,15 @@ describe("loaderUtils.ts", () => {
         cluster_id: TEST_LOCAL_KAFKA_CLUSTER.id,
         consumer_group_id: testGroupId,
       });
+    });
+
+    it("should propagate API errors from listKafkaConsumers", async () => {
+      stubbedClient.listKafkaConsumers.rejects(new Error("Connection refused"));
+
+      await assert.rejects(
+        loaderUtils.fetchConsumerGroupMembers(TEST_LOCAL_KAFKA_CLUSTER, testGroupId),
+        { message: "Connection refused" },
+      );
     });
   });
 
