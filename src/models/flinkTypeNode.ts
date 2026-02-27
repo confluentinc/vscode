@@ -14,6 +14,7 @@ import type { FlinkRelationColumn } from "./flinkRelation";
 import type { ConnectionId, IResourceBase } from "./resource";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ConnectionType } from "../clients/sidecar";
+import { IconNames } from "../icons";
 
 /**
  * Represents a parsed Flink type node in the tree hierarchy.
@@ -174,34 +175,11 @@ export class FlinkTypeNode implements IResourceBase {
   }
 
   /**
-   * Get the icon for this node based on type kind.
-   * Uses VS Code built-in ThemeIcons.
+   * Get the icon for this node.
+   * Currently uses placeholder icon for all types.
    */
-  private getIcon(): ThemeIcon {
-    const kind = this.parsedType.kind;
-
-    if (kind === FlinkTypeKind.ROW) {
-      return new ThemeIcon("symbol-struct");
-    }
-
-    if (kind === FlinkTypeKind.MAP) {
-      // Use different icons for key vs value based on fieldName
-      if (this.parsedType.fieldName === "key") {
-        return new ThemeIcon("symbol-key");
-      }
-      return new ThemeIcon("symbol-value");
-    }
-
-    if (kind === FlinkTypeKind.ARRAY) {
-      return new ThemeIcon("symbol-array");
-    }
-
-    if (kind === FlinkTypeKind.MULTISET) {
-      return new ThemeIcon("symbol-array"); // Use array icon for multiset
-    }
-
-    // Default for scalars
-    return new ThemeIcon("symbol-field");
+  private getIcon(): string {
+    return IconNames.PLACEHOLDER;
   }
 
   /**
