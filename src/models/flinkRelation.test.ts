@@ -120,22 +120,22 @@ describe("flinkRelation.ts", () => {
           assert.strictEqual(simpleType, "MAP");
         });
 
-        it("should simplify ARRAY types", () => {
+        it("should simplify ARRAY types with element type", () => {
           const column = new FlinkRelationColumn({
             ...TEST_VARCHAR_COLUMN,
             fullDataType: "ARRAY<INT>",
           });
           const simpleType = column.simpleDataType;
-          assert.strictEqual(simpleType, "ARRAY");
+          assert.strictEqual(simpleType, "INT[]");
         });
 
-        it("should simplify MULTISET types", () => {
+        it("should simplify MULTISET types with element type", () => {
           const column = new FlinkRelationColumn({
             ...TEST_VARCHAR_COLUMN,
             fullDataType: "MULTISET<STRING>",
           });
           const simpleType = column.simpleDataType;
-          assert.strictEqual(simpleType, "MULTISET");
+          assert.strictEqual(simpleType, "STRING MULTISET");
         });
 
         for (const type of ["INT", "VARCHAR(100)", "BOOLEAN", "TIMESTAMP(3)"]) {
@@ -238,6 +238,147 @@ describe("flinkRelation.ts", () => {
         for (const pattern of absentPatterns) {
           assert.doesNotMatch(tooltip.value, pattern);
         }
+      });
+    });
+
+    describe("getTypeChildren()", () => {
+      it("generates globally unique IDs across multiple ARRAY<ROW> columns with same field names", () => {
+        // This test proves that even though two different columns have identical
+        // ROW structures with the same field names, their child nodes have globally
+        // unique IDs within the tree view.
+        // This is critical for handling the synthetic parent node pattern where
+        // FlinkRelationColumn.getTypeChildren() creates a non-displayed ARRAY/MULTISET
+        // node to maintain proper ID hierarchy.
+
+        const column1 = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          relationName: "users_table",
+          name: "metadata",
+          fullDataType: "ARRAY<ROW<id INT, name VARCHAR>>",
+        });
+
+        const column2 = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          relationName: "orders_table",
+          name: "metadata",
+          fullDataType: "ARRAY<ROW<id INT, name VARCHAR>>",
+        });
+
+        // Get children from both columns
+        const children1 = column1.getTypeChildren();
+        const children2 = column2.getTypeChildren();
+
+        // Both should have 2 children (the ROW's two fields)
+        assert.strictEqual(children1.length, 2, "Column 1 should have 2 field children");
+        assert.strictEqual(children2.length, 2, "Column 2 should have 2 field children");
+
+        // Collect all IDs
+        const allIds = [
+          ...children1.map((child) => child.id),
+          ...children2.map((child) => child.id),
+        ];
+
+        // Verify all IDs are unique (no duplicates)
+        const uniqueIds = new Set(allIds);
+        assert.strictEqual(
+          allIds.length,
+          uniqueIds.size,
+          "All IDs should be globally unique across columns",
+        );
+
+        // Verify IDs include column context despite same field names
+        const ids1 = new Set(children1.map((child) => child.id));
+        const ids2 = new Set(children2.map((child) => child.id));
+
+        // The sets should be completely disjoint (no overlap)
+        const intersection = new Set([...ids1].filter((id) => ids2.has(id)));
+        assert.strictEqual(
+          intersection.size,
+          0,
+          "IDs from different columns should be completely different due to column ID prefix",
+        );
+
+        // Verify IDs have expected structure: relationName.columnName.fieldName
+        for (const id of ids1) {
+          assert.match(
+            id,
+            /^users_table\.metadata\.(id|name)$/,
+            `Column 1 ID should be: users_table.metadata.(id|name): ${id}`,
+          );
+        }
+
+        for (const id of ids2) {
+          assert.match(
+            id,
+            /^orders_table\.metadata\.(id|name)$/,
+            `Column 2 ID should be: orders_table.metadata.(id|name): ${id}`,
+          );
+        }
+      });
+
+      it("generates unique IDs for MULTISET<ROW> columns", () => {
+        const column = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          relationName: "test_table",
+          name: "items",
+          fullDataType: "MULTISET<ROW<id INT, value VARCHAR>>",
+        });
+
+        const children = column.getTypeChildren();
+
+        assert.strictEqual(children.length, 2, "Should have 2 field children from MULTISET<ROW>");
+
+        // Verify IDs use field names
+        const ids = children.map((child) => child.id);
+        for (const id of ids) {
+          assert.match(
+            id,
+            /^test_table\.items\.(id|value)$/,
+            `MULTISET ID should be: test_table.items.(id|value): ${id}`,
+          );
+        }
+
+        // All IDs should be unique
+        const uniqueIds = new Set(ids);
+        assert.strictEqual(ids.length, uniqueIds.size, "All IDs should be unique");
+      });
+    });
+
+    describe("getParsedType()", () => {
+      it("returns null and logs error for unparseable type strings", () => {
+        const column = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          relationName: "test_table",
+          name: "bad_column",
+          // Empty type that will cause parser to throw
+          fullDataType: "",
+        });
+
+        // Call getParsedType - should return null for unparseable input
+        const result = column.getParsedType();
+        assert.strictEqual(result, null, "Should return null for unparseable type syntax");
+
+        // Call again - should still return null (not re-attempt parsing due to _parseError flag)
+        const result2 = column.getParsedType();
+        assert.strictEqual(result2, null, "Should cache error and return null on second call");
+      });
+
+      it("successfully parses valid type strings and caches result", () => {
+        const column = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          relationName: "test_table",
+          name: "good_column",
+          fullDataType: "ARRAY<ROW<id INT, name VARCHAR>>",
+        });
+
+        // First call should parse successfully
+        const result1 = column.getParsedType();
+        assert.ok(result1, "Should successfully parse valid type");
+        assert.strictEqual(result1.kind, "ARRAY", "Should correctly identify ARRAY type");
+
+        // Second call should return cached result (same object reference)
+        const result2 = column.getParsedType();
+        assert.strictEqual(result1, result2, "Should return cached result on second call");
       });
     });
 
