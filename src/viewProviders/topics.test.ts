@@ -781,6 +781,39 @@ describe("viewProviders/topics.ts", () => {
           });
         }
       });
+
+      describe("consumerGroupsChangedHandler", () => {
+        let refreshConsumerGroupsStub: sinon.SinonStub;
+
+        beforeEach(() => {
+          refreshConsumerGroupsStub = sandbox.stub(provider, "refreshConsumerGroups");
+        });
+
+        it("should do nothing when no cluster is focused", async () => {
+          provider.kafkaCluster = null;
+
+          await provider.consumerGroupsChangedHandler(TEST_CCLOUD_KAFKA_CLUSTER);
+
+          sinon.assert.notCalled(refreshConsumerGroupsStub);
+        });
+
+        it("should do nothing when the event cluster does not match the focused cluster", async () => {
+          provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+
+          await provider.consumerGroupsChangedHandler(TEST_CCLOUD_KAFKA_CLUSTER);
+
+          sinon.assert.notCalled(refreshConsumerGroupsStub);
+        });
+
+        it("should call refreshConsumerGroups when the event cluster matches the focused cluster", async () => {
+          provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+
+          await provider.consumerGroupsChangedHandler(TEST_CCLOUD_KAFKA_CLUSTER);
+
+          sinon.assert.calledOnce(refreshConsumerGroupsStub);
+          sinon.assert.calledWith(refreshConsumerGroupsStub, TEST_CCLOUD_KAFKA_CLUSTER, true);
+        });
+      });
     });
 
     describe("setCustomEventListeners()", () => {
