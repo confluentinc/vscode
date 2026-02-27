@@ -4,7 +4,6 @@ import { CCLOUD_CONNECTION_ID } from "../constants";
 import { logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { IconNames } from "../icons";
-import { Logger } from "../logging";
 import { parseFlinkType } from "../parsers/flinkTypeParser";
 import { formatSqlType, formatFlinkTypeForDisplay } from "../utils/flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
@@ -13,8 +12,6 @@ import { FlinkTypeKind, isCompoundFlinkType } from "./flinkTypes";
 import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
 import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
-
-const logger = new Logger("models.flinkRelation");
 
 /**
  * Represents a column of a Flink relation (table or view).
@@ -97,15 +94,9 @@ export class FlinkRelationColumn {
       return "MAP";
     }
     if (type.startsWith("ARRAY<")) {
-      logger.warn(
-        `ARRAY type for "${this.name}": fullType="${type}" → parsing FAILED, returning "[]"`,
-      );
       return "[]";
     }
     if (type.startsWith("MULTISET<")) {
-      logger.warn(
-        `MULTISET type for "${this.name}": fullType="${type}" → parsing FAILED, returning "MULTISET"`,
-      );
       return "MULTISET";
     }
 
