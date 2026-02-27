@@ -161,6 +161,10 @@ export class FlinkRelationColumn {
   /**
    * Get child type nodes for this column (for tree expansion).
    * Returns empty array if not expandable.
+   *
+   * Special case: For ARRAY/MULTISET columns, we skip the intermediate container node
+   * and return the element's children directly for better UX. However, we set the
+   * element type as parentNode to ensure ID uniqueness includes ARRAY/MULTISET context.
    */
   getTypeChildren(): FlinkTypeNode[] {
     if (!this.isExpandable) {
@@ -172,6 +176,33 @@ export class FlinkRelationColumn {
       return [];
     }
 
+    // For ARRAY/MULTISET with compound elements, create a synthetic parent node
+    // so that the element's children have the correct ID hierarchy
+    if (
+      (parsed.kind === FlinkTypeKind.ARRAY || parsed.kind === FlinkTypeKind.MULTISET) &&
+      isCompoundFlinkType(parsed.members[0])
+    ) {
+      // Create a synthetic ARRAY/MULTISET node (not displayed in tree, but used for ID calculation)
+      const containerNode = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumn: this,
+        depth: 0,
+      });
+
+      // Return the container's children (which skips the intermediate node)
+      const elementType = parsed.members[0];
+      return elementType.members.map(
+        (member) =>
+          new FlinkTypeNode({
+            parsedType: member,
+            parentNode: containerNode,
+            parentColumn: this,
+            depth: 1,
+          }),
+      );
+    }
+
+    // For ROW/MAP columns, create nodes for each member field
     return parsed.members.map(
       (member) =>
         new FlinkTypeNode({
