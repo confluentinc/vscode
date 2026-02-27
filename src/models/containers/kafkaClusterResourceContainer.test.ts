@@ -92,27 +92,27 @@ describe("models/containers/kafkaClusterResourceContainer", () => {
     });
 
     describe("id derivation", () => {
-      it("should derive id suffix from single-word label", () => {
+      it("should derive id from connectionId and label", () => {
         const container = new KafkaClusterResourceContainer(
           CCLOUD_CONNECTION_ID,
           ConnectionType.Ccloud,
           "Topics",
         );
 
-        assert.strictEqual(container.id, "kafka-cluster-topics");
+        assert.strictEqual(container.id, `${CCLOUD_CONNECTION_ID}-Topics`);
       });
 
-      it("should derive id suffix from multi-word label", () => {
+      it("should preserve multi-word labels in id", () => {
         const container = new KafkaClusterResourceContainer(
           CCLOUD_CONNECTION_ID,
           ConnectionType.Ccloud,
           "Consumer Groups",
         );
 
-        assert.strictEqual(container.id, "kafka-cluster-consumer-groups");
+        assert.strictEqual(container.id, `${CCLOUD_CONNECTION_ID}-Consumer Groups`);
       });
 
-      it("should use the same id regardless of connection type", () => {
+      it("should use different ids for different connection types", () => {
         const ccloudContainer = new KafkaClusterResourceContainer(
           CCLOUD_CONNECTION_ID,
           ConnectionType.Ccloud,
@@ -124,7 +124,7 @@ describe("models/containers/kafkaClusterResourceContainer", () => {
           TEST_LABEL,
         );
 
-        assert.strictEqual(ccloudContainer.id, directContainer.id);
+        assert.notStrictEqual(ccloudContainer.id, directContainer.id);
       });
     });
 
@@ -137,7 +137,7 @@ describe("models/containers/kafkaClusterResourceContainer", () => {
           label,
         );
 
-        assert.strictEqual(container.loggerName, `models.KafkaClusterResourceContainer(${label})`);
+        assert.strictEqual(container.loggerName, `KafkaClusterResourceContainer.${label}`);
       });
     });
   });

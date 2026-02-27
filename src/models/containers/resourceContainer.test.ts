@@ -10,7 +10,7 @@ import { LOADING_POLL_INTERVAL_MS, ResourceContainer } from "./resourceContainer
 
 /** Minimal concrete subclass to test abstract base. */
 class TestContainer extends ResourceContainer<BaseViewProviderData> {
-  readonly loggerName = "test.TestContainer";
+  protected readonly loggerNamePrefix = "TestContainer";
 
   constructor(
     label: string,
@@ -19,7 +19,6 @@ class TestContainer extends ResourceContainer<BaseViewProviderData> {
     icon?: ThemeIcon,
   ) {
     super(CCLOUD_CONNECTION_ID, ConnectionType.Ccloud, label, children, contextValue, icon);
-    this.id = `test-${label}`;
   }
 }
 
@@ -48,7 +47,7 @@ describe("models/containers/resourceContainer.ts", () => {
         const container = new TestContainer(testLabel, testResources);
 
         assert.strictEqual(container.label, testLabel);
-        assert.strictEqual(container.id, `test-${testLabel}`);
+        assert.strictEqual(container.id, `${CCLOUD_CONNECTION_ID}-${testLabel}`);
       });
 
       it("should always set the collapsible state to Collapsed", () => {

@@ -20,14 +20,10 @@ export enum FlinkDatabaseContainerLabel {
 export class FlinkDatabaseResourceContainer<
   T extends FlinkDatabaseResource | FlinkArtifact,
 > extends ResourceContainer<T> {
-  get loggerName() {
-    return `models.FlinkDatabaseResourceContainer(${this.label})`;
-  }
+  protected readonly loggerNamePrefix = "FlinkDatabaseResourceContainer";
 
   constructor(label: string, children: T[], contextValue?: string, icon?: ThemeIcon) {
     // Flink Database resources are always for the CCLOUD connection
     super(CCLOUD_CONNECTION_ID, ConnectionType.Ccloud, label, children, contextValue, icon);
-
-    this.id = `${CCLOUD_CONNECTION_ID}-${label}`;
   }
 }

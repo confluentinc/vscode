@@ -15,14 +15,14 @@ export abstract class ResourceContainer<T extends ISearchable>
   extends TreeItem
   implements ISearchable
 {
-  // enforce string so subclasses set this after super()
+  // narrow TreeItem.id from `string | undefined` to satisfy IdItem (required by BaseViewProviderData)
   declare id: string;
 
   // IResourceBase fields required by BaseViewProviderData
   readonly connectionId: ConnectionId;
   readonly connectionType: ConnectionType;
 
-  abstract loggerName: string;
+  protected abstract readonly loggerNamePrefix: string;
 
   private _children: T[];
 
@@ -31,16 +31,17 @@ export abstract class ResourceContainer<T extends ISearchable>
   protected readonly _defaultContextValue: string | undefined;
   protected readonly _defaultIcon: ThemeIcon | undefined;
 
-  protected constructor(
+  constructor(
     connectionId: ConnectionId,
     connectionType: ConnectionType,
     label: string,
-    children: T[],
+    children: T[] = [],
     contextValue?: string,
     icon?: ThemeIcon,
   ) {
     super(label, TreeItemCollapsibleState.Collapsed);
 
+    this.id = `${connectionId}-${label}`;
     this.connectionId = connectionId;
     this.connectionType = connectionType;
     this._children = children;
@@ -53,7 +54,12 @@ export abstract class ResourceContainer<T extends ISearchable>
     this.iconPath = this._defaultIcon;
   }
 
-  // lazy because loggerName is abstract and not available during super() / constructor time
+  /** Logger name combining the subclass-provided {@link loggerNamePrefix} and instance label. */
+  get loggerName(): string {
+    return `${this.loggerNamePrefix}.${this.label}`;
+  }
+
+  // lazy to avoid allocating a Logger on every container construction
   private _logger?: Logger;
   private get logger(): Logger {
     if (!this._logger) {

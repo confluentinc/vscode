@@ -1,6 +1,4 @@
-import type { ThemeIcon } from "vscode";
-import type { ConnectionType } from "../../clients/sidecar";
-import type { ConnectionId, ISearchable } from "../resource";
+import type { ISearchable } from "../resource";
 import { ResourceContainer } from "./resourceContainer";
 
 /** Labels for the top-level containers in the Topics view. */
@@ -11,23 +9,5 @@ export enum KafkaClusterContainerLabel {
 
 /** A container {@link TreeItem} for resources to display in the Topics view. */
 export class KafkaClusterResourceContainer<T extends ISearchable> extends ResourceContainer<T> {
-  get loggerName() {
-    return `models.KafkaClusterResourceContainer(${this.label})`;
-  }
-
-  constructor(
-    connectionId: ConnectionId,
-    connectionType: ConnectionType,
-    label: string,
-    children: T[] = [],
-    contextValue?: string,
-    icon?: ThemeIcon,
-  ) {
-    super(connectionId, connectionType, label, children, contextValue, icon);
-
-    // convert label to hyphenated id:
-    // "Consumer Groups" -> "consumer-groups", "Topics" -> "topics"
-    const suffix = label.toLowerCase().replaceAll(/\s+/g, "-");
-    this.id = `kafka-cluster-${suffix}`;
-  }
+  protected readonly loggerNamePrefix = "KafkaClusterResourceContainer";
 }
