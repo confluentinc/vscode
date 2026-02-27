@@ -29,7 +29,7 @@ import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
 import {
   FlinkDatabaseContainerLabel,
   FlinkDatabaseResourceContainer,
-} from "../models/flinkDatabaseResourceContainer";
+} from "../models/containers/flinkDatabaseResourceContainer";
 import { FlinkUdfTreeItem } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
