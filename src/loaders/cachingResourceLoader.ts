@@ -15,6 +15,7 @@ import {
   fetchConsumerGroupMembers,
   fetchConsumerGroups,
   fetchTopics,
+  parseCoordinatorId,
 } from "./utils/loaderUtils";
 
 const logger = new Logger("cachingResourceLoader");
@@ -287,7 +288,6 @@ export abstract class CachingResourceLoader<
     // Convert API response to ConsumerGroup models, fetching members for each group.
     const consumerGroups: ConsumerGroup[] = await Promise.all(
       responseConsumerGroups.map(async (data) => {
-        // Fetch members for this consumer group
         const memberData = await fetchConsumerGroupMembers(cluster, data.consumer_group_id);
         const members: Consumer[] = memberData.map(
           (m) =>
@@ -312,7 +312,7 @@ export abstract class CachingResourceLoader<
           state: data.state as ConsumerGroupState,
           isSimple: data.is_simple,
           partitionAssignor: data.partition_assignor,
-          coordinatorId: data.coordinator?.related ? parseInt(data.coordinator.related, 10) : null,
+          coordinatorId: parseCoordinatorId(data.coordinator?.related),
           members,
         });
       }),
