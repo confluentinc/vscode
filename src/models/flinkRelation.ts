@@ -128,7 +128,8 @@ export class FlinkRelationColumn {
       return this._parsedType;
     } catch (error) {
       this._parseError = true;
-      logError(error, `Failed to parse type for column ${this.name}: ${this.fullDataType}`);
+      const errorMessage = `Failed to parse Flink type for column '${this.name}' in table '${this.relationName}'. Data type: ${this.fullDataType}`;
+      logError(error, errorMessage);
       return null;
     }
   }

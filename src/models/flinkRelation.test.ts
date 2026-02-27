@@ -344,6 +344,44 @@ describe("flinkRelation.ts", () => {
       });
     });
 
+    describe("getParsedType()", () => {
+      it("returns null and logs error for unparseable type strings", () => {
+        const column = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          relationName: "test_table",
+          name: "bad_column",
+          // Empty type that will cause parser to throw
+          fullDataType: "",
+        });
+
+        // Call getParsedType - should return null for unparseable input
+        const result = column.getParsedType();
+        assert.strictEqual(result, null, "Should return null for unparseable type syntax");
+
+        // Call again - should still return null (not re-attempt parsing due to _parseError flag)
+        const result2 = column.getParsedType();
+        assert.strictEqual(result2, null, "Should cache error and return null on second call");
+      });
+
+      it("successfully parses valid type strings and caches result", () => {
+        const column = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          relationName: "test_table",
+          name: "good_column",
+          fullDataType: "ARRAY<ROW<id INT, name VARCHAR>>",
+        });
+
+        // First call should parse successfully
+        const result1 = column.getParsedType();
+        assert.ok(result1, "Should successfully parse valid type");
+        assert.strictEqual(result1.kind, "ARRAY", "Should correctly identify ARRAY type");
+
+        // Second call should return cached result (same object reference)
+        const result2 = column.getParsedType();
+        assert.strictEqual(result1, result2, "Should return cached result on second call");
+      });
+    });
+
     describe("tooltipLine()", () => {
       it("should return a single line tooltip for the column", () => {
         const column = new FlinkRelationColumn({
