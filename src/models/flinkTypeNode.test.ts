@@ -347,6 +347,50 @@ describe("FlinkTypeNode", () => {
       assert(!item.description.includes("NOT NULL"));
     });
 
+    it("includes array notation in description for ARRAY<scalar>", () => {
+      const parsed = parseFlinkType("ARRAY<VARCHAR(255)>");
+      parsed.isFieldNullable = true;
+
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      const item = node.getTreeItem();
+
+      assert(typeof item.description === "string");
+      assert.strictEqual(item.description, "VARCHAR(255)[]");
+    });
+
+    it("includes array notation in description for ARRAY<scalar> with NOT NULL", () => {
+      const parsed = parseFlinkType("ARRAY<INT>");
+      parsed.isFieldNullable = false;
+
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      const item = node.getTreeItem();
+
+      assert(typeof item.description === "string");
+      assert.strictEqual(item.description, "INT[] NOT NULL");
+    });
+
+    it("includes multiset notation in description for MULTISET<scalar>", () => {
+      const parsed = parseFlinkType("MULTISET<DECIMAL>");
+      parsed.isFieldNullable = true;
+
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      const item = node.getTreeItem();
+
+      assert(typeof item.description === "string");
+      assert.strictEqual(item.description, "DECIMAL MULTISET");
+    });
+
+    it("includes array notation in description for ARRAY<ROW>", () => {
+      const parsed = parseFlinkType("ARRAY<ROW<id INT>>");
+      parsed.isFieldNullable = true;
+
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      const item = node.getTreeItem();
+
+      assert(typeof item.description === "string");
+      assert.strictEqual(item.description, "ROW[]");
+    });
+
     it("sets correct contextValue", () => {
       const parsed = parseFlinkType("INT");
       const node = new FlinkTypeNode({ parsedType: parsed });

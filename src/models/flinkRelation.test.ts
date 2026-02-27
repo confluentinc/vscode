@@ -241,6 +241,109 @@ describe("flinkRelation.ts", () => {
       });
     });
 
+    describe("getTypeChildren()", () => {
+      it("generates globally unique IDs across multiple ARRAY<ROW> columns with same field names", () => {
+        // This test proves that even though two different columns have identical
+        // ROW structures with the same field names, their child nodes have globally
+        // unique IDs within the tree view.
+        // This is critical for handling the synthetic parent node pattern where
+        // FlinkRelationColumn.getTypeChildren() creates a non-displayed ARRAY/MULTISET
+        // node to maintain proper ID hierarchy.
+
+        const column1 = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          relationName: "users_table",
+          name: "metadata",
+          fullDataType: "ARRAY<ROW<id INT, name VARCHAR>>",
+        });
+
+        const column2 = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          relationName: "orders_table",
+          name: "metadata",
+          fullDataType: "ARRAY<ROW<id INT, name VARCHAR>>",
+        });
+
+        // Get children from both columns
+        const children1 = column1.getTypeChildren();
+        const children2 = column2.getTypeChildren();
+
+        // Both should have 2 children (the ROW's two fields)
+        assert.strictEqual(children1.length, 2, "Column 1 should have 2 field children");
+        assert.strictEqual(children2.length, 2, "Column 2 should have 2 field children");
+
+        // Collect all IDs
+        const allIds = [
+          ...children1.map((child) => child.id),
+          ...children2.map((child) => child.id),
+        ];
+
+        // Verify all IDs are unique (no duplicates)
+        const uniqueIds = new Set(allIds);
+        assert.strictEqual(
+          allIds.length,
+          uniqueIds.size,
+          "All IDs should be globally unique across columns",
+        );
+
+        // Verify IDs include column context despite same field names
+        const ids1 = new Set(children1.map((child) => child.id));
+        const ids2 = new Set(children2.map((child) => child.id));
+
+        // The sets should be completely disjoint (no overlap)
+        const intersection = new Set([...ids1].filter((id) => ids2.has(id)));
+        assert.strictEqual(
+          intersection.size,
+          0,
+          "IDs from different columns should be completely different due to column ID prefix",
+        );
+
+        // Verify IDs have expected structure: relationName.columnName:[element]:fieldName
+        for (const id of ids1) {
+          assert.match(
+            id,
+            /^users_table\.metadata:\[element\]:(id|name)$/,
+            `Column 1 ID should include column and ARRAY marker: ${id}`,
+          );
+        }
+
+        for (const id of ids2) {
+          assert.match(
+            id,
+            /^orders_table\.metadata:\[element\]:(id|name)$/,
+            `Column 2 ID should include column and ARRAY marker: ${id}`,
+          );
+        }
+      });
+
+      it("generates unique IDs for MULTISET<ROW> columns", () => {
+        const column = new FlinkRelationColumn({
+          ...TEST_VARCHAR_COLUMN,
+          relationName: "test_table",
+          name: "items",
+          fullDataType: "MULTISET<ROW<id INT, value VARCHAR>>",
+        });
+
+        const children = column.getTypeChildren();
+
+        assert.strictEqual(children.length, 2, "Should have 2 field children from MULTISET<ROW>");
+
+        // Verify IDs include MULTISET marker
+        const ids = children.map((child) => child.id);
+        for (const id of ids) {
+          assert.match(
+            id,
+            /^test_table\.items:\{element\}:(id|value)$/,
+            `MULTISET ID should include curly brace marker: ${id}`,
+          );
+        }
+
+        // All IDs should be unique
+        const uniqueIds = new Set(ids);
+        assert.strictEqual(ids.length, uniqueIds.size, "All IDs should be unique");
+      });
+    });
+
     describe("tooltipLine()", () => {
       it("should return a single line tooltip for the column", () => {
         const column = new FlinkRelationColumn({

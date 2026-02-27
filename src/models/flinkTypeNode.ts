@@ -161,9 +161,10 @@ export class FlinkTypeNode implements IResourceBase {
    *
    * Format: "DataType NOT NULL" or "DataType"
    * Only shows "NOT NULL" if non-nullable (nullable is default in databases)
+   * Includes array/multiset notation for display consistency (e.g., "VARCHAR[]", "ROW MULTISET")
    */
   private getDescription(): string {
-    let desc = formatSqlType(this.parsedType.dataType);
+    let desc = formatFlinkTypeForDisplay(this.parsedType);
 
     if (!this.parsedType.isFieldNullable) {
       desc += " NOT NULL";
