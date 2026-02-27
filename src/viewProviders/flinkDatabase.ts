@@ -163,9 +163,6 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     } else if ("getTreeItem" in element && typeof element.getTreeItem === "function") {
       // FlinkRelations/FlinkRelationColumn/FlinkTypeNode since they can produce their own TreeItems.
       treeItem = element.getTreeItem();
-      this.logger.debug(
-        `generated TreeItem for ${treeItem.label} ${treeItem.id} with icon ${treeItem.iconPath}`,
-      );
     } else if (element instanceof FlinkArtifact) {
       treeItem = new FlinkArtifactTreeItem(element);
     } else if (element instanceof FlinkUdf) {
