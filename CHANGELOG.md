@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Consumer groups and their members are now visible in the Topics view under a collapsible "Consumer
+  Groups" container
 - Direct connections form now supports OAuth authentication for WarpStream connections.
 
 ## 2.2.2
