@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Consumer groups and their members are now visible in the Topics view under a collapsible "Consumer
+  Groups" container
 - Direct connections form now supports OAuth authentication for WarpStream connections.
 - Columns of compound Flink types (`ROW`s, `MAP`s, `ARRAY`s or `MULTISET`s thereof) are now
   expandable in the Flink Database view list of Tables and Views.
