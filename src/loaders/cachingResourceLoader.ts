@@ -1,4 +1,5 @@
 import type { ConsumerGroupData, TopicData } from "../clients/kafkaRest";
+import { logError } from "../errors";
 import { Logger } from "../logging";
 import type { ConsumerGroupState } from "../models/consumerGroup";
 import { Consumer, ConsumerGroup } from "../models/consumerGroup";
@@ -288,20 +289,25 @@ export abstract class CachingResourceLoader<
     // Convert API response to ConsumerGroup models, fetching members for each group.
     const consumerGroups: ConsumerGroup[] = await Promise.all(
       responseConsumerGroups.map(async (data) => {
-        const memberData = await fetchConsumerGroupMembers(cluster, data.consumer_group_id);
-        const members: Consumer[] = memberData.map(
-          (m) =>
-            new Consumer({
-              connectionId: cluster.connectionId,
-              connectionType: cluster.connectionType,
-              environmentId: cluster.environmentId,
-              clusterId: cluster.id,
-              consumerGroupId: data.consumer_group_id,
-              consumerId: m.consumer_id,
-              clientId: m.client_id,
-              instanceId: m.instance_id ?? null,
-            }),
-        );
+        let members: Consumer[] = [];
+        try {
+          const memberData = await fetchConsumerGroupMembers(cluster, data.consumer_group_id);
+          members = memberData.map(
+            (m) =>
+              new Consumer({
+                connectionId: cluster.connectionId,
+                connectionType: cluster.connectionType,
+                environmentId: cluster.environmentId,
+                clusterId: cluster.id,
+                consumerGroupId: data.consumer_group_id,
+                consumerId: m.consumer_id,
+                clientId: m.client_id,
+                instanceId: m.instance_id ?? null,
+              }),
+          );
+        } catch (error) {
+          logError(error, `fetching members for consumer group ${data.consumer_group_id}`);
+        }
 
         return new ConsumerGroup({
           connectionId: cluster.connectionId,
