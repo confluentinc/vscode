@@ -329,17 +329,13 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     this.logger.debug(
       `refreshing ${container.label} resources for ${database.name} (${database.id})...`,
     );
-    // set initial loading state
-    container.isLoading = true;
+    container.setLoading();
     this._onDidChangeTreeData.fire(container);
 
     let results: T[] = [];
     try {
       results = await loaderMethod(database, forceDeepRefresh);
-      // clear any loading/error state and only refresh the provided container to show updated items
-      container.children = results;
-      container.tooltip = new CustomMarkdownString();
-      container.hasError = false;
+      container.setLoaded(results);
       this._onDidChangeTreeData.fire(container);
     } catch (error) {
       let errorMsg = String(error);
@@ -353,12 +349,9 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
       }
       const msg = `Failed to load ${container.label} for **${database.name}** (${database.id}):`;
       logError(error, `${msg} ${errorMsg}`);
-      // clear the loading state and show error info as tooltip (and icon through setting hasError)
-      container.children = [];
-      container.tooltip = new CustomMarkdownString()
-        .addWarning(msg)
-        .addCodeBlock(errorMsg, errorLanguage);
-      container.hasError = true;
+      container.setError(
+        new CustomMarkdownString().addWarning(msg).addCodeBlock(errorMsg, errorLanguage),
+      );
       this._onDidChangeTreeData.fire(container);
     }
     return results;
