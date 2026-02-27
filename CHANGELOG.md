@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- Direct connections form now supports OAuth authentication for WarpStream connections.
+
 ## 2.2.0
 
 ### Added
