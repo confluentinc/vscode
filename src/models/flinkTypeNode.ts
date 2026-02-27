@@ -67,7 +67,11 @@ export class FlinkTypeNode implements IResourceBase {
 
   /**
    * Unique identifier for this node in the tree hierarchy.
-   * Format: "parentId:fieldPath" for nested nodes, "parentId" for direct children.
+   * Format: "columnId:containerMarkers:fieldPath"
+   *
+   * Includes markers for ARRAY/MULTISET containers to ensure uniqueness when
+   * skipping intermediate container nodes in the tree (e.g., ARRAY<ROW> displays
+   * ROW's children directly, but needs to track which ARRAY they came from).
    */
   get id(): string {
     const path: string[] = [];
@@ -86,21 +90,23 @@ export class FlinkTypeNode implements IResourceBase {
       path.push(this.parentColumn.id);
     }
 
-    // Add field names in order from root to this node
+    // Add node identifiers in order from root to this node
+    // For ARRAY/MULTISET, add a marker; for ROW/MAP, add field names
     for (const chainNode of nodeChain) {
+      if (isCompoundFlinkType(chainNode.parsedType)) {
+        if (
+          chainNode.parsedType.kind === FlinkTypeKind.ARRAY ||
+          chainNode.parsedType.kind === FlinkTypeKind.MULTISET
+        ) {
+          // Add marker for ARRAY/MULTISET containers to track which container a field came from
+          path.push(chainNode.parsedType.kind === FlinkTypeKind.ARRAY ? "[element]" : "{element}");
+        }
+      }
+      // Always add fieldName if present (ROW/MAP members)
       const fieldName = chainNode.parsedType.fieldName;
       if (fieldName) {
         path.push(fieldName);
       }
-    }
-
-    // For ARRAY/MULTISET, also include the element identifier
-    if (
-      isCompoundFlinkType(this.parsedType) &&
-      (this.parsedType.kind === FlinkTypeKind.ARRAY ||
-        this.parsedType.kind === FlinkTypeKind.MULTISET)
-    ) {
-      path.push(this.parsedType.kind === FlinkTypeKind.ARRAY ? "[element]" : "{element}");
     }
 
     return path.join(":");
@@ -267,7 +273,8 @@ export class FlinkTypeNode implements IResourceBase {
    * Returns empty array if not expandable.
    *
    * Special case: For ARRAY/MULTISET with compound element types (ROW/MAP),
-   * returns the element's children directly (skips the intermediate [element]/[element] node).
+   * returns the element's children directly (skips the intermediate [element] node for better UX).
+   * The ID calculation includes ARRAY/MULTISET markers to ensure uniqueness.
    * For ROW/MAP, returns their member nodes directly.
    */
   getChildren(): FlinkTypeNode[] {
@@ -277,14 +284,13 @@ export class FlinkTypeNode implements IResourceBase {
 
     const { kind, members } = this.parsedType;
 
-    // For ARRAY/MULTISET with compound elements, skip intermediate node
-    // and return the element's children directly
+    // For ARRAY/MULTISET with compound elements, return the element's children directly
+    // (skips the intermediate [element] node for cleaner UX)
     if (
       (kind === FlinkTypeKind.ARRAY || kind === FlinkTypeKind.MULTISET) &&
       isCompoundFlinkType(members[0])
     ) {
       const elementType = members[0];
-      // Create child nodes from the element's members (ROW fields or MAP entries)
       return elementType.members.map(
         (member) =>
           new FlinkTypeNode({
@@ -320,8 +326,7 @@ export class FlinkTypeNode implements IResourceBase {
     const item = new TreeItem(this.getLabel(), collapsibleState);
 
     item.iconPath = this.getIcon();
-    // Note: Intentionally not setting item.id - FlinkTypeNode instances are ephemeral
-    // (recreated on each expand), so using object identity works better than fixed IDs
+    item.id = this.id;
     item.description = this.getDescription();
     item.tooltip = this.getTooltip();
     item.contextValue = "ccloud-flink-type-node";
