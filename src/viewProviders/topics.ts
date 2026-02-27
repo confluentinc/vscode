@@ -8,7 +8,6 @@ import type {
   TopicChangeEvent,
 } from "../emitters";
 import {
-  consumerGroupsChanged,
   environmentChanged,
   localKafkaConnected,
   schemaSubjectChanged,
@@ -400,7 +399,6 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
       schemaSubjectChanged.event(this.subjectChangeHandler.bind(this)),
       schemaVersionsChanged.event(this.subjectChangeHandler.bind(this)),
       topicChanged.event(this.topicChangedHandler.bind(this)),
-      consumerGroupsChanged.event(this.consumerGroupsChangedHandler.bind(this)),
     ];
   }
 
@@ -411,16 +409,6 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
         cluster: event.cluster.name,
       });
       await this.refresh(true);
-    }
-  }
-
-  async consumerGroupsChangedHandler(cluster: KafkaCluster): Promise<void> {
-    if (this.kafkaCluster && this.kafkaCluster.equals(cluster)) {
-      this.logger.debug(
-        "consumerGroupsChanged event fired for the focused cluster, refreshing consumer groups",
-        { clusterId: cluster.id },
-      );
-      await this.refreshConsumerGroups(cluster, true);
     }
   }
 
