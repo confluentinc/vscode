@@ -545,5 +545,52 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(children2.length, 1);
       assert.strictEqual(children2[0].parsedType.fieldName, "id");
     });
+
+    it("generates unique IDs across complex table structure with multiple array columns", () => {
+      // Simulate a complex table with multiple array columns containing the same structure
+      const col1 = createTestColumn("ARRAY<ROW<id INT, name VARCHAR>", "artists");
+      const col2 = createTestColumn("ARRAY<ROW<id INT, name VARCHAR>>", "metadata");
+
+      // Create nodes for both columns
+      const col1Type = parseFlinkType("ARRAY<ROW<id INT, name VARCHAR>>");
+      const col1Node = new FlinkTypeNode({ parsedType: col1Type, parentColumn: col1 });
+
+      const col2Type = parseFlinkType("ARRAY<ROW<id INT, name VARCHAR>>");
+      const col2Node = new FlinkTypeNode({ parsedType: col2Type, parentColumn: col2 });
+
+      // Get children (which should be the ROW's fields, skipping the ARRAY node)
+      const col1Children = col1Node.getChildren();
+      const col2Children = col2Node.getChildren();
+
+      assert.strictEqual(col1Children.length, 2);
+      assert.strictEqual(col2Children.length, 2);
+
+      // Collect all IDs from both columns
+      const allIds = [...col1Children.map((c) => c.id), ...col2Children.map((c) => c.id)];
+
+      // Check that all IDs are unique
+      const uniqueIds = new Set(allIds);
+      assert.strictEqual(
+        allIds.length,
+        uniqueIds.size,
+        `Found duplicate IDs: ${allIds.filter((id, i) => allIds.indexOf(id) !== i).join(", ")}`,
+      );
+
+      // Verify the IDs have the correct structure
+      assert(col1Children[0].id.includes("artists"), "col1 ID should include column name");
+      assert(col1Children[0].id.includes("[element]"), "col1 ID should include array marker");
+      assert(col1Children[0].id.includes("id"), "col1 ID should include field name");
+
+      assert(col2Children[0].id.includes("metadata"), "col2 ID should include column name");
+      assert(col2Children[0].id.includes("[element]"), "col2 ID should include array marker");
+      assert(col2Children[0].id.includes("id"), "col2 ID should include field name");
+
+      // Verify column1's ids are different from column2's despite same field names
+      assert.notStrictEqual(
+        col1Children[0].id,
+        col2Children[0].id,
+        "Different columns should have different IDs even with same field names",
+      );
+    });
   });
 });
