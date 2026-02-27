@@ -28,6 +28,7 @@ import {
 } from "../models/consumerGroup";
 import { KafkaClusterResourceContainer } from "../models/containers/kafkaClusterResourceContainer";
 import { KafkaCluster } from "../models/kafkaCluster";
+import { CustomMarkdownString } from "../models/main";
 import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
@@ -228,9 +229,13 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
     if (!this.topicsContainer) {
       return;
     }
-    // set initial loading state
-    this.topicsContainer.isLoading = true;
+    this.topicsContainer.setLoading();
     this._onDidChangeTreeData.fire(this.topicsContainer);
+
+    // clear stale entries before repopulating
+    this.topicsInTreeView.clear();
+    this.subjectsInTreeView.clear();
+    this.subjectToTopicMap.clear();
 
     const loader = ResourceLoader.getInstance(cluster.connectionId);
     try {
@@ -244,13 +249,15 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
           });
         }
       });
-      this.topicsContainer.children = topics;
-      // loading/error state is cleared by the children setter
+      this.topicsContainer.setLoaded(topics);
     } catch (err) {
       this.logger.error("Error fetching topics for cluster", cluster, err);
-      // signal error state so the container shows an error indicator
-      this.topicsContainer.hasError = true;
-      this.topicsContainer.children = [];
+      const message = err instanceof Error ? err.message : String(err);
+      this.topicsContainer.setError(
+        new CustomMarkdownString()
+          .addWarning(`Failed to load topics for **${cluster.name}**:`)
+          .addCodeBlock(message),
+      );
       if (err instanceof TopicFetchError) {
         window.showErrorMessage(
           `Failed to list topics for cluster "${cluster.name}": ${err.message}`,
@@ -269,9 +276,11 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
     if (!this.consumerGroupsContainer) {
       return;
     }
-    // set initial loading state
-    this.consumerGroupsContainer.isLoading = true;
+    this.consumerGroupsContainer.setLoading();
     this._onDidChangeTreeData.fire(this.consumerGroupsContainer);
+
+    // clear stale entries before repopulating
+    this.consumerGroupsInTreeView.clear();
 
     const loader = ResourceLoader.getInstance(cluster.connectionId);
     try {
@@ -279,14 +288,15 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
       consumerGroups.forEach((group) => {
         this.consumerGroupsInTreeView.set(group.consumerGroupId, group);
       });
-      this.consumerGroupsContainer.children = consumerGroups;
-      // loading/error state is cleared
+      this.consumerGroupsContainer.setLoaded(consumerGroups);
     } catch (err) {
       this.logger.error("Error fetching consumer groups for cluster", cluster, err);
-      // signal error state so the container shows an error indicator
-      this.consumerGroupsContainer.hasError = true;
-      this.consumerGroupsContainer.children = [];
-      // TODO: show error in tooltip?
+      const message = err instanceof Error ? err.message : String(err);
+      this.consumerGroupsContainer.setError(
+        new CustomMarkdownString()
+          .addWarning(`Failed to load consumer groups for **${cluster.name}**:`)
+          .addCodeBlock(message),
+      );
     }
 
     this._onDidChangeTreeData.fire(this.consumerGroupsContainer);
