@@ -19,6 +19,7 @@ import type { ViewMode } from "./flinkStatementResultColumns";
 import type { StatementResultsRow } from "./flinkStatementResults";
 import { parseResults } from "./flinkStatementResults";
 import { extractPageToken } from "./utils";
+import type { StatementWarning } from "./warningParser";
 
 const logger = new Logger("flink-statement-results");
 
@@ -85,6 +86,7 @@ export type PostFunction = {
     failed: boolean;
     areResultsViewable: boolean;
     isForeground: boolean;
+    warnings: StatementWarning[];
   }>;
   (type: "StopStatement", body: { timestamp?: number }): Promise<null>;
   (type: "ViewStatementSource", body: { timestamp?: number }): Promise<null>;
@@ -493,6 +495,7 @@ export class FlinkStatementResultsManager {
           areResultsViewable: this.statement.canRequestResults,
           possiblyViewable: this.statement.possiblyViewable,
           isForeground: this.statement.isForeground,
+          warnings: this.statement.warnings,
         };
       }
       case "StopStatement": {
