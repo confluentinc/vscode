@@ -477,6 +477,40 @@ describe("loaderUtils.ts", () => {
     });
   });
 
+  describe("parseCoordinatorId()", () => {
+    it("should parse broker ID from a full Kafka REST URL", () => {
+      const url = "http://localhost:26636/kafka/v3/clusters/lkc-abc123/brokers/2";
+      assert.strictEqual(loaderUtils.parseCoordinatorId(url), 2);
+    });
+
+    it("should parse broker ID from a CCloud-style URL", () => {
+      const url =
+        "https://pkc-abc123.us-east-1.aws.confluent.cloud/kafka/v3/clusters/lkc-5vmjd8/brokers/0";
+      assert.strictEqual(loaderUtils.parseCoordinatorId(url), 0);
+    });
+
+    it("should parse a plain numeric string", () => {
+      assert.strictEqual(loaderUtils.parseCoordinatorId("7"), 7);
+    });
+
+    it("should return null for undefined", () => {
+      assert.strictEqual(loaderUtils.parseCoordinatorId(undefined), null);
+    });
+
+    it("should return null for empty string", () => {
+      assert.strictEqual(loaderUtils.parseCoordinatorId(""), null);
+    });
+
+    it("should return null when the last segment is non-numeric", () => {
+      assert.strictEqual(
+        loaderUtils.parseCoordinatorId(
+          "http://localhost/kafka/v3/clusters/lkc-abc123/brokers/notanumber",
+        ),
+        null,
+      );
+    });
+  });
+
   describe("generateFlinkStatementKey()", () => {
     const mainStatementParams: IFlinkStatementSubmitParameters = {
       statement: "SHOW USER FUNCTIONS",
