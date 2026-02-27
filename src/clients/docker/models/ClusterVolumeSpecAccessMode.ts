@@ -2,220 +2,200 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { ClusterVolumeSpecAccessModeAccessibilityRequirements } from "./ClusterVolumeSpecAccessModeAccessibilityRequirements";
+import { mapValues } from '../runtime';
+import type { ClusterVolumeSpecAccessModeAccessibilityRequirements } from './ClusterVolumeSpecAccessModeAccessibilityRequirements';
 import {
-  ClusterVolumeSpecAccessModeAccessibilityRequirementsFromJSON,
-  ClusterVolumeSpecAccessModeAccessibilityRequirementsFromJSONTyped,
-  ClusterVolumeSpecAccessModeAccessibilityRequirementsToJSON,
-  ClusterVolumeSpecAccessModeAccessibilityRequirementsToJSONTyped,
-} from "./ClusterVolumeSpecAccessModeAccessibilityRequirements";
-import type { ClusterVolumeSpecAccessModeSecretsInner } from "./ClusterVolumeSpecAccessModeSecretsInner";
+    ClusterVolumeSpecAccessModeAccessibilityRequirementsFromJSON,
+    ClusterVolumeSpecAccessModeAccessibilityRequirementsFromJSONTyped,
+    ClusterVolumeSpecAccessModeAccessibilityRequirementsToJSON,
+    ClusterVolumeSpecAccessModeAccessibilityRequirementsToJSONTyped,
+} from './ClusterVolumeSpecAccessModeAccessibilityRequirements';
+import type { ClusterVolumeSpecAccessModeSecretsInner } from './ClusterVolumeSpecAccessModeSecretsInner';
 import {
-  ClusterVolumeSpecAccessModeSecretsInnerFromJSON,
-  ClusterVolumeSpecAccessModeSecretsInnerFromJSONTyped,
-  ClusterVolumeSpecAccessModeSecretsInnerToJSON,
-  ClusterVolumeSpecAccessModeSecretsInnerToJSONTyped,
-} from "./ClusterVolumeSpecAccessModeSecretsInner";
-import type { ClusterVolumeSpecAccessModeCapacityRange } from "./ClusterVolumeSpecAccessModeCapacityRange";
+    ClusterVolumeSpecAccessModeSecretsInnerFromJSON,
+    ClusterVolumeSpecAccessModeSecretsInnerFromJSONTyped,
+    ClusterVolumeSpecAccessModeSecretsInnerToJSON,
+    ClusterVolumeSpecAccessModeSecretsInnerToJSONTyped,
+} from './ClusterVolumeSpecAccessModeSecretsInner';
+import type { ClusterVolumeSpecAccessModeCapacityRange } from './ClusterVolumeSpecAccessModeCapacityRange';
 import {
-  ClusterVolumeSpecAccessModeCapacityRangeFromJSON,
-  ClusterVolumeSpecAccessModeCapacityRangeFromJSONTyped,
-  ClusterVolumeSpecAccessModeCapacityRangeToJSON,
-  ClusterVolumeSpecAccessModeCapacityRangeToJSONTyped,
-} from "./ClusterVolumeSpecAccessModeCapacityRange";
+    ClusterVolumeSpecAccessModeCapacityRangeFromJSON,
+    ClusterVolumeSpecAccessModeCapacityRangeFromJSONTyped,
+    ClusterVolumeSpecAccessModeCapacityRangeToJSON,
+    ClusterVolumeSpecAccessModeCapacityRangeToJSONTyped,
+} from './ClusterVolumeSpecAccessModeCapacityRange';
 
 /**
  * Defines how the volume is used by tasks.
- *
+ * 
  * @export
  * @interface ClusterVolumeSpecAccessMode
  */
 export interface ClusterVolumeSpecAccessMode {
-  /**
-   * The set of nodes this volume can be used on at one time.
-   * - `single` The volume may only be scheduled to one node at a time.
-   * - `multi` the volume may be scheduled to any supported number of nodes at a time.
-   *
-   * @type {string}
-   * @memberof ClusterVolumeSpecAccessMode
-   */
-  Scope?: ClusterVolumeSpecAccessModeScopeEnum;
-  /**
-   * The number and way that different tasks can use this volume
-   * at one time.
-   * - `none` The volume may only be used by one task at a time.
-   * - `readonly` The volume may be used by any number of tasks, but they all must mount the volume as readonly
-   * - `onewriter` The volume may be used by any number of tasks, but only one may mount it as read/write.
-   * - `all` The volume may have any number of readers and writers.
-   *
-   * @type {string}
-   * @memberof ClusterVolumeSpecAccessMode
-   */
-  Sharing?: ClusterVolumeSpecAccessModeSharingEnum;
-  /**
-   * Options for using this volume as a Mount-type volume.
-   *
-   *     Either MountVolume or BlockVolume, but not both, must be
-   *     present.
-   *   properties:
-   *     FsType:
-   *       type: "string"
-   *       description: |
-   *         Specifies the filesystem type for the mount volume.
-   *         Optional.
-   *     MountFlags:
-   *       type: "array"
-   *       description: |
-   *         Flags to pass when mounting the volume. Optional.
-   *       items:
-   *         type: "string"
-   * BlockVolume:
-   *   type: "object"
-   *   description: |
-   *     Options for using this volume as a Block-type volume.
-   *     Intentionally empty.
-   *
-   * @type {object}
-   * @memberof ClusterVolumeSpecAccessMode
-   */
-  MountVolume?: object;
-  /**
-   * Swarm Secrets that are passed to the CSI storage plugin when
-   * operating on this volume.
-   *
-   * @type {Array<ClusterVolumeSpecAccessModeSecretsInner>}
-   * @memberof ClusterVolumeSpecAccessMode
-   */
-  Secrets?: Array<ClusterVolumeSpecAccessModeSecretsInner>;
-  /**
-   *
-   * @type {ClusterVolumeSpecAccessModeAccessibilityRequirements}
-   * @memberof ClusterVolumeSpecAccessMode
-   */
-  AccessibilityRequirements?: ClusterVolumeSpecAccessModeAccessibilityRequirements;
-  /**
-   *
-   * @type {ClusterVolumeSpecAccessModeCapacityRange}
-   * @memberof ClusterVolumeSpecAccessMode
-   */
-  CapacityRange?: ClusterVolumeSpecAccessModeCapacityRange;
-  /**
-   * The availability of the volume for use in tasks.
-   * - `active` The volume is fully available for scheduling on the cluster
-   * - `pause` No new workloads should use the volume, but existing workloads are not stopped.
-   * - `drain` All workloads using this volume should be stopped and rescheduled, and no new ones should be started.
-   *
-   * @type {string}
-   * @memberof ClusterVolumeSpecAccessMode
-   */
-  Availability?: ClusterVolumeSpecAccessModeAvailabilityEnum;
+    /**
+     * The set of nodes this volume can be used on at one time.
+     * - `single` The volume may only be scheduled to one node at a time.
+     * - `multi` the volume may be scheduled to any supported number of nodes at a time.
+     * 
+     * @type {string}
+     * @memberof ClusterVolumeSpecAccessMode
+     */
+    Scope?: ClusterVolumeSpecAccessModeScopeEnum;
+    /**
+     * The number and way that different tasks can use this volume
+     * at one time.
+     * - `none` The volume may only be used by one task at a time.
+     * - `readonly` The volume may be used by any number of tasks, but they all must mount the volume as readonly
+     * - `onewriter` The volume may be used by any number of tasks, but only one may mount it as read/write.
+     * - `all` The volume may have any number of readers and writers.
+     * 
+     * @type {string}
+     * @memberof ClusterVolumeSpecAccessMode
+     */
+    Sharing?: ClusterVolumeSpecAccessModeSharingEnum;
+    /**
+     * Options for using this volume as a Mount-type volume.
+     * 
+     *     Either MountVolume or BlockVolume, but not both, must be
+     *     present.
+     *   properties:
+     *     FsType:
+     *       type: "string"
+     *       description: |
+     *         Specifies the filesystem type for the mount volume.
+     *         Optional.
+     *     MountFlags:
+     *       type: "array"
+     *       description: |
+     *         Flags to pass when mounting the volume. Optional.
+     *       items:
+     *         type: "string"
+     * BlockVolume:
+     *   type: "object"
+     *   description: |
+     *     Options for using this volume as a Block-type volume.
+     *     Intentionally empty.
+     * 
+     * @type {object}
+     * @memberof ClusterVolumeSpecAccessMode
+     */
+    MountVolume?: object;
+    /**
+     * Swarm Secrets that are passed to the CSI storage plugin when
+     * operating on this volume.
+     * 
+     * @type {Array<ClusterVolumeSpecAccessModeSecretsInner>}
+     * @memberof ClusterVolumeSpecAccessMode
+     */
+    Secrets?: Array<ClusterVolumeSpecAccessModeSecretsInner>;
+    /**
+     * 
+     * @type {ClusterVolumeSpecAccessModeAccessibilityRequirements}
+     * @memberof ClusterVolumeSpecAccessMode
+     */
+    AccessibilityRequirements?: ClusterVolumeSpecAccessModeAccessibilityRequirements;
+    /**
+     * 
+     * @type {ClusterVolumeSpecAccessModeCapacityRange}
+     * @memberof ClusterVolumeSpecAccessMode
+     */
+    CapacityRange?: ClusterVolumeSpecAccessModeCapacityRange;
+    /**
+     * The availability of the volume for use in tasks.
+     * - `active` The volume is fully available for scheduling on the cluster
+     * - `pause` No new workloads should use the volume, but existing workloads are not stopped.
+     * - `drain` All workloads using this volume should be stopped and rescheduled, and no new ones should be started.
+     * 
+     * @type {string}
+     * @memberof ClusterVolumeSpecAccessMode
+     */
+    Availability?: ClusterVolumeSpecAccessModeAvailabilityEnum;
 }
 
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export enum ClusterVolumeSpecAccessModeScopeEnum {
-  Single = "single",
-  Multi = "multi",
+    Single = 'single',
+    Multi = 'multi'
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export enum ClusterVolumeSpecAccessModeSharingEnum {
-  None = "none",
-  Readonly = "readonly",
-  Onewriter = "onewriter",
-  All = "all",
+    None = 'none',
+    Readonly = 'readonly',
+    Onewriter = 'onewriter',
+    All = 'all'
 }
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export enum ClusterVolumeSpecAccessModeAvailabilityEnum {
-  Active = "active",
-  Pause = "pause",
-  Drain = "drain",
+    Active = 'active',
+    Pause = 'pause',
+    Drain = 'drain'
 }
+
 
 /**
  * Check if a given object implements the ClusterVolumeSpecAccessMode interface.
  */
-export function instanceOfClusterVolumeSpecAccessMode(
-  value: object,
-): value is ClusterVolumeSpecAccessMode {
-  return true;
+export function instanceOfClusterVolumeSpecAccessMode(value: object): value is ClusterVolumeSpecAccessMode {
+    return true;
 }
 
 export function ClusterVolumeSpecAccessModeFromJSON(json: any): ClusterVolumeSpecAccessMode {
-  return ClusterVolumeSpecAccessModeFromJSONTyped(json, false);
+    return ClusterVolumeSpecAccessModeFromJSONTyped(json, false);
 }
 
-export function ClusterVolumeSpecAccessModeFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): ClusterVolumeSpecAccessMode {
-  if (json == null) {
-    return json;
-  }
-  return {
-    Scope: json["Scope"] == null ? undefined : json["Scope"],
-    Sharing: json["Sharing"] == null ? undefined : json["Sharing"],
-    MountVolume: json["MountVolume"] == null ? undefined : json["MountVolume"],
-    Secrets:
-      json["Secrets"] == null
-        ? undefined
-        : (json["Secrets"] as Array<any>).map(ClusterVolumeSpecAccessModeSecretsInnerFromJSON),
-    AccessibilityRequirements:
-      json["AccessibilityRequirements"] == null
-        ? undefined
-        : ClusterVolumeSpecAccessModeAccessibilityRequirementsFromJSON(
-            json["AccessibilityRequirements"],
-          ),
-    CapacityRange:
-      json["CapacityRange"] == null
-        ? undefined
-        : ClusterVolumeSpecAccessModeCapacityRangeFromJSON(json["CapacityRange"]),
-    Availability: json["Availability"] == null ? undefined : json["Availability"],
-  };
+export function ClusterVolumeSpecAccessModeFromJSONTyped(json: any, ignoreDiscriminator: boolean): ClusterVolumeSpecAccessMode {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'Scope': json['Scope'] == null ? undefined : json['Scope'],
+        'Sharing': json['Sharing'] == null ? undefined : json['Sharing'],
+        'MountVolume': json['MountVolume'] == null ? undefined : json['MountVolume'],
+        'Secrets': json['Secrets'] == null ? undefined : ((json['Secrets'] as Array<any>).map(ClusterVolumeSpecAccessModeSecretsInnerFromJSON)),
+        'AccessibilityRequirements': json['AccessibilityRequirements'] == null ? undefined : ClusterVolumeSpecAccessModeAccessibilityRequirementsFromJSON(json['AccessibilityRequirements']),
+        'CapacityRange': json['CapacityRange'] == null ? undefined : ClusterVolumeSpecAccessModeCapacityRangeFromJSON(json['CapacityRange']),
+        'Availability': json['Availability'] == null ? undefined : json['Availability'],
+    };
 }
 
 export function ClusterVolumeSpecAccessModeToJSON(json: any): ClusterVolumeSpecAccessMode {
-  return ClusterVolumeSpecAccessModeToJSONTyped(json, false);
+    return ClusterVolumeSpecAccessModeToJSONTyped(json, false);
 }
 
-export function ClusterVolumeSpecAccessModeToJSONTyped(
-  value?: ClusterVolumeSpecAccessMode | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function ClusterVolumeSpecAccessModeToJSONTyped(value?: ClusterVolumeSpecAccessMode | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    Scope: value["Scope"],
-    Sharing: value["Sharing"],
-    MountVolume: value["MountVolume"],
-    Secrets:
-      value["Secrets"] == null
-        ? undefined
-        : (value["Secrets"] as Array<any>).map(ClusterVolumeSpecAccessModeSecretsInnerToJSON),
-    AccessibilityRequirements: ClusterVolumeSpecAccessModeAccessibilityRequirementsToJSON(
-      value["AccessibilityRequirements"],
-    ),
-    CapacityRange: ClusterVolumeSpecAccessModeCapacityRangeToJSON(value["CapacityRange"]),
-    Availability: value["Availability"],
-  };
+    return {
+        
+        'Scope': value['Scope'],
+        'Sharing': value['Sharing'],
+        'MountVolume': value['MountVolume'],
+        'Secrets': value['Secrets'] == null ? undefined : ((value['Secrets'] as Array<any>).map(ClusterVolumeSpecAccessModeSecretsInnerToJSON)),
+        'AccessibilityRequirements': ClusterVolumeSpecAccessModeAccessibilityRequirementsToJSON(value['AccessibilityRequirements']),
+        'CapacityRange': ClusterVolumeSpecAccessModeCapacityRangeToJSON(value['CapacityRange']),
+        'Availability': value['Availability'],
+    };
 }
+

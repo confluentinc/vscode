@@ -12,62 +12,62 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
- *
+ * 
  * @export
  * @interface AuthError
  */
 export interface AuthError {
-  /**
-   *
-   * @type {string}
-   * @memberof AuthError
-   */
-  message?: string;
-  /**
-   *
-   * @type {boolean}
-   * @memberof AuthError
-   */
-  is_transient?: boolean;
+    /**
+     * 
+     * @type {string}
+     * @memberof AuthError
+     */
+    message?: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof AuthError
+     */
+    is_transient?: boolean;
 }
 
 /**
  * Check if a given object implements the AuthError interface.
  */
 export function instanceOfAuthError(value: object): value is AuthError {
-  return true;
+    return true;
 }
 
 export function AuthErrorFromJSON(json: any): AuthError {
-  return AuthErrorFromJSONTyped(json, false);
+    return AuthErrorFromJSONTyped(json, false);
 }
 
 export function AuthErrorFromJSONTyped(json: any, ignoreDiscriminator: boolean): AuthError {
-  if (json == null) {
-    return json;
-  }
-  return {
-    message: json["message"] == null ? undefined : json["message"],
-    is_transient: json["is_transient"] == null ? undefined : json["is_transient"],
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'message': json['message'] == null ? undefined : json['message'],
+        'is_transient': json['is_transient'] == null ? undefined : json['is_transient'],
+    };
 }
 
 export function AuthErrorToJSON(json: any): AuthError {
-  return AuthErrorToJSONTyped(json, false);
+    return AuthErrorToJSONTyped(json, false);
 }
 
-export function AuthErrorToJSONTyped(
-  value?: AuthError | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function AuthErrorToJSONTyped(value?: AuthError | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    message: value["message"],
-    is_transient: value["is_transient"],
-  };
+    return {
+        
+        'message': value['message'],
+        'is_transient': value['is_transient'],
+    };
 }
+

@@ -12,42 +12,42 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { SchemaRegistryConfig } from "./SchemaRegistryConfig";
+import { mapValues } from '../runtime';
+import type { SchemaRegistryConfig } from './SchemaRegistryConfig';
 import {
-  SchemaRegistryConfigFromJSON,
-  SchemaRegistryConfigFromJSONTyped,
-  SchemaRegistryConfigToJSON,
-  SchemaRegistryConfigToJSONTyped,
-} from "./SchemaRegistryConfig";
-import type { ConnectionType } from "./ConnectionType";
+    SchemaRegistryConfigFromJSON,
+    SchemaRegistryConfigFromJSONTyped,
+    SchemaRegistryConfigToJSON,
+    SchemaRegistryConfigToJSONTyped,
+} from './SchemaRegistryConfig';
+import type { ConnectionType } from './ConnectionType';
 import {
-  ConnectionTypeFromJSON,
-  ConnectionTypeFromJSONTyped,
-  ConnectionTypeToJSON,
-  ConnectionTypeToJSONTyped,
-} from "./ConnectionType";
-import type { LocalConfig } from "./LocalConfig";
+    ConnectionTypeFromJSON,
+    ConnectionTypeFromJSONTyped,
+    ConnectionTypeToJSON,
+    ConnectionTypeToJSONTyped,
+} from './ConnectionType';
+import type { LocalConfig } from './LocalConfig';
 import {
-  LocalConfigFromJSON,
-  LocalConfigFromJSONTyped,
-  LocalConfigToJSON,
-  LocalConfigToJSONTyped,
-} from "./LocalConfig";
-import type { CCloudConfig } from "./CCloudConfig";
+    LocalConfigFromJSON,
+    LocalConfigFromJSONTyped,
+    LocalConfigToJSON,
+    LocalConfigToJSONTyped,
+} from './LocalConfig';
+import type { CCloudConfig } from './CCloudConfig';
 import {
-  CCloudConfigFromJSON,
-  CCloudConfigFromJSONTyped,
-  CCloudConfigToJSON,
-  CCloudConfigToJSONTyped,
-} from "./CCloudConfig";
-import type { KafkaClusterConfig } from "./KafkaClusterConfig";
+    CCloudConfigFromJSON,
+    CCloudConfigFromJSONTyped,
+    CCloudConfigToJSON,
+    CCloudConfigToJSONTyped,
+} from './CCloudConfig';
+import type { KafkaClusterConfig } from './KafkaClusterConfig';
 import {
-  KafkaClusterConfigFromJSON,
-  KafkaClusterConfigFromJSONTyped,
-  KafkaClusterConfigToJSON,
-  KafkaClusterConfigToJSONTyped,
-} from "./KafkaClusterConfig";
+    KafkaClusterConfigFromJSON,
+    KafkaClusterConfigFromJSONTyped,
+    KafkaClusterConfigToJSON,
+    KafkaClusterConfigToJSONTyped,
+} from './KafkaClusterConfig';
 
 /**
  * The connection details that can be set or changed.
@@ -55,104 +55,97 @@ import {
  * @interface ConnectionSpec
  */
 export interface ConnectionSpec {
-  /**
-   * The unique identifier of the connection resource.
-   * @type {string}
-   * @memberof ConnectionSpec
-   */
-  id?: string;
-  /**
-   * The user-supplied name of the connection resource.
-   * @type {string}
-   * @memberof ConnectionSpec
-   */
-  name?: string;
-  /**
-   * The type of connection resource.
-   * @type {ConnectionType}
-   * @memberof ConnectionSpec
-   */
-  type?: ConnectionType;
-  /**
-   * The details for connecting to CCloud.
-   * @type {CCloudConfig}
-   * @memberof ConnectionSpec
-   */
-  ccloud_config?: CCloudConfig;
-  /**
-   * The details for connecting to Confluent Local.
-   * @type {LocalConfig}
-   * @memberof ConnectionSpec
-   */
-  local_config?: LocalConfig;
-  /**
-   * The details for connecting to a CCloud, Confluent Platform, or Apache Kafka cluster.
-   * @type {KafkaClusterConfig}
-   * @memberof ConnectionSpec
-   */
-  kafka_cluster?: KafkaClusterConfig;
-  /**
-   * The details for connecting to a Schema Registry.
-   * @type {SchemaRegistryConfig}
-   * @memberof ConnectionSpec
-   */
-  schema_registry?: SchemaRegistryConfig;
+    /**
+     * The unique identifier of the connection resource.
+     * @type {string}
+     * @memberof ConnectionSpec
+     */
+    id?: string;
+    /**
+     * The user-supplied name of the connection resource.
+     * @type {string}
+     * @memberof ConnectionSpec
+     */
+    name?: string;
+    /**
+     * The type of connection resource.
+     * @type {ConnectionType}
+     * @memberof ConnectionSpec
+     */
+    type?: ConnectionType;
+    /**
+     * The details for connecting to CCloud.
+     * @type {CCloudConfig}
+     * @memberof ConnectionSpec
+     */
+    ccloud_config?: CCloudConfig;
+    /**
+     * The details for connecting to Confluent Local.
+     * @type {LocalConfig}
+     * @memberof ConnectionSpec
+     */
+    local_config?: LocalConfig;
+    /**
+     * The details for connecting to a CCloud, Confluent Platform, or Apache Kafka cluster.
+     * @type {KafkaClusterConfig}
+     * @memberof ConnectionSpec
+     */
+    kafka_cluster?: KafkaClusterConfig;
+    /**
+     * The details for connecting to a Schema Registry.
+     * @type {SchemaRegistryConfig}
+     * @memberof ConnectionSpec
+     */
+    schema_registry?: SchemaRegistryConfig;
 }
+
+
 
 /**
  * Check if a given object implements the ConnectionSpec interface.
  */
 export function instanceOfConnectionSpec(value: object): value is ConnectionSpec {
-  return true;
+    return true;
 }
 
 export function ConnectionSpecFromJSON(json: any): ConnectionSpec {
-  return ConnectionSpecFromJSONTyped(json, false);
+    return ConnectionSpecFromJSONTyped(json, false);
 }
 
-export function ConnectionSpecFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): ConnectionSpec {
-  if (json == null) {
-    return json;
-  }
-  return {
-    id: json["id"] == null ? undefined : json["id"],
-    name: json["name"] == null ? undefined : json["name"],
-    type: json["type"] == null ? undefined : ConnectionTypeFromJSON(json["type"]),
-    ccloud_config:
-      json["ccloud_config"] == null ? undefined : CCloudConfigFromJSON(json["ccloud_config"]),
-    local_config:
-      json["local_config"] == null ? undefined : LocalConfigFromJSON(json["local_config"]),
-    kafka_cluster:
-      json["kafka_cluster"] == null ? undefined : KafkaClusterConfigFromJSON(json["kafka_cluster"]),
-    schema_registry:
-      json["schema_registry"] == null
-        ? undefined
-        : SchemaRegistryConfigFromJSON(json["schema_registry"]),
-  };
+export function ConnectionSpecFromJSONTyped(json: any, ignoreDiscriminator: boolean): ConnectionSpec {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'id': json['id'] == null ? undefined : json['id'],
+        'name': json['name'] == null ? undefined : json['name'],
+        'type': json['type'] == null ? undefined : ConnectionTypeFromJSON(json['type']),
+        'ccloud_config': json['ccloud_config'] == null ? undefined : CCloudConfigFromJSON(json['ccloud_config']),
+        'local_config': json['local_config'] == null ? undefined : LocalConfigFromJSON(json['local_config']),
+        'kafka_cluster': json['kafka_cluster'] == null ? undefined : KafkaClusterConfigFromJSON(json['kafka_cluster']),
+        'schema_registry': json['schema_registry'] == null ? undefined : SchemaRegistryConfigFromJSON(json['schema_registry']),
+    };
 }
 
 export function ConnectionSpecToJSON(json: any): ConnectionSpec {
-  return ConnectionSpecToJSONTyped(json, false);
+    return ConnectionSpecToJSONTyped(json, false);
 }
 
-export function ConnectionSpecToJSONTyped(
-  value?: ConnectionSpec | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function ConnectionSpecToJSONTyped(value?: ConnectionSpec | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    id: value["id"],
-    name: value["name"],
-    type: ConnectionTypeToJSON(value["type"]),
-    ccloud_config: CCloudConfigToJSON(value["ccloud_config"]),
-    local_config: LocalConfigToJSON(value["local_config"]),
-    kafka_cluster: KafkaClusterConfigToJSON(value["kafka_cluster"]),
-    schema_registry: SchemaRegistryConfigToJSON(value["schema_registry"]),
-  };
+    return {
+        
+        'id': value['id'],
+        'name': value['name'],
+        'type': ConnectionTypeToJSON(value['type']),
+        'ccloud_config': CCloudConfigToJSON(value['ccloud_config']),
+        'local_config': LocalConfigToJSON(value['local_config']),
+        'kafka_cluster': KafkaClusterConfigToJSON(value['kafka_cluster']),
+        'schema_registry': SchemaRegistryConfigToJSON(value['schema_registry']),
+    };
 }
+

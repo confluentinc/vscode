@@ -12,75 +12,72 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
  * Kerberos authentication credentials
  * @export
  * @interface KerberosCredentials
  */
 export interface KerberosCredentials {
-  /**
-   * The Kerberos principal to use.
-   * @type {string}
-   * @memberof KerberosCredentials
-   */
-  principal: string;
-  /**
-   * The Kerberos keytab file path.
-   * @type {string}
-   * @memberof KerberosCredentials
-   */
-  keytab_path: string;
-  /**
-   * Service name that matches the primary name of the Kafka brokers configured in the Broker JAAS file. Defaults to 'kafka'.
-   * @type {string}
-   * @memberof KerberosCredentials
-   */
-  service_name?: string;
+    /**
+     * The Kerberos principal to use.
+     * @type {string}
+     * @memberof KerberosCredentials
+     */
+    principal: string;
+    /**
+     * The Kerberos keytab file path.
+     * @type {string}
+     * @memberof KerberosCredentials
+     */
+    keytab_path: string;
+    /**
+     * Service name that matches the primary name of the Kafka brokers configured in the Broker JAAS file. Defaults to 'kafka'.
+     * @type {string}
+     * @memberof KerberosCredentials
+     */
+    service_name?: string;
 }
 
 /**
  * Check if a given object implements the KerberosCredentials interface.
  */
 export function instanceOfKerberosCredentials(value: object): value is KerberosCredentials {
-  if (!("principal" in value) || value["principal"] === undefined) return false;
-  if (!("keytab_path" in value) || value["keytab_path"] === undefined) return false;
-  return true;
+    if (!('principal' in value) || value['principal'] === undefined) return false;
+    if (!('keytab_path' in value) || value['keytab_path'] === undefined) return false;
+    return true;
 }
 
 export function KerberosCredentialsFromJSON(json: any): KerberosCredentials {
-  return KerberosCredentialsFromJSONTyped(json, false);
+    return KerberosCredentialsFromJSONTyped(json, false);
 }
 
-export function KerberosCredentialsFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): KerberosCredentials {
-  if (json == null) {
-    return json;
-  }
-  return {
-    principal: json["principal"],
-    keytab_path: json["keytab_path"],
-    service_name: json["service_name"] == null ? undefined : json["service_name"],
-  };
+export function KerberosCredentialsFromJSONTyped(json: any, ignoreDiscriminator: boolean): KerberosCredentials {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'principal': json['principal'],
+        'keytab_path': json['keytab_path'],
+        'service_name': json['service_name'] == null ? undefined : json['service_name'],
+    };
 }
 
 export function KerberosCredentialsToJSON(json: any): KerberosCredentials {
-  return KerberosCredentialsToJSONTyped(json, false);
+    return KerberosCredentialsToJSONTyped(json, false);
 }
 
-export function KerberosCredentialsToJSONTyped(
-  value?: KerberosCredentials | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function KerberosCredentialsToJSONTyped(value?: KerberosCredentials | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    principal: value["principal"],
-    keytab_path: value["keytab_path"],
-    service_name: value["service_name"],
-  };
+    return {
+        
+        'principal': value['principal'],
+        'keytab_path': value['keytab_path'],
+        'service_name': value['service_name'],
+    };
 }
+

@@ -2,284 +2,233 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
+
+import * as runtime from '../runtime';
 import type {
   Config,
   ConfigCreateRequest,
   ConfigSpec,
   ErrorResponse,
   IdResponse,
-} from "../models/index";
+} from '../models/index';
 import {
-  ConfigFromJSON,
-  ConfigToJSON,
-  ConfigCreateRequestFromJSON,
-  ConfigCreateRequestToJSON,
-  ConfigSpecFromJSON,
-  ConfigSpecToJSON,
-  ErrorResponseFromJSON,
-  ErrorResponseToJSON,
-  IdResponseFromJSON,
-  IdResponseToJSON,
-} from "../models/index";
+    ConfigFromJSON,
+    ConfigToJSON,
+    ConfigCreateRequestFromJSON,
+    ConfigCreateRequestToJSON,
+    ConfigSpecFromJSON,
+    ConfigSpecToJSON,
+    ErrorResponseFromJSON,
+    ErrorResponseToJSON,
+    IdResponseFromJSON,
+    IdResponseToJSON,
+} from '../models/index';
 
 export interface ConfigCreateOperationRequest {
-  body?: ConfigCreateRequest;
+    body?: ConfigCreateRequest;
 }
 
 export interface ConfigDeleteRequest {
-  id: string;
+    id: string;
 }
 
 export interface ConfigInspectRequest {
-  id: string;
+    id: string;
 }
 
 export interface ConfigListRequest {
-  filters?: string;
+    filters?: string;
 }
 
 export interface ConfigUpdateRequest {
-  id: string;
-  version: number;
-  body?: ConfigSpec;
+    id: string;
+    version: number;
+    body?: ConfigSpec;
 }
 
 /**
- *
+ * 
  */
 export class ConfigApi extends runtime.BaseAPI {
-  /**
-   * Create a config
-   */
-  async configCreateRaw(
-    requestParameters: ConfigCreateOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<IdResponse>> {
-    const queryParameters: any = {};
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * Create a config
+     */
+    async configCreateRaw(requestParameters: ConfigCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<IdResponse>> {
+        const queryParameters: any = {};
 
-    headerParameters["Content-Type"] = "application/json";
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    const response = await this.request(
-      {
-        path: `/configs/create`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: ConfigCreateRequestToJSON(requestParameters["body"]),
-      },
-      initOverrides,
-    );
+        headerParameters['Content-Type'] = 'application/json';
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => IdResponseFromJSON(jsonValue));
-  }
+        const response = await this.request({
+            path: `/configs/create`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ConfigCreateRequestToJSON(requestParameters['body']),
+        }, initOverrides);
 
-  /**
-   * Create a config
-   */
-  async configCreate(
-    requestParameters: ConfigCreateOperationRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<IdResponse> {
-    const response = await this.configCreateRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Delete a config
-   */
-  async configDeleteRaw(
-    requestParameters: ConfigDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling configDelete().',
-      );
+        return new runtime.JSONApiResponse(response, (jsonValue) => IdResponseFromJSON(jsonValue));
     }
 
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/configs/{id}`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "DELETE",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   * Delete a config
-   */
-  async configDelete(
-    requestParameters: ConfigDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.configDeleteRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   * Inspect a config
-   */
-  async configInspectRaw(
-    requestParameters: ConfigInspectRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Config>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling configInspect().',
-      );
+    /**
+     * Create a config
+     */
+    async configCreate(requestParameters: ConfigCreateOperationRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<IdResponse> {
+        const response = await this.configCreateRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    const queryParameters: any = {};
+    /**
+     * Delete a config
+     */
+    async configDeleteRaw(requestParameters: ConfigDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling configDelete().'
+            );
+        }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/configs/{id}`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => ConfigFromJSON(jsonValue));
-  }
+        const response = await this.request({
+            path: `/configs/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   * Inspect a config
-   */
-  async configInspect(
-    requestParameters: ConfigInspectRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Config> {
-    const response = await this.configInspectRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * List configs
-   */
-  async configListRaw(
-    requestParameters: ConfigListRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Array<Config>>> {
-    const queryParameters: any = {};
-
-    if (requestParameters["filters"] != null) {
-      queryParameters["filters"] = requestParameters["filters"];
+        return new runtime.VoidApiResponse(response);
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/configs`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ConfigFromJSON));
-  }
-
-  /**
-   * List configs
-   */
-  async configList(
-    requestParameters: ConfigListRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Array<Config>> {
-    const response = await this.configListRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Update a Config
-   */
-  async configUpdateRaw(
-    requestParameters: ConfigUpdateRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling configUpdate().',
-      );
+    /**
+     * Delete a config
+     */
+    async configDelete(requestParameters: ConfigDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.configDeleteRaw(requestParameters, initOverrides);
     }
 
-    if (requestParameters["version"] == null) {
-      throw new runtime.RequiredError(
-        "version",
-        'Required parameter "version" was null or undefined when calling configUpdate().',
-      );
+    /**
+     * Inspect a config
+     */
+    async configInspectRaw(requestParameters: ConfigInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Config>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling configInspect().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/configs/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ConfigFromJSON(jsonValue));
     }
 
-    const queryParameters: any = {};
-
-    if (requestParameters["version"] != null) {
-      queryParameters["version"] = requestParameters["version"];
+    /**
+     * Inspect a config
+     */
+    async configInspect(requestParameters: ConfigInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Config> {
+        const response = await this.configInspectRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     * List configs
+     */
+    async configListRaw(requestParameters: ConfigListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Config>>> {
+        const queryParameters: any = {};
 
-    headerParameters["Content-Type"] = "application/json";
+        if (requestParameters['filters'] != null) {
+            queryParameters['filters'] = requestParameters['filters'];
+        }
 
-    const response = await this.request(
-      {
-        path: `/configs/{id}/update`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: ConfigSpecToJSON(requestParameters["body"]),
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.VoidApiResponse(response);
-  }
+        const response = await this.request({
+            path: `/configs`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   * Update a Config
-   */
-  async configUpdate(
-    requestParameters: ConfigUpdateRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.configUpdateRaw(requestParameters, initOverrides);
-  }
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ConfigFromJSON));
+    }
+
+    /**
+     * List configs
+     */
+    async configList(requestParameters: ConfigListRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Config>> {
+        const response = await this.configListRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Update a Config
+     */
+    async configUpdateRaw(requestParameters: ConfigUpdateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling configUpdate().'
+            );
+        }
+
+        if (requestParameters['version'] == null) {
+            throw new runtime.RequiredError(
+                'version',
+                'Required parameter "version" was null or undefined when calling configUpdate().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['version'] != null) {
+            queryParameters['version'] = requestParameters['version'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/configs/{id}/update`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ConfigSpecToJSON(requestParameters['body']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Update a Config
+     */
+    async configUpdate(requestParameters: ConfigUpdateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.configUpdateRaw(requestParameters, initOverrides);
+    }
+
 }

@@ -2,398 +2,376 @@
 /* eslint-disable */
 /**
  * Docker Engine API
- * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ```
+ * The Engine API is an HTTP API served by Docker Engine. It is the API the Docker client uses to communicate with the Engine, so everything the Docker client can do can be done with the API.  Most of the client\'s commands map directly to API endpoints (e.g. `docker ps` is `GET /containers/json`). The notable exception is running containers, which consists of several API calls.  # Errors  The API uses standard HTTP status codes to indicate the success or failure of the API call. The body of the response will be JSON in the following format:  ``` {   \"message\": \"page not found\" } ```  # Versioning  The API is usually changed in each release, so API calls are versioned to ensure that clients don\'t break. To lock to a specific version of the API, you prefix the URL with its version, for example, call `/v1.30/info` to use the v1.30 version of the `/info` endpoint. If the API version specified in the URL is not supported by the daemon, a HTTP `400 Bad Request` error message is returned.  If you omit the version-prefix, the current version of the API (v1.43) is used. For example, calling `/info` is the same as calling `/v1.43/info`. Using the API without a version-prefix is deprecated and will be removed in a future release.  Engine releases in the near future should support this version of the API, so your client will continue to work even if it is talking to a newer Engine.  The API uses an open schema model, which means server may add extra properties to responses. Likewise, the server will ignore any extra query parameters and request body properties. When you write clients, you need to ignore additional properties in responses to ensure they do not break when talking to newer daemons.   # Authentication  Authentication for registries is handled client side. The client has to send authentication details to various endpoints that need to communicate with registries, such as `POST /images/(name)/push`. These are sent as `X-Registry-Auth` header as a [base64url encoded](https://tools.ietf.org/html/rfc4648#section-5) (JSON) string with the following structure:  ``` {   \"username\": \"string\",   \"password\": \"string\",   \"email\": \"string\",   \"serveraddress\": \"string\" } ```  The `serveraddress` is a domain/IP without a protocol. Throughout this structure, double quotes are required.  If you have already got an identity token from the [`/auth` endpoint](#operation/SystemAuth), you can just pass this instead of credentials:  ``` {   \"identitytoken\": \"9cbaf023786cd7...\" } ``` 
  *
  * The version of the OpenAPI document: 1.44
- *
+ * 
  *
  * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { ResourcesUlimitsInner } from "./ResourcesUlimitsInner";
+import { mapValues } from '../runtime';
+import type { ResourcesUlimitsInner } from './ResourcesUlimitsInner';
 import {
-  ResourcesUlimitsInnerFromJSON,
-  ResourcesUlimitsInnerFromJSONTyped,
-  ResourcesUlimitsInnerToJSON,
-  ResourcesUlimitsInnerToJSONTyped,
-} from "./ResourcesUlimitsInner";
-import type { HealthConfig } from "./HealthConfig";
+    ResourcesUlimitsInnerFromJSON,
+    ResourcesUlimitsInnerFromJSONTyped,
+    ResourcesUlimitsInnerToJSON,
+    ResourcesUlimitsInnerToJSONTyped,
+} from './ResourcesUlimitsInner';
+import type { HealthConfig } from './HealthConfig';
 import {
-  HealthConfigFromJSON,
-  HealthConfigFromJSONTyped,
-  HealthConfigToJSON,
-  HealthConfigToJSONTyped,
-} from "./HealthConfig";
-import type { Mount } from "./Mount";
-import { MountFromJSON, MountFromJSONTyped, MountToJSON, MountToJSONTyped } from "./Mount";
-import type { TaskSpecContainerSpecDNSConfig } from "./TaskSpecContainerSpecDNSConfig";
+    HealthConfigFromJSON,
+    HealthConfigFromJSONTyped,
+    HealthConfigToJSON,
+    HealthConfigToJSONTyped,
+} from './HealthConfig';
+import type { Mount } from './Mount';
 import {
-  TaskSpecContainerSpecDNSConfigFromJSON,
-  TaskSpecContainerSpecDNSConfigFromJSONTyped,
-  TaskSpecContainerSpecDNSConfigToJSON,
-  TaskSpecContainerSpecDNSConfigToJSONTyped,
-} from "./TaskSpecContainerSpecDNSConfig";
-import type { TaskSpecContainerSpecPrivileges } from "./TaskSpecContainerSpecPrivileges";
+    MountFromJSON,
+    MountFromJSONTyped,
+    MountToJSON,
+    MountToJSONTyped,
+} from './Mount';
+import type { TaskSpecContainerSpecDNSConfig } from './TaskSpecContainerSpecDNSConfig';
 import {
-  TaskSpecContainerSpecPrivilegesFromJSON,
-  TaskSpecContainerSpecPrivilegesFromJSONTyped,
-  TaskSpecContainerSpecPrivilegesToJSON,
-  TaskSpecContainerSpecPrivilegesToJSONTyped,
-} from "./TaskSpecContainerSpecPrivileges";
-import type { TaskSpecContainerSpecConfigsInner } from "./TaskSpecContainerSpecConfigsInner";
+    TaskSpecContainerSpecDNSConfigFromJSON,
+    TaskSpecContainerSpecDNSConfigFromJSONTyped,
+    TaskSpecContainerSpecDNSConfigToJSON,
+    TaskSpecContainerSpecDNSConfigToJSONTyped,
+} from './TaskSpecContainerSpecDNSConfig';
+import type { TaskSpecContainerSpecPrivileges } from './TaskSpecContainerSpecPrivileges';
 import {
-  TaskSpecContainerSpecConfigsInnerFromJSON,
-  TaskSpecContainerSpecConfigsInnerFromJSONTyped,
-  TaskSpecContainerSpecConfigsInnerToJSON,
-  TaskSpecContainerSpecConfigsInnerToJSONTyped,
-} from "./TaskSpecContainerSpecConfigsInner";
-import type { TaskSpecContainerSpecSecretsInner } from "./TaskSpecContainerSpecSecretsInner";
+    TaskSpecContainerSpecPrivilegesFromJSON,
+    TaskSpecContainerSpecPrivilegesFromJSONTyped,
+    TaskSpecContainerSpecPrivilegesToJSON,
+    TaskSpecContainerSpecPrivilegesToJSONTyped,
+} from './TaskSpecContainerSpecPrivileges';
+import type { TaskSpecContainerSpecConfigsInner } from './TaskSpecContainerSpecConfigsInner';
 import {
-  TaskSpecContainerSpecSecretsInnerFromJSON,
-  TaskSpecContainerSpecSecretsInnerFromJSONTyped,
-  TaskSpecContainerSpecSecretsInnerToJSON,
-  TaskSpecContainerSpecSecretsInnerToJSONTyped,
-} from "./TaskSpecContainerSpecSecretsInner";
+    TaskSpecContainerSpecConfigsInnerFromJSON,
+    TaskSpecContainerSpecConfigsInnerFromJSONTyped,
+    TaskSpecContainerSpecConfigsInnerToJSON,
+    TaskSpecContainerSpecConfigsInnerToJSONTyped,
+} from './TaskSpecContainerSpecConfigsInner';
+import type { TaskSpecContainerSpecSecretsInner } from './TaskSpecContainerSpecSecretsInner';
+import {
+    TaskSpecContainerSpecSecretsInnerFromJSON,
+    TaskSpecContainerSpecSecretsInnerFromJSONTyped,
+    TaskSpecContainerSpecSecretsInnerToJSON,
+    TaskSpecContainerSpecSecretsInnerToJSONTyped,
+} from './TaskSpecContainerSpecSecretsInner';
 
 /**
  * Container spec for the service.
- *
+ * 
  * <p><br /></p>
- *
+ * 
  * > **Note**: ContainerSpec, NetworkAttachmentSpec, and PluginSpec are
  * > mutually exclusive. PluginSpec is only used when the Runtime field
  * > is set to `plugin`. NetworkAttachmentSpec is used when the Runtime
  * > field is set to `attachment`.
- *
+ * 
  * @export
  * @interface TaskSpecContainerSpec
  */
 export interface TaskSpecContainerSpec {
-  /**
-   * The image name to use for the container
-   * @type {string}
-   * @memberof TaskSpecContainerSpec
-   */
-  Image?: string;
-  /**
-   * User-defined key/value data.
-   * @type {{ [key: string]: string; }}
-   * @memberof TaskSpecContainerSpec
-   */
-  Labels?: { [key: string]: string };
-  /**
-   * The command to be run in the image.
-   * @type {Array<string>}
-   * @memberof TaskSpecContainerSpec
-   */
-  Command?: Array<string>;
-  /**
-   * Arguments to the command.
-   * @type {Array<string>}
-   * @memberof TaskSpecContainerSpec
-   */
-  Args?: Array<string>;
-  /**
-   * The hostname to use for the container, as a valid
-   * [RFC 1123](https://tools.ietf.org/html/rfc1123) hostname.
-   *
-   * @type {string}
-   * @memberof TaskSpecContainerSpec
-   */
-  Hostname?: string;
-  /**
-   * A list of environment variables in the form `VAR=value`.
-   *
-   * @type {Array<string>}
-   * @memberof TaskSpecContainerSpec
-   */
-  Env?: Array<string>;
-  /**
-   * The working directory for commands to run in.
-   * @type {string}
-   * @memberof TaskSpecContainerSpec
-   */
-  Dir?: string;
-  /**
-   * The user inside the container.
-   * @type {string}
-   * @memberof TaskSpecContainerSpec
-   */
-  User?: string;
-  /**
-   * A list of additional groups that the container process will run as.
-   *
-   * @type {Array<string>}
-   * @memberof TaskSpecContainerSpec
-   */
-  Groups?: Array<string>;
-  /**
-   *
-   * @type {TaskSpecContainerSpecPrivileges}
-   * @memberof TaskSpecContainerSpec
-   */
-  Privileges?: TaskSpecContainerSpecPrivileges;
-  /**
-   * Whether a pseudo-TTY should be allocated.
-   * @type {boolean}
-   * @memberof TaskSpecContainerSpec
-   */
-  TTY?: boolean;
-  /**
-   * Open `stdin`
-   * @type {boolean}
-   * @memberof TaskSpecContainerSpec
-   */
-  OpenStdin?: boolean;
-  /**
-   * Mount the container's root filesystem as read only.
-   * @type {boolean}
-   * @memberof TaskSpecContainerSpec
-   */
-  ReadOnly?: boolean;
-  /**
-   * Specification for mounts to be added to containers created as part
-   * of the service.
-   *
-   * @type {Array<Mount>}
-   * @memberof TaskSpecContainerSpec
-   */
-  Mounts?: Array<Mount>;
-  /**
-   * Signal to stop the container.
-   * @type {string}
-   * @memberof TaskSpecContainerSpec
-   */
-  StopSignal?: string;
-  /**
-   * Amount of time to wait for the container to terminate before
-   * forcefully killing it.
-   *
-   * @type {number}
-   * @memberof TaskSpecContainerSpec
-   */
-  StopGracePeriod?: number;
-  /**
-   *
-   * @type {HealthConfig}
-   * @memberof TaskSpecContainerSpec
-   */
-  HealthCheck?: HealthConfig;
-  /**
-   * A list of hostname/IP mappings to add to the container's `hosts`
-   * file. The format of extra hosts is specified in the
-   * [hosts(5)](http://man7.org/linux/man-pages/man5/hosts.5.html)
-   * man page:
-   *
-   *     IP_address canonical_hostname [aliases...]
-   *
-   * @type {Array<string>}
-   * @memberof TaskSpecContainerSpec
-   */
-  Hosts?: Array<string>;
-  /**
-   *
-   * @type {TaskSpecContainerSpecDNSConfig}
-   * @memberof TaskSpecContainerSpec
-   */
-  DNSConfig?: TaskSpecContainerSpecDNSConfig;
-  /**
-   * Secrets contains references to zero or more secrets that will be
-   * exposed to the service.
-   *
-   * @type {Array<TaskSpecContainerSpecSecretsInner>}
-   * @memberof TaskSpecContainerSpec
-   */
-  Secrets?: Array<TaskSpecContainerSpecSecretsInner>;
-  /**
-   * Configs contains references to zero or more configs that will be
-   * exposed to the service.
-   *
-   * @type {Array<TaskSpecContainerSpecConfigsInner>}
-   * @memberof TaskSpecContainerSpec
-   */
-  Configs?: Array<TaskSpecContainerSpecConfigsInner>;
-  /**
-   * Isolation technology of the containers running the service.
-   * (Windows only)
-   *
-   * @type {string}
-   * @memberof TaskSpecContainerSpec
-   */
-  Isolation?: TaskSpecContainerSpecIsolationEnum;
-  /**
-   * Run an init inside the container that forwards signals and reaps
-   * processes. This field is omitted if empty, and the default (as
-   * configured on the daemon) is used.
-   *
-   * @type {boolean}
-   * @memberof TaskSpecContainerSpec
-   */
-  Init?: boolean | null;
-  /**
-   * Set kernel namedspaced parameters (sysctls) in the container.
-   * The Sysctls option on services accepts the same sysctls as the
-   * are supported on containers. Note that while the same sysctls are
-   * supported, no guarantees or checks are made about their
-   * suitability for a clustered environment, and it's up to the user
-   * to determine whether a given sysctl will work properly in a
-   * Service.
-   *
-   * @type {{ [key: string]: string; }}
-   * @memberof TaskSpecContainerSpec
-   */
-  Sysctls?: { [key: string]: string };
-  /**
-   * A list of kernel capabilities to add to the default set
-   * for the container.
-   *
-   * @type {Array<string>}
-   * @memberof TaskSpecContainerSpec
-   */
-  CapabilityAdd?: Array<string>;
-  /**
-   * A list of kernel capabilities to drop from the default set
-   * for the container.
-   *
-   * @type {Array<string>}
-   * @memberof TaskSpecContainerSpec
-   */
-  CapabilityDrop?: Array<string>;
-  /**
-   * A list of resource limits to set in the container. For example: `{"Name": "nofile", "Soft": 1024, "Hard": 2048}`"
-   *
-   * @type {Array<ResourcesUlimitsInner>}
-   * @memberof TaskSpecContainerSpec
-   */
-  Ulimits?: Array<ResourcesUlimitsInner>;
+    /**
+     * The image name to use for the container
+     * @type {string}
+     * @memberof TaskSpecContainerSpec
+     */
+    Image?: string;
+    /**
+     * User-defined key/value data.
+     * @type {{ [key: string]: string; }}
+     * @memberof TaskSpecContainerSpec
+     */
+    Labels?: { [key: string]: string; };
+    /**
+     * The command to be run in the image.
+     * @type {Array<string>}
+     * @memberof TaskSpecContainerSpec
+     */
+    Command?: Array<string>;
+    /**
+     * Arguments to the command.
+     * @type {Array<string>}
+     * @memberof TaskSpecContainerSpec
+     */
+    Args?: Array<string>;
+    /**
+     * The hostname to use for the container, as a valid
+     * [RFC 1123](https://tools.ietf.org/html/rfc1123) hostname.
+     * 
+     * @type {string}
+     * @memberof TaskSpecContainerSpec
+     */
+    Hostname?: string;
+    /**
+     * A list of environment variables in the form `VAR=value`.
+     * 
+     * @type {Array<string>}
+     * @memberof TaskSpecContainerSpec
+     */
+    Env?: Array<string>;
+    /**
+     * The working directory for commands to run in.
+     * @type {string}
+     * @memberof TaskSpecContainerSpec
+     */
+    Dir?: string;
+    /**
+     * The user inside the container.
+     * @type {string}
+     * @memberof TaskSpecContainerSpec
+     */
+    User?: string;
+    /**
+     * A list of additional groups that the container process will run as.
+     * 
+     * @type {Array<string>}
+     * @memberof TaskSpecContainerSpec
+     */
+    Groups?: Array<string>;
+    /**
+     * 
+     * @type {TaskSpecContainerSpecPrivileges}
+     * @memberof TaskSpecContainerSpec
+     */
+    Privileges?: TaskSpecContainerSpecPrivileges;
+    /**
+     * Whether a pseudo-TTY should be allocated.
+     * @type {boolean}
+     * @memberof TaskSpecContainerSpec
+     */
+    TTY?: boolean;
+    /**
+     * Open `stdin`
+     * @type {boolean}
+     * @memberof TaskSpecContainerSpec
+     */
+    OpenStdin?: boolean;
+    /**
+     * Mount the container's root filesystem as read only.
+     * @type {boolean}
+     * @memberof TaskSpecContainerSpec
+     */
+    ReadOnly?: boolean;
+    /**
+     * Specification for mounts to be added to containers created as part
+     * of the service.
+     * 
+     * @type {Array<Mount>}
+     * @memberof TaskSpecContainerSpec
+     */
+    Mounts?: Array<Mount>;
+    /**
+     * Signal to stop the container.
+     * @type {string}
+     * @memberof TaskSpecContainerSpec
+     */
+    StopSignal?: string;
+    /**
+     * Amount of time to wait for the container to terminate before
+     * forcefully killing it.
+     * 
+     * @type {number}
+     * @memberof TaskSpecContainerSpec
+     */
+    StopGracePeriod?: number;
+    /**
+     * 
+     * @type {HealthConfig}
+     * @memberof TaskSpecContainerSpec
+     */
+    HealthCheck?: HealthConfig;
+    /**
+     * A list of hostname/IP mappings to add to the container's `hosts`
+     * file. The format of extra hosts is specified in the
+     * [hosts(5)](http://man7.org/linux/man-pages/man5/hosts.5.html)
+     * man page:
+     * 
+     *     IP_address canonical_hostname [aliases...]
+     * 
+     * @type {Array<string>}
+     * @memberof TaskSpecContainerSpec
+     */
+    Hosts?: Array<string>;
+    /**
+     * 
+     * @type {TaskSpecContainerSpecDNSConfig}
+     * @memberof TaskSpecContainerSpec
+     */
+    DNSConfig?: TaskSpecContainerSpecDNSConfig;
+    /**
+     * Secrets contains references to zero or more secrets that will be
+     * exposed to the service.
+     * 
+     * @type {Array<TaskSpecContainerSpecSecretsInner>}
+     * @memberof TaskSpecContainerSpec
+     */
+    Secrets?: Array<TaskSpecContainerSpecSecretsInner>;
+    /**
+     * Configs contains references to zero or more configs that will be
+     * exposed to the service.
+     * 
+     * @type {Array<TaskSpecContainerSpecConfigsInner>}
+     * @memberof TaskSpecContainerSpec
+     */
+    Configs?: Array<TaskSpecContainerSpecConfigsInner>;
+    /**
+     * Isolation technology of the containers running the service.
+     * (Windows only)
+     * 
+     * @type {string}
+     * @memberof TaskSpecContainerSpec
+     */
+    Isolation?: TaskSpecContainerSpecIsolationEnum;
+    /**
+     * Run an init inside the container that forwards signals and reaps
+     * processes. This field is omitted if empty, and the default (as
+     * configured on the daemon) is used.
+     * 
+     * @type {boolean}
+     * @memberof TaskSpecContainerSpec
+     */
+    Init?: boolean | null;
+    /**
+     * Set kernel namedspaced parameters (sysctls) in the container.
+     * The Sysctls option on services accepts the same sysctls as the
+     * are supported on containers. Note that while the same sysctls are
+     * supported, no guarantees or checks are made about their
+     * suitability for a clustered environment, and it's up to the user
+     * to determine whether a given sysctl will work properly in a
+     * Service.
+     * 
+     * @type {{ [key: string]: string; }}
+     * @memberof TaskSpecContainerSpec
+     */
+    Sysctls?: { [key: string]: string; };
+    /**
+     * A list of kernel capabilities to add to the default set
+     * for the container.
+     * 
+     * @type {Array<string>}
+     * @memberof TaskSpecContainerSpec
+     */
+    CapabilityAdd?: Array<string>;
+    /**
+     * A list of kernel capabilities to drop from the default set
+     * for the container.
+     * 
+     * @type {Array<string>}
+     * @memberof TaskSpecContainerSpec
+     */
+    CapabilityDrop?: Array<string>;
+    /**
+     * A list of resource limits to set in the container. For example: `{"Name": "nofile", "Soft": 1024, "Hard": 2048}`"
+     * 
+     * @type {Array<ResourcesUlimitsInner>}
+     * @memberof TaskSpecContainerSpec
+     */
+    Ulimits?: Array<ResourcesUlimitsInner>;
 }
 
 /**
- * @export
- * @enum {string}
- */
+* @export
+* @enum {string}
+*/
 export enum TaskSpecContainerSpecIsolationEnum {
-  Default = "default",
-  Process = "process",
-  Hyperv = "hyperv",
+    Default = 'default',
+    Process = 'process',
+    Hyperv = 'hyperv'
 }
+
 
 /**
  * Check if a given object implements the TaskSpecContainerSpec interface.
  */
 export function instanceOfTaskSpecContainerSpec(value: object): value is TaskSpecContainerSpec {
-  return true;
+    return true;
 }
 
 export function TaskSpecContainerSpecFromJSON(json: any): TaskSpecContainerSpec {
-  return TaskSpecContainerSpecFromJSONTyped(json, false);
+    return TaskSpecContainerSpecFromJSONTyped(json, false);
 }
 
-export function TaskSpecContainerSpecFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): TaskSpecContainerSpec {
-  if (json == null) {
-    return json;
-  }
-  return {
-    Image: json["Image"] == null ? undefined : json["Image"],
-    Labels: json["Labels"] == null ? undefined : json["Labels"],
-    Command: json["Command"] == null ? undefined : json["Command"],
-    Args: json["Args"] == null ? undefined : json["Args"],
-    Hostname: json["Hostname"] == null ? undefined : json["Hostname"],
-    Env: json["Env"] == null ? undefined : json["Env"],
-    Dir: json["Dir"] == null ? undefined : json["Dir"],
-    User: json["User"] == null ? undefined : json["User"],
-    Groups: json["Groups"] == null ? undefined : json["Groups"],
-    Privileges:
-      json["Privileges"] == null
-        ? undefined
-        : TaskSpecContainerSpecPrivilegesFromJSON(json["Privileges"]),
-    TTY: json["TTY"] == null ? undefined : json["TTY"],
-    OpenStdin: json["OpenStdin"] == null ? undefined : json["OpenStdin"],
-    ReadOnly: json["ReadOnly"] == null ? undefined : json["ReadOnly"],
-    Mounts: json["Mounts"] == null ? undefined : (json["Mounts"] as Array<any>).map(MountFromJSON),
-    StopSignal: json["StopSignal"] == null ? undefined : json["StopSignal"],
-    StopGracePeriod: json["StopGracePeriod"] == null ? undefined : json["StopGracePeriod"],
-    HealthCheck:
-      json["HealthCheck"] == null ? undefined : HealthConfigFromJSON(json["HealthCheck"]),
-    Hosts: json["Hosts"] == null ? undefined : json["Hosts"],
-    DNSConfig:
-      json["DNSConfig"] == null
-        ? undefined
-        : TaskSpecContainerSpecDNSConfigFromJSON(json["DNSConfig"]),
-    Secrets:
-      json["Secrets"] == null
-        ? undefined
-        : (json["Secrets"] as Array<any>).map(TaskSpecContainerSpecSecretsInnerFromJSON),
-    Configs:
-      json["Configs"] == null
-        ? undefined
-        : (json["Configs"] as Array<any>).map(TaskSpecContainerSpecConfigsInnerFromJSON),
-    Isolation: json["Isolation"] == null ? undefined : json["Isolation"],
-    Init: json["Init"] == null ? undefined : json["Init"],
-    Sysctls: json["Sysctls"] == null ? undefined : json["Sysctls"],
-    CapabilityAdd: json["CapabilityAdd"] == null ? undefined : json["CapabilityAdd"],
-    CapabilityDrop: json["CapabilityDrop"] == null ? undefined : json["CapabilityDrop"],
-    Ulimits:
-      json["Ulimits"] == null
-        ? undefined
-        : (json["Ulimits"] as Array<any>).map(ResourcesUlimitsInnerFromJSON),
-  };
+export function TaskSpecContainerSpecFromJSONTyped(json: any, ignoreDiscriminator: boolean): TaskSpecContainerSpec {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'Image': json['Image'] == null ? undefined : json['Image'],
+        'Labels': json['Labels'] == null ? undefined : json['Labels'],
+        'Command': json['Command'] == null ? undefined : json['Command'],
+        'Args': json['Args'] == null ? undefined : json['Args'],
+        'Hostname': json['Hostname'] == null ? undefined : json['Hostname'],
+        'Env': json['Env'] == null ? undefined : json['Env'],
+        'Dir': json['Dir'] == null ? undefined : json['Dir'],
+        'User': json['User'] == null ? undefined : json['User'],
+        'Groups': json['Groups'] == null ? undefined : json['Groups'],
+        'Privileges': json['Privileges'] == null ? undefined : TaskSpecContainerSpecPrivilegesFromJSON(json['Privileges']),
+        'TTY': json['TTY'] == null ? undefined : json['TTY'],
+        'OpenStdin': json['OpenStdin'] == null ? undefined : json['OpenStdin'],
+        'ReadOnly': json['ReadOnly'] == null ? undefined : json['ReadOnly'],
+        'Mounts': json['Mounts'] == null ? undefined : ((json['Mounts'] as Array<any>).map(MountFromJSON)),
+        'StopSignal': json['StopSignal'] == null ? undefined : json['StopSignal'],
+        'StopGracePeriod': json['StopGracePeriod'] == null ? undefined : json['StopGracePeriod'],
+        'HealthCheck': json['HealthCheck'] == null ? undefined : HealthConfigFromJSON(json['HealthCheck']),
+        'Hosts': json['Hosts'] == null ? undefined : json['Hosts'],
+        'DNSConfig': json['DNSConfig'] == null ? undefined : TaskSpecContainerSpecDNSConfigFromJSON(json['DNSConfig']),
+        'Secrets': json['Secrets'] == null ? undefined : ((json['Secrets'] as Array<any>).map(TaskSpecContainerSpecSecretsInnerFromJSON)),
+        'Configs': json['Configs'] == null ? undefined : ((json['Configs'] as Array<any>).map(TaskSpecContainerSpecConfigsInnerFromJSON)),
+        'Isolation': json['Isolation'] == null ? undefined : json['Isolation'],
+        'Init': json['Init'] == null ? undefined : json['Init'],
+        'Sysctls': json['Sysctls'] == null ? undefined : json['Sysctls'],
+        'CapabilityAdd': json['CapabilityAdd'] == null ? undefined : json['CapabilityAdd'],
+        'CapabilityDrop': json['CapabilityDrop'] == null ? undefined : json['CapabilityDrop'],
+        'Ulimits': json['Ulimits'] == null ? undefined : ((json['Ulimits'] as Array<any>).map(ResourcesUlimitsInnerFromJSON)),
+    };
 }
 
 export function TaskSpecContainerSpecToJSON(json: any): TaskSpecContainerSpec {
-  return TaskSpecContainerSpecToJSONTyped(json, false);
+    return TaskSpecContainerSpecToJSONTyped(json, false);
 }
 
-export function TaskSpecContainerSpecToJSONTyped(
-  value?: TaskSpecContainerSpec | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function TaskSpecContainerSpecToJSONTyped(value?: TaskSpecContainerSpec | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    Image: value["Image"],
-    Labels: value["Labels"],
-    Command: value["Command"],
-    Args: value["Args"],
-    Hostname: value["Hostname"],
-    Env: value["Env"],
-    Dir: value["Dir"],
-    User: value["User"],
-    Groups: value["Groups"],
-    Privileges: TaskSpecContainerSpecPrivilegesToJSON(value["Privileges"]),
-    TTY: value["TTY"],
-    OpenStdin: value["OpenStdin"],
-    ReadOnly: value["ReadOnly"],
-    Mounts: value["Mounts"] == null ? undefined : (value["Mounts"] as Array<any>).map(MountToJSON),
-    StopSignal: value["StopSignal"],
-    StopGracePeriod: value["StopGracePeriod"],
-    HealthCheck: HealthConfigToJSON(value["HealthCheck"]),
-    Hosts: value["Hosts"],
-    DNSConfig: TaskSpecContainerSpecDNSConfigToJSON(value["DNSConfig"]),
-    Secrets:
-      value["Secrets"] == null
-        ? undefined
-        : (value["Secrets"] as Array<any>).map(TaskSpecContainerSpecSecretsInnerToJSON),
-    Configs:
-      value["Configs"] == null
-        ? undefined
-        : (value["Configs"] as Array<any>).map(TaskSpecContainerSpecConfigsInnerToJSON),
-    Isolation: value["Isolation"],
-    Init: value["Init"],
-    Sysctls: value["Sysctls"],
-    CapabilityAdd: value["CapabilityAdd"],
-    CapabilityDrop: value["CapabilityDrop"],
-    Ulimits:
-      value["Ulimits"] == null
-        ? undefined
-        : (value["Ulimits"] as Array<any>).map(ResourcesUlimitsInnerToJSON),
-  };
+    return {
+        
+        'Image': value['Image'],
+        'Labels': value['Labels'],
+        'Command': value['Command'],
+        'Args': value['Args'],
+        'Hostname': value['Hostname'],
+        'Env': value['Env'],
+        'Dir': value['Dir'],
+        'User': value['User'],
+        'Groups': value['Groups'],
+        'Privileges': TaskSpecContainerSpecPrivilegesToJSON(value['Privileges']),
+        'TTY': value['TTY'],
+        'OpenStdin': value['OpenStdin'],
+        'ReadOnly': value['ReadOnly'],
+        'Mounts': value['Mounts'] == null ? undefined : ((value['Mounts'] as Array<any>).map(MountToJSON)),
+        'StopSignal': value['StopSignal'],
+        'StopGracePeriod': value['StopGracePeriod'],
+        'HealthCheck': HealthConfigToJSON(value['HealthCheck']),
+        'Hosts': value['Hosts'],
+        'DNSConfig': TaskSpecContainerSpecDNSConfigToJSON(value['DNSConfig']),
+        'Secrets': value['Secrets'] == null ? undefined : ((value['Secrets'] as Array<any>).map(TaskSpecContainerSpecSecretsInnerToJSON)),
+        'Configs': value['Configs'] == null ? undefined : ((value['Configs'] as Array<any>).map(TaskSpecContainerSpecConfigsInnerToJSON)),
+        'Isolation': value['Isolation'],
+        'Init': value['Init'],
+        'Sysctls': value['Sysctls'],
+        'CapabilityAdd': value['CapabilityAdd'],
+        'CapabilityDrop': value['CapabilityDrop'],
+        'Ulimits': value['Ulimits'] == null ? undefined : ((value['Ulimits'] as Array<any>).map(ResourcesUlimitsInnerToJSON)),
+    };
 }
+

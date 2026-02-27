@@ -12,96 +12,96 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { PreferencesMetadata } from "./PreferencesMetadata";
+import { mapValues } from '../runtime';
+import type { PreferencesMetadata } from './PreferencesMetadata';
 import {
-  PreferencesMetadataFromJSON,
-  PreferencesMetadataFromJSONTyped,
-  PreferencesMetadataToJSON,
-  PreferencesMetadataToJSONTyped,
-} from "./PreferencesMetadata";
-import type { PreferencesSpec } from "./PreferencesSpec";
+    PreferencesMetadataFromJSON,
+    PreferencesMetadataFromJSONTyped,
+    PreferencesMetadataToJSON,
+    PreferencesMetadataToJSONTyped,
+} from './PreferencesMetadata';
+import type { PreferencesSpec } from './PreferencesSpec';
 import {
-  PreferencesSpecFromJSON,
-  PreferencesSpecFromJSONTyped,
-  PreferencesSpecToJSON,
-  PreferencesSpecToJSONTyped,
-} from "./PreferencesSpec";
+    PreferencesSpecFromJSON,
+    PreferencesSpecFromJSONTyped,
+    PreferencesSpecToJSON,
+    PreferencesSpecToJSONTyped,
+} from './PreferencesSpec';
 
 /**
- *
+ * 
  * @export
  * @interface Preferences
  */
 export interface Preferences {
-  /**
-   *
-   * @type {string}
-   * @memberof Preferences
-   */
-  api_version: string;
-  /**
-   *
-   * @type {string}
-   * @memberof Preferences
-   */
-  kind: string;
-  /**
-   *
-   * @type {PreferencesMetadata}
-   * @memberof Preferences
-   */
-  metadata?: PreferencesMetadata;
-  /**
-   *
-   * @type {PreferencesSpec}
-   * @memberof Preferences
-   */
-  spec: PreferencesSpec;
+    /**
+     * 
+     * @type {string}
+     * @memberof Preferences
+     */
+    api_version: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Preferences
+     */
+    kind: string;
+    /**
+     * 
+     * @type {PreferencesMetadata}
+     * @memberof Preferences
+     */
+    metadata?: PreferencesMetadata;
+    /**
+     * 
+     * @type {PreferencesSpec}
+     * @memberof Preferences
+     */
+    spec: PreferencesSpec;
 }
 
 /**
  * Check if a given object implements the Preferences interface.
  */
 export function instanceOfPreferences(value: object): value is Preferences {
-  if (!("api_version" in value) || value["api_version"] === undefined) return false;
-  if (!("kind" in value) || value["kind"] === undefined) return false;
-  if (!("spec" in value) || value["spec"] === undefined) return false;
-  return true;
+    if (!('api_version' in value) || value['api_version'] === undefined) return false;
+    if (!('kind' in value) || value['kind'] === undefined) return false;
+    if (!('spec' in value) || value['spec'] === undefined) return false;
+    return true;
 }
 
 export function PreferencesFromJSON(json: any): Preferences {
-  return PreferencesFromJSONTyped(json, false);
+    return PreferencesFromJSONTyped(json, false);
 }
 
 export function PreferencesFromJSONTyped(json: any, ignoreDiscriminator: boolean): Preferences {
-  if (json == null) {
-    return json;
-  }
-  return {
-    api_version: json["api_version"],
-    kind: json["kind"],
-    metadata: json["metadata"] == null ? undefined : PreferencesMetadataFromJSON(json["metadata"]),
-    spec: PreferencesSpecFromJSON(json["spec"]),
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'api_version': json['api_version'],
+        'kind': json['kind'],
+        'metadata': json['metadata'] == null ? undefined : PreferencesMetadataFromJSON(json['metadata']),
+        'spec': PreferencesSpecFromJSON(json['spec']),
+    };
 }
 
 export function PreferencesToJSON(json: any): Preferences {
-  return PreferencesToJSONTyped(json, false);
+    return PreferencesToJSONTyped(json, false);
 }
 
-export function PreferencesToJSONTyped(
-  value?: Preferences | null,
-  ignoreDiscriminator: boolean = false,
-): any {
-  if (value == null) {
-    return value;
-  }
+export function PreferencesToJSONTyped(value?: Preferences | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+        return value;
+    }
 
-  return {
-    api_version: value["api_version"],
-    kind: value["kind"],
-    metadata: PreferencesMetadataToJSON(value["metadata"]),
-    spec: PreferencesSpecToJSON(value["spec"]),
-  };
+    return {
+        
+        'api_version': value['api_version'],
+        'kind': value['kind'],
+        'metadata': PreferencesMetadataToJSON(value['metadata']),
+        'spec': PreferencesSpecToJSON(value['spec']),
+    };
 }
+

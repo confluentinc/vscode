@@ -13,45 +13,41 @@
  */
 
 /**
- *
+ * 
  * @export
  * @enum {string}
  */
 export enum ConnectionType {
-  Local = "LOCAL",
-  Ccloud = "CCLOUD",
-  Direct = "DIRECT",
+    Local = 'LOCAL',
+    Ccloud = 'CCLOUD',
+    Direct = 'DIRECT'
 }
 
+
 export function instanceOfConnectionType(value: any): boolean {
-  for (const key in ConnectionType) {
-    if (Object.prototype.hasOwnProperty.call(ConnectionType, key)) {
-      if (ConnectionType[key as keyof typeof ConnectionType] === value) {
-        return true;
-      }
+    for (const key in ConnectionType) {
+        if (Object.prototype.hasOwnProperty.call(ConnectionType, key)) {
+            if (ConnectionType[key as keyof typeof ConnectionType] === value) {
+                return true;
+            }
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 export function ConnectionTypeFromJSON(json: any): ConnectionType {
-  return ConnectionTypeFromJSONTyped(json, false);
+    return ConnectionTypeFromJSONTyped(json, false);
 }
 
-export function ConnectionTypeFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): ConnectionType {
-  return json as ConnectionType;
+export function ConnectionTypeFromJSONTyped(json: any, ignoreDiscriminator: boolean): ConnectionType {
+    return json as ConnectionType;
 }
 
 export function ConnectionTypeToJSON(value?: ConnectionType | null): any {
-  return value as any;
+    return value as any;
 }
 
-export function ConnectionTypeToJSONTyped(
-  value: any,
-  ignoreDiscriminator: boolean,
-): ConnectionType {
-  return value as ConnectionType;
+export function ConnectionTypeToJSONTyped(value: any, ignoreDiscriminator: boolean): ConnectionType {
+    return value as ConnectionType;
 }
+

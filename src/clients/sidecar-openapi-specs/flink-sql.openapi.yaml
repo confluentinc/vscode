@@ -3,6 +3,10 @@ openapi: 3.0.0
 info:
   title: SQL API v1
   version: 0.0.1
+  contact:
+    name: Flink
+    url: https://confluent.slack.com/app_redirect?channel=flink-ccloud
+    email: flink-control-plane@confluent.io
   x-api-id: a19bfe13-af66-493b-930a-5b7664bf52b7
   x-audience: external-public
   x-tag-group: SQL API (%s)
@@ -47,8 +51,8 @@ paths:
           required: false
           schema:
             type: string
-            x-extensible-enum: [AZUREML, AZUREOPENAI, BEDROCK, COUCHBASE, ELASTIC,
-                                GOOGLEAI, MONGODB, OPENAI, PINECONE, SAGEMAKER, VERTEXAI]
+            x-extensible-enum: [AZUREML, AZUREOPENAI, A2A, ANTHROPIC, BEDROCK, CONFLUENT_JDBC, COSMOSDB, COUCHBASE, ELASTIC,
+                                FIREWORKSAI, GOOGLEAI, MCP_SERVER, MONGODB, OPENAI, PINECONE, REST, S3VECTORS, SAGEMAKER, VERTEXAI]
           description: Filter the results by exact match for spec.connection_type
         - name: page_size
           in: query
@@ -435,6 +439,7 @@ paths:
         - Statement Results (sql/v1)
       security:
         - resource-api-key: []
+        - external-access-token: []
       responses:
         '200':
           description: Statement Result.
@@ -507,7 +512,9 @@ paths:
           schema:
             type: string
           example: lfcp-00000
-          description: Filter the results by exact match for spec.compute_pool.
+          description: |-
+            Filter the results by exact match for spec.compute_pool_id.
+            When creating statements, if compute_pool_id is not specified, the statement will use the default compute pool. The default pool is automatically determined by the system.
         - name: page_size
           in: query
           required: false
@@ -536,6 +543,7 @@ paths:
         - Statements (sql/v1)
       security:
         - resource-api-key: []
+        - external-access-token: []
       responses:
         '200':
           description: Statements.
@@ -588,6 +596,7 @@ paths:
         - Statements (sql/v1)
       security:
         - resource-api-key: []
+        - external-access-token: []
       requestBody:
         content:
           application/json:
@@ -603,7 +612,6 @@ paths:
                       type: object
                       required:
                         - statement
-                        - compute_pool_id
 
       responses:
         '201':
@@ -634,7 +642,6 @@ paths:
                         required:
                           - statement_name
                           - statement
-                          - compute_pool_id
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -687,6 +694,7 @@ paths:
         - Statements (sql/v1)
       security:
         - resource-api-key: []
+        - external-access-token: []
       responses:
         '200':
           description: Statement.
@@ -708,7 +716,6 @@ paths:
                         required:
                           - statement_name
                           - statement
-                          - compute_pool_id
           headers:
             X-Request-Id:
               schema:
@@ -760,6 +767,7 @@ paths:
         - Statements (sql/v1)
       security:
         - resource-api-key: []
+        - external-access-token: []
       responses:
         '202':
           description: A Statement is being deleted.
@@ -816,6 +824,7 @@ paths:
         - Statements (sql/v1)
       security:
         - resource-api-key: []
+        - external-access-token: []
       responses:
         '202':
           description: A Statement is being updated.
@@ -857,7 +866,7 @@ paths:
                       required:
                         - resource_version
     patch:
-      x-lifecycle-stage: Early Access
+      x-lifecycle-stage: General Availability
       x-self-access: true
       x-request-access-name: SQL API v1
       operationId: patchSqlv1Statement
@@ -890,6 +899,7 @@ paths:
         - Statements (sql/v1)
       security:
         - resource-api-key: []
+        - external-access-token: []
       requestBody:
         content:
           application/json-patch+json:
@@ -913,7 +923,6 @@ paths:
                         required:
                           - statement_name
                           - statement
-                          - compute_pool_id
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -970,6 +979,7 @@ paths:
         - Statement Exceptions (sql/v1)
       security:
         - resource-api-key: []
+        - external-access-token: []
       responses:
         '200':
           description: Statement Exceptions.
@@ -995,8 +1005,1724 @@ paths:
         '500':
           $ref: '#/components/responses/DefaultSystemError'
 
+  # List Materialized Tables
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/materialized-tables:
+    get:
+      x-lifecycle-stage: Preview
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: listSqlv1MaterializedTables
+      summary: List all materialized tables
+      description: |
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+        
+        Retrieve a sorted and paginated list of all materialized tables.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 10
+            maximum: 100
+          description: A pagination size for collection requests.
+        - name: page_token
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+          description: An opaque pagination token for collection requests.
+      tags:
+        - Materialized Tables (sql/v1)
+      security:
+        - resource-api-key: []
+        - external-access-token: []
+      responses:
+        '200':
+          description: A list of Materialized Tables.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sql.v1.MaterializedTableList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+
+  # Create a materialized table
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/databases/{kafka_cluster_id}/materialized-tables:
+    post:
+      x-lifecycle-stage: Preview
+      operationId: createSqlv1MaterializedTable
+      summary: Create a materialized table
+      description: |
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+
+        Create a new Materialized Table.
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier for the organization
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - in: path
+          name: kafka_cluster_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the database.
+      tags:
+        - Materialized Tables (sql/v1)
+      security:
+        - resource-api-key: []
+        - external-access-token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/sql.v1.MaterializedTable'
+                - type: object
+                  required:
+                    - name
+                    - spec
+                  properties:
+                    spec:
+                      type: object
+                      required:
+                        - query
+      responses:
+        '201':
+          description: Materialized Table is being created
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+            Location:
+              schema:
+                type: string
+                format: uri
+                example: https://flink.region.provider.confluent.cloud/sql/v1/organizations/{organization_id}/environments/{environment_id}/databases/{kafka_cluster_id}/materialized-tables/{table_name}
+              description: Materialized Table uri
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/sql.v1.MaterializedTable'
+                  - type: object
+                    required:
+                      - spec
+                      - status
+                    properties:
+                      spec:
+                        type: object
+                        required:
+                          - query
+                          - compute_pool_id
+                          - principal
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+  # Get, Update, and Delete a specific Materialized Table
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/databases/{kafka_cluster_id}/materialized-tables/{table_name}:
+    get:
+      x-lifecycle-stage: Preview
+      operationId: getSqlv1MaterializedTable
+      summary: Read a materialized table
+      description: |
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+
+        Retrieve a specific Materialized Table by name.
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier for the organization
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - in: path
+          name: kafka_cluster_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the database.
+        - name: table_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the Materialized Table
+      tags:
+        - Materialized Tables (sql/v1)
+      security:
+        - resource-api-key: []
+        - external-access-token: []
+      responses:
+        '200':
+          description: The requested Materialized Table.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sql.v1.MaterializedTable'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+    put:
+      x-lifecycle-stage: Preview
+      operationId: updateSqlv1MaterializedTable
+      summary: Update/Evolve a materialized table
+      description: |
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to update a Materialized Table's mutable fields.
+        Mutable fields include: `query`, `stopped`, `compute_pool_id`, and `principal`.
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier for the organization
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - in: path
+          name: kafka_cluster_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the database.
+        - name: table_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the Materialized Table
+      tags:
+        - Materialized Tables (sql/v1)
+      security:
+        - resource-api-key: []
+        - external-access-token: []
+      requestBody:
+        description: The Materialized Table resource with updated spec fields.
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/sql.v1.MaterializedTable'
+                - type: object
+                  required:
+                    - spec
+                    - name
+                    - metadata
+                  properties:
+                    metadata:
+                      type: object
+                      required:
+                        - resource_version
+      responses:
+        '201':
+          description: Materialized Table update accepted.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sql.v1.MaterializedTable'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+    delete:
+      x-lifecycle-stage: Preview
+      operationId: deleteSqlv1MaterializedTable
+      summary: Delete a materialized table
+      description: |
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+
+        Delete a specific Materialized Table by name.
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier for the organization
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - in: path
+          name: kafka_cluster_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the database.
+        - name: table_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the Materialized Table
+      tags:
+        - Materialized Tables (sql/v1)
+      security:
+        - resource-api-key: []
+        - external-access-token: []
+      responses:
+        '202':
+          description: A Materialized Table is being deleted.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+
+  # Materialized Table Versions API
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/databases/{kafka_cluster_id}/materialized-tables/{table_name}/versions:
+    get:
+      x-lifecycle-stage: Preview
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: listSqlv1MaterializedTableVersions
+      summary: List all the versions of a materialized table
+      description: |
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+
+        Retrieve a sorted and paginated list of all versions for a specific Materialized Table.
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - in: path
+          name: kafka_cluster_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the database.
+        - in: path
+          name: table_name
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the Materialized Table.
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 10
+            maximum: 100
+          description: A pagination size for collection requests.
+        - name: page_token
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+          description: An opaque pagination token for collection requests.
+      tags:
+        - Materialized Table Versions (sql/v1)
+      security:
+        - resource-api-key: []
+        - external-access-token: []
+      responses:
+        '200':
+          description: A list of Materialized Table Versions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sql.v1.MaterializedTableVersionList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/databases/{kafka_cluster_id}/materialized-tables/{table_name}/versions/{version}:
+    get:
+      x-lifecycle-stage: Preview
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: getSqlv1MaterializedTableVersion
+      summary: Read a materialized table version
+      description: |
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+
+        Retrieve a specific version of a Materialized Table.
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - in: path
+          name: kafka_cluster_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the database.
+        - in: path
+          name: table_name
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the Materialized Table.
+        - in: path
+          name: version
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+          description: The version number of the Materialized Table.
+      tags:
+        - Materialized Table Versions (sql/v1)
+      security:
+        - resource-api-key: []
+        - external-access-token: []
+      responses:
+        '200':
+          description: The requested Materialized Table Version.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sql.v1.MaterializedTableVersion'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+  # List Agents
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/agents:
+    get:
+      x-lifecycle-stage: Preview
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: listSqlv1Agents
+      summary: List all agents
+      description: |
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+        
+        Retrieve a sorted and paginated list of all agents.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 10
+            maximum: 100
+          description: A pagination size for collection requests.
+        - name: page_token
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+          description: An opaque pagination token for collection requests.
+      tags:
+        - Agents (sql/v1)
+      security:
+        - resource-api-key: []
+        - external-access-token: []
+      responses:
+        '200':
+          description: A list of Agents.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sql.v1.AgentList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+
+  # Create an agent
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/databases/{kafka_cluster_id}/agents:
+    post:
+      x-lifecycle-stage: Preview
+      operationId: createSqlv1Agent
+      summary: Create an Agent
+      description: |
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to create an Agent.
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier for the organization
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - in: path
+          name: kafka_cluster_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the database.
+      tags:
+        - Agents (sql/v1)
+      security:
+        - resource-api-key: []
+        - external-access-token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/sql.v1.Agent'
+                - type: object
+                  required:
+                    - name
+                    - spec
+                  properties:
+                    spec:
+                      type: object
+                      required:
+                        - model
+                        - prompt
+      responses:
+        '200':
+          description: Agent.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+            Location:
+              schema:
+                type: string
+                format: uri
+                example: https://flink.region.provider.confluent.cloud/sql/v1/organizations/{organization_id}/environments/{environment_id}/databases/{kafka_cluster_id}/agents/{agent_name}
+              description: Agent uri
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/sql.v1.Agent'
+                  - type: object
+                    required:
+                      - name
+                      - spec
+                    properties:
+                      spec:
+                        type: object
+                        required:
+                          - model
+                          - prompt
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+  # Get, Update, and Delete a specific Agent
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/databases/{kafka_cluster_id}/agents/{agent_name}:
+    get:
+      x-lifecycle-stage: Preview
+      operationId: getSqlv1Agent
+      summary: Read an Agent
+      description: |
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+
+        Retrieve a specific Agent by name.
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier for the organization
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - in: path
+          name: kafka_cluster_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the database.
+        - name: agent_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the Agent
+      tags:
+        - Agents (sql/v1)
+      security:
+        - resource-api-key: []
+        - external-access-token: []
+      responses:
+        '200':
+          description: The requested Agent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sql.v1.Agent'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+    put:
+      x-lifecycle-stage: Preview
+      operationId: updateSqlv1Agent
+      summary: Alter an Agent
+      description: |
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to update an Agent's mutable fields.
+        Mutable fields include: `description`, `model`, `prompt`, and `properties`.
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier for the organization
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - in: path
+          name: kafka_cluster_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the database.
+        - name: agent_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the Agent
+      tags:
+        - Agents (sql/v1)
+      security:
+        - resource-api-key: []
+        - external-access-token: []
+      requestBody:
+        description: The Agent resource with updated spec fields.
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/sql.v1.Agent'
+                - type: object
+                  required:
+                    - spec
+                    - name
+                    - metadata
+                  properties:
+                    metadata:
+                      type: object
+                      required:
+                        - resource_version
+      responses:
+        '200':
+          description: Agent has been updated.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sql.v1.Agent'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+    delete:
+      x-lifecycle-stage: Preview
+      operationId: deleteSqlv1Agent
+      summary: Delete an Agent
+      description: |
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+
+        Delete a specific Agent by name.
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier for the organization
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - in: path
+          name: kafka_cluster_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the database.
+        - name: agent_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the Agent
+      tags:
+        - Agents (sql/v1)
+      security:
+        - resource-api-key: []
+        - external-access-token: []
+      responses:
+        '200':
+          description: A Agent has been deleted.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+
+
+  # Tools API
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/tools:
+    x-lifecycle-stage: Preview
+    x-self-access: true
+    x-request-access-name: SQL API v1
+    post:
+      x-lifecycle-stage: Preview
+      x-self-access: false
+      x-request-access-name: SQL API v1
+      operationId: createSqlv1Tool
+      summary: Create a Tool
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to create a Tool.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+      tags:
+        - Tools (sql/v1)
+      security:
+        - resource-api-key: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/sql.v1.Tool'
+                - type: object
+                  required:
+                    - name
+                    - spec
+                  properties:
+                    spec:
+                      type: object
+                      required:
+                        - connection
+
+      responses:
+        '201':
+          description: A Tool has been successfully created.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+            Location:
+              schema:
+                type: string
+                format: uri
+                example: https://flink.region.provider.confluent.cloud/sql/v1/organizations/{organization_id}/environments/{environment_id}/tools/{name}
+              description: Tool resource uri
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/sql.v1.Tool'
+                  - type: object
+                    required:
+                      - name
+                      - spec
+                    properties:
+                      spec:
+                        type: object
+                        required:
+                          - connection
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/databases/{database_name}/tools:
+    x-lifecycle-stage: Preview
+    x-self-access: true
+    x-request-access-name: SQL API v1
+    get:
+      x-lifecycle-stage: Preview
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: listSqlv1Tools
+      summary: List of Tools
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+
+        Retrieve a sorted, filtered, paginated list of all Tools.
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - in: path
+          name: database_name
+          required: true
+          schema:
+            type: string
+          description: The name of the database.
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+            x-max-page-items: 500
+          description: A pagination size for collection requests.
+        - name: page_token
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+          description: An opaque pagination token for collection requests.
+      tags:
+        - Tools (sql/v1)
+      security:
+        - resource-api-key: []
+      responses:
+        '200':
+          description: Tools.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sql.v1.ToolList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/databases/{database_name}/tools/{tool_name}:
+    x-lifecycle-stage: Preview
+    x-self-access: true
+    x-request-access-name: SQL API v1
+    get:
+      x-lifecycle-stage: Preview
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: getSqlv1Tool
+      summary: Read a Tool
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to read a Tool.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: database_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The name of the database.
+        - name: tool_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The user provided name of the Tool.
+      tags:
+        - Tools (sql/v1)
+      security:
+        - resource-api-key: []
+      responses:
+        '200':
+          description: Tool.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/sql.v1.Tool'
+                  - type: object
+                    required:
+                      - api_version
+                      - kind
+                      - metadata
+                      - name
+                      - spec
+                    properties:
+                      spec:
+                        type: object
+                        required:
+                          - connection
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+    delete:
+      x-lifecycle-stage: Preview
+      x-self-access: false
+      x-request-access-name: SQL API v1
+      operationId: deleteSqlv1Tool
+      summary: Delete a Tool
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to delete a Tool.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: database_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The name of the database.
+        - name: tool_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The user provided name of the Tool.
+      tags:
+        - Tools (sql/v1)
+      security:
+        - resource-api-key: []
+      responses:
+        '200':
+          description: A Tool has been deleted.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+
 components:
   schemas:
+    sql.v1.MaterializedTable:
+      type: object
+      description: Represents a Materialized Table resource.
+      required:
+        - api_version
+        - kind
+        - metadata
+        - name
+        - organization_id
+        - environment_id
+        - spec
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          description: APIVersion defines the schema version of this representation of a resource.
+          example: sql/v1
+          readOnly: true
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - MaterializedTable
+          readOnly: true
+        metadata:
+          allOf:
+            - $ref: '#/components/schemas/ObjectMeta'
+            - type: object
+              properties:
+                self:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-123/databases/lkc-123/materialized-tables/high-value-orders
+                uid:
+                  example: 12345678-1234-1234-1234-123456789012
+                resource_version:
+                  example: a23av
+                resource_name:
+                  example: ""
+                labels:
+                  type: object
+                  additionalProperties:
+                    type: string
+        name:
+          type: string
+          description: The user-provided name of the resource, unique within this environment.
+          pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'
+          maxLength: 100
+          example: "high-value-orders"
+          x-immutable: true
+        organization_id:
+          type: string
+          format: uuid
+          description: The unique identifier for the organization.
+          x-immutable: true
+          readOnly: true
+        environment_id:
+          type: string
+          description: The unique identifier for the environment.
+          x-immutable: true
+          readOnly: true
+        spec:
+          $ref: '#/components/schemas/sql.v1.MaterializedTableSpec'
+        status:
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/sql.v1.MaterializedTableStatus'
+
+    sql.v1.MaterializedTableList:
+      type: object
+      description: A list of Materialized Table resources.
+      required:
+        - api_version
+        - kind
+        - metadata
+        - data
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          readOnly: true
+        kind:
+          type: string
+          enum:
+            - MaterializedTableList
+          readOnly: true
+        metadata:
+          $ref: '#/components/schemas/ListMeta'
+        data:
+          type: array
+          description: A data property that contains an array of resource items. Each entry in the array is a separate resource.
+          items:
+            $ref: '#/components/schemas/sql.v1.MaterializedTable'
+          uniqueItems: true
+
+    sql.v1.MaterializedTableSpec:
+      type: object
+      description: The specifications of the Materialized Table.
+      properties:
+        kafka_cluster_id:
+          type: string
+          description: The ID of Kafka cluster hosting the Materialized Table's topic. Populated from the `kafka_cluster_id` path parameter on creation.
+          example: "lkc-12345"
+          readOnly: true # Populated from path
+        compute_pool_id:
+          type: string
+          description: |-
+            The id associated with the compute pool in context.
+            If not specified, the materialized table will use the default compute pool. The default pool is automatically determined by the system.
+          example: "lfcp-123"
+        principal:
+          type: string
+          description: The id of a principal this Materialized Table query runs as.
+          example: "sa-abc123"
+          maxLength: 255
+        stopped:
+          type: boolean
+          description: Indicates whether the Materialized Table query should be stopped.
+          example: false
+        table_options:
+          type: object
+          description: Defines configuration properties for the table, equivalent to the SQL 'WITH' clause
+          additionalProperties:
+            type: string
+          maxProperties: 8192
+        session_options:
+          type: object
+          description: Session configurations equivalent to the SQL 'SET' statement.
+          additionalProperties:
+            type: string
+          maxProperties: 8192
+        columns:
+          type: array
+          description: Details of each column in Materialized Table resource. If columns are not specified, we infer from query. If it's specified it must be compatible with the types in the query.
+          items:
+            $ref: '#/components/schemas/sql.v1.MaterializedTableColumnDetails'
+        watermark:
+          $ref: '#/components/schemas/sql.v1.MaterializedTableWatermark'
+        constraints:
+          type: array
+          description: Specify table constraints.
+          items:
+            $ref: '#/components/schemas/sql.v1.MaterializedTableConstraint'
+        distributed_by:
+          $ref: '#/components/schemas/sql.v1.MaterializedTableDistribution'
+        query:
+          type: string
+          description: Contains the query section (usually starting with a SELECT) of the latest Materialized Table.
+          example: "SELECT user_id, product_id, price, quantity FROM orders WHERE price > 1000;"
+          maxLength: 131072
+
+    sql.v1.MaterializedTableStatus:
+      type: object
+      description: The status of the Materialized Table.
+      properties:
+        phase:
+          type: string
+          x-extensible-enum: [PENDING, RUNNING, COMPLETED, DELETING, FAILING, FAILED, CREATING, ALTERING, DEGRADED, STOPPING, STOPPED]
+          description: The lifecycle phase of the materialized table.
+          example: RUNNING
+        detail:
+          type: string
+          description: Optional. Human-readable description of phase.
+          example: "Materialized table is running."
+        warnings:
+          type: array
+          description: List of warnings encountered during materialized table execution.
+          items:
+            $ref: '#/components/schemas/sql.v1.MaterializedTableWarning'
+        creation_statement:
+          type: string
+          description: Entire Materialized Table statement as submitted by user e.g CREATE OR ALTER MATERIALIZED TABLE ...
+          example: "CREATE OR ALTER MATERIALIZED TABLE high-value-orders AS SELECT user_id, product_id, price, quantity FROM orders WHERE price > 1000;"
+        scaling_status:
+          $ref: '#/components/schemas/sql.v1.ScalingStatus'
+        version:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Represents the evolution history of the Materialized Table. The current value indicates the latest version.
+          example: 3
+
+    sql.v1.MaterializedTableVersion:
+      type: object
+      description: Represents a specific version of a Materialized Table resource.
+      required:
+        - api_version
+        - kind
+        - metadata
+        - name
+        - organization_id
+        - environment_id
+        - spec
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          description: APIVersion defines the schema version of this representation of a resource.
+          example: sql/v1
+          readOnly: true
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - MaterializedTableVersion
+          readOnly: true
+        metadata:
+          allOf:
+            - $ref: '#/components/schemas/ObjectMeta'
+            - type: object
+              properties:
+                self:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/organizations/org-123/environments/env-123/databases/lkc-123/materialized-tables/high-value-orders/versions/4
+        name:
+          type: string
+          description: |
+            The resource version name, unique within the Kafka cluster.
+            Name conforms to DNS Subdomain (RFC 1123).
+          pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'
+          maxLength: 100
+          example: "mt-123-v4"
+          readOnly: true
+        organization_id:
+          type: string
+          format: uuid
+          description: The unique identifier for the organization.
+          x-immutable: true
+          readOnly: true
+        environment_id:
+          type: string
+          description: The unique identifier for the environment.
+          x-immutable: true
+          readOnly: true
+        spec:
+          $ref: '#/components/schemas/sql.v1.MaterializedTableVersionSpec'
+
+    sql.v1.MaterializedTableVersionList:
+      type: object
+      description: A list of Materialized Table Version resources.
+      required:
+        - api_version
+        - kind
+        - metadata
+        - data
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          readOnly: true
+        kind:
+          type: string
+          enum:
+            - MaterializedTableVersionList
+          readOnly: true
+        metadata:
+          $ref: '#/components/schemas/ListMeta'
+        data:
+          type: array
+          description: A data property that contains an array of resource items. Each entry in the array is a separate resource.
+          items:
+            $ref: '#/components/schemas/sql.v1.MaterializedTableVersion'
+          uniqueItems: true
+
+    sql.v1.MaterializedTableVersionSpec:
+      type: object
+      description: The specifications of the Materialized Table Version.
+      required:
+        - version
+        - statement
+      properties:
+        version:
+          type: integer
+          format: int32
+          minimum: 1
+          description: The version number of the Materialized Table.
+          example: 4
+          readOnly: true
+        statement:
+          type: string
+          description: |
+            The full SQL statement for the materialized table as generated by SHOW CREATE MATERIALIZED TABLE at the time of the evolution.
+          example: "CREATE OR ALTER MATERIALIZED TABLE orders AS SELECT user_id, product_id, price FROM orders;"
+          readOnly: true
+          maxLength: 131072
+        changes:
+          type: array
+          description: Changes affecting resources since the previous version.
+          items:
+            $ref: '#/components/schemas/sql.v1.ResourceChange'
+          readOnly: true
+
+    sql.v1.ResourceChange:
+      type: object
+      description: Details of a change to a specific resource.
+      required:
+        - kind
+        - environment_locator
+        - database_locator
+        - name
+        - details
+      properties:
+        kind:
+          type: string
+          x-extensible-enum: [MATERIALIZED_TABLE, TABLE, VIEW, FUNCTION]
+          description: The type of resource that was changed.
+          example: MATERIALIZED_TABLE
+        environment_locator:
+          type: string
+          description: The environment containing the resource. Can be either the environment name or ID, depending on how it is referenced in the SQL statement text.
+          example: "env-abc"
+        database_locator:
+          type: string
+          description: The database containing the resource. Can be either the database name or ID, depending on how it is referenced in the SQL statement text.
+          example: "lkc-123"
+        name:
+          type: string
+          description: The name of the resource, unique within its scope (environment and database).
+          example: "orders"
+        details:
+          type: array
+          description: Human-readable descriptions of the changes made to this resource.
+          items:
+            type: string
+          example: ["Column 'product_name: VARCHAR' added", "Column 'product_id: BIGINT' added"]
+      readOnly: true
+
+    sql.v1.MaterializedTableColumnDetails:
+      type: object
+      description: Details of a column in the Materialized Table.
+      discriminator:
+        propertyName: kind
+        mapping:
+          Physical: '#/components/schemas/sql.v1.PhysicalColumn'
+          Metadata: '#/components/schemas/sql.v1.MetadataColumn'
+          Computed: '#/components/schemas/sql.v1.ComputedColumn'
+      oneOf:
+        - $ref: '#/components/schemas/sql.v1.PhysicalColumn'
+        - $ref: '#/components/schemas/sql.v1.MetadataColumn'
+        - $ref: '#/components/schemas/sql.v1.ComputedColumn'
+
+    sql.v1.ColumnCommon:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          description: The name of the column.
+        type:
+          $ref: '#/components/schemas/DataType'
+        comment:
+          type: string
+          description: A comment or description for the column.
+
+    sql.v1.PhysicalColumn:
+      description: Physical columns define the structure of the table and the data types of its fields.
+      allOf:
+        - $ref: '#/components/schemas/sql.v1.ColumnCommon'
+        - type: object
+          required:
+            - kind
+          properties:
+            name:
+              example: user_id
+            type:
+              example:
+                type: "BIGINT"
+                nullable: false
+            kind:
+              type: string
+              description: The kind of column.
+              enum: [Physical]
+              example: Physical
+
+    sql.v1.MetadataColumn:
+      description: Metadata columns reference system properties.
+      allOf:
+        - $ref: '#/components/schemas/sql.v1.ColumnCommon'
+        - type: object
+          required:
+            - kind
+            - metadata_key
+          properties:
+            name:
+              example: table_offset
+            type:
+              example:
+                type: "BIGINT"
+                nullable: false
+            kind:
+              type: string
+              description: The kind of column.
+              enum: [Metadata]
+              example: Metadata
+            metadata_key:
+              type: string
+              description: The system metadata key to reference.
+              example: "offset"
+            virtual:
+              type: boolean
+              description: Indicates if the metadata column is virtual.
+              default: false
+              example: true
+
+    sql.v1.ComputedColumn:
+      description: Computed columns are generated via an expression.
+      allOf:
+        - $ref: '#/components/schemas/sql.v1.ColumnCommon'
+        - type: object
+          required:
+            - kind
+            - expression
+          properties:
+            name:
+              example: total_price
+            type:
+              example:
+                type: "DECIMAL"
+                nullable: false
+                precision: 10
+                scale: 2
+            kind:
+              type: string
+              description: The kind of column.
+              enum: [Computed]
+              example: Computed
+            expression:
+              type: string
+              description: The SQL expression used to compute the column value.
+              example: "quantity * price"
+            virtual:
+              type: boolean
+              description: Indicates if the computed column is virtual.
+              default: false
+              example: true
+
+    sql.v1.MaterializedTableWatermark:
+      type: object
+      description: Watermark strategy for the Materialized Table resource.
+      properties:
+        column_name:
+          type: string
+          example: "event_timestamp"
+        expression:
+          type: string
+          example: "event_timestamp - INTERVAL '5' SECOND"
+
+    sql.v1.MaterializedTableConstraint:
+      type: object
+      description: A constraint on the materialized table.
+      properties:
+        name:
+          type: string
+          example: "pk_orders"
+        kind:
+          type: string
+          x-extensible-enum: [PRIMARY_KEY]
+          description: The type of constraint.
+          example: PRIMARY_KEY
+        column_names:
+          type: array
+          items:
+            type: string
+          example: ["user_id", "product_id"]
+        enforced:
+          type: boolean
+          description: Whether the constraint is enforced.
+          default: false
+
+    sql.v1.MaterializedTableDistribution:
+      type: object
+      description: Distribution (bucket by) strategy.
+      properties:
+        column_names:
+          type: array
+          items:
+            type: string
+          example: ["user_id"]
+        buckets:
+          type: integer
+          format: int32
+          minimum: 1
+          default: 6
+          description: The number of buckets.
+          example: 12
+    sql.v1.MaterializedTableWarning:
+      type: object
+      description: Represents a non-fatal issue encountered during materialized table processing.
+      allOf:
+        - $ref: '#/components/schemas/sql.v1.StatementWarning'
+
     sql.v1.Connection:
       type: object
       description: |-
@@ -1172,8 +2898,8 @@ components:
           example: OPENAI
           description: The type of this connection.
           x-immutable: true
-          x-extensible-enum: [OPENAI, AZUREML, AZUREOPENAI, BEDROCK, SAGEMAKER, GOOGLEAI, VERTEXAI, MONGODB, PINECONE,
-                              ELASTIC]
+          x-extensible-enum: [AZUREML, AZUREOPENAI, A2A, ANTHROPIC, BEDROCK, CONFLUENT_JDBC, COSMOSDB, COUCHBASE, ELASTIC,
+                              FIREWORKSAI, GOOGLEAI, MCP_SERVER, MONGODB, OPENAI, PINECONE, REST, S3VECTORS, SAGEMAKER, VERTEXAI]
         endpoint:
           type: string
           example: 'https://api.openai.com/v1/chat/completions'
@@ -1196,6 +2922,305 @@ components:
           x-immutable: false
       x-enable-listmeta: true
       x-enable-objectmeta: true
+
+
+    sql.v1.Agent:
+      type: object
+      description: Represents an Agent resource.
+      required:
+        - api_version
+        - kind
+        - metadata
+        - name
+        - organization_id
+        - environment_id
+        - spec
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          description: APIVersion defines the schema version of this representation of a resource.
+          example: sql/v1
+          readOnly: true
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - Agent
+          readOnly: true
+        metadata:
+          allOf:
+            - $ref: '#/components/schemas/ObjectMeta'
+            - type: object
+              properties:
+                self:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-123/databases/lkc-123/agents/chat-listener-agent
+                uid:
+                  example: 12345678-1234-1234-1234-123456789012
+                resource_version:
+                  example: a23av
+                resource_name:
+                  example: ""
+                labels:
+                  type: object
+                  additionalProperties:
+                    type: string
+        name:
+          type: string
+          description: The user-provided name of the agent, unique within this environment.
+          pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'
+          maxLength: 100
+          example: "chat-listener-agent"
+          x-immutable: true
+        organization_id:
+          type: string
+          format: uuid
+          description: The unique identifier for the organization.
+          x-immutable: true
+          readOnly: true
+        environment_id:
+          type: string
+          description: The unique identifier for the environment.
+          x-immutable: true
+          readOnly: true
+        spec:
+          $ref: '#/components/schemas/sql.v1.AgentSpec'
+        status:
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/sql.v1.AgentStatus'
+
+    sql.v1.AgentList:
+      type: object
+      description: A list of Agent resources.
+      required:
+        - api_version
+        - kind
+        - metadata
+        - data
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          readOnly: true
+        kind:
+          type: string
+          enum:
+            - AgentList
+          readOnly: true
+        metadata:
+          $ref: '#/components/schemas/ListMeta'
+        data:
+          type: array
+          description: A data property that contains an array of resource items. Each entry in the array is a separate resource.
+          items:
+            $ref: '#/components/schemas/sql.v1.Agent'
+          uniqueItems: true
+
+    sql.v1.AgentSpec:
+      type: object
+      description: The specifications of the Agent.
+      properties:
+        description:
+          type: string
+          example: 'An agent that listens to chat messages and creates issues'
+          description: The description of the agent.
+        model:
+          type: string
+          example: chat_listener
+          description: The name of the model the agent uses for inferencing.
+        prompt:
+          type: string
+          example: Create an issue from the content using bebb0fa3-e084-412d-a000-b02280558318
+            as the team ID
+          description: The instruction prompt that guides the agent's behavior.
+          maxLength: 65536
+        tools:
+          type: array
+          description: The list of tools available to the agent.
+          items:
+            type: string
+          example:
+            - linear-mcp-tool
+        properties:
+          type: object
+          description: A set of key-value option pairs that configure the agent's
+            behavior.
+          additionalProperties:
+            type: string
+          example:
+            max_iterations: '5'
+
+    sql.v1.AgentStatus:
+      type: object
+      description: The status of the Agent.
+      properties:
+        phase:
+          type: string
+          x-extensible-enum: [READY, RUNNING]
+          description: |
+            Describes the status of the agent:
+            
+            READY: The Agent is created;
+            
+            RUNNING: The Agent is created and running in a query;
+          example: RUNNING
+
+    sql.v1.ToolList:
+      type: object
+      description: |-
+        `Tool` models a reusable tool resource backed by a connection that can be referenced
+        by agents to perform actions.
+        The API allows you to create your tools.
+        ## The Tool Model
+        <SchemaDefinition schemaRef="#/components/schemas/sql.v1.Tool" />
+      required:
+        - api_version
+        - kind
+        - metadata
+        - data
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          description: APIVersion defines the schema version of this representation of a resource.
+          example: sql/v1
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - ToolList
+        metadata:
+          allOf:
+            - $ref: '#/components/schemas/ListMeta'
+            - properties:
+                self:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/organizations/org-abc/environments/env-123/databases/my-database/tools
+                first:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/organizations/org-abc/environments/env-123/databases/my-database/tools
+                last:
+                  example: ""
+                prev:
+                  example: ""
+                next:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/organizations/org-abc/environments/env-123/databases/my-database/tools?page_token=UvmDWOB1iwfAIBPj6EYb
+        data:
+          type: array
+          description: A data property that contains an array of resource items. Each entry in the array is a separate resource.
+          items:
+            allOf:
+              - $ref: '#/components/schemas/sql.v1.Tool'
+              - type: object
+                required:
+                  - api_version
+                  - kind
+                  - metadata
+                  - name
+                  - spec
+                  - status
+                  - organization_id
+                  - environment_id
+                properties:
+                  spec:
+                    type: object
+                    required:
+                      - connection
+          uniqueItems: true
+
+    sql.v1.Tool:
+      type: object
+      description: |-
+        `Tool` models a reusable tool resource backed by a connection that can be referenced
+        by agents to perform actions.
+        The API allows you to create your tools.
+        ## The Tools Model
+        <SchemaDefinition schemaRef="#/components/schemas/sql.v1.Tool" />
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          description: APIVersion defines the schema version of this representation of a resource.
+          example: sql/v1
+          readOnly: true
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - Tool
+          readOnly: true
+        metadata:
+          allOf:
+            - $ref: '#/components/schemas/ObjectMeta'
+            - properties:
+                self:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/organizations/org-abc/environments/env-123/tools/linear-mcp-tool
+                uid:
+                  example: 12345678-1234-1234-1234-123456789012
+                resource_version:
+                  example: a23av
+                resource_name:
+                  example: ""
+        name:
+          type: string
+          example: linear-mcp-tool
+          description: The user provided name of the tool, unique within this environment.
+          pattern: '[a-z0-9_]([-a-z0-9_]*[a-z0-9_])?'
+          x-immutable: true
+          maxLength: 100
+        spec:
+          $ref: '#/components/schemas/sql.v1.ToolSpec'
+        status:
+          $ref: '#/components/schemas/sql.v1.ToolStatus'
+
+    sql.v1.ToolSpec:
+      type: object
+      description: The spec of the Tool
+      properties:
+        connection:
+          type: string
+          example: linear-mcp-connection-streamable
+          description: The name of the connection this tool uses.
+        options:
+          type: object
+          description: A set of key-value option pairs that configure the tool's behavior.
+          additionalProperties:
+            type: string
+          example:
+            type: 'mcp'
+            allowed_tools: 'create_issue, list_issues'
+            request_timeout: '30'
+      x-enable-listmeta: true
+      x-enable-objectmeta: true
+
+    sql.v1.ToolStatus:
+      type: object
+      required:
+        - phase
+      description: The status of the Tool
+      properties:
+        phase:
+          type: string
+          x-extensible-enum: [ACTIVE, INACTIVE, ERROR]
+          description: |
+            Describes the status of the tool:
+
+            ACTIVE: The Tool is usable;
+
+            INACTIVE: The Tool is not currently active;
+
+            ERROR: The Tool encountered an error;
+          example: ACTIVE
+          readOnly: true
+        detail:
+          type: string
+          description: Details about why the tool transitioned into a given status.
+          example: 'Tool is ready'
+          readOnly: true
+      readOnly: true
 
     sql.v1.Statement:
       type: object
@@ -1235,7 +3260,7 @@ components:
                 labels:
                   type: object
                   additionalProperties:
-                      type: string
+                    type: string
         name:
           type: string
           example: sql123
@@ -1288,10 +3313,18 @@ components:
           readOnly: true
         scaling_status:
           $ref: '#/components/schemas/sql.v1.ScalingStatus'
+        state_limit_status:
+          $ref: '#/components/schemas/sql.v1.StateLimitStatus'
         detail:
           type: string
           description: Details about the execution status of this statement.
           example: Statement is running successfully
+          readOnly: true
+        warnings:
+          type: array
+          description: List of warnings encountered during statement execution.
+          items:
+            $ref: '#/components/schemas/sql.v1.StatementWarning'
           readOnly: true
         traits:
           $ref: '#/components/schemas/sql.v1.StatementTraits'
@@ -1320,10 +3353,61 @@ components:
         latest_offsets_timestamp:
           type: string
           format: date-time
-          example: '2023-03-31T00:00:00-00:00'
+          example: '2025-11-10T16:20:00Z'
           description: The date and time at which the Kafka topic offsets were added to the statement status.
             It is represented in RFC3339 format and is in UTC.
           readOnly: true
+        end_time:
+          type: string
+          format: date-time
+          example: '2025-03-19T01:02:03-04:05'
+          description: |
+            The date and time in UTC (represented as RFC3339 format) at which the statement reached its final terminal state. 
+            This field is set when the Phase is COMPLETED, FAILED, or STOPPED.
+            
+            Note - The attribute is in a [Early Access lifecycle](https://docs.confluent.io/cloud/current/api.html#section/Versioning/API-Lifecycle-Policy)
+        duration:
+          type: string
+          format: duration
+          example: 'PT2H30M'
+          description: |
+            The total elapsed time (represented as ISO 8601 format) from when the statement transitioned from 
+            PENDING to RUNNING until it reached a final terminal state. This field is calculated and set when 
+            the Phase is COMPLETED, FAILED, or STOPPED.
+            
+            Note - The attribute is in a [Early Access lifecycle](https://docs.confluent.io/cloud/current/api.html#section/Versioning/API-Lifecycle-Policy)
+        affected_resource:
+          type: object
+          description: |
+            A reference to the resource created by this statement, if any. This field is set when a statement
+            (e.g., CREATE MATERIALIZED TABLE) results in a new user-facing resource.
+
+            Note - The attribute is in a [Early Access lifecycle](https://docs.confluent.io/cloud/current/api.html#section/Versioning/API-Lifecycle-Policy)
+          required:
+            - kind
+            - environment_id
+            - resource_name
+          properties:
+            kind:
+              type: string
+              x-extensible-enum: [MATERIALIZED_TABLE]
+              description: The kind of resource that was created.
+              example: MATERIALIZED_TABLE
+            environment_id:
+              type: string
+              description: The unique identifier for the environment containing the
+                resource.
+              example: env-abc
+            database_id:
+              type: string
+              description: |
+                The unique identifier for the database containing the resource.
+                Only present for resource kinds that are scoped to a database.
+              example: lkc-123
+            resource_name:
+              type: string
+              description: The name of the created resource, unique within its scope.
+              example: my-materialized-table
       readOnly: true
     MultipleSearchFilter:
       description: Filter a collection by a string search for one or more values
@@ -1357,6 +3441,12 @@ components:
             type: integer
         schema:
           $ref: '#/components/schemas/sql.v1.ResultSchema'
+        connection_refs:
+          type: array
+          description: The names of connections that the SQL statement references (e.g., in FROM clauses).
+          items:
+            type: string
+          example: ["my-postgres-connection", "my-kafka-connection"]
       readOnly: true
 
     sql.v1.StatementList:
@@ -1420,7 +3510,6 @@ components:
                     type: object
                     required:
                       - statement
-                      - compute_pool_id
           uniqueItems: true
 
     sql.v1.StatementResult:
@@ -1500,11 +3589,13 @@ components:
           description: A map (key-value pairs) of statement properties.
           additionalProperties:
             type: string
-          maximum: 8192
+          maxProperties: 8192
         compute_pool_id:
           type: string
           example: fcp-00000
-          description: The id associated with the compute pool in context.
+          description: |-
+            The id associated with the compute pool in context. 
+            If not specified, the statement will use the default compute pool. The default pool is automatically determined by the system.
           maxLength: 255
         principal:
           type: string
@@ -1512,18 +3603,19 @@ components:
           description: The id of a principal this statement runs as.
           maxLength: 255
           x-immutable: true
-        authorized_principals:
-          type: array
-          example: [sa-abc123, sa-abc456]
-          description: The list of ids of the principals granting permissions to run this statement.
-          items:
-            type: string
-            maxLength: 255
-          x-immutable: true
         stopped:
           type: boolean
           description: Indicates whether the statement should be stopped.
           example: false
+        execution_mode:
+          type: string
+          example: streaming
+          description: |
+            The execution mode of the statement.
+            
+            Note - The attribute is in a [Early Access lifecycle](https://docs.confluent.io/cloud/current/api.html#section/Versioning/API-Lifecycle-Policy)
+          maxLength: 255
+          readOnly: true
       x-enable-listmeta: true
       x-enable-objectmeta: true
 
@@ -1546,7 +3638,7 @@ components:
         updated_at:
           type: string
           format: date-time
-          example: '2023-03-31T00:00:00-00:00'
+          example: '2025-11-10T16:20:00Z'
           description: The date and time at which this object was last updated. It is represented in RFC3339 format and is
             in UTC.
         uid:
@@ -1577,7 +3669,7 @@ components:
         updated_at:
           type: string
           format: date-time
-          example: '2023-03-31T00:00:00-00:00'
+          example: '2025-11-10T16:20:00Z'
           description: The date and time at which this object was last updated. It is represented in RFC3339 format and is
             in UTC.
         uid:
@@ -1660,6 +3752,43 @@ components:
           type: string
       readOnly: true
 
+    sql.v1.StateLimitStatus:
+      description: State limit status for this statement.
+      properties:
+        state_limit_state:
+          description: |
+            OK: The statement is within state limits.
+
+            APPROACHING_SOFT_LIMIT: The statement is approaching soft state limits.
+
+            EXCEEDING_SOFT_LIMIT: The statement is exceeding soft state limits.
+
+            APPROACHING_HARD_LIMIT: The statement is approaching hard state limits.
+
+            EXCEEDING_HARD_LIMIT: The statement is exceeding hard state limits.
+          example: OK
+          readOnly: true
+          type: string
+          x-extensible-enum:
+            - OK
+            - APPROACHING_SOFT_LIMIT
+            - EXCEEDING_SOFT_LIMIT
+            - APPROACHING_HARD_LIMIT
+            - EXCEEDING_HARD_LIMIT
+        last_updated:
+          description: The last time the state limit status was updated.
+          example: 1996-03-19T01:02:03-04:05
+          format: date-time
+          readOnly: true
+          type: string
+        detail:
+          description: Details about why state limit status is in its current state.
+          example: The statement is within state limits.
+          type: string
+          readOnly: true
+      readOnly: true
+      type: object
+
     sql.v1.ResultSchema:
       type: object
       description: "The table columns of the results schema."
@@ -1735,6 +3864,9 @@ components:
           type: integer
           format: int32
           description: "The fractional precision of the data type (if applicable)."
+        class_name:
+          type: string
+          description: "The class name of the structured data type (if applicable)."
       required:
         - type
         - nullable
@@ -1801,6 +3933,47 @@ components:
             parameter:
               description: A string indicating which query parameter caused the error.
               type: string
+    sql.v1.StatementWarning:
+      type: object
+      description: Represents a non-fatal issue encountered during statement processing.
+      required:
+        - severity
+        - created_at
+        - reason
+        - message
+      properties:
+        severity:
+          $ref: '#/components/schemas/sql.v1.WarningSeverity'
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the warning was created. It is represented in RFC3339 format and is in UTC.
+          example: '2025-11-10T16:20:00Z'
+          readOnly: true
+        reason:
+          type: string
+          description: A machine-readable short, upper case summary delimited by underscore.
+          example: MISSING_WINDOW_START_END
+        message:
+          type: string
+          description: A human-readable string containing the description of the warning.
+          example: The statement is missing window start and end bounds which may lead to unbounded state growth.
+
+    sql.v1.WarningSeverity:
+      type: string
+      x-extensible-enum:
+        - LOW
+        - MODERATE
+        - CRITICAL
+      description: |
+        Indicates the severity of the warning.
+
+        LOW: Indicates a low severity warning and for informing the user.
+
+        MODERATE: Indicates a moderate severity warning and may require user action. Could cause degraded statements if certain conditions apply.
+
+        CRITICAL: Indicates a critical severity warning and requires user action. It will cause degraded statements eventually.
+      example: MODERATE
 
     # Exceptions API Components
 
@@ -1817,8 +3990,8 @@ components:
     sql.v1.StatementExceptionList:
       type: object
       description: |-
-       StatementExceptionList is a list of exceptions coming from FAILED or FAILING Statements created by
-       the SQL Statements API.
+        StatementExceptionList is a list of exceptions coming from FAILED or FAILING Statements created by
+        the SQL Statements API.
       required:
         - api_version
         - kind
@@ -1867,7 +4040,7 @@ components:
         timestamp:
           type: string
           format: date-time
-          example: '2023-03-31T00:00:00-00:00'
+          example: '2025-11-10T16:20:00Z'
           description: The date and time at which the exception occurred. It is represented in RFC3339 format and is
             in UTC.
           readOnly: true
@@ -1946,6 +4119,13 @@ components:
       description: |
         Authenticate with resource-specific API Keys using HTTP Basic Auth. Treat the resource-specific API Key ID
         as the username and resource-specific API Key Secret as the password.
+    external-access-token:
+      type: oauth2
+      description: Authenticate with OAuth 2.0.
+      flows:
+        clientCredentials:
+          tokenUrl: https://<oauth-identity-provider>/token
+          scopes: {}
   responses:
     BadRequestError:
       description: Bad Request
@@ -2152,3 +4332,37 @@ tags:
       The API allows you to list, create, read, and delete your connections.
       ## The Connections Model
       <SchemaDefinition schemaRef="#/components/schemas/sql.v1.Connection" />
+  - name: Agents (sql/v1)
+    description: |-
+      [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+
+      `Agent` models an AI agent that uses a specified model, prompt, and set of tools
+      to autonomously perform tasks.
+      The API allows you to create your agents.
+      ## The Agents Model
+      <SchemaDefinition schemaRef="#/components/schemas/sql.v1.Agent" />
+  - name: Tools (sql/v1)
+    description: |-
+      [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+
+      `Tool` models a reusable tool resource backed by a connection that can be referenced
+      by agents to perform actions.
+      The API allows you to create your tools.
+      ## The Tools Model
+      <SchemaDefinition schemaRef="#/components/schemas/sql.v1.Tool" />
+  - name: Materialized Tables (sql/v1)
+    description: |-
+      [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+
+      `MaterializedTable` represents a core resource used to define and manage streaming SQL queries that persist results.
+      The API allows you to list, create, read, update, and delete your materialized tables.
+      ## The Materialized Table Model
+      <SchemaDefinition schemaRef="#/components/schemas/sql.v1.MaterializedTable" />
+  - name: Materialized Table Versions (sql/v1)
+    description: |-
+      [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300af91)](#section/Versioning/API-Lifecycle-Policy)
+
+      `MaterializedTableVersion` represents a specific version of a Materialized Table, capturing the state and changes at that point in time.
+      The API allows you to list and read versions of your materialized tables.
+      ## The Materialized Table Version Model
+      <SchemaDefinition schemaRef="#/components/schemas/sql.v1.MaterializedTableVersion" />
