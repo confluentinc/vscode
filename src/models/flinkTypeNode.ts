@@ -6,7 +6,7 @@
  */
 
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
-import { formatSqlType, formatFlinkTypeForDisplay } from "../utils/flinkTypes";
+import { formatSqlType, formatFlinkTypeForDisplay, getIconForFlinkType } from "../utils/flinkTypes";
 import type { FlinkType } from "./flinkTypes";
 import { FlinkTypeKind, isCompoundFlinkType } from "./flinkTypes";
 import { CustomMarkdownString } from "./main";
@@ -14,7 +14,6 @@ import type { FlinkRelationColumn } from "./flinkRelation";
 import type { ConnectionId, IResourceBase } from "./resource";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ConnectionType } from "../clients/sidecar";
-import { IconNames } from "../icons";
 
 /**
  * Represents a parsed Flink type node in the tree hierarchy.
@@ -175,11 +174,12 @@ export class FlinkTypeNode implements IResourceBase {
   }
 
   /**
-   * Get the icon for this node.
-   * Currently uses placeholder icon for all types.
+   * Get the icon for this node based on type kind.
+   * Uses unified icon resolution strategy via getIconForFlinkType().
+   * Special handling for ROW and ARRAY/MULTISET types, otherwise uses column icon.
    */
   private getIcon(): string {
-    return IconNames.PLACEHOLDER;
+    return getIconForFlinkType(this.parsedType);
   }
 
   /**

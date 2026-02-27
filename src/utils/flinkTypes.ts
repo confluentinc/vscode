@@ -1,5 +1,6 @@
 import type { FlinkType } from "../models/flinkTypes";
 import { FlinkTypeKind, isCompoundFlinkType } from "../models/flinkTypes";
+import { IconNames } from "../icons";
 
 /**
  * Returns a display-friendly version of the data type by removing max-int size specifications and escaping backticks.
@@ -48,4 +49,31 @@ export function formatFlinkTypeForDisplay(flinkType: FlinkType): string {
 
   // Scalar types
   return formatSqlType(flinkType.dataType);
+}
+
+/**
+ * Get the icon name for a Flink type.
+ * Uses special icons for ROW and ARRAY/MULTISET types, defaults to column icon for others.
+ *
+ * Rules:
+ * - ROW types: symbol-struct (FLINK_TYPE_ROW)
+ * - ARRAY/MULTISET types: symbol-array (FLINK_TYPE_ARRAY)
+ * - All other types: symbol-constant (default column icon)
+ *
+ * @param flinkType - The parsed FlinkType to get an icon for
+ * @returns A string icon name suitable for use with ThemeIcon
+ */
+export function getIconForFlinkType(flinkType: FlinkType): string {
+  if (flinkType.kind === FlinkTypeKind.ROW) {
+    return IconNames.FLINK_TYPE_ROW;
+  }
+
+  if (isCompoundFlinkType(flinkType)) {
+    if (flinkType.kind === FlinkTypeKind.ARRAY || flinkType.kind === FlinkTypeKind.MULTISET) {
+      return IconNames.FLINK_TYPE_ARRAY;
+    }
+  }
+
+  // Default icon for scalars and MAP types (matches column icon)
+  return "symbol-constant";
 }
