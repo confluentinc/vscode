@@ -67,11 +67,11 @@ export class FlinkTypeNode implements IResourceBase {
 
   /**
    * Unique identifier for this node in the tree hierarchy.
-   * Format: "columnId:containerMarkers:fieldPath"
+   * Format: "tableRelation.columnName.fieldPath.fieldPath..."
    *
-   * Includes markers for ARRAY/MULTISET containers to ensure uniqueness when
-   * skipping intermediate container nodes in the tree (e.g., ARRAY<ROW> displays
-   * ROW's children directly, but needs to track which ARRAY they came from).
+   * Uses field names for all path segments, including ARRAY/MULTISET containers.
+   * All segments separated by '.' for consistency.
+   * Example: "spotify-listening-data.track.artists.uri"
    */
   get id(): string {
     const path: string[] = [];
@@ -89,26 +89,15 @@ export class FlinkTypeNode implements IResourceBase {
       path.push(this.parentColumn.id);
     }
 
-    // Add node identifiers in order from root to this node
-    // For ARRAY/MULTISET, add a marker; for ROW/MAP, add field names
+    // Add field names from all nodes in the chain
     for (const chainNode of nodeChain) {
-      if (isCompoundFlinkType(chainNode.parsedType)) {
-        if (
-          chainNode.parsedType.kind === FlinkTypeKind.ARRAY ||
-          chainNode.parsedType.kind === FlinkTypeKind.MULTISET
-        ) {
-          // Add marker for ARRAY/MULTISET containers to track which container a field came from
-          path.push(chainNode.parsedType.kind === FlinkTypeKind.ARRAY ? "[element]" : "{element}");
-        }
-      }
-      // Always add fieldName if present (ROW/MAP members)
       const fieldName = chainNode.parsedType.fieldName;
       if (fieldName) {
         path.push(fieldName);
       }
     }
 
-    return path.join(":");
+    return path.join(".");
   }
 
   /**

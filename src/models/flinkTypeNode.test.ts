@@ -96,7 +96,7 @@ describe("FlinkTypeNode", () => {
       parsed.fieldName = "id";
 
       const node = new FlinkTypeNode({ parsedType: parsed, parentColumn: column });
-      assert.strictEqual(node.id, "test_table.test_col:id");
+      assert.strictEqual(node.id, "test_table.test_col.id");
     });
 
     it("includes nested field names in id", () => {
@@ -118,26 +118,38 @@ describe("FlinkTypeNode", () => {
         parentColumn: column,
       });
 
-      assert.strictEqual(innerNode.id, "test_table.test_col:nested:inner");
+      assert.strictEqual(innerNode.id, "test_table.test_col.nested.inner");
     });
 
-    it("includes [element] for ARRAY", () => {
-      const column = createTestColumn("ARRAY<INT>");
-      const parsed = parseFlinkType("INT");
+    it("uses field name for ARRAY element nodes", () => {
+      const column2 = new FlinkRelationColumn({
+        ...createTestColumn("ARRAY<ROW<id INT>>"),
+        name: "artists",
+        fullDataType: "ARRAY<ROW<id INT>>",
+      });
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumn: column });
-      const arrayParsed = parseFlinkType("ARRAY<INT>");
-      const arrayNode = new FlinkTypeNode({ parsedType: arrayParsed, parentColumn: column });
+      // Get children from the column - they are the ROW fields
+      const children = column2.getTypeChildren();
+      assert.strictEqual(children.length, 1, "Should have 1 field child (id)");
 
-      assert(arrayNode.id.includes("[element]"));
+      // The id should be: table.columnName.fieldName
+      // Column ID is "test_table.artists", add field name "id"
+      assert.strictEqual(children[0].id, "test_table.artists.id");
     });
 
-    it("includes {element} for MULTISET", () => {
-      const column = createTestColumn("MULTISET<VARCHAR>");
-      const multisetParsed = parseFlinkType("MULTISET<VARCHAR>");
-      const node = new FlinkTypeNode({ parsedType: multisetParsed, parentColumn: column });
+    it("uses field name for MULTISET element nodes", () => {
+      const column = new FlinkRelationColumn({
+        ...createTestColumn("MULTISET<ROW<id INT>>"),
+        name: "items",
+        fullDataType: "MULTISET<ROW<id INT>>",
+      });
 
-      assert(node.id.includes("{element}"));
+      const children = column.getTypeChildren();
+      assert.strictEqual(children.length, 1, "Should have 1 field child (id)");
+
+      // The id should be: table.columnName.fieldName
+      // Column ID is "test_table.items", add field name "id"
+      assert.strictEqual(children[0].id, "test_table.items.id");
     });
   });
 
@@ -592,19 +604,13 @@ describe("FlinkTypeNode", () => {
 
     it("generates unique IDs across complex table structure with multiple array columns", () => {
       // Simulate a complex table with multiple array columns containing the same structure
-      const col1 = createTestColumn("ARRAY<ROW<id INT, name VARCHAR>", "artists");
+      const col1 = createTestColumn("ARRAY<ROW<id INT, name VARCHAR>>", "artists");
       const col2 = createTestColumn("ARRAY<ROW<id INT, name VARCHAR>>", "metadata");
 
-      // Create nodes for both columns
-      const col1Type = parseFlinkType("ARRAY<ROW<id INT, name VARCHAR>>");
-      const col1Node = new FlinkTypeNode({ parsedType: col1Type, parentColumn: col1 });
-
-      const col2Type = parseFlinkType("ARRAY<ROW<id INT, name VARCHAR>>");
-      const col2Node = new FlinkTypeNode({ parsedType: col2Type, parentColumn: col2 });
-
-      // Get children (which should be the ROW's fields, skipping the ARRAY node)
-      const col1Children = col1Node.getChildren();
-      const col2Children = col2Node.getChildren();
+      // Get type children from the columns (which creates synthetic parent nodes)
+      // This is the real-world usage pattern
+      const col1Children = col1.getTypeChildren();
+      const col2Children = col2.getTypeChildren();
 
       assert.strictEqual(col1Children.length, 2);
       assert.strictEqual(col2Children.length, 2);
@@ -620,14 +626,12 @@ describe("FlinkTypeNode", () => {
         `Found duplicate IDs: ${allIds.filter((id, i) => allIds.indexOf(id) !== i).join(", ")}`,
       );
 
-      // Verify the IDs have the correct structure
-      assert(col1Children[0].id.includes("artists"), "col1 ID should include column name");
-      assert(col1Children[0].id.includes("[element]"), "col1 ID should include array marker");
-      assert(col1Children[0].id.includes("id"), "col1 ID should include field name");
+      // Verify the IDs have the correct structure: table.columnName.fieldName
+      assert.strictEqual(col1Children[0].id, "test_table.artists.id");
+      assert.strictEqual(col1Children[1].id, "test_table.artists.name");
 
-      assert(col2Children[0].id.includes("metadata"), "col2 ID should include column name");
-      assert(col2Children[0].id.includes("[element]"), "col2 ID should include array marker");
-      assert(col2Children[0].id.includes("id"), "col2 ID should include field name");
+      assert.strictEqual(col2Children[0].id, "test_table.metadata.id");
+      assert.strictEqual(col2Children[1].id, "test_table.metadata.name");
 
       // Verify column1's ids are different from column2's despite same field names
       assert.notStrictEqual(

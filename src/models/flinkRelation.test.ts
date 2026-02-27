@@ -298,20 +298,20 @@ describe("flinkRelation.ts", () => {
           "IDs from different columns should be completely different due to column ID prefix",
         );
 
-        // Verify IDs have expected structure: relationName.columnName:[element]:fieldName
+        // Verify IDs have expected structure: relationName.columnName.fieldName
         for (const id of ids1) {
           assert.match(
             id,
-            /^users_table\.metadata:\[element\]:(id|name)$/,
-            `Column 1 ID should include column and ARRAY marker: ${id}`,
+            /^users_table\.metadata\.(id|name)$/,
+            `Column 1 ID should be: users_table.metadata.(id|name): ${id}`,
           );
         }
 
         for (const id of ids2) {
           assert.match(
             id,
-            /^orders_table\.metadata:\[element\]:(id|name)$/,
-            `Column 2 ID should include column and ARRAY marker: ${id}`,
+            /^orders_table\.metadata\.(id|name)$/,
+            `Column 2 ID should be: orders_table.metadata.(id|name): ${id}`,
           );
         }
       });
@@ -328,13 +328,13 @@ describe("flinkRelation.ts", () => {
 
         assert.strictEqual(children.length, 2, "Should have 2 field children from MULTISET<ROW>");
 
-        // Verify IDs include MULTISET marker
+        // Verify IDs use field names
         const ids = children.map((child) => child.id);
         for (const id of ids) {
           assert.match(
             id,
-            /^test_table\.items:\{element\}:(id|value)$/,
-            `MULTISET ID should include curly brace marker: ${id}`,
+            /^test_table\.items\.(id|value)$/,
+            `MULTISET ID should be: test_table.items.(id|value): ${id}`,
           );
         }
 
