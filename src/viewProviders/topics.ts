@@ -26,7 +26,10 @@ import {
   ConsumerGroupTreeItem,
   ConsumerTreeItem,
 } from "../models/consumerGroup";
-import { KafkaClusterResourceContainer } from "../models/containers/kafkaClusterResourceContainer";
+import {
+  KafkaClusterContainerLabel,
+  KafkaClusterResourceContainer,
+} from "../models/containers/kafkaClusterResourceContainer";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { CustomMarkdownString } from "../models/main";
 import { isCCloud, isLocal } from "../models/resource";
@@ -348,10 +351,24 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
     options?: { select?: boolean; focus?: boolean },
   ): Promise<void> {
     // callers likely won't have the exact instance in the provider's cache(s), so we need to
-    // find the instance (originally returned by getChildren()) by name
+    // find the instance (originally returned by getChildren()) by name/id
     let itemToReveal: TopicViewProviderData | undefined;
 
-    if (item instanceof KafkaTopic) {
+    if (item instanceof KafkaClusterResourceContainer) {
+      // match by tree item id against the known container instances
+      if (this.topicsContainer?.id === item.id) {
+        itemToReveal = this.topicsContainer;
+      } else if (this.consumerGroupsContainer?.id === item.id) {
+        itemToReveal = this.consumerGroupsContainer;
+      }
+    } else if (item instanceof ConsumerGroup) {
+      itemToReveal = this.consumerGroupsInTreeView.get(item.consumerGroupId);
+    } else if (item instanceof Consumer) {
+      const parentGroup = this.consumerGroupsInTreeView.get(item.consumerGroupId);
+      if (parentGroup) {
+        itemToReveal = parentGroup.members.find((member) => member.consumerId === item.consumerId);
+      }
+    } else if (item instanceof KafkaTopic) {
       itemToReveal = this.topicsInTreeView.get(item.name);
     } else if (item instanceof Subject) {
       itemToReveal = this.subjectsInTreeView.get(item.name);
