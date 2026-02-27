@@ -163,8 +163,6 @@ export type TopicChangeEvent = {
   change: EventChangeType;
   cluster: KafkaCluster;
 };
+
 /** Fires when a topic has been created or deleted in a Kafka cluster. */
 export const topicChanged = new vscode.EventEmitter<TopicChangeEvent>();
-
-/** Fires when consumer groups for a Kafka cluster have changed (removed or updated, direct addition not supported). */
-export const consumerGroupsChanged = new vscode.EventEmitter<KafkaCluster>();
