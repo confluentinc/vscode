@@ -320,7 +320,8 @@ export class FlinkTypeNode implements IResourceBase {
     const item = new TreeItem(this.getLabel(), collapsibleState);
 
     item.iconPath = this.getIcon();
-    item.id = this.id;
+    // Note: Intentionally not setting item.id - FlinkTypeNode instances are ephemeral
+    // (recreated on each expand), so using object identity works better than fixed IDs
     item.description = this.getDescription();
     item.tooltip = this.getTooltip();
     item.contextValue = "ccloud-flink-type-node";
