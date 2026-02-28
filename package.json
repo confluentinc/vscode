@@ -853,6 +853,12 @@
         "category": "Confluent: Topics"
       },
       {
+        "command": "confluent.topics.refreshResourceContainer",
+        "icon": "$(sync)",
+        "title": "Refresh Group",
+        "category": "Confluent: Topics View"
+      },
+      {
         "command": "confluent.topics.search",
         "icon": "$(search)",
         "title": "Search",
@@ -1750,6 +1756,10 @@
         {
           "command": "confluent.topics.refresh",
           "when": "true"
+        },
+        {
+          "command": "confluent.topics.refreshResourceContainer",
+          "when": "false"
         },
         {
           "command": "confluent.topics.search",
