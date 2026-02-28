@@ -23,7 +23,7 @@ import { registerChatTools } from "./chat/tools/registration";
 import { FlinkSqlCodelensProvider } from "./codelens/flinkSqlProvider";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
-import { registerConsumerGroupCommands } from "./commands/consumerGroups";
+import { registerTopicsViewCommands } from "./commands/topicsView";
 import { registerDebugCommands } from "./commands/debugtools";
 import { registerDiffCommands } from "./commands/diffs";
 import { registerDockerCommands } from "./commands/docker";
@@ -264,7 +264,7 @@ async function _activateExtension(
     ...registerSchemaRegistryCommands(),
     ...registerSchemaCommands(),
     ...registerTopicCommands(),
-    ...registerConsumerGroupCommands(),
+    ...registerTopicsViewCommands(),
     ...registerDiffCommands(),
     ...registerExtraCommands(),
     ...registerDockerCommands(),
