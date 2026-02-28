@@ -216,7 +216,7 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
         cluster.connectionType,
         KafkaClusterContainerLabel.CONSUMER_GROUPS,
         [],
-        undefined, // no context value for now since no commands are needed yet for this container
+        "consumer-groups-container",
         new ThemeIcon(IconNames.CONSUMER_GROUP),
       );
 
