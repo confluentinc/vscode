@@ -21,11 +21,8 @@ import { ConsumerGroupState, ConsumerGroupTreeItem, ConsumerTreeItem } from "./c
 describe("models/consumerGroup.ts", () => {
   describe("ConsumerGroup", () => {
     describe("id", () => {
-      it("should return clusterId-consumerGroupId", () => {
-        assert.strictEqual(
-          TEST_CCLOUD_CONSUMER_GROUP.id,
-          `${TEST_CCLOUD_CONSUMER_GROUP.clusterId}-${TEST_CCLOUD_CONSUMER_GROUP_ID}`,
-        );
+      it("should return consumerGroupId", () => {
+        assert.strictEqual(TEST_CCLOUD_CONSUMER_GROUP.id, TEST_CCLOUD_CONSUMER_GROUP_ID);
       });
     });
 
@@ -111,12 +108,8 @@ describe("models/consumerGroup.ts", () => {
 
   describe("Consumer", () => {
     describe("id", () => {
-      it("should return clusterId-consumerGroupId-consumerId", () => {
-        const consumer = TEST_CCLOUD_CONSUMER;
-        assert.strictEqual(
-          consumer.id,
-          `${consumer.clusterId}-${consumer.consumerGroupId}-${consumer.consumerId}`,
-        );
+      it("should return consumerId", () => {
+        assert.strictEqual(TEST_CCLOUD_CONSUMER.id, TEST_CCLOUD_CONSUMER.consumerId);
       });
     });
 
@@ -179,10 +172,11 @@ describe("models/consumerGroup.ts", () => {
       assert.strictEqual(treeItem.label, TEST_CCLOUD_CONSUMER_GROUP.consumerGroupId);
     });
 
-    it("should set id from the resource", () => {
+    it("should set id as clusterId-consumerGroupId", () => {
       const treeItem = new ConsumerGroupTreeItem(TEST_CCLOUD_CONSUMER_GROUP);
+      const group = TEST_CCLOUD_CONSUMER_GROUP;
 
-      assert.strictEqual(treeItem.id, TEST_CCLOUD_CONSUMER_GROUP.id);
+      assert.strictEqual(treeItem.id, `${group.clusterId}-${group.consumerGroupId}`);
     });
 
     it("should include connection type and state in contextValue", () => {
@@ -340,9 +334,14 @@ describe("models/consumerGroup.ts", () => {
       assert.strictEqual(treeItem.label, consumer.consumerId);
     });
 
-    it("should set id from the resource", () => {
+    it("should set id as clusterId-clientId-consumerId", () => {
       const treeItem = new ConsumerTreeItem(TEST_CCLOUD_CONSUMER);
-      assert.strictEqual(treeItem.id, TEST_CCLOUD_CONSUMER.id);
+      const consumer = TEST_CCLOUD_CONSUMER;
+
+      assert.strictEqual(
+        treeItem.id,
+        `${consumer.clusterId}-${consumer.clientId}-${consumer.consumerId}`,
+      );
     });
 
     it("should include connection type in contextValue", () => {
