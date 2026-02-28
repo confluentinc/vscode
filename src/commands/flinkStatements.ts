@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
+import type { ExecutableBlock, ParsedStatement } from "../documentParsing/flinkSql";
+import { StatementType, classifyStatementType } from "../documentParsing/flinkSql";
 import {
   FLINKSTATEMENT_URI_SCHEME,
   FlinkStatementDocumentProvider,
@@ -107,6 +109,7 @@ export async function submitFlinkStatementCommand(
   uri?: vscode.Uri,
   pool?: CCloudFlinkComputePool,
   database?: CCloudKafkaCluster,
+  block?: ExecutableBlock,
 ): Promise<void> {
   const funcLogger = logger.withCallpoint("submitFlinkStatementCommand");
 
@@ -125,8 +128,26 @@ export async function submitFlinkStatementCommand(
     return;
   }
 
-  const document = await getEditorOrFileContents(statementBodyUri);
-  const statement = document.content;
+  let statement: string;
+  // submit a statement "block" if it was provided, otherwise submit the whole document
+  if (block) {
+    // TODO: handle SET/USE statements through the language client in a follow-up PR
+    const executableStatements: ParsedStatement[] = block.statements.filter(
+      (statement) => classifyStatementType(statement.text) === StatementType.EXECUTABLE,
+    );
+    if (executableStatements.length === 0) {
+      await showErrorNotificationWithButtons("No executable statements found in block.");
+      return;
+    }
+
+    statement = executableStatements.map((statement) => statement.text).join("\n");
+    funcLogger.debug(
+      `Submitting block ${block.index} with ${executableStatements.length} executable statement(s) (filtered from ${block.statements.length} total)`,
+    );
+  } else {
+    const document = await getEditorOrFileContents(statementBodyUri);
+    statement = document.content;
+  }
   const uriMetadata = await ResourceManager.getInstance().getUriMetadata(statementBodyUri);
 
   // 2. Choose the statement name
