@@ -337,6 +337,12 @@
         "category": "Confluent: Connections"
       },
       {
+        "command": "confluent.consumerGroups.refresh",
+        "icon": "$(sync)",
+        "title": "Refresh Consumer Groups",
+        "category": "Confluent: Consumer Groups"
+      },
+      {
         "command": "confluent.copyOrganizationId",
         "title": "Copy Organization ID",
         "category": "Confluent: Resources"
@@ -1371,6 +1377,10 @@
           "when": "true"
         },
         {
+          "command": "confluent.consumerGroups.refresh",
+          "when": "false"
+        },
+        {
           "command": "confluent.copyOrganizationId",
           "when": "false"
         },
@@ -2190,6 +2200,21 @@
         {
           "command": "confluent.topics.query",
           "when": "view == confluent-topics && viewItem =~ /ccloud-kafka-topic.*-flinkable.*/",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.consumerGroups.refresh",
+          "when": "view == confluent-topics && viewItem =~ /consumerGroups-container.*/",
+          "group": "inline"
+        },
+        {
+          "command": "confluent.copyResourceId",
+          "when": "view == confluent-topics && viewItem =~ /.*-consumerGroup-.*/",
+          "group": "2_copy@1"
+        },
+        {
+          "command": "confluent.openCCloudLink",
+          "when": "view == confluent-topics && viewItem =~ /ccloud-consumerGroup-.*/",
           "group": "z_openInCloud"
         },
         {
