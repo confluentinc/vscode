@@ -337,10 +337,10 @@
         "category": "Confluent: Connections"
       },
       {
-        "command": "confluent.consumerGroups.refresh",
+        "command": "confluent.topics.refreshResourceContainer",
         "icon": "$(sync)",
-        "title": "Refresh Consumer Groups",
-        "category": "Confluent: Consumer Groups"
+        "title": "Refresh Group",
+        "category": "Confluent: Topics View"
       },
       {
         "command": "confluent.copyOrganizationId",
@@ -1377,7 +1377,7 @@
           "when": "true"
         },
         {
-          "command": "confluent.consumerGroups.refresh",
+          "command": "confluent.topics.refreshResourceContainer",
           "when": "false"
         },
         {
@@ -2203,18 +2203,18 @@
           "group": "z_openInCloud"
         },
         {
-          "command": "confluent.consumerGroups.refresh",
-          "when": "view == confluent-topics && viewItem =~ /consumerGroups-container.*/",
-          "group": "inline"
+          "command": "confluent.topics.refreshResourceContainer",
+          "when": "view == confluent-topics && viewItem =~ /.*-container/",
+          "group": "inline@2"
         },
         {
           "command": "confluent.copyResourceId",
-          "when": "view == confluent-topics && viewItem =~ /.*-consumerGroup-.*/",
+          "when": "view == confluent-topics && viewItem =~ /.*-consumer-group-.*/",
           "group": "2_copy@1"
         },
         {
           "command": "confluent.openCCloudLink",
-          "when": "view == confluent-topics && viewItem =~ /ccloud-consumerGroup-.*/",
+          "when": "view == confluent-topics && viewItem =~ /ccloud-consumer-group-.*/",
           "group": "z_openInCloud"
         },
         {
