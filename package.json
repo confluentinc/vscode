@@ -337,12 +337,6 @@
         "category": "Confluent: Connections"
       },
       {
-        "command": "confluent.topics.refreshResourceContainer",
-        "icon": "$(sync)",
-        "title": "Refresh Group",
-        "category": "Confluent: Topics View"
-      },
-      {
         "command": "confluent.copyOrganizationId",
         "title": "Copy Organization ID",
         "category": "Confluent: Resources"
@@ -840,6 +834,12 @@
         "icon": "$(sync)",
         "title": "Refresh",
         "category": "Confluent: Topics"
+      },
+      {
+        "command": "confluent.topics.refreshResourceContainer",
+        "icon": "$(sync)",
+        "title": "Refresh Group",
+        "category": "Confluent: Topics View"
       },
       {
         "command": "confluent.topics.search",
@@ -1377,10 +1377,6 @@
           "when": "true"
         },
         {
-          "command": "confluent.topics.refreshResourceContainer",
-          "when": "false"
-        },
-        {
           "command": "confluent.copyOrganizationId",
           "when": "false"
         },
@@ -1731,6 +1727,10 @@
         {
           "command": "confluent.topics.refresh",
           "when": "true"
+        },
+        {
+          "command": "confluent.topics.refreshResourceContainer",
+          "when": "false"
         },
         {
           "command": "confluent.topics.search",
