@@ -115,11 +115,7 @@ export class FlinkTypeNode implements IResourceBase {
     }
 
     // ARRAY/MULTISET: only if element is compound
-    if (kind === FlinkTypeKind.ARRAY || kind === FlinkTypeKind.MULTISET) {
-      return isCompoundFlinkType(members[0]);
-    }
-
-    return false;
+    return isCompoundFlinkType(members[0]);
   }
 
   /**
@@ -244,7 +240,7 @@ export class FlinkTypeNode implements IResourceBase {
     ) {
       const elementType = members[0];
       return elementType.members.map(
-        (member) =>
+        (member: FlinkType) =>
           new FlinkTypeNode({
             parsedType: member,
             parentNode: this,
@@ -255,7 +251,7 @@ export class FlinkTypeNode implements IResourceBase {
 
     // For ROW and MAP, return their members as children.
     return members.map(
-      (member) =>
+      (member: FlinkType) =>
         new FlinkTypeNode({
           parsedType: member,
           parentNode: this,

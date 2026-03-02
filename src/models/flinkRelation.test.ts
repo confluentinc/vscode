@@ -7,6 +7,7 @@ import {
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
+import { formatFlinkTypeForDisplay } from "../utils/flinkTypes";
 import {
   FlinkRelation,
   FlinkRelationColumn,
@@ -98,7 +99,7 @@ describe("flinkRelation.ts", () => {
             ...TEST_VARCHAR_COLUMN,
             fullDataType: "VARCHAR(2147483647)",
           });
-          const simpleType = column.simpleDataType;
+          const simpleType = formatFlinkTypeForDisplay(column.getParsedType());
           assert.strictEqual(simpleType, "VARCHAR");
         });
 
@@ -107,7 +108,7 @@ describe("flinkRelation.ts", () => {
             ...TEST_VARCHAR_COLUMN,
             fullDataType: "ROW<`field1` INT, `field2` VARCHAR(2147483647)>",
           });
-          const simpleType = column.simpleDataType;
+          const simpleType = formatFlinkTypeForDisplay(column.getParsedType());
           assert.strictEqual(simpleType, "ROW");
         });
 
@@ -116,7 +117,7 @@ describe("flinkRelation.ts", () => {
             ...TEST_VARCHAR_COLUMN,
             fullDataType: "MAP<STRING, VARCHAR(2147483647)>",
           });
-          const simpleType = column.simpleDataType;
+          const simpleType = formatFlinkTypeForDisplay(column.getParsedType());
           assert.strictEqual(simpleType, "MAP");
         });
 
@@ -125,7 +126,7 @@ describe("flinkRelation.ts", () => {
             ...TEST_VARCHAR_COLUMN,
             fullDataType: "ARRAY<INT>",
           });
-          const simpleType = column.simpleDataType;
+          const simpleType = formatFlinkTypeForDisplay(column.getParsedType());
           assert.strictEqual(simpleType, "INT[]");
         });
 
@@ -134,7 +135,7 @@ describe("flinkRelation.ts", () => {
             ...TEST_VARCHAR_COLUMN,
             fullDataType: "MULTISET<STRING>",
           });
-          const simpleType = column.simpleDataType;
+          const simpleType = formatFlinkTypeForDisplay(column.getParsedType());
           assert.strictEqual(simpleType, "STRING MULTISET");
         });
 
@@ -144,7 +145,7 @@ describe("flinkRelation.ts", () => {
               ...TEST_VARCHAR_COLUMN,
               fullDataType: type,
             });
-            const simpleType = column.simpleDataType;
+            const simpleType = formatFlinkTypeForDisplay(column.getParsedType());
             assert.strictEqual(simpleType, type);
           });
         }
@@ -771,7 +772,9 @@ describe("flinkRelation.ts", () => {
       assert.ok(searchText.includes("VIEW"));
       assert.ok(searchText.includes("This is a searchable relation"));
       assert.ok(searchText.includes(TEST_VARCHAR_COLUMN.name));
-      assert.ok(searchText.includes(TEST_VARCHAR_COLUMN.simpleDataType));
+      assert.ok(
+        searchText.includes(formatFlinkTypeForDisplay(TEST_VARCHAR_COLUMN.getParsedType())),
+      );
     });
   });
 

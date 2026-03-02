@@ -73,14 +73,6 @@ export class FlinkRelationColumn {
     return `${this.relationName}.${this.name}`;
   }
 
-  /**
-   * Simplified spelling of the datatype.
-   * Uses the unified type formatter for consistent display across UI.
-   **/
-  get simpleDataType(): string {
-    return formatFlinkTypeForDisplay(this.getParsedType());
-  }
-
   get connectionId(): ConnectionId {
     return CCLOUD_CONNECTION_ID;
   }
@@ -133,11 +125,7 @@ export class FlinkRelationColumn {
     }
 
     // ARRAY/MULTISET: only if element is compound
-    if (kind === FlinkTypeKind.ARRAY || kind === FlinkTypeKind.MULTISET) {
-      return isCompoundFlinkType(members[0]);
-    }
-
-    return false;
+    return isCompoundFlinkType(members[0]);
   }
 
   /**
@@ -158,11 +146,13 @@ export class FlinkRelationColumn {
       return [];
     }
 
+    const { kind, members } = parsed;
+
     // For ARRAY/MULTISET with compound elements, create a synthetic parent node
     // so that the element's children have the correct ID hierarchy
     if (
-      (parsed.kind === FlinkTypeKind.ARRAY || parsed.kind === FlinkTypeKind.MULTISET) &&
-      isCompoundFlinkType(parsed.members[0])
+      (kind === FlinkTypeKind.ARRAY || kind === FlinkTypeKind.MULTISET) &&
+      isCompoundFlinkType(members[0])
     ) {
       // Create a synthetic ARRAY/MULTISET node (not displayed in tree, but used for ID calculation)
       const containerNode = new FlinkTypeNode({
@@ -171,9 +161,9 @@ export class FlinkRelationColumn {
       });
 
       // Return the container's children (which skips the intermediate node)
-      const elementType = parsed.members[0];
+      const elementType = members[0];
       return elementType.members.map(
-        (member) =>
+        (member: FlinkType) =>
           new FlinkTypeNode({
             parsedType: member,
             parentNode: containerNode,
@@ -183,8 +173,8 @@ export class FlinkRelationColumn {
     }
 
     // For ROW/MAP columns, create nodes for each member field
-    return parsed.members.map(
-      (member) =>
+    return members.map(
+      (member: FlinkType) =>
         new FlinkTypeNode({
           parsedType: member,
           parentColumnId: this.id,
@@ -201,7 +191,7 @@ export class FlinkRelationColumn {
     const parts = [];
 
     parts.push(this.name);
-    parts.push(this.simpleDataType);
+    parts.push(formatFlinkTypeForDisplay(this.getParsedType()));
     if (this.metadataKey) {
       parts.push(this.metadataKey);
     }
@@ -233,7 +223,7 @@ export class FlinkRelationColumn {
 
   /** Make a nice overview of the column type, nullability, comment prefix */
   get treeItemDescription(): string {
-    let desc = this.simpleDataType;
+    let desc = formatFlinkTypeForDisplay(this.getParsedType());
 
     // Only show NOT NULL if applicable, as NULL is default in DB-lands and would be noisy
     if (!this.isNullable) {
@@ -277,7 +267,7 @@ export class FlinkRelationColumn {
 
   /** Returns a single line representation of this column, for use within the containing relation's tooltip */
   tooltipLine(): string {
-    const parts: string[] = [`${this.name}: ${formatSqlType(this.simpleDataType)}`];
+    const parts: string[] = [`${this.name}: ${formatFlinkTypeForDisplay(this.getParsedType())}`];
     if (!this.isNullable) {
       parts.push("NOT NULL");
     } else {
@@ -434,7 +424,7 @@ export class FlinkRelation implements IResourceBase, IdItem, ISearchable {
     }
     for (const col of this.columns) {
       parts.push(col.name);
-      parts.push(col.simpleDataType);
+      parts.push(formatFlinkTypeForDisplay(col.getParsedType()));
       if (col.metadataKey) {
         parts.push(col.metadataKey);
       }
