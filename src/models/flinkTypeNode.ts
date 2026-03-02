@@ -9,7 +9,7 @@ import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { formatFlinkTypeForDisplay, formatSqlType, getIconForFlinkType } from "../utils/flinkTypes";
-import type { FlinkType } from "./flinkTypes";
+import type { CompoundFlinkType, FlinkType } from "./flinkTypes";
 import { FlinkTypeKind, isCompoundFlinkType } from "./flinkTypes";
 import { CustomMarkdownString } from "./main";
 import type { ConnectionId, IResourceBase } from "./resource";
@@ -218,28 +218,23 @@ export class FlinkTypeNode implements IResourceBase {
 
   /**
    * Get child type nodes from this node (for tree expansion).
-   * Returns empty array if not expandable.
+   * Returns empty array if not expandable. If expandable, returns the appropriate child nodes.
    *
-   * Special case: For ARRAY/MULTISET with compound element types (ROW/MAP),
-   * returns the element's children directly (skips the intermediate [element] node for better UX).
-   * The ID calculation includes ARRAY/MULTISET markers to ensure uniqueness.
-   * For ROW/MAP, returns their member nodes directly.
+   * For ROW/MAP: returns member field nodes directly.
+   * For ARRAY/MULTISET with compound element types: returns the element's children directly
+   * (skips the intermediate container node for better UX). Since isExpandable() validates this
+   * condition, we can safely access members[0].members without additional checks.
    */
   getChildren(): FlinkTypeNode[] {
-    if (!this.isExpandable || !isCompoundFlinkType(this.parsedType)) {
+    if (!this.isExpandable) {
       return [];
     }
 
-    const { kind, members } = this.parsedType;
+    const { kind, members } = this.parsedType as CompoundFlinkType;
 
-    // For ARRAY/MULTISET with compound elements, return the element's children directly
-    // (skips the intermediate [element] node for cleaner UX)
-    if (
-      (kind === FlinkTypeKind.ARRAY || kind === FlinkTypeKind.MULTISET) &&
-      isCompoundFlinkType(members[0])
-    ) {
-      const elementType = members[0];
-      return elementType.members.map(
+    // ROW and MAP: return member nodes directly
+    if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
+      return members.map(
         (member: FlinkType) =>
           new FlinkTypeNode({
             parsedType: member,
@@ -249,8 +244,11 @@ export class FlinkTypeNode implements IResourceBase {
       );
     }
 
-    // For ROW and MAP, return their members as children.
-    return members.map(
+    // ARRAY/MULTISET with compound elements: return the element's children directly
+    // (skips the intermediate [element] node for cleaner UX)
+    // Note: isExpandable() ensures the element is compound, so we can safely access members[0].members
+    const elementType = members[0] as CompoundFlinkType;
+    return elementType.members.map(
       (member: FlinkType) =>
         new FlinkTypeNode({
           parsedType: member,

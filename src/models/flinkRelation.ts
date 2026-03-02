@@ -7,7 +7,7 @@ import { IconNames } from "../icons";
 import { parseFlinkType } from "../parsers/flinkTypeParser";
 import { formatFlinkTypeForDisplay, formatSqlType, getIconForFlinkType } from "../utils/flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
-import type { FlinkType } from "./flinkTypes";
+import type { CompoundFlinkType, FlinkType } from "./flinkTypes";
 import { FlinkTypeKind, isCompoundFlinkType } from "./flinkTypes";
 import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
@@ -130,53 +130,47 @@ export class FlinkRelationColumn {
 
   /**
    * Get child type nodes for this column (for tree expansion).
-   * Returns empty array if not expandable.
+   * Returns empty array if not expandable. If expandable, returns the appropriate child nodes.
    *
-   * Special case: For ARRAY/MULTISET columns, we skip the intermediate container node
-   * and return the element's children directly for better UX. However, we set the
-   * element type as parentNode to ensure ID uniqueness includes ARRAY/MULTISET context.
+   * For ROW/MAP: returns member field nodes directly.
+   * For ARRAY/MULTISET with compound elements: skips the intermediate container node and returns
+   * the element's children directly for better UX. Since isExpandable() validates this condition,
+   * we can safely access members[0].members without additional checks. We set a synthetic container
+   * as parentNode to ensure ID uniqueness includes ARRAY/MULTISET context.
    */
   getTypeChildren(): FlinkTypeNode[] {
     if (!this.isExpandable) {
       return [];
     }
 
-    const parsed = this.getParsedType();
-    if (!isCompoundFlinkType(parsed)) {
-      return [];
-    }
-
+    const parsed = this.getParsedType() as CompoundFlinkType;
     const { kind, members } = parsed;
 
-    // For ARRAY/MULTISET with compound elements, create a synthetic parent node
-    // so that the element's children have the correct ID hierarchy
-    if (
-      (kind === FlinkTypeKind.ARRAY || kind === FlinkTypeKind.MULTISET) &&
-      isCompoundFlinkType(members[0])
-    ) {
-      // Create a synthetic ARRAY/MULTISET node (not displayed in tree, but used for ID calculation)
-      const containerNode = new FlinkTypeNode({
-        parsedType: parsed,
-        parentColumnId: this.id,
-      });
-
-      // Return the container's children (which skips the intermediate node)
-      const elementType = members[0];
-      return elementType.members.map(
+    // ROW and MAP: return member nodes directly
+    if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
+      return members.map(
         (member: FlinkType) =>
           new FlinkTypeNode({
             parsedType: member,
-            parentNode: containerNode,
             parentColumnId: this.id,
           }),
       );
     }
 
-    // For ROW/MAP columns, create nodes for each member field
-    return members.map(
+    // ARRAY/MULTISET with compound elements: create a synthetic parent node
+    // so that the element's children have the correct ID hierarchy
+    // Note: isExpandable() ensures the element is compound, so we can safely access members[0].members
+    const containerNode = new FlinkTypeNode({
+      parsedType: parsed,
+      parentColumnId: this.id,
+    });
+
+    const elementType = members[0] as CompoundFlinkType;
+    return elementType.members.map(
       (member: FlinkType) =>
         new FlinkTypeNode({
           parsedType: member,
+          parentNode: containerNode,
           parentColumnId: this.id,
         }),
     );
