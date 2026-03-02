@@ -735,14 +735,25 @@ export async function testRun() {
   const vscodeVersion = process.env.VSCODE_VERSION || (isInsiders ? "insiders" : "stable");
   console.info(`Starting test runner for VS Code ${vscodeVersion}...`);
 
+  // Convert pipe-separated patterns to regex OR pattern, and detect regex syntax
+  const isRegexPattern =
+    testFilter && (testFilter.includes("|") || /[[\]().*+?{}]/.test(testFilter));
+  let grepPattern;
+  if (isRegexPattern && testFilter.includes("|")) {
+    // Convert "pattern1|pattern2" to "(pattern1|pattern2)" for Mocha grep
+    grepPattern = `(${testFilter})`;
+  } else if (isRegexPattern) {
+    grepPattern = testFilter;
+  }
+
   try {
     await runTests({
       version: vscodeVersion,
       extensionDevelopmentPath: resolve(DESTINATION),
       extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
       extensionTestsEnv: {
-        // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
-        FGREP: testFilter,
+        // Use GREP for regex patterns, FGREP for simple substring matching
+        ...(grepPattern ? { GREP: grepPattern } : { FGREP: testFilter }),
       },
       launchArgs: [
         "--no-sandbox",
