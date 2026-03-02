@@ -24,19 +24,18 @@ export enum FlinkTypeKind {
 /**
  * Base interface for all Flink types.
  *
- * Represents either a standalone type or a member within a compound type.
- * Common fields present on all type variants, whether scalar or composite.
+ * Contains common fields shared by both scalar and compound types.
+ * Should not be instantiated directly; use the discriminated union type {@link FlinkType} instead.
  */
-export interface FlinkType {
+interface BaseFlinkType {
   /**
-   * Enumeration indicating the kind of type: scalar, ROW, MAP, ARRAY, or MULTISET.
+   * Enumeration indicating the kind of type: SCALAR, ROW, MAP, ARRAY, or MULTISET.
    */
   kind: FlinkTypeKind;
 
   /**
    * The data type name, including any size or precision designators.
-   * Examples: 'DATE', 'VARCHAR(256)', 'TIMESTAMP WITH TIME ZONE'
-   * For containers: just the base name without the angle bracket content.
+   * Examples: 'DATE', 'VARCHAR(256)', 'TIMESTAMP WITH TIME ZONE', 'ROW', 'MAP', 'ARRAY', 'MULTISET'
    */
   dataType: string;
 
@@ -46,17 +45,9 @@ export interface FlinkType {
   isFieldNullable: boolean;
 
   /**
-   * For ROW, MAP, ARRAY, or MULTISET types: the contained member types.
-   * - For ROW: each element has a fieldName
-   * - For MAP: exactly 2 elements with fieldNames "key" and "value" (key first)
-   * - For ARRAY/MULTISET: exactly 1 element (no fieldName)
-   */
-  members?: FlinkType[];
-
-  /**
    * For ROW/MAP member fields: the field/member name.
    * For MAP specifically, this will be "key" or "value".
-   * Undefined for standalone types, scalar types, or ARRAY/MULTISET element types.
+   * Undefined for standalone types or array/multiset element types.
    */
   fieldName?: string;
 
@@ -69,14 +60,33 @@ export interface FlinkType {
 }
 
 /**
- * Compound Flink type (subinterface of FlinkType).
+ * Scalar Flink type (no members).
  *
- * Extends FlinkType for types that contain sub-members: ROW, MAP, ARRAY, and MULTISET.
- * The members array is guaranteed to be non-empty and provides structured access to nested types.
+ * Represents atomic types like INT, VARCHAR, DECIMAL, TIMESTAMP, etc.
+ * Scalars do not have member types and cannot be expanded in tree views.
  */
-export interface CompoundFlinkType extends FlinkType {
+export interface ScalarFlinkType extends BaseFlinkType {
   /**
-   * Non-empty array of member types (required for compound types).
+   * Enumeration indicating the kind of type: SCALAR.
+   * Represents atomic, non-composite types (including parameterized scalars like VARCHAR(255)).
+   */
+  kind: FlinkTypeKind.SCALAR;
+}
+
+/**
+ * Compound Flink type (with members).
+ *
+ * Represents composite types that contain member types: ROW, MAP, ARRAY, and MULTISET.
+ * The members array is guaranteed to be non-empty.
+ */
+export interface CompoundFlinkType extends BaseFlinkType {
+  /**
+   * Enumeration indicating the kind of compound type: ROW, MAP, ARRAY, or MULTISET.
+   */
+  kind: FlinkTypeKind.ROW | FlinkTypeKind.MAP | FlinkTypeKind.ARRAY | FlinkTypeKind.MULTISET;
+
+  /**
+   * Non-empty array of member types (required and guaranteed non-empty for compound types).
    * - For ROW: each element has a fieldName (2+ elements for practical schemas)
    * - For MAP: exactly 2 elements with fieldNames "key" and "value" (key first)
    * - For ARRAY/MULTISET: exactly 1 element (no fieldName)
@@ -85,28 +95,27 @@ export interface CompoundFlinkType extends FlinkType {
 }
 
 /**
+ * Union type representing any Flink type: scalar or compound.
+ *
+ * Use the {@link isCompoundFlinkType} type guard to discriminate between
+ * scalar and compound types in a type-safe manner.
+ */
+export type FlinkType = ScalarFlinkType | CompoundFlinkType;
+
+/**
  * Type guard to check if a FlinkType is a CompoundFlinkType.
- * Returns true if the type has a non-empty members array.
- * Validates that if members are present, the kind must not be SCALAR (which would be invalid).
+ *
+ * This provides compile-time type narrowing: after calling this function,
+ * TypeScript will know that the type has a non-optional `members` array.
  *
  * @param type - The FlinkType to check
- * @returns true if the type has a non-empty members array and is not SCALAR kind.
- * @returns false if the type does not have a members array and is SCALAR kind
- * @throws Error if there is a mismatch between the presence of members and the kind (e.g., SCALAR with members or non-SCALAR without members)
+ * @returns true if the type is compound (ROW, MAP, ARRAY, or MULTISET) with members
  */
 export function isCompoundFlinkType(type: FlinkType): type is CompoundFlinkType {
-  const hasMembers =
-    "members" in type &&
-    Array.isArray((type as CompoundFlinkType).members) &&
-    (type as CompoundFlinkType).members.length > 0;
-
-  if (hasMembers && type.kind === FlinkTypeKind.SCALAR) {
-    throw new Error(`Invalid type: kind is ${type.kind} but members array is present.`);
-  }
-
-  if (!hasMembers && type.kind !== FlinkTypeKind.SCALAR) {
-    throw new Error(`Invalid type: kind is ${type.kind} but members array is missing or empty.`);
-  }
-
-  return hasMembers;
+  return (
+    type.kind === FlinkTypeKind.ROW ||
+    type.kind === FlinkTypeKind.ARRAY ||
+    type.kind === FlinkTypeKind.MULTISET ||
+    type.kind === FlinkTypeKind.MAP
+  );
 }

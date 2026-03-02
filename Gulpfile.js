@@ -724,7 +724,7 @@ testRun.description = "Run tests using @vscode/test-electron. Use --coverage for
 export async function testRun() {
   const reportCoverage = IS_CI || process.argv.indexOf("--coverage", 2) >= 0;
   // argv array is something like ['gulp', 'test', '-t', 'something'], we look for the one after -t
-  let testFilter =
+  const testFilter =
     process.env.TEST_SUITE || process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
 
   // check for VS Code stable vs Insiders based on TERM_PROGRAM_VERSION
