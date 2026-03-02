@@ -203,21 +203,26 @@ export class FlinkRelationColumn {
 
     const item = new TreeItem(this.name, collapsibleState);
 
+    const parsed = this.getParsedType();
+
     // Determine icon based on the parsed type
-    const iconName = getIconForFlinkType(this.getParsedType());
+    const iconName = getIconForFlinkType(parsed);
     item.iconPath = new ThemeIcon(iconName);
 
     item.id = this.id;
     item.contextValue = "ccloud-flink-column";
     item.tooltip = this.getToolTip();
-    item.description = this.treeItemDescription;
+    item.description = this.getTreeItemDescription(parsed);
 
     return item;
   }
 
-  /** Make a nice overview of the column type, nullability, comment prefix */
-  get treeItemDescription(): string {
-    let desc = formatFlinkTypeForDisplay(this.getParsedType());
+  /**
+   * Make a nice overview of the column type, nullability, comment prefix.
+   * Takes the parsed type as parameter to avoid redundant parsing.
+   */
+  private getTreeItemDescription(parsed: FlinkType): string {
+    let desc = formatFlinkTypeForDisplay(parsed);
 
     // Only show NOT NULL if applicable, as NULL is default in DB-lands and would be noisy
     if (!this.isNullable) {
