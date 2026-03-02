@@ -113,6 +113,14 @@ export class FlinkTypeNode implements IResourceBase {
   }
 
   /**
+   * Get the formatted display string for this type.
+   * For use in UI labels, descriptions, and other display contexts.
+   */
+  get formattedType(): string {
+    return formatFlinkTypeForDisplay(this.parsedType);
+  }
+
+  /**
    * Determine if this node should be expandable in the tree view.
    *
    * Expandable if:
