@@ -240,8 +240,9 @@ export class FlinkRelationColumn {
   }
 
   getToolTip(): CustomMarkdownString {
+    const parsed = this.getParsedType();
     const tooltip = new CustomMarkdownString()
-      .addHeader("Flink Column", IconNames.FLINK_FUNCTION) // TODO replace with column specific icon when available
+      .addHeader("Flink Column", getIconForFlinkType(parsed))
       .addField("Name", this.name)
       .addField("Data Type", formatSqlType(this.fullDataType))
       .addField("Nullable", this.isNullable ? "Yes" : "No")
