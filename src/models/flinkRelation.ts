@@ -263,29 +263,6 @@ export class FlinkRelationColumn {
 
     return tooltip;
   }
-
-  /** Returns a single line representation of this column, for use within the containing relation's tooltip */
-  tooltipLine(): string {
-    const parts: string[] = [`${this.name}: ${formatFlinkTypeForDisplay(this.getParsedType())}`];
-    if (!this.isNullable) {
-      parts.push("NOT NULL");
-    } else {
-      parts.push("NULL");
-    }
-    if (this.isGenerated) {
-      parts.push("GENERATED");
-    }
-
-    if (this.distributionKeyNumber !== null) {
-      parts.push(`DISTKEY(${this.distributionKeyNumber})`);
-    }
-
-    if (this.isMetadata) {
-      parts.push(`METADATA('${this.metadataKey}')`);
-    }
-
-    return parts.join(" ");
-  }
 }
 
 /** Type of a Flink relation (table, view, system or external table). */

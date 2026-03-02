@@ -682,25 +682,6 @@ describe("flinkRelation.ts", () => {
         assert.strictEqual(result1, result2, "Should return cached result on second call");
       });
     });
-
-    describe("tooltipLine()", () => {
-      it("should return a single line tooltip for the column", () => {
-        const column = new FlinkRelationColumn({
-          ...TEST_VARCHAR_COLUMN,
-          name: "lineTooltipColumn",
-          fullDataType: "VARCHAR(2147483647)",
-          isNullable: false,
-          distributionKeyNumber: 1,
-          isGenerated: true,
-          metadataKey: "metaKey",
-        });
-        const lineTooltip = column.tooltipLine();
-        assert.strictEqual(
-          lineTooltip,
-          "lineTooltipColumn: VARCHAR NOT NULL GENERATED DISTKEY(1) METADATA('metaKey')",
-        );
-      });
-    });
   });
 
   describe("FlinkRelation", () => {
