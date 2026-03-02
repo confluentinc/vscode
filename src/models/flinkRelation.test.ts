@@ -8,6 +8,7 @@ import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
 import { formatFlinkTypeForDisplay } from "../utils/flinkTypes";
+import { FlinkTypeNode } from "./flinkTypeNode";
 import {
   FlinkRelation,
   FlinkRelationColumn,
@@ -186,7 +187,10 @@ describe("flinkRelation.ts", () => {
           column["getTreeItemDescription"](column.getParsedType()),
         );
         assert.strictEqual(treeItem.contextValue, "ccloud-flink-column");
-        assert.deepStrictEqual(treeItem.tooltip, column.getToolTip());
+        assert.deepStrictEqual(
+          treeItem.tooltip,
+          column.getToolTip(FlinkTypeNode.getIconForType(column.getParsedType())),
+        );
       });
     });
 
@@ -202,7 +206,7 @@ describe("flinkRelation.ts", () => {
           distributionKeyNumber: 1,
           isGenerated: true,
         });
-        const tooltip = column.getToolTip();
+        const tooltip = column.getToolTip(FlinkTypeNode.getIconForType(column.getParsedType()));
 
         const patterns: RegExp[] = [
           /Flink Column/,
@@ -231,7 +235,7 @@ describe("flinkRelation.ts", () => {
           isPersisted: false,
           comment: null,
         });
-        const tooltip = column.getToolTip();
+        const tooltip = column.getToolTip(FlinkTypeNode.getIconForType(column.getParsedType()));
 
         const absentPatterns: RegExp[] = [
           /Distribution Key Number:/,

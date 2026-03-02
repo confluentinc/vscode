@@ -1,4 +1,3 @@
-import { IconNames } from "../icons";
 import type { FlinkType } from "../models/flinkTypes";
 import { FlinkTypeKind } from "../models/flinkTypes";
 
@@ -42,32 +41,5 @@ export function formatFlinkTypeForDisplay(flinkType: FlinkType): string {
     }
     default:
       return formatSqlType(flinkType.dataType);
-  }
-}
-
-/**
- * Get the icon name for a Flink type.
- * Uses special icons for ROW, ARRAY, and MULTISET types, defaults to column icon for others.
- *
- * Rules:
- * - ROW types: symbol-struct (FLINK_TYPE_ROW)
- * - ARRAY types: symbol-array (FLINK_TYPE_ARRAY)
- * - MULTISET types: symbol-object (FLINK_TYPE_MULTISET)
- * - All other types: symbol-constant (default column icon)
- *
- * @param flinkType - The parsed FlinkType to get an icon for
- * @returns A string icon name suitable for use with ThemeIcon
- */
-export function getIconForFlinkType(flinkType: FlinkType): IconNames {
-  switch (flinkType.kind) {
-    case FlinkTypeKind.ROW:
-      return IconNames.FLINK_TYPE_ROW;
-    case FlinkTypeKind.ARRAY:
-      return IconNames.FLINK_TYPE_ARRAY;
-    case FlinkTypeKind.MULTISET:
-      return IconNames.FLINK_TYPE_MULTISET;
-    default:
-      // is an 'f' for 'field' I guess.
-      return IconNames.FLINK_FUNCTION;
   }
 }

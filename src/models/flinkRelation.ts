@@ -5,7 +5,7 @@ import { logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { IconNames } from "../icons";
 import { parseFlinkType } from "../parsers/flinkTypeParser";
-import { formatFlinkTypeForDisplay, formatSqlType, getIconForFlinkType } from "../utils/flinkTypes";
+import { formatFlinkTypeForDisplay, formatSqlType } from "../utils/flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
 import type { CompoundFlinkType, FlinkType } from "./flinkTypes";
 import { FlinkTypeKind, isCompoundFlinkType } from "./flinkTypes";
@@ -204,14 +204,13 @@ export class FlinkRelationColumn {
     const item = new TreeItem(this.name, collapsibleState);
 
     const parsed = this.getParsedType();
+    const iconName = FlinkTypeNode.getIconForType(parsed);
 
-    // Determine icon based on the parsed type
-    const iconName = getIconForFlinkType(parsed);
     item.iconPath = new ThemeIcon(iconName);
 
     item.id = this.id;
     item.contextValue = "ccloud-flink-column";
-    item.tooltip = this.getToolTip();
+    item.tooltip = this.getToolTip(iconName);
     item.description = this.getTreeItemDescription(parsed);
 
     return item;
@@ -239,10 +238,9 @@ export class FlinkRelationColumn {
     return desc;
   }
 
-  getToolTip(): CustomMarkdownString {
-    const parsed = this.getParsedType();
+  getToolTip(iconName: IconNames): CustomMarkdownString {
     const tooltip = new CustomMarkdownString()
-      .addHeader("Flink Column", getIconForFlinkType(parsed))
+      .addHeader("Flink Column", iconName)
       .addField("Name", this.name)
       .addField("Data Type", formatSqlType(this.fullDataType))
       .addField("Nullable", this.isNullable ? "Yes" : "No")

@@ -96,11 +96,12 @@ export class FlinkTypeNode implements IResourceBase {
   }
 
   /**
-   * Get the icon name for this type node.
+   * Determine the icon name for a Flink type.
    * Uses special icons for ROW, ARRAY, and MULTISET types, defaults to function icon for others.
+   * Static method for use by any caller with a FlinkType.
    */
-  get iconName(): IconNames {
-    switch (this.parsedType.kind) {
+  static getIconForType(flinkType: FlinkType): IconNames {
+    switch (flinkType.kind) {
       case FlinkTypeKind.ROW:
         return IconNames.FLINK_TYPE_ROW;
       case FlinkTypeKind.ARRAY:
@@ -110,6 +111,14 @@ export class FlinkTypeNode implements IResourceBase {
       default:
         return IconNames.FLINK_FUNCTION;
     }
+  }
+
+  /**
+   * Get the icon name for this type node.
+   * Uses special icons for ROW, ARRAY, and MULTISET types, defaults to function icon for others.
+   */
+  get iconName(): IconNames {
+    return FlinkTypeNode.getIconForType(this.parsedType);
   }
 
   /**
