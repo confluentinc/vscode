@@ -12,21 +12,21 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { SqlV1MaterializedTable } from './SqlV1MaterializedTable';
+import { mapValues } from "../runtime";
+import type { SqlV1MaterializedTable } from "./SqlV1MaterializedTable";
 import {
-    SqlV1MaterializedTableFromJSON,
-    SqlV1MaterializedTableFromJSONTyped,
-    SqlV1MaterializedTableToJSON,
-    SqlV1MaterializedTableToJSONTyped,
-} from './SqlV1MaterializedTable';
-import type { ListMeta } from './ListMeta';
+  SqlV1MaterializedTableFromJSON,
+  SqlV1MaterializedTableFromJSONTyped,
+  SqlV1MaterializedTableToJSON,
+  SqlV1MaterializedTableToJSONTyped,
+} from "./SqlV1MaterializedTable";
+import type { ListMeta } from "./ListMeta";
 import {
-    ListMetaFromJSON,
-    ListMetaFromJSONTyped,
-    ListMetaToJSON,
-    ListMetaToJSONTyped,
-} from './ListMeta';
+  ListMetaFromJSON,
+  ListMetaFromJSONTyped,
+  ListMetaToJSON,
+  ListMetaToJSONTyped,
+} from "./ListMeta";
 
 /**
  * A list of Materialized Table resources.
@@ -34,89 +34,93 @@ import {
  * @interface SqlV1MaterializedTableList
  */
 export interface SqlV1MaterializedTableList {
-    /**
-     * 
-     * @type {string}
-     * @memberof SqlV1MaterializedTableList
-     */
-    readonly api_version: SqlV1MaterializedTableListApiVersionEnum;
-    /**
-     * 
-     * @type {string}
-     * @memberof SqlV1MaterializedTableList
-     */
-    readonly kind: SqlV1MaterializedTableListKindEnum;
-    /**
-     * 
-     * @type {ListMeta}
-     * @memberof SqlV1MaterializedTableList
-     */
-    metadata: ListMeta;
-    /**
-     * A data property that contains an array of resource items. Each entry in the array is a separate resource.
-     * @type {Set<SqlV1MaterializedTable>}
-     * @memberof SqlV1MaterializedTableList
-     */
-    data: Set<SqlV1MaterializedTable>;
+  /**
+   *
+   * @type {string}
+   * @memberof SqlV1MaterializedTableList
+   */
+  readonly api_version: SqlV1MaterializedTableListApiVersionEnum;
+  /**
+   *
+   * @type {string}
+   * @memberof SqlV1MaterializedTableList
+   */
+  readonly kind: SqlV1MaterializedTableListKindEnum;
+  /**
+   *
+   * @type {ListMeta}
+   * @memberof SqlV1MaterializedTableList
+   */
+  metadata: ListMeta;
+  /**
+   * A data property that contains an array of resource items. Each entry in the array is a separate resource.
+   * @type {Set<SqlV1MaterializedTable>}
+   * @memberof SqlV1MaterializedTableList
+   */
+  data: Set<SqlV1MaterializedTable>;
 }
 
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1MaterializedTableListApiVersionEnum {
-    SqlV1 = 'sql/v1'
+  SqlV1 = "sql/v1",
 }
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1MaterializedTableListKindEnum {
-    MaterializedTableList = 'MaterializedTableList'
+  MaterializedTableList = "MaterializedTableList",
 }
-
 
 /**
  * Check if a given object implements the SqlV1MaterializedTableList interface.
  */
-export function instanceOfSqlV1MaterializedTableList(value: object): value is SqlV1MaterializedTableList {
-    if (!('api_version' in value) || value['api_version'] === undefined) return false;
-    if (!('kind' in value) || value['kind'] === undefined) return false;
-    if (!('metadata' in value) || value['metadata'] === undefined) return false;
-    if (!('data' in value) || value['data'] === undefined) return false;
-    return true;
+export function instanceOfSqlV1MaterializedTableList(
+  value: object,
+): value is SqlV1MaterializedTableList {
+  if (!("api_version" in value) || value["api_version"] === undefined) return false;
+  if (!("kind" in value) || value["kind"] === undefined) return false;
+  if (!("metadata" in value) || value["metadata"] === undefined) return false;
+  if (!("data" in value) || value["data"] === undefined) return false;
+  return true;
 }
 
 export function SqlV1MaterializedTableListFromJSON(json: any): SqlV1MaterializedTableList {
-    return SqlV1MaterializedTableListFromJSONTyped(json, false);
+  return SqlV1MaterializedTableListFromJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableListFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1MaterializedTableList {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'api_version': json['api_version'],
-        'kind': json['kind'],
-        'metadata': ListMetaFromJSON(json['metadata']),
-        'data': (new Set((json['data'] as Array<any>).map(SqlV1MaterializedTableFromJSON))),
-    };
+export function SqlV1MaterializedTableListFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1MaterializedTableList {
+  if (json == null) {
+    return json;
+  }
+  return {
+    api_version: json["api_version"],
+    kind: json["kind"],
+    metadata: ListMetaFromJSON(json["metadata"]),
+    data: new Set((json["data"] as Array<any>).map(SqlV1MaterializedTableFromJSON)),
+  };
 }
 
 export function SqlV1MaterializedTableListToJSON(json: any): SqlV1MaterializedTableList {
-    return SqlV1MaterializedTableListToJSONTyped(json, false);
+  return SqlV1MaterializedTableListToJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableListToJSONTyped(value?: Omit<SqlV1MaterializedTableList, 'api_version'|'kind'> | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1MaterializedTableListToJSONTyped(
+  value?: Omit<SqlV1MaterializedTableList, "api_version" | "kind"> | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'metadata': ListMetaToJSON(value['metadata']),
-        'data': (Array.from(value['data'] as Set<any>).map(SqlV1MaterializedTableToJSON)),
-    };
+  return {
+    metadata: ListMetaToJSON(value["metadata"]),
+    data: Array.from(value["data"] as Set<any>).map(SqlV1MaterializedTableToJSON),
+  };
 }
-

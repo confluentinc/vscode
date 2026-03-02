@@ -12,107 +12,109 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
  * Computed columns are generated via an expression.
  * @export
  * @interface SqlV1ComputedColumn
  */
 export interface SqlV1ComputedColumn {
-    /**
-     * 
-     * @type {any}
-     * @memberof SqlV1ComputedColumn
-     */
-    name: any | null;
-    /**
-     * 
-     * @type {any}
-     * @memberof SqlV1ComputedColumn
-     */
-    type: any | null;
-    /**
-     * A comment or description for the column.
-     * @type {string}
-     * @memberof SqlV1ComputedColumn
-     */
-    comment?: string;
-    /**
-     * The kind of column.
-     * @type {string}
-     * @memberof SqlV1ComputedColumn
-     */
-    kind: SqlV1ComputedColumnKindEnum;
-    /**
-     * The SQL expression used to compute the column value.
-     * @type {string}
-     * @memberof SqlV1ComputedColumn
-     */
-    expression: string;
-    /**
-     * Indicates if the computed column is virtual.
-     * @type {boolean}
-     * @memberof SqlV1ComputedColumn
-     */
-    virtual?: boolean;
+  /**
+   *
+   * @type {any}
+   * @memberof SqlV1ComputedColumn
+   */
+  name: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof SqlV1ComputedColumn
+   */
+  type: any | null;
+  /**
+   * A comment or description for the column.
+   * @type {string}
+   * @memberof SqlV1ComputedColumn
+   */
+  comment?: string;
+  /**
+   * The kind of column.
+   * @type {string}
+   * @memberof SqlV1ComputedColumn
+   */
+  kind: SqlV1ComputedColumnKindEnum;
+  /**
+   * The SQL expression used to compute the column value.
+   * @type {string}
+   * @memberof SqlV1ComputedColumn
+   */
+  expression: string;
+  /**
+   * Indicates if the computed column is virtual.
+   * @type {boolean}
+   * @memberof SqlV1ComputedColumn
+   */
+  virtual?: boolean;
 }
 
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1ComputedColumnKindEnum {
-    Computed = 'Computed'
+  Computed = "Computed",
 }
-
 
 /**
  * Check if a given object implements the SqlV1ComputedColumn interface.
  */
 export function instanceOfSqlV1ComputedColumn(value: object): value is SqlV1ComputedColumn {
-    if (!('name' in value) || value['name'] === undefined) return false;
-    if (!('type' in value) || value['type'] === undefined) return false;
-    if (!('kind' in value) || value['kind'] === undefined) return false;
-    if (!('expression' in value) || value['expression'] === undefined) return false;
-    return true;
+  if (!("name" in value) || value["name"] === undefined) return false;
+  if (!("type" in value) || value["type"] === undefined) return false;
+  if (!("kind" in value) || value["kind"] === undefined) return false;
+  if (!("expression" in value) || value["expression"] === undefined) return false;
+  return true;
 }
 
 export function SqlV1ComputedColumnFromJSON(json: any): SqlV1ComputedColumn {
-    return SqlV1ComputedColumnFromJSONTyped(json, false);
+  return SqlV1ComputedColumnFromJSONTyped(json, false);
 }
 
-export function SqlV1ComputedColumnFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1ComputedColumn {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'name': json['name'],
-        'type': json['type'],
-        'comment': json['comment'] == null ? undefined : json['comment'],
-        'kind': json['kind'],
-        'expression': json['expression'],
-        'virtual': json['virtual'] == null ? undefined : json['virtual'],
-    };
+export function SqlV1ComputedColumnFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1ComputedColumn {
+  if (json == null) {
+    return json;
+  }
+  return {
+    name: json["name"],
+    type: json["type"],
+    comment: json["comment"] == null ? undefined : json["comment"],
+    kind: json["kind"],
+    expression: json["expression"],
+    virtual: json["virtual"] == null ? undefined : json["virtual"],
+  };
 }
 
 export function SqlV1ComputedColumnToJSON(json: any): SqlV1ComputedColumn {
-    return SqlV1ComputedColumnToJSONTyped(json, false);
+  return SqlV1ComputedColumnToJSONTyped(json, false);
 }
 
-export function SqlV1ComputedColumnToJSONTyped(value?: SqlV1ComputedColumn | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1ComputedColumnToJSONTyped(
+  value?: SqlV1ComputedColumn | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'name': value['name'],
-        'type': value['type'],
-        'comment': value['comment'],
-        'kind': value['kind'],
-        'expression': value['expression'],
-        'virtual': value['virtual'],
-    };
+  return {
+    name: value["name"],
+    type: value["type"],
+    comment: value["comment"],
+    kind: value["kind"],
+    expression: value["expression"],
+    virtual: value["virtual"],
+  };
 }
-

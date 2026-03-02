@@ -12,37 +12,41 @@
  * Do not edit the class manually.
  */
 
-
-import * as runtime from '../runtime';
+import * as runtime from "../runtime";
 
 /**
- * 
+ *
  */
 export class LoginRealmResourceApi extends runtime.BaseAPI {
+  /**
+   * Proxy Login Realm Request
+   */
+  async apiLoginRealmGetRaw(
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<void>> {
+    const queryParameters: any = {};
 
-    /**
-     * Proxy Login Realm Request
-     */
-    async apiLoginRealmGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-        const queryParameters: any = {};
+    const headerParameters: runtime.HTTPHeaders = {};
 
-        const headerParameters: runtime.HTTPHeaders = {};
+    const response = await this.request(
+      {
+        path: `/api/login/realm`,
+        method: "GET",
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
 
-        const response = await this.request({
-            path: `/api/login/realm`,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        }, initOverrides);
+    return new runtime.VoidApiResponse(response);
+  }
 
-        return new runtime.VoidApiResponse(response);
-    }
-
-    /**
-     * Proxy Login Realm Request
-     */
-    async apiLoginRealmGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.apiLoginRealmGetRaw(initOverrides);
-    }
-
+  /**
+   * Proxy Login Realm Request
+   */
+  async apiLoginRealmGet(
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<void> {
+    await this.apiLoginRealmGetRaw(initOverrides);
+  }
 }

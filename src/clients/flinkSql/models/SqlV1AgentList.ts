@@ -12,21 +12,21 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { SqlV1Agent } from './SqlV1Agent';
+import { mapValues } from "../runtime";
+import type { SqlV1Agent } from "./SqlV1Agent";
 import {
-    SqlV1AgentFromJSON,
-    SqlV1AgentFromJSONTyped,
-    SqlV1AgentToJSON,
-    SqlV1AgentToJSONTyped,
-} from './SqlV1Agent';
-import type { ListMeta } from './ListMeta';
+  SqlV1AgentFromJSON,
+  SqlV1AgentFromJSONTyped,
+  SqlV1AgentToJSON,
+  SqlV1AgentToJSONTyped,
+} from "./SqlV1Agent";
+import type { ListMeta } from "./ListMeta";
 import {
-    ListMetaFromJSON,
-    ListMetaFromJSONTyped,
-    ListMetaToJSON,
-    ListMetaToJSONTyped,
-} from './ListMeta';
+  ListMetaFromJSON,
+  ListMetaFromJSONTyped,
+  ListMetaToJSON,
+  ListMetaToJSONTyped,
+} from "./ListMeta";
 
 /**
  * A list of Agent resources.
@@ -34,89 +34,91 @@ import {
  * @interface SqlV1AgentList
  */
 export interface SqlV1AgentList {
-    /**
-     * 
-     * @type {string}
-     * @memberof SqlV1AgentList
-     */
-    readonly api_version: SqlV1AgentListApiVersionEnum;
-    /**
-     * 
-     * @type {string}
-     * @memberof SqlV1AgentList
-     */
-    readonly kind: SqlV1AgentListKindEnum;
-    /**
-     * 
-     * @type {ListMeta}
-     * @memberof SqlV1AgentList
-     */
-    metadata: ListMeta;
-    /**
-     * A data property that contains an array of resource items. Each entry in the array is a separate resource.
-     * @type {Set<SqlV1Agent>}
-     * @memberof SqlV1AgentList
-     */
-    data: Set<SqlV1Agent>;
+  /**
+   *
+   * @type {string}
+   * @memberof SqlV1AgentList
+   */
+  readonly api_version: SqlV1AgentListApiVersionEnum;
+  /**
+   *
+   * @type {string}
+   * @memberof SqlV1AgentList
+   */
+  readonly kind: SqlV1AgentListKindEnum;
+  /**
+   *
+   * @type {ListMeta}
+   * @memberof SqlV1AgentList
+   */
+  metadata: ListMeta;
+  /**
+   * A data property that contains an array of resource items. Each entry in the array is a separate resource.
+   * @type {Set<SqlV1Agent>}
+   * @memberof SqlV1AgentList
+   */
+  data: Set<SqlV1Agent>;
 }
 
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1AgentListApiVersionEnum {
-    SqlV1 = 'sql/v1'
+  SqlV1 = "sql/v1",
 }
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1AgentListKindEnum {
-    AgentList = 'AgentList'
+  AgentList = "AgentList",
 }
-
 
 /**
  * Check if a given object implements the SqlV1AgentList interface.
  */
 export function instanceOfSqlV1AgentList(value: object): value is SqlV1AgentList {
-    if (!('api_version' in value) || value['api_version'] === undefined) return false;
-    if (!('kind' in value) || value['kind'] === undefined) return false;
-    if (!('metadata' in value) || value['metadata'] === undefined) return false;
-    if (!('data' in value) || value['data'] === undefined) return false;
-    return true;
+  if (!("api_version" in value) || value["api_version"] === undefined) return false;
+  if (!("kind" in value) || value["kind"] === undefined) return false;
+  if (!("metadata" in value) || value["metadata"] === undefined) return false;
+  if (!("data" in value) || value["data"] === undefined) return false;
+  return true;
 }
 
 export function SqlV1AgentListFromJSON(json: any): SqlV1AgentList {
-    return SqlV1AgentListFromJSONTyped(json, false);
+  return SqlV1AgentListFromJSONTyped(json, false);
 }
 
-export function SqlV1AgentListFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1AgentList {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'api_version': json['api_version'],
-        'kind': json['kind'],
-        'metadata': ListMetaFromJSON(json['metadata']),
-        'data': (new Set((json['data'] as Array<any>).map(SqlV1AgentFromJSON))),
-    };
+export function SqlV1AgentListFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1AgentList {
+  if (json == null) {
+    return json;
+  }
+  return {
+    api_version: json["api_version"],
+    kind: json["kind"],
+    metadata: ListMetaFromJSON(json["metadata"]),
+    data: new Set((json["data"] as Array<any>).map(SqlV1AgentFromJSON)),
+  };
 }
 
 export function SqlV1AgentListToJSON(json: any): SqlV1AgentList {
-    return SqlV1AgentListToJSONTyped(json, false);
+  return SqlV1AgentListToJSONTyped(json, false);
 }
 
-export function SqlV1AgentListToJSONTyped(value?: Omit<SqlV1AgentList, 'api_version'|'kind'> | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1AgentListToJSONTyped(
+  value?: Omit<SqlV1AgentList, "api_version" | "kind"> | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'metadata': ListMetaToJSON(value['metadata']),
-        'data': (Array.from(value['data'] as Set<any>).map(SqlV1AgentToJSON)),
-    };
+  return {
+    metadata: ListMetaToJSON(value["metadata"]),
+    data: Array.from(value["data"] as Set<any>).map(SqlV1AgentToJSON),
+  };
 }
-

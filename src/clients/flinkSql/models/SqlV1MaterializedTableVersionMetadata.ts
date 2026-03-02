@@ -12,87 +12,96 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
- * 
+ *
  * @export
  * @interface SqlV1MaterializedTableVersionMetadata
  */
 export interface SqlV1MaterializedTableVersionMetadata {
-    /**
-     * 
-     * @type {any}
-     * @memberof SqlV1MaterializedTableVersionMetadata
-     */
-    self: any | null;
-    /**
-     * The date and time at which this object was created. It is represented in RFC3339 format and is in UTC.
-     * @type {Date}
-     * @memberof SqlV1MaterializedTableVersionMetadata
-     */
-    created_at?: Date;
-    /**
-     * The date and time at which this object was last updated. It is represented in RFC3339 format and is in UTC.
-     * @type {Date}
-     * @memberof SqlV1MaterializedTableVersionMetadata
-     */
-    updated_at?: Date;
-    /**
-     * A system generated globally unique identifier for this resource.
-     * @type {string}
-     * @memberof SqlV1MaterializedTableVersionMetadata
-     */
-    uid?: string;
-    /**
-     * A system generated string that uniquely identifies the version of this resource.
-     * @type {string}
-     * @memberof SqlV1MaterializedTableVersionMetadata
-     */
-    resource_version?: string;
+  /**
+   *
+   * @type {any}
+   * @memberof SqlV1MaterializedTableVersionMetadata
+   */
+  self: any | null;
+  /**
+   * The date and time at which this object was created. It is represented in RFC3339 format and is in UTC.
+   * @type {Date}
+   * @memberof SqlV1MaterializedTableVersionMetadata
+   */
+  created_at?: Date;
+  /**
+   * The date and time at which this object was last updated. It is represented in RFC3339 format and is in UTC.
+   * @type {Date}
+   * @memberof SqlV1MaterializedTableVersionMetadata
+   */
+  updated_at?: Date;
+  /**
+   * A system generated globally unique identifier for this resource.
+   * @type {string}
+   * @memberof SqlV1MaterializedTableVersionMetadata
+   */
+  uid?: string;
+  /**
+   * A system generated string that uniquely identifies the version of this resource.
+   * @type {string}
+   * @memberof SqlV1MaterializedTableVersionMetadata
+   */
+  resource_version?: string;
 }
 
 /**
  * Check if a given object implements the SqlV1MaterializedTableVersionMetadata interface.
  */
-export function instanceOfSqlV1MaterializedTableVersionMetadata(value: object): value is SqlV1MaterializedTableVersionMetadata {
-    if (!('self' in value) || value['self'] === undefined) return false;
-    return true;
+export function instanceOfSqlV1MaterializedTableVersionMetadata(
+  value: object,
+): value is SqlV1MaterializedTableVersionMetadata {
+  if (!("self" in value) || value["self"] === undefined) return false;
+  return true;
 }
 
-export function SqlV1MaterializedTableVersionMetadataFromJSON(json: any): SqlV1MaterializedTableVersionMetadata {
-    return SqlV1MaterializedTableVersionMetadataFromJSONTyped(json, false);
+export function SqlV1MaterializedTableVersionMetadataFromJSON(
+  json: any,
+): SqlV1MaterializedTableVersionMetadata {
+  return SqlV1MaterializedTableVersionMetadataFromJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableVersionMetadataFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1MaterializedTableVersionMetadata {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'self': json['self'],
-        'created_at': json['created_at'] == null ? undefined : (new Date(json['created_at'])),
-        'updated_at': json['updated_at'] == null ? undefined : (new Date(json['updated_at'])),
-        'uid': json['uid'] == null ? undefined : json['uid'],
-        'resource_version': json['resource_version'] == null ? undefined : json['resource_version'],
-    };
+export function SqlV1MaterializedTableVersionMetadataFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1MaterializedTableVersionMetadata {
+  if (json == null) {
+    return json;
+  }
+  return {
+    self: json["self"],
+    created_at: json["created_at"] == null ? undefined : new Date(json["created_at"]),
+    updated_at: json["updated_at"] == null ? undefined : new Date(json["updated_at"]),
+    uid: json["uid"] == null ? undefined : json["uid"],
+    resource_version: json["resource_version"] == null ? undefined : json["resource_version"],
+  };
 }
 
-export function SqlV1MaterializedTableVersionMetadataToJSON(json: any): SqlV1MaterializedTableVersionMetadata {
-    return SqlV1MaterializedTableVersionMetadataToJSONTyped(json, false);
+export function SqlV1MaterializedTableVersionMetadataToJSON(
+  json: any,
+): SqlV1MaterializedTableVersionMetadata {
+  return SqlV1MaterializedTableVersionMetadataToJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableVersionMetadataToJSONTyped(value?: SqlV1MaterializedTableVersionMetadata | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1MaterializedTableVersionMetadataToJSONTyped(
+  value?: SqlV1MaterializedTableVersionMetadata | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'self': value['self'],
-        'created_at': value['created_at'] == null ? undefined : ((value['created_at']).toISOString()),
-        'updated_at': value['updated_at'] == null ? undefined : ((value['updated_at']).toISOString()),
-        'uid': value['uid'],
-        'resource_version': value['resource_version'],
-    };
+  return {
+    self: value["self"],
+    created_at: value["created_at"] == null ? undefined : value["created_at"].toISOString(),
+    updated_at: value["updated_at"] == null ? undefined : value["updated_at"].toISOString(),
+    uid: value["uid"],
+    resource_version: value["resource_version"],
+  };
 }
-

@@ -12,62 +12,62 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
  * The spec of the Tool
  * @export
  * @interface SqlV1ToolSpec
  */
 export interface SqlV1ToolSpec {
-    /**
-     * The name of the connection this tool uses.
-     * @type {string}
-     * @memberof SqlV1ToolSpec
-     */
-    connection?: string;
-    /**
-     * A set of key-value option pairs that configure the tool's behavior.
-     * @type {{ [key: string]: string; }}
-     * @memberof SqlV1ToolSpec
-     */
-    options?: { [key: string]: string; };
+  /**
+   * The name of the connection this tool uses.
+   * @type {string}
+   * @memberof SqlV1ToolSpec
+   */
+  connection?: string;
+  /**
+   * A set of key-value option pairs that configure the tool's behavior.
+   * @type {{ [key: string]: string; }}
+   * @memberof SqlV1ToolSpec
+   */
+  options?: { [key: string]: string };
 }
 
 /**
  * Check if a given object implements the SqlV1ToolSpec interface.
  */
 export function instanceOfSqlV1ToolSpec(value: object): value is SqlV1ToolSpec {
-    return true;
+  return true;
 }
 
 export function SqlV1ToolSpecFromJSON(json: any): SqlV1ToolSpec {
-    return SqlV1ToolSpecFromJSONTyped(json, false);
+  return SqlV1ToolSpecFromJSONTyped(json, false);
 }
 
 export function SqlV1ToolSpecFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1ToolSpec {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'connection': json['connection'] == null ? undefined : json['connection'],
-        'options': json['options'] == null ? undefined : json['options'],
-    };
+  if (json == null) {
+    return json;
+  }
+  return {
+    connection: json["connection"] == null ? undefined : json["connection"],
+    options: json["options"] == null ? undefined : json["options"],
+  };
 }
 
 export function SqlV1ToolSpecToJSON(json: any): SqlV1ToolSpec {
-    return SqlV1ToolSpecToJSONTyped(json, false);
+  return SqlV1ToolSpecToJSONTyped(json, false);
 }
 
-export function SqlV1ToolSpecToJSONTyped(value?: SqlV1ToolSpec | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1ToolSpecToJSONTyped(
+  value?: SqlV1ToolSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'connection': value['connection'],
-        'options': value['options'],
-    };
+  return {
+    connection: value["connection"],
+    options: value["options"],
+  };
 }
-

@@ -12,86 +12,89 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
- * 
+ *
  * @export
  * @interface SqlV1ToolListMetadata
  */
 export interface SqlV1ToolListMetadata {
-    /**
-     * 
-     * @type {any}
-     * @memberof SqlV1ToolListMetadata
-     */
-    self?: any | null;
-    /**
-     * 
-     * @type {any}
-     * @memberof SqlV1ToolListMetadata
-     */
-    next?: any | null;
-    /**
-     * 
-     * @type {any}
-     * @memberof SqlV1ToolListMetadata
-     */
-    first?: any | null;
-    /**
-     * 
-     * @type {any}
-     * @memberof SqlV1ToolListMetadata
-     */
-    last?: any | null;
-    /**
-     * 
-     * @type {any}
-     * @memberof SqlV1ToolListMetadata
-     */
-    prev?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof SqlV1ToolListMetadata
+   */
+  self?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof SqlV1ToolListMetadata
+   */
+  next?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof SqlV1ToolListMetadata
+   */
+  first?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof SqlV1ToolListMetadata
+   */
+  last?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof SqlV1ToolListMetadata
+   */
+  prev?: any | null;
 }
 
 /**
  * Check if a given object implements the SqlV1ToolListMetadata interface.
  */
 export function instanceOfSqlV1ToolListMetadata(value: object): value is SqlV1ToolListMetadata {
-    return true;
+  return true;
 }
 
 export function SqlV1ToolListMetadataFromJSON(json: any): SqlV1ToolListMetadata {
-    return SqlV1ToolListMetadataFromJSONTyped(json, false);
+  return SqlV1ToolListMetadataFromJSONTyped(json, false);
 }
 
-export function SqlV1ToolListMetadataFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1ToolListMetadata {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'self': json['self'] == null ? undefined : json['self'],
-        'next': json['next'] == null ? undefined : json['next'],
-        'first': json['first'] == null ? undefined : json['first'],
-        'last': json['last'] == null ? undefined : json['last'],
-        'prev': json['prev'] == null ? undefined : json['prev'],
-    };
+export function SqlV1ToolListMetadataFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1ToolListMetadata {
+  if (json == null) {
+    return json;
+  }
+  return {
+    self: json["self"] == null ? undefined : json["self"],
+    next: json["next"] == null ? undefined : json["next"],
+    first: json["first"] == null ? undefined : json["first"],
+    last: json["last"] == null ? undefined : json["last"],
+    prev: json["prev"] == null ? undefined : json["prev"],
+  };
 }
 
 export function SqlV1ToolListMetadataToJSON(json: any): SqlV1ToolListMetadata {
-    return SqlV1ToolListMetadataToJSONTyped(json, false);
+  return SqlV1ToolListMetadataToJSONTyped(json, false);
 }
 
-export function SqlV1ToolListMetadataToJSONTyped(value?: SqlV1ToolListMetadata | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1ToolListMetadataToJSONTyped(
+  value?: SqlV1ToolListMetadata | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'self': value['self'],
-        'next': value['next'],
-        'first': value['first'],
-        'last': value['last'],
-        'prev': value['prev'],
-    };
+  return {
+    self: value["self"],
+    next: value["next"],
+    first: value["first"],
+    last: value["last"],
+    prev: value["prev"],
+  };
 }
-

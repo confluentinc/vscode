@@ -12,90 +12,92 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
  * Physical columns define the structure of the table and the data types of its fields.
  * @export
  * @interface SqlV1PhysicalColumn
  */
 export interface SqlV1PhysicalColumn {
-    /**
-     * 
-     * @type {any}
-     * @memberof SqlV1PhysicalColumn
-     */
-    name: any | null;
-    /**
-     * 
-     * @type {any}
-     * @memberof SqlV1PhysicalColumn
-     */
-    type: any | null;
-    /**
-     * A comment or description for the column.
-     * @type {string}
-     * @memberof SqlV1PhysicalColumn
-     */
-    comment?: string;
-    /**
-     * The kind of column.
-     * @type {string}
-     * @memberof SqlV1PhysicalColumn
-     */
-    kind: SqlV1PhysicalColumnKindEnum;
+  /**
+   *
+   * @type {any}
+   * @memberof SqlV1PhysicalColumn
+   */
+  name: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof SqlV1PhysicalColumn
+   */
+  type: any | null;
+  /**
+   * A comment or description for the column.
+   * @type {string}
+   * @memberof SqlV1PhysicalColumn
+   */
+  comment?: string;
+  /**
+   * The kind of column.
+   * @type {string}
+   * @memberof SqlV1PhysicalColumn
+   */
+  kind: SqlV1PhysicalColumnKindEnum;
 }
 
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1PhysicalColumnKindEnum {
-    Physical = 'Physical'
+  Physical = "Physical",
 }
-
 
 /**
  * Check if a given object implements the SqlV1PhysicalColumn interface.
  */
 export function instanceOfSqlV1PhysicalColumn(value: object): value is SqlV1PhysicalColumn {
-    if (!('name' in value) || value['name'] === undefined) return false;
-    if (!('type' in value) || value['type'] === undefined) return false;
-    if (!('kind' in value) || value['kind'] === undefined) return false;
-    return true;
+  if (!("name" in value) || value["name"] === undefined) return false;
+  if (!("type" in value) || value["type"] === undefined) return false;
+  if (!("kind" in value) || value["kind"] === undefined) return false;
+  return true;
 }
 
 export function SqlV1PhysicalColumnFromJSON(json: any): SqlV1PhysicalColumn {
-    return SqlV1PhysicalColumnFromJSONTyped(json, false);
+  return SqlV1PhysicalColumnFromJSONTyped(json, false);
 }
 
-export function SqlV1PhysicalColumnFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1PhysicalColumn {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'name': json['name'],
-        'type': json['type'],
-        'comment': json['comment'] == null ? undefined : json['comment'],
-        'kind': json['kind'],
-    };
+export function SqlV1PhysicalColumnFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1PhysicalColumn {
+  if (json == null) {
+    return json;
+  }
+  return {
+    name: json["name"],
+    type: json["type"],
+    comment: json["comment"] == null ? undefined : json["comment"],
+    kind: json["kind"],
+  };
 }
 
 export function SqlV1PhysicalColumnToJSON(json: any): SqlV1PhysicalColumn {
-    return SqlV1PhysicalColumnToJSONTyped(json, false);
+  return SqlV1PhysicalColumnToJSONTyped(json, false);
 }
 
-export function SqlV1PhysicalColumnToJSONTyped(value?: SqlV1PhysicalColumn | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1PhysicalColumnToJSONTyped(
+  value?: SqlV1PhysicalColumn | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'name': value['name'],
-        'type': value['type'],
-        'comment': value['comment'],
-        'kind': value['kind'],
-    };
+  return {
+    name: value["name"],
+    type: value["type"],
+    comment: value["comment"],
+    kind: value["kind"],
+  };
 }
-

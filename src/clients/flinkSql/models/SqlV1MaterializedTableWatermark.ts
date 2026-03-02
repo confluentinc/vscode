@@ -12,62 +12,69 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
  * Watermark strategy for the Materialized Table resource.
  * @export
  * @interface SqlV1MaterializedTableWatermark
  */
 export interface SqlV1MaterializedTableWatermark {
-    /**
-     * 
-     * @type {string}
-     * @memberof SqlV1MaterializedTableWatermark
-     */
-    column_name?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof SqlV1MaterializedTableWatermark
-     */
-    expression?: string;
+  /**
+   *
+   * @type {string}
+   * @memberof SqlV1MaterializedTableWatermark
+   */
+  column_name?: string;
+  /**
+   *
+   * @type {string}
+   * @memberof SqlV1MaterializedTableWatermark
+   */
+  expression?: string;
 }
 
 /**
  * Check if a given object implements the SqlV1MaterializedTableWatermark interface.
  */
-export function instanceOfSqlV1MaterializedTableWatermark(value: object): value is SqlV1MaterializedTableWatermark {
-    return true;
+export function instanceOfSqlV1MaterializedTableWatermark(
+  value: object,
+): value is SqlV1MaterializedTableWatermark {
+  return true;
 }
 
-export function SqlV1MaterializedTableWatermarkFromJSON(json: any): SqlV1MaterializedTableWatermark {
-    return SqlV1MaterializedTableWatermarkFromJSONTyped(json, false);
+export function SqlV1MaterializedTableWatermarkFromJSON(
+  json: any,
+): SqlV1MaterializedTableWatermark {
+  return SqlV1MaterializedTableWatermarkFromJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableWatermarkFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1MaterializedTableWatermark {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'column_name': json['column_name'] == null ? undefined : json['column_name'],
-        'expression': json['expression'] == null ? undefined : json['expression'],
-    };
+export function SqlV1MaterializedTableWatermarkFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1MaterializedTableWatermark {
+  if (json == null) {
+    return json;
+  }
+  return {
+    column_name: json["column_name"] == null ? undefined : json["column_name"],
+    expression: json["expression"] == null ? undefined : json["expression"],
+  };
 }
 
 export function SqlV1MaterializedTableWatermarkToJSON(json: any): SqlV1MaterializedTableWatermark {
-    return SqlV1MaterializedTableWatermarkToJSONTyped(json, false);
+  return SqlV1MaterializedTableWatermarkToJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableWatermarkToJSONTyped(value?: SqlV1MaterializedTableWatermark | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1MaterializedTableWatermarkToJSONTyped(
+  value?: SqlV1MaterializedTableWatermark | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'column_name': value['column_name'],
-        'expression': value['expression'],
-    };
+  return {
+    column_name: value["column_name"],
+    expression: value["expression"],
+  };
 }
-

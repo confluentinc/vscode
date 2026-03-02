@@ -12,62 +12,71 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
  * Distribution (bucket by) strategy.
  * @export
  * @interface SqlV1MaterializedTableDistribution
  */
 export interface SqlV1MaterializedTableDistribution {
-    /**
-     * 
-     * @type {Array<string>}
-     * @memberof SqlV1MaterializedTableDistribution
-     */
-    column_names?: Array<string>;
-    /**
-     * The number of buckets.
-     * @type {number}
-     * @memberof SqlV1MaterializedTableDistribution
-     */
-    buckets?: number;
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof SqlV1MaterializedTableDistribution
+   */
+  column_names?: Array<string>;
+  /**
+   * The number of buckets.
+   * @type {number}
+   * @memberof SqlV1MaterializedTableDistribution
+   */
+  buckets?: number;
 }
 
 /**
  * Check if a given object implements the SqlV1MaterializedTableDistribution interface.
  */
-export function instanceOfSqlV1MaterializedTableDistribution(value: object): value is SqlV1MaterializedTableDistribution {
-    return true;
+export function instanceOfSqlV1MaterializedTableDistribution(
+  value: object,
+): value is SqlV1MaterializedTableDistribution {
+  return true;
 }
 
-export function SqlV1MaterializedTableDistributionFromJSON(json: any): SqlV1MaterializedTableDistribution {
-    return SqlV1MaterializedTableDistributionFromJSONTyped(json, false);
+export function SqlV1MaterializedTableDistributionFromJSON(
+  json: any,
+): SqlV1MaterializedTableDistribution {
+  return SqlV1MaterializedTableDistributionFromJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableDistributionFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1MaterializedTableDistribution {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'column_names': json['column_names'] == null ? undefined : json['column_names'],
-        'buckets': json['buckets'] == null ? undefined : json['buckets'],
-    };
+export function SqlV1MaterializedTableDistributionFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1MaterializedTableDistribution {
+  if (json == null) {
+    return json;
+  }
+  return {
+    column_names: json["column_names"] == null ? undefined : json["column_names"],
+    buckets: json["buckets"] == null ? undefined : json["buckets"],
+  };
 }
 
-export function SqlV1MaterializedTableDistributionToJSON(json: any): SqlV1MaterializedTableDistribution {
-    return SqlV1MaterializedTableDistributionToJSONTyped(json, false);
+export function SqlV1MaterializedTableDistributionToJSON(
+  json: any,
+): SqlV1MaterializedTableDistribution {
+  return SqlV1MaterializedTableDistributionToJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableDistributionToJSONTyped(value?: SqlV1MaterializedTableDistribution | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1MaterializedTableDistributionToJSONTyped(
+  value?: SqlV1MaterializedTableDistribution | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'column_names': value['column_names'],
-        'buckets': value['buckets'],
-    };
+  return {
+    column_names: value["column_names"],
+    buckets: value["buckets"],
+  };
 }
-

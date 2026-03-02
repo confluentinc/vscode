@@ -12,14 +12,14 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { DataType } from './DataType';
+import { mapValues } from "../runtime";
+import type { DataType } from "./DataType";
 import {
-    DataTypeFromJSON,
-    DataTypeFromJSONTyped,
-    DataTypeToJSON,
-    DataTypeToJSONTyped,
-} from './DataType';
+  DataTypeFromJSON,
+  DataTypeFromJSONTyped,
+  DataTypeToJSON,
+  DataTypeToJSONTyped,
+} from "./DataType";
 
 /**
  * A column in the results schema.
@@ -27,57 +27,57 @@ import {
  * @interface ColumnDetails
  */
 export interface ColumnDetails {
-    /**
-     * The name of the SQL table column.
-     * @type {string}
-     * @memberof ColumnDetails
-     */
-    name: string;
-    /**
-     * JSON object in TableSchema format; describes the data returned by the results serving API.
-     * @type {DataType}
-     * @memberof ColumnDetails
-     */
-    type: DataType;
+  /**
+   * The name of the SQL table column.
+   * @type {string}
+   * @memberof ColumnDetails
+   */
+  name: string;
+  /**
+   * JSON object in TableSchema format; describes the data returned by the results serving API.
+   * @type {DataType}
+   * @memberof ColumnDetails
+   */
+  type: DataType;
 }
 
 /**
  * Check if a given object implements the ColumnDetails interface.
  */
 export function instanceOfColumnDetails(value: object): value is ColumnDetails {
-    if (!('name' in value) || value['name'] === undefined) return false;
-    if (!('type' in value) || value['type'] === undefined) return false;
-    return true;
+  if (!("name" in value) || value["name"] === undefined) return false;
+  if (!("type" in value) || value["type"] === undefined) return false;
+  return true;
 }
 
 export function ColumnDetailsFromJSON(json: any): ColumnDetails {
-    return ColumnDetailsFromJSONTyped(json, false);
+  return ColumnDetailsFromJSONTyped(json, false);
 }
 
 export function ColumnDetailsFromJSONTyped(json: any, ignoreDiscriminator: boolean): ColumnDetails {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'name': json['name'],
-        'type': DataTypeFromJSON(json['type']),
-    };
+  if (json == null) {
+    return json;
+  }
+  return {
+    name: json["name"],
+    type: DataTypeFromJSON(json["type"]),
+  };
 }
 
 export function ColumnDetailsToJSON(json: any): ColumnDetails {
-    return ColumnDetailsToJSONTyped(json, false);
+  return ColumnDetailsToJSONTyped(json, false);
 }
 
-export function ColumnDetailsToJSONTyped(value?: ColumnDetails | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function ColumnDetailsToJSONTyped(
+  value?: ColumnDetails | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'name': value['name'],
-        'type': DataTypeToJSON(value['type']),
-    };
+  return {
+    name: value["name"],
+    type: DataTypeToJSON(value["type"]),
+  };
 }
-
