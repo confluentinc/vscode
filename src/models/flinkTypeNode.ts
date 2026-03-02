@@ -9,7 +9,6 @@ import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { formatFlinkTypeForDisplay, formatSqlType, getIconForFlinkType } from "../utils/flinkTypes";
-import type { FlinkRelationColumn } from "./flinkRelation";
 import type { FlinkType } from "./flinkTypes";
 import { FlinkTypeKind, isCompoundFlinkType } from "./flinkTypes";
 import { CustomMarkdownString } from "./main";
@@ -27,7 +26,8 @@ export class FlinkTypeNode implements IResourceBase {
   readonly parsedType: FlinkType;
 
   /** If this node came from expanding a FlinkRelationColumn, reference to the parent column */
-  readonly parentColumn: FlinkRelationColumn | null;
+  /** ID of the parent FlinkRelationColumn (if this is a direct child of a column) */
+  readonly parentColumnId: string | null;
 
   /** If this node is nested within another FlinkTypeNode, reference to the parent */
   readonly parentNode: FlinkTypeNode | null;
@@ -46,16 +46,16 @@ export class FlinkTypeNode implements IResourceBase {
    *
    * @param props Configuration object
    * @param props.parsedType The parsed FlinkType this node represents
-   * @param props.parentColumn Optional parent FlinkRelationColumn (if direct child of column)
+   * @param props.parentColumnId Optional ID of parent FlinkRelationColumn (if direct child of column)
    * @param props.parentNode Optional parent FlinkTypeNode (if nested)
    */
   constructor(props: {
     parsedType: FlinkType;
-    parentColumn?: FlinkRelationColumn;
+    parentColumnId?: string;
     parentNode?: FlinkTypeNode;
   }) {
     this.parsedType = props.parsedType;
-    this.parentColumn = props.parentColumn ?? null;
+    this.parentColumnId = props.parentColumnId ?? null;
     this.parentNode = props.parentNode ?? null;
   }
 
@@ -79,8 +79,8 @@ export class FlinkTypeNode implements IResourceBase {
     }
 
     // Add column id first if we have one
-    if (this.parentColumn) {
-      path.push(this.parentColumn.id);
+    if (this.parentColumnId) {
+      path.push(this.parentColumnId);
     }
 
     // Add field names from all nodes in the chain
@@ -248,7 +248,7 @@ export class FlinkTypeNode implements IResourceBase {
           new FlinkTypeNode({
             parsedType: member,
             parentNode: this,
-            parentColumn: this.parentColumn ?? undefined,
+            parentColumnId: this.parentColumnId ?? undefined,
           }),
       );
     }
@@ -259,7 +259,7 @@ export class FlinkTypeNode implements IResourceBase {
         new FlinkTypeNode({
           parsedType: member,
           parentNode: this,
-          parentColumn: this.parentColumn ?? undefined,
+          parentColumnId: this.parentColumnId ?? undefined,
         }),
     );
   }

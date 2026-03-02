@@ -186,7 +186,7 @@ export class FlinkRelationColumn {
       // Create a synthetic ARRAY/MULTISET node (not displayed in tree, but used for ID calculation)
       const containerNode = new FlinkTypeNode({
         parsedType: parsed,
-        parentColumn: this,
+        parentColumnId: this.id,
       });
 
       // Return the container's children (which skips the intermediate node)
@@ -196,7 +196,7 @@ export class FlinkRelationColumn {
           new FlinkTypeNode({
             parsedType: member,
             parentNode: containerNode,
-            parentColumn: this,
+            parentColumnId: this.id,
           }),
       );
     }
@@ -206,7 +206,7 @@ export class FlinkRelationColumn {
       (member) =>
         new FlinkTypeNode({
           parsedType: member,
-          parentColumn: this,
+          parentColumnId: this.id,
         }),
     );
   }
