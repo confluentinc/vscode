@@ -636,7 +636,7 @@ describe("flinkRelation.ts", () => {
     });
 
     describe("getParsedType()", () => {
-      it("returns null and logs error for unparseable type strings", () => {
+      it("returns synthetic SCALAR type and logs error for unparseable type strings", () => {
         const column = new FlinkRelationColumn({
           ...TEST_VARCHAR_COLUMN,
           relationName: "test_table",
@@ -645,13 +645,19 @@ describe("flinkRelation.ts", () => {
           fullDataType: "",
         });
 
-        // Call getParsedType - should return null for unparseable input
+        // Call getParsedType - should return synthetic SCALAR type for unparseable input
         const result = column.getParsedType();
-        assert.strictEqual(result, null, "Should return null for unparseable type syntax");
+        assert.ok(result, "Should return a FlinkType (not null)");
+        assert.strictEqual(result.kind, "SCALAR", "Should return synthetic SCALAR type");
+        assert.strictEqual(
+          result.dataType,
+          "",
+          "Should preserve the unparseable input as dataType",
+        );
 
-        // Call again - should still return null (not re-attempt parsing due to _parseError flag)
+        // Call again - should return cached result (same object reference)
         const result2 = column.getParsedType();
-        assert.strictEqual(result2, null, "Should cache error and return null on second call");
+        assert.strictEqual(result, result2, "Should cache result on second call");
       });
 
       it("successfully parses valid type strings and caches result", () => {

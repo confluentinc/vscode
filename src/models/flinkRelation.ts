@@ -41,8 +41,6 @@ export class FlinkRelationColumn {
 
   /** Cached parsed type result (lazy initialization) */
   private _parsedType: FlinkType | null = null;
-  /** Flag to track if parsing failed (avoid re-attempting) */
-  private _parseError: boolean = false;
 
   constructor(
     props: Pick<
@@ -80,27 +78,7 @@ export class FlinkRelationColumn {
    * Uses the unified type formatter for consistent display across UI.
    **/
   get simpleDataType(): string {
-    const parsed = this.getParsedType();
-    if (parsed) {
-      return formatFlinkTypeForDisplay(parsed);
-    }
-
-    // Fallback if parsing fails: try simple pattern-based formatting
-    const type = this.fullDataType;
-    if (type.startsWith("ROW<")) {
-      return "ROW";
-    }
-    if (type.startsWith("MAP<")) {
-      return "MAP";
-    }
-    if (type.startsWith("ARRAY<")) {
-      return "[]";
-    }
-    if (type.startsWith("MULTISET<")) {
-      return "MULTISET";
-    }
-
-    return formatSqlType(type);
+    return formatFlinkTypeForDisplay(this.getParsedType());
   }
 
   get connectionId(): ConnectionId {
@@ -113,25 +91,28 @@ export class FlinkRelationColumn {
 
   /**
    * Parse the fullDataType into a FlinkType structure.
-   * Returns null if parsing fails. Caches result after first successful parse.
+   * Always returns a FlinkType. If parsing fails, returns a synthetic SCALAR type with the full dataType.
+   * Caches result after first parse attempt.
    */
-  getParsedType(): FlinkType | null {
+  getParsedType(): FlinkType {
     if (this._parsedType !== null) {
       return this._parsedType;
-    }
-    if (this._parseError) {
-      return null;
     }
 
     try {
       this._parsedType = parseFlinkType(this.fullDataType);
-      return this._parsedType;
     } catch (error) {
-      this._parseError = true;
       const errorMessage = `Failed to parse Flink type for column '${this.name}' in table '${this.relationName}'. Data type: ${this.fullDataType}`;
       logError(error, errorMessage);
-      return null;
+      // Return a synthetic SCALAR type as fallback (visible in UI with full type string)
+      this._parsedType = {
+        kind: FlinkTypeKind.SCALAR,
+        dataType: this.fullDataType,
+        isFieldNullable: true,
+      };
     }
+
+    return this._parsedType;
   }
 
   /**
@@ -140,7 +121,7 @@ export class FlinkRelationColumn {
    */
   get isExpandable(): boolean {
     const parsed = this.getParsedType();
-    if (!parsed || !isCompoundFlinkType(parsed)) {
+    if (!isCompoundFlinkType(parsed)) {
       return false;
     }
 
@@ -173,7 +154,7 @@ export class FlinkRelationColumn {
     }
 
     const parsed = this.getParsedType();
-    if (!parsed || !isCompoundFlinkType(parsed)) {
+    if (!isCompoundFlinkType(parsed)) {
       return [];
     }
 
@@ -239,8 +220,7 @@ export class FlinkRelationColumn {
     const item = new TreeItem(this.name, collapsibleState);
 
     // Determine icon based on the parsed type
-    const parsed = this.getParsedType();
-    const iconName = parsed ? getIconForFlinkType(parsed) : IconNames.PLACEHOLDER;
+    const iconName = getIconForFlinkType(this.getParsedType());
     item.iconPath = new ThemeIcon(iconName);
 
     item.id = this.id;
