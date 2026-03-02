@@ -44,8 +44,10 @@ export enum IconNames {
   PLACEHOLDER = "symbol-misc",
   /** Icon for ROW types in TreeView */
   FLINK_TYPE_ROW = "symbol-struct",
-  /** Icon for ARRAY and MULTISET types in TreeView */
+  /** Icon for ARRAY types in TreeView */
   FLINK_TYPE_ARRAY = "symbol-array",
+  /** Icon for MULTISET types in TreeView */
+  FLINK_TYPE_MULTISET = "symbol-package",
 }
 
 /** Red "warning" icon to use when dealing with connectivity issues or failed resource fetching. */

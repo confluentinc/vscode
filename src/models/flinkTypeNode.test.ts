@@ -6,7 +6,6 @@
 import assert from "assert";
 import { TreeItemCollapsibleState } from "vscode";
 import { FlinkTypeKind } from "./flinkTypes";
-import type { FlinkType } from "./flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
 import { FlinkRelationColumn } from "./flinkRelation";
 import { parseFlinkType } from "../parsers/flinkTypeParser";
