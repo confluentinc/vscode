@@ -4,6 +4,12 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 2.2.1
+
+### Changed
+
+- Added telemetry for Flink statements triggered via workspace URI
+
 ## 2.2.0
 
 ### Added
