@@ -12,107 +12,109 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
  * Metadata columns reference system properties.
  * @export
  * @interface SqlV1MetadataColumn
  */
 export interface SqlV1MetadataColumn {
-    /**
-     * 
-     * @type {any}
-     * @memberof SqlV1MetadataColumn
-     */
-    name: any | null;
-    /**
-     * 
-     * @type {any}
-     * @memberof SqlV1MetadataColumn
-     */
-    type: any | null;
-    /**
-     * A comment or description for the column.
-     * @type {string}
-     * @memberof SqlV1MetadataColumn
-     */
-    comment?: string;
-    /**
-     * The kind of column.
-     * @type {string}
-     * @memberof SqlV1MetadataColumn
-     */
-    kind: SqlV1MetadataColumnKindEnum;
-    /**
-     * The system metadata key to reference.
-     * @type {string}
-     * @memberof SqlV1MetadataColumn
-     */
-    metadata_key: string;
-    /**
-     * Indicates if the metadata column is virtual.
-     * @type {boolean}
-     * @memberof SqlV1MetadataColumn
-     */
-    virtual?: boolean;
+  /**
+   *
+   * @type {any}
+   * @memberof SqlV1MetadataColumn
+   */
+  name: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof SqlV1MetadataColumn
+   */
+  type: any | null;
+  /**
+   * A comment or description for the column.
+   * @type {string}
+   * @memberof SqlV1MetadataColumn
+   */
+  comment?: string;
+  /**
+   * The kind of column.
+   * @type {string}
+   * @memberof SqlV1MetadataColumn
+   */
+  kind: SqlV1MetadataColumnKindEnum;
+  /**
+   * The system metadata key to reference.
+   * @type {string}
+   * @memberof SqlV1MetadataColumn
+   */
+  metadata_key: string;
+  /**
+   * Indicates if the metadata column is virtual.
+   * @type {boolean}
+   * @memberof SqlV1MetadataColumn
+   */
+  virtual?: boolean;
 }
 
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1MetadataColumnKindEnum {
-    Metadata = 'Metadata'
+  Metadata = "Metadata",
 }
-
 
 /**
  * Check if a given object implements the SqlV1MetadataColumn interface.
  */
 export function instanceOfSqlV1MetadataColumn(value: object): value is SqlV1MetadataColumn {
-    if (!('name' in value) || value['name'] === undefined) return false;
-    if (!('type' in value) || value['type'] === undefined) return false;
-    if (!('kind' in value) || value['kind'] === undefined) return false;
-    if (!('metadata_key' in value) || value['metadata_key'] === undefined) return false;
-    return true;
+  if (!("name" in value) || value["name"] === undefined) return false;
+  if (!("type" in value) || value["type"] === undefined) return false;
+  if (!("kind" in value) || value["kind"] === undefined) return false;
+  if (!("metadata_key" in value) || value["metadata_key"] === undefined) return false;
+  return true;
 }
 
 export function SqlV1MetadataColumnFromJSON(json: any): SqlV1MetadataColumn {
-    return SqlV1MetadataColumnFromJSONTyped(json, false);
+  return SqlV1MetadataColumnFromJSONTyped(json, false);
 }
 
-export function SqlV1MetadataColumnFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1MetadataColumn {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'name': json['name'],
-        'type': json['type'],
-        'comment': json['comment'] == null ? undefined : json['comment'],
-        'kind': json['kind'],
-        'metadata_key': json['metadata_key'],
-        'virtual': json['virtual'] == null ? undefined : json['virtual'],
-    };
+export function SqlV1MetadataColumnFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1MetadataColumn {
+  if (json == null) {
+    return json;
+  }
+  return {
+    name: json["name"],
+    type: json["type"],
+    comment: json["comment"] == null ? undefined : json["comment"],
+    kind: json["kind"],
+    metadata_key: json["metadata_key"],
+    virtual: json["virtual"] == null ? undefined : json["virtual"],
+  };
 }
 
 export function SqlV1MetadataColumnToJSON(json: any): SqlV1MetadataColumn {
-    return SqlV1MetadataColumnToJSONTyped(json, false);
+  return SqlV1MetadataColumnToJSONTyped(json, false);
 }
 
-export function SqlV1MetadataColumnToJSONTyped(value?: SqlV1MetadataColumn | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1MetadataColumnToJSONTyped(
+  value?: SqlV1MetadataColumn | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'name': value['name'],
-        'type': value['type'],
-        'comment': value['comment'],
-        'kind': value['kind'],
-        'metadata_key': value['metadata_key'],
-        'virtual': value['virtual'],
-    };
+  return {
+    name: value["name"],
+    type: value["type"],
+    comment: value["comment"],
+    kind: value["kind"],
+    metadata_key: value["metadata_key"],
+    virtual: value["virtual"],
+  };
 }
-

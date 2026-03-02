@@ -12,73 +12,92 @@
  * Do not edit the class manually.
  */
 
-import type { SqlV1ComputedColumn } from './SqlV1ComputedColumn';
+import type { SqlV1ComputedColumn } from "./SqlV1ComputedColumn";
 import {
-    instanceOfSqlV1ComputedColumn,
-    SqlV1ComputedColumnFromJSON,
-    SqlV1ComputedColumnFromJSONTyped,
-    SqlV1ComputedColumnToJSON,
-} from './SqlV1ComputedColumn';
-import type { SqlV1MetadataColumn } from './SqlV1MetadataColumn';
+  instanceOfSqlV1ComputedColumn,
+  SqlV1ComputedColumnFromJSON,
+  SqlV1ComputedColumnFromJSONTyped,
+  SqlV1ComputedColumnToJSON,
+} from "./SqlV1ComputedColumn";
+import type { SqlV1MetadataColumn } from "./SqlV1MetadataColumn";
 import {
-    instanceOfSqlV1MetadataColumn,
-    SqlV1MetadataColumnFromJSON,
-    SqlV1MetadataColumnFromJSONTyped,
-    SqlV1MetadataColumnToJSON,
-} from './SqlV1MetadataColumn';
-import type { SqlV1PhysicalColumn } from './SqlV1PhysicalColumn';
+  instanceOfSqlV1MetadataColumn,
+  SqlV1MetadataColumnFromJSON,
+  SqlV1MetadataColumnFromJSONTyped,
+  SqlV1MetadataColumnToJSON,
+} from "./SqlV1MetadataColumn";
+import type { SqlV1PhysicalColumn } from "./SqlV1PhysicalColumn";
 import {
-    instanceOfSqlV1PhysicalColumn,
-    SqlV1PhysicalColumnFromJSON,
-    SqlV1PhysicalColumnFromJSONTyped,
-    SqlV1PhysicalColumnToJSON,
-} from './SqlV1PhysicalColumn';
+  instanceOfSqlV1PhysicalColumn,
+  SqlV1PhysicalColumnFromJSON,
+  SqlV1PhysicalColumnFromJSONTyped,
+  SqlV1PhysicalColumnToJSON,
+} from "./SqlV1PhysicalColumn";
 
 /**
  * @type SqlV1MaterializedTableColumnDetails
  * Details of a column in the Materialized Table.
  * @export
  */
-export type SqlV1MaterializedTableColumnDetails = { kind: 'Computed' } & SqlV1ComputedColumn | { kind: 'Metadata' } & SqlV1MetadataColumn | { kind: 'Physical' } & SqlV1PhysicalColumn;
+export type SqlV1MaterializedTableColumnDetails =
+  | ({ kind: "Computed" } & SqlV1ComputedColumn)
+  | ({ kind: "Metadata" } & SqlV1MetadataColumn)
+  | ({ kind: "Physical" } & SqlV1PhysicalColumn);
 
-export function SqlV1MaterializedTableColumnDetailsFromJSON(json: any): SqlV1MaterializedTableColumnDetails {
-    return SqlV1MaterializedTableColumnDetailsFromJSONTyped(json, false);
+export function SqlV1MaterializedTableColumnDetailsFromJSON(
+  json: any,
+): SqlV1MaterializedTableColumnDetails {
+  return SqlV1MaterializedTableColumnDetailsFromJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableColumnDetailsFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1MaterializedTableColumnDetails {
-    if (json == null) {
-        return json;
-    }
-    switch (json['kind']) {
-        case 'Computed':
-            return Object.assign({}, SqlV1ComputedColumnFromJSONTyped(json, true), { kind: 'Computed' } as const);
-        case 'Metadata':
-            return Object.assign({}, SqlV1MetadataColumnFromJSONTyped(json, true), { kind: 'Metadata' } as const);
-        case 'Physical':
-            return Object.assign({}, SqlV1PhysicalColumnFromJSONTyped(json, true), { kind: 'Physical' } as const);
-        default:
-            throw new Error(`No variant of SqlV1MaterializedTableColumnDetails exists with 'kind=${json['kind']}'`);
-    }
+export function SqlV1MaterializedTableColumnDetailsFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1MaterializedTableColumnDetails {
+  if (json == null) {
+    return json;
+  }
+  switch (json["kind"]) {
+    case "Computed":
+      return Object.assign({}, SqlV1ComputedColumnFromJSONTyped(json, true), {
+        kind: "Computed",
+      } as const);
+    case "Metadata":
+      return Object.assign({}, SqlV1MetadataColumnFromJSONTyped(json, true), {
+        kind: "Metadata",
+      } as const);
+    case "Physical":
+      return Object.assign({}, SqlV1PhysicalColumnFromJSONTyped(json, true), {
+        kind: "Physical",
+      } as const);
+    default:
+      throw new Error(
+        `No variant of SqlV1MaterializedTableColumnDetails exists with 'kind=${json["kind"]}'`,
+      );
+  }
 }
 
 export function SqlV1MaterializedTableColumnDetailsToJSON(json: any): any {
-    return SqlV1MaterializedTableColumnDetailsToJSONTyped(json, false);
+  return SqlV1MaterializedTableColumnDetailsToJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableColumnDetailsToJSONTyped(value?: SqlV1MaterializedTableColumnDetails | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
-    switch (value['kind']) {
-        case 'Computed':
-            return Object.assign({}, SqlV1ComputedColumnToJSON(value), { kind: 'Computed' } as const);
-        case 'Metadata':
-            return Object.assign({}, SqlV1MetadataColumnToJSON(value), { kind: 'Metadata' } as const);
-        case 'Physical':
-            return Object.assign({}, SqlV1PhysicalColumnToJSON(value), { kind: 'Physical' } as const);
-        default:
-            throw new Error(`No variant of SqlV1MaterializedTableColumnDetails exists with 'kind=${value['kind']}'`);
-    }
-
+export function SqlV1MaterializedTableColumnDetailsToJSONTyped(
+  value?: SqlV1MaterializedTableColumnDetails | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
+  switch (value["kind"]) {
+    case "Computed":
+      return Object.assign({}, SqlV1ComputedColumnToJSON(value), { kind: "Computed" } as const);
+    case "Metadata":
+      return Object.assign({}, SqlV1MetadataColumnToJSON(value), { kind: "Metadata" } as const);
+    case "Physical":
+      return Object.assign({}, SqlV1PhysicalColumnToJSON(value), { kind: "Physical" } as const);
+    default:
+      throw new Error(
+        `No variant of SqlV1MaterializedTableColumnDetails exists with 'kind=${value["kind"]}'`,
+      );
+  }
 }
-

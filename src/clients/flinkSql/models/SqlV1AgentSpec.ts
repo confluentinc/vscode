@@ -12,86 +12,89 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
  * The specifications of the Agent.
  * @export
  * @interface SqlV1AgentSpec
  */
 export interface SqlV1AgentSpec {
-    /**
-     * The description of the agent.
-     * @type {string}
-     * @memberof SqlV1AgentSpec
-     */
-    description?: string;
-    /**
-     * The name of the model the agent uses for inferencing.
-     * @type {string}
-     * @memberof SqlV1AgentSpec
-     */
-    model?: string;
-    /**
-     * The instruction prompt that guides the agent's behavior.
-     * @type {string}
-     * @memberof SqlV1AgentSpec
-     */
-    prompt?: string;
-    /**
-     * The list of tools available to the agent.
-     * @type {Array<string>}
-     * @memberof SqlV1AgentSpec
-     */
-    tools?: Array<string>;
-    /**
-     * A set of key-value option pairs that configure the agent's behavior.
-     * @type {{ [key: string]: string; }}
-     * @memberof SqlV1AgentSpec
-     */
-    properties?: { [key: string]: string; };
+  /**
+   * The description of the agent.
+   * @type {string}
+   * @memberof SqlV1AgentSpec
+   */
+  description?: string;
+  /**
+   * The name of the model the agent uses for inferencing.
+   * @type {string}
+   * @memberof SqlV1AgentSpec
+   */
+  model?: string;
+  /**
+   * The instruction prompt that guides the agent's behavior.
+   * @type {string}
+   * @memberof SqlV1AgentSpec
+   */
+  prompt?: string;
+  /**
+   * The list of tools available to the agent.
+   * @type {Array<string>}
+   * @memberof SqlV1AgentSpec
+   */
+  tools?: Array<string>;
+  /**
+   * A set of key-value option pairs that configure the agent's behavior.
+   * @type {{ [key: string]: string; }}
+   * @memberof SqlV1AgentSpec
+   */
+  properties?: { [key: string]: string };
 }
 
 /**
  * Check if a given object implements the SqlV1AgentSpec interface.
  */
 export function instanceOfSqlV1AgentSpec(value: object): value is SqlV1AgentSpec {
-    return true;
+  return true;
 }
 
 export function SqlV1AgentSpecFromJSON(json: any): SqlV1AgentSpec {
-    return SqlV1AgentSpecFromJSONTyped(json, false);
+  return SqlV1AgentSpecFromJSONTyped(json, false);
 }
 
-export function SqlV1AgentSpecFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1AgentSpec {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'description': json['description'] == null ? undefined : json['description'],
-        'model': json['model'] == null ? undefined : json['model'],
-        'prompt': json['prompt'] == null ? undefined : json['prompt'],
-        'tools': json['tools'] == null ? undefined : json['tools'],
-        'properties': json['properties'] == null ? undefined : json['properties'],
-    };
+export function SqlV1AgentSpecFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1AgentSpec {
+  if (json == null) {
+    return json;
+  }
+  return {
+    description: json["description"] == null ? undefined : json["description"],
+    model: json["model"] == null ? undefined : json["model"],
+    prompt: json["prompt"] == null ? undefined : json["prompt"],
+    tools: json["tools"] == null ? undefined : json["tools"],
+    properties: json["properties"] == null ? undefined : json["properties"],
+  };
 }
 
 export function SqlV1AgentSpecToJSON(json: any): SqlV1AgentSpec {
-    return SqlV1AgentSpecToJSONTyped(json, false);
+  return SqlV1AgentSpecToJSONTyped(json, false);
 }
 
-export function SqlV1AgentSpecToJSONTyped(value?: SqlV1AgentSpec | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1AgentSpecToJSONTyped(
+  value?: SqlV1AgentSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'description': value['description'],
-        'model': value['model'],
-        'prompt': value['prompt'],
-        'tools': value['tools'],
-        'properties': value['properties'],
-    };
+  return {
+    description: value["description"],
+    model: value["model"],
+    prompt: value["prompt"],
+    tools: value["tools"],
+    properties: value["properties"],
+  };
 }
-

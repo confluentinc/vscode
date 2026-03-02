@@ -12,28 +12,28 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { SqlV1ToolSpec } from './SqlV1ToolSpec';
+import { mapValues } from "../runtime";
+import type { SqlV1ToolSpec } from "./SqlV1ToolSpec";
 import {
-    SqlV1ToolSpecFromJSON,
-    SqlV1ToolSpecFromJSONTyped,
-    SqlV1ToolSpecToJSON,
-    SqlV1ToolSpecToJSONTyped,
-} from './SqlV1ToolSpec';
-import type { SqlV1ToolStatus } from './SqlV1ToolStatus';
+  SqlV1ToolSpecFromJSON,
+  SqlV1ToolSpecFromJSONTyped,
+  SqlV1ToolSpecToJSON,
+  SqlV1ToolSpecToJSONTyped,
+} from "./SqlV1ToolSpec";
+import type { SqlV1ToolStatus } from "./SqlV1ToolStatus";
 import {
-    SqlV1ToolStatusFromJSON,
-    SqlV1ToolStatusFromJSONTyped,
-    SqlV1ToolStatusToJSON,
-    SqlV1ToolStatusToJSONTyped,
-} from './SqlV1ToolStatus';
-import type { SqlV1ToolMetadata } from './SqlV1ToolMetadata';
+  SqlV1ToolStatusFromJSON,
+  SqlV1ToolStatusFromJSONTyped,
+  SqlV1ToolStatusToJSON,
+  SqlV1ToolStatusToJSONTyped,
+} from "./SqlV1ToolStatus";
+import type { SqlV1ToolMetadata } from "./SqlV1ToolMetadata";
 import {
-    SqlV1ToolMetadataFromJSON,
-    SqlV1ToolMetadataFromJSONTyped,
-    SqlV1ToolMetadataToJSON,
-    SqlV1ToolMetadataToJSONTyped,
-} from './SqlV1ToolMetadata';
+  SqlV1ToolMetadataFromJSON,
+  SqlV1ToolMetadataFromJSONTyped,
+  SqlV1ToolMetadataToJSON,
+  SqlV1ToolMetadataToJSONTyped,
+} from "./SqlV1ToolMetadata";
 
 /**
  * `Tool` models a reusable tool resource backed by a connection that can be referenced
@@ -45,101 +45,100 @@ import {
  * @interface SqlV1Tool
  */
 export interface SqlV1Tool {
-    /**
-     * APIVersion defines the schema version of this representation of a resource.
-     * @type {string}
-     * @memberof SqlV1Tool
-     */
-    readonly api_version?: SqlV1ToolApiVersionEnum;
-    /**
-     * Kind defines the object this REST resource represents.
-     * @type {string}
-     * @memberof SqlV1Tool
-     */
-    readonly kind?: SqlV1ToolKindEnum;
-    /**
-     * 
-     * @type {SqlV1ToolMetadata}
-     * @memberof SqlV1Tool
-     */
-    metadata?: SqlV1ToolMetadata;
-    /**
-     * The user provided name of the tool, unique within this environment.
-     * @type {string}
-     * @memberof SqlV1Tool
-     */
-    name?: string;
-    /**
-     * 
-     * @type {SqlV1ToolSpec}
-     * @memberof SqlV1Tool
-     */
-    spec?: SqlV1ToolSpec;
-    /**
-     * 
-     * @type {SqlV1ToolStatus}
-     * @memberof SqlV1Tool
-     */
-    status?: SqlV1ToolStatus;
+  /**
+   * APIVersion defines the schema version of this representation of a resource.
+   * @type {string}
+   * @memberof SqlV1Tool
+   */
+  readonly api_version?: SqlV1ToolApiVersionEnum;
+  /**
+   * Kind defines the object this REST resource represents.
+   * @type {string}
+   * @memberof SqlV1Tool
+   */
+  readonly kind?: SqlV1ToolKindEnum;
+  /**
+   *
+   * @type {SqlV1ToolMetadata}
+   * @memberof SqlV1Tool
+   */
+  metadata?: SqlV1ToolMetadata;
+  /**
+   * The user provided name of the tool, unique within this environment.
+   * @type {string}
+   * @memberof SqlV1Tool
+   */
+  name?: string;
+  /**
+   *
+   * @type {SqlV1ToolSpec}
+   * @memberof SqlV1Tool
+   */
+  spec?: SqlV1ToolSpec;
+  /**
+   *
+   * @type {SqlV1ToolStatus}
+   * @memberof SqlV1Tool
+   */
+  status?: SqlV1ToolStatus;
 }
 
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1ToolApiVersionEnum {
-    SqlV1 = 'sql/v1'
+  SqlV1 = "sql/v1",
 }
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1ToolKindEnum {
-    Tool = 'Tool'
+  Tool = "Tool",
 }
-
 
 /**
  * Check if a given object implements the SqlV1Tool interface.
  */
 export function instanceOfSqlV1Tool(value: object): value is SqlV1Tool {
-    return true;
+  return true;
 }
 
 export function SqlV1ToolFromJSON(json: any): SqlV1Tool {
-    return SqlV1ToolFromJSONTyped(json, false);
+  return SqlV1ToolFromJSONTyped(json, false);
 }
 
 export function SqlV1ToolFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1Tool {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'api_version': json['api_version'] == null ? undefined : json['api_version'],
-        'kind': json['kind'] == null ? undefined : json['kind'],
-        'metadata': json['metadata'] == null ? undefined : SqlV1ToolMetadataFromJSON(json['metadata']),
-        'name': json['name'] == null ? undefined : json['name'],
-        'spec': json['spec'] == null ? undefined : SqlV1ToolSpecFromJSON(json['spec']),
-        'status': json['status'] == null ? undefined : SqlV1ToolStatusFromJSON(json['status']),
-    };
+  if (json == null) {
+    return json;
+  }
+  return {
+    api_version: json["api_version"] == null ? undefined : json["api_version"],
+    kind: json["kind"] == null ? undefined : json["kind"],
+    metadata: json["metadata"] == null ? undefined : SqlV1ToolMetadataFromJSON(json["metadata"]),
+    name: json["name"] == null ? undefined : json["name"],
+    spec: json["spec"] == null ? undefined : SqlV1ToolSpecFromJSON(json["spec"]),
+    status: json["status"] == null ? undefined : SqlV1ToolStatusFromJSON(json["status"]),
+  };
 }
 
 export function SqlV1ToolToJSON(json: any): SqlV1Tool {
-    return SqlV1ToolToJSONTyped(json, false);
+  return SqlV1ToolToJSONTyped(json, false);
 }
 
-export function SqlV1ToolToJSONTyped(value?: Omit<SqlV1Tool, 'api_version'|'kind'> | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1ToolToJSONTyped(
+  value?: Omit<SqlV1Tool, "api_version" | "kind"> | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'metadata': SqlV1ToolMetadataToJSON(value['metadata']),
-        'name': value['name'],
-        'spec': SqlV1ToolSpecToJSON(value['spec']),
-        'status': SqlV1ToolStatusToJSON(value['status']),
-    };
+  return {
+    metadata: SqlV1ToolMetadataToJSON(value["metadata"]),
+    name: value["name"],
+    spec: SqlV1ToolSpecToJSON(value["spec"]),
+    status: SqlV1ToolStatusToJSON(value["status"]),
+  };
 }
-

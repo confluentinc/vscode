@@ -12,21 +12,21 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { SqlV1ToolListDataInner } from './SqlV1ToolListDataInner';
+import { mapValues } from "../runtime";
+import type { SqlV1ToolListDataInner } from "./SqlV1ToolListDataInner";
 import {
-    SqlV1ToolListDataInnerFromJSON,
-    SqlV1ToolListDataInnerFromJSONTyped,
-    SqlV1ToolListDataInnerToJSON,
-    SqlV1ToolListDataInnerToJSONTyped,
-} from './SqlV1ToolListDataInner';
-import type { SqlV1ToolListMetadata } from './SqlV1ToolListMetadata';
+  SqlV1ToolListDataInnerFromJSON,
+  SqlV1ToolListDataInnerFromJSONTyped,
+  SqlV1ToolListDataInnerToJSON,
+  SqlV1ToolListDataInnerToJSONTyped,
+} from "./SqlV1ToolListDataInner";
+import type { SqlV1ToolListMetadata } from "./SqlV1ToolListMetadata";
 import {
-    SqlV1ToolListMetadataFromJSON,
-    SqlV1ToolListMetadataFromJSONTyped,
-    SqlV1ToolListMetadataToJSON,
-    SqlV1ToolListMetadataToJSONTyped,
-} from './SqlV1ToolListMetadata';
+  SqlV1ToolListMetadataFromJSON,
+  SqlV1ToolListMetadataFromJSONTyped,
+  SqlV1ToolListMetadataToJSON,
+  SqlV1ToolListMetadataToJSONTyped,
+} from "./SqlV1ToolListMetadata";
 
 /**
  * `Tool` models a reusable tool resource backed by a connection that can be referenced
@@ -38,91 +38,90 @@ import {
  * @interface SqlV1ToolList
  */
 export interface SqlV1ToolList {
-    /**
-     * APIVersion defines the schema version of this representation of a resource.
-     * @type {string}
-     * @memberof SqlV1ToolList
-     */
-    api_version: SqlV1ToolListApiVersionEnum;
-    /**
-     * Kind defines the object this REST resource represents.
-     * @type {string}
-     * @memberof SqlV1ToolList
-     */
-    kind: SqlV1ToolListKindEnum;
-    /**
-     * 
-     * @type {SqlV1ToolListMetadata}
-     * @memberof SqlV1ToolList
-     */
-    metadata: SqlV1ToolListMetadata;
-    /**
-     * A data property that contains an array of resource items. Each entry in the array is a separate resource.
-     * @type {Set<SqlV1ToolListDataInner>}
-     * @memberof SqlV1ToolList
-     */
-    data: Set<SqlV1ToolListDataInner>;
+  /**
+   * APIVersion defines the schema version of this representation of a resource.
+   * @type {string}
+   * @memberof SqlV1ToolList
+   */
+  api_version: SqlV1ToolListApiVersionEnum;
+  /**
+   * Kind defines the object this REST resource represents.
+   * @type {string}
+   * @memberof SqlV1ToolList
+   */
+  kind: SqlV1ToolListKindEnum;
+  /**
+   *
+   * @type {SqlV1ToolListMetadata}
+   * @memberof SqlV1ToolList
+   */
+  metadata: SqlV1ToolListMetadata;
+  /**
+   * A data property that contains an array of resource items. Each entry in the array is a separate resource.
+   * @type {Set<SqlV1ToolListDataInner>}
+   * @memberof SqlV1ToolList
+   */
+  data: Set<SqlV1ToolListDataInner>;
 }
 
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1ToolListApiVersionEnum {
-    SqlV1 = 'sql/v1'
+  SqlV1 = "sql/v1",
 }
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1ToolListKindEnum {
-    ToolList = 'ToolList'
+  ToolList = "ToolList",
 }
-
 
 /**
  * Check if a given object implements the SqlV1ToolList interface.
  */
 export function instanceOfSqlV1ToolList(value: object): value is SqlV1ToolList {
-    if (!('api_version' in value) || value['api_version'] === undefined) return false;
-    if (!('kind' in value) || value['kind'] === undefined) return false;
-    if (!('metadata' in value) || value['metadata'] === undefined) return false;
-    if (!('data' in value) || value['data'] === undefined) return false;
-    return true;
+  if (!("api_version" in value) || value["api_version"] === undefined) return false;
+  if (!("kind" in value) || value["kind"] === undefined) return false;
+  if (!("metadata" in value) || value["metadata"] === undefined) return false;
+  if (!("data" in value) || value["data"] === undefined) return false;
+  return true;
 }
 
 export function SqlV1ToolListFromJSON(json: any): SqlV1ToolList {
-    return SqlV1ToolListFromJSONTyped(json, false);
+  return SqlV1ToolListFromJSONTyped(json, false);
 }
 
 export function SqlV1ToolListFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1ToolList {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'api_version': json['api_version'],
-        'kind': json['kind'],
-        'metadata': SqlV1ToolListMetadataFromJSON(json['metadata']),
-        'data': (new Set((json['data'] as Array<any>).map(SqlV1ToolListDataInnerFromJSON))),
-    };
+  if (json == null) {
+    return json;
+  }
+  return {
+    api_version: json["api_version"],
+    kind: json["kind"],
+    metadata: SqlV1ToolListMetadataFromJSON(json["metadata"]),
+    data: new Set((json["data"] as Array<any>).map(SqlV1ToolListDataInnerFromJSON)),
+  };
 }
 
 export function SqlV1ToolListToJSON(json: any): SqlV1ToolList {
-    return SqlV1ToolListToJSONTyped(json, false);
+  return SqlV1ToolListToJSONTyped(json, false);
 }
 
-export function SqlV1ToolListToJSONTyped(value?: SqlV1ToolList | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1ToolListToJSONTyped(
+  value?: SqlV1ToolList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'api_version': value['api_version'],
-        'kind': value['kind'],
-        'metadata': SqlV1ToolListMetadataToJSON(value['metadata']),
-        'data': (Array.from(value['data'] as Set<any>).map(SqlV1ToolListDataInnerToJSON)),
-    };
+  return {
+    api_version: value["api_version"],
+    kind: value["kind"],
+    metadata: SqlV1ToolListMetadataToJSON(value["metadata"]),
+    data: Array.from(value["data"] as Set<any>).map(SqlV1ToolListDataInnerToJSON),
+  };
 }
-

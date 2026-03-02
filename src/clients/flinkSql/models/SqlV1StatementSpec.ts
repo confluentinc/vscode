@@ -12,97 +12,100 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
  * The specs of the Statement
  * @export
  * @interface SqlV1StatementSpec
  */
 export interface SqlV1StatementSpec {
-    /**
-     * The raw SQL text statement.
-     * @type {string}
-     * @memberof SqlV1StatementSpec
-     */
-    statement?: string;
-    /**
-     * A map (key-value pairs) of statement properties.
-     * @type {{ [key: string]: string; }}
-     * @memberof SqlV1StatementSpec
-     */
-    properties?: { [key: string]: string; };
-    /**
-     * The id associated with the compute pool in context. 
-     * If not specified, the statement will use the default compute pool. The default pool is automatically determined by the system.
-     * @type {string}
-     * @memberof SqlV1StatementSpec
-     */
-    compute_pool_id?: string;
-    /**
-     * The id of a principal this statement runs as.
-     * @type {string}
-     * @memberof SqlV1StatementSpec
-     */
-    principal?: string;
-    /**
-     * Indicates whether the statement should be stopped.
-     * @type {boolean}
-     * @memberof SqlV1StatementSpec
-     */
-    stopped?: boolean;
-    /**
-     * The execution mode of the statement.
-     * 
-     * Note - The attribute is in a [Early Access lifecycle](https://docs.confluent.io/cloud/current/api.html#section/Versioning/API-Lifecycle-Policy)
-     * 
-     * @type {string}
-     * @memberof SqlV1StatementSpec
-     */
-    readonly execution_mode?: string;
+  /**
+   * The raw SQL text statement.
+   * @type {string}
+   * @memberof SqlV1StatementSpec
+   */
+  statement?: string;
+  /**
+   * A map (key-value pairs) of statement properties.
+   * @type {{ [key: string]: string; }}
+   * @memberof SqlV1StatementSpec
+   */
+  properties?: { [key: string]: string };
+  /**
+   * The id associated with the compute pool in context.
+   * If not specified, the statement will use the default compute pool. The default pool is automatically determined by the system.
+   * @type {string}
+   * @memberof SqlV1StatementSpec
+   */
+  compute_pool_id?: string;
+  /**
+   * The id of a principal this statement runs as.
+   * @type {string}
+   * @memberof SqlV1StatementSpec
+   */
+  principal?: string;
+  /**
+   * Indicates whether the statement should be stopped.
+   * @type {boolean}
+   * @memberof SqlV1StatementSpec
+   */
+  stopped?: boolean;
+  /**
+   * The execution mode of the statement.
+   *
+   * Note - The attribute is in a [Early Access lifecycle](https://docs.confluent.io/cloud/current/api.html#section/Versioning/API-Lifecycle-Policy)
+   *
+   * @type {string}
+   * @memberof SqlV1StatementSpec
+   */
+  readonly execution_mode?: string;
 }
 
 /**
  * Check if a given object implements the SqlV1StatementSpec interface.
  */
 export function instanceOfSqlV1StatementSpec(value: object): value is SqlV1StatementSpec {
-    return true;
+  return true;
 }
 
 export function SqlV1StatementSpecFromJSON(json: any): SqlV1StatementSpec {
-    return SqlV1StatementSpecFromJSONTyped(json, false);
+  return SqlV1StatementSpecFromJSONTyped(json, false);
 }
 
-export function SqlV1StatementSpecFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1StatementSpec {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'statement': json['statement'] == null ? undefined : json['statement'],
-        'properties': json['properties'] == null ? undefined : json['properties'],
-        'compute_pool_id': json['compute_pool_id'] == null ? undefined : json['compute_pool_id'],
-        'principal': json['principal'] == null ? undefined : json['principal'],
-        'stopped': json['stopped'] == null ? undefined : json['stopped'],
-        'execution_mode': json['execution_mode'] == null ? undefined : json['execution_mode'],
-    };
+export function SqlV1StatementSpecFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1StatementSpec {
+  if (json == null) {
+    return json;
+  }
+  return {
+    statement: json["statement"] == null ? undefined : json["statement"],
+    properties: json["properties"] == null ? undefined : json["properties"],
+    compute_pool_id: json["compute_pool_id"] == null ? undefined : json["compute_pool_id"],
+    principal: json["principal"] == null ? undefined : json["principal"],
+    stopped: json["stopped"] == null ? undefined : json["stopped"],
+    execution_mode: json["execution_mode"] == null ? undefined : json["execution_mode"],
+  };
 }
 
 export function SqlV1StatementSpecToJSON(json: any): SqlV1StatementSpec {
-    return SqlV1StatementSpecToJSONTyped(json, false);
+  return SqlV1StatementSpecToJSONTyped(json, false);
 }
 
-export function SqlV1StatementSpecToJSONTyped(value?: Omit<SqlV1StatementSpec, 'execution_mode'> | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1StatementSpecToJSONTyped(
+  value?: Omit<SqlV1StatementSpec, "execution_mode"> | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'statement': value['statement'],
-        'properties': value['properties'],
-        'compute_pool_id': value['compute_pool_id'],
-        'principal': value['principal'],
-        'stopped': value['stopped'],
-    };
+  return {
+    statement: value["statement"],
+    properties: value["properties"],
+    compute_pool_id: value["compute_pool_id"],
+    principal: value["principal"],
+    stopped: value["stopped"],
+  };
 }
-

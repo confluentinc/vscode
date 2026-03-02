@@ -12,28 +12,28 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { SqlV1AgentMetadata } from './SqlV1AgentMetadata';
+import { mapValues } from "../runtime";
+import type { SqlV1AgentMetadata } from "./SqlV1AgentMetadata";
 import {
-    SqlV1AgentMetadataFromJSON,
-    SqlV1AgentMetadataFromJSONTyped,
-    SqlV1AgentMetadataToJSON,
-    SqlV1AgentMetadataToJSONTyped,
-} from './SqlV1AgentMetadata';
-import type { SqlV1AgentStatus } from './SqlV1AgentStatus';
+  SqlV1AgentMetadataFromJSON,
+  SqlV1AgentMetadataFromJSONTyped,
+  SqlV1AgentMetadataToJSON,
+  SqlV1AgentMetadataToJSONTyped,
+} from "./SqlV1AgentMetadata";
+import type { SqlV1AgentStatus } from "./SqlV1AgentStatus";
 import {
-    SqlV1AgentStatusFromJSON,
-    SqlV1AgentStatusFromJSONTyped,
-    SqlV1AgentStatusToJSON,
-    SqlV1AgentStatusToJSONTyped,
-} from './SqlV1AgentStatus';
-import type { SqlV1AgentSpec } from './SqlV1AgentSpec';
+  SqlV1AgentStatusFromJSON,
+  SqlV1AgentStatusFromJSONTyped,
+  SqlV1AgentStatusToJSON,
+  SqlV1AgentStatusToJSONTyped,
+} from "./SqlV1AgentStatus";
+import type { SqlV1AgentSpec } from "./SqlV1AgentSpec";
 import {
-    SqlV1AgentSpecFromJSON,
-    SqlV1AgentSpecFromJSONTyped,
-    SqlV1AgentSpecToJSON,
-    SqlV1AgentSpecToJSONTyped,
-} from './SqlV1AgentSpec';
+  SqlV1AgentSpecFromJSON,
+  SqlV1AgentSpecFromJSONTyped,
+  SqlV1AgentSpecToJSON,
+  SqlV1AgentSpecToJSONTyped,
+} from "./SqlV1AgentSpec";
 
 /**
  * Represents an Agent resource.
@@ -41,121 +41,123 @@ import {
  * @interface SqlV1Agent
  */
 export interface SqlV1Agent {
-    /**
-     * APIVersion defines the schema version of this representation of a resource.
-     * @type {string}
-     * @memberof SqlV1Agent
-     */
-    readonly api_version: SqlV1AgentApiVersionEnum;
-    /**
-     * Kind defines the object this REST resource represents.
-     * @type {string}
-     * @memberof SqlV1Agent
-     */
-    readonly kind: SqlV1AgentKindEnum;
-    /**
-     * 
-     * @type {SqlV1AgentMetadata}
-     * @memberof SqlV1Agent
-     */
-    metadata: SqlV1AgentMetadata;
-    /**
-     * The user-provided name of the agent, unique within this environment.
-     * @type {string}
-     * @memberof SqlV1Agent
-     */
-    name: string;
-    /**
-     * The unique identifier for the organization.
-     * @type {string}
-     * @memberof SqlV1Agent
-     */
-    readonly organization_id: string;
-    /**
-     * The unique identifier for the environment.
-     * @type {string}
-     * @memberof SqlV1Agent
-     */
-    readonly environment_id: string;
-    /**
-     * 
-     * @type {SqlV1AgentSpec}
-     * @memberof SqlV1Agent
-     */
-    spec: SqlV1AgentSpec;
-    /**
-     * 
-     * @type {SqlV1AgentStatus}
-     * @memberof SqlV1Agent
-     */
-    readonly status?: SqlV1AgentStatus;
+  /**
+   * APIVersion defines the schema version of this representation of a resource.
+   * @type {string}
+   * @memberof SqlV1Agent
+   */
+  readonly api_version: SqlV1AgentApiVersionEnum;
+  /**
+   * Kind defines the object this REST resource represents.
+   * @type {string}
+   * @memberof SqlV1Agent
+   */
+  readonly kind: SqlV1AgentKindEnum;
+  /**
+   *
+   * @type {SqlV1AgentMetadata}
+   * @memberof SqlV1Agent
+   */
+  metadata: SqlV1AgentMetadata;
+  /**
+   * The user-provided name of the agent, unique within this environment.
+   * @type {string}
+   * @memberof SqlV1Agent
+   */
+  name: string;
+  /**
+   * The unique identifier for the organization.
+   * @type {string}
+   * @memberof SqlV1Agent
+   */
+  readonly organization_id: string;
+  /**
+   * The unique identifier for the environment.
+   * @type {string}
+   * @memberof SqlV1Agent
+   */
+  readonly environment_id: string;
+  /**
+   *
+   * @type {SqlV1AgentSpec}
+   * @memberof SqlV1Agent
+   */
+  spec: SqlV1AgentSpec;
+  /**
+   *
+   * @type {SqlV1AgentStatus}
+   * @memberof SqlV1Agent
+   */
+  readonly status?: SqlV1AgentStatus;
 }
 
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1AgentApiVersionEnum {
-    SqlV1 = 'sql/v1'
+  SqlV1 = "sql/v1",
 }
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1AgentKindEnum {
-    Agent = 'Agent'
+  Agent = "Agent",
 }
-
 
 /**
  * Check if a given object implements the SqlV1Agent interface.
  */
 export function instanceOfSqlV1Agent(value: object): value is SqlV1Agent {
-    if (!('api_version' in value) || value['api_version'] === undefined) return false;
-    if (!('kind' in value) || value['kind'] === undefined) return false;
-    if (!('metadata' in value) || value['metadata'] === undefined) return false;
-    if (!('name' in value) || value['name'] === undefined) return false;
-    if (!('organization_id' in value) || value['organization_id'] === undefined) return false;
-    if (!('environment_id' in value) || value['environment_id'] === undefined) return false;
-    if (!('spec' in value) || value['spec'] === undefined) return false;
-    return true;
+  if (!("api_version" in value) || value["api_version"] === undefined) return false;
+  if (!("kind" in value) || value["kind"] === undefined) return false;
+  if (!("metadata" in value) || value["metadata"] === undefined) return false;
+  if (!("name" in value) || value["name"] === undefined) return false;
+  if (!("organization_id" in value) || value["organization_id"] === undefined) return false;
+  if (!("environment_id" in value) || value["environment_id"] === undefined) return false;
+  if (!("spec" in value) || value["spec"] === undefined) return false;
+  return true;
 }
 
 export function SqlV1AgentFromJSON(json: any): SqlV1Agent {
-    return SqlV1AgentFromJSONTyped(json, false);
+  return SqlV1AgentFromJSONTyped(json, false);
 }
 
 export function SqlV1AgentFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1Agent {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'api_version': json['api_version'],
-        'kind': json['kind'],
-        'metadata': SqlV1AgentMetadataFromJSON(json['metadata']),
-        'name': json['name'],
-        'organization_id': json['organization_id'],
-        'environment_id': json['environment_id'],
-        'spec': SqlV1AgentSpecFromJSON(json['spec']),
-        'status': json['status'] == null ? undefined : SqlV1AgentStatusFromJSON(json['status']),
-    };
+  if (json == null) {
+    return json;
+  }
+  return {
+    api_version: json["api_version"],
+    kind: json["kind"],
+    metadata: SqlV1AgentMetadataFromJSON(json["metadata"]),
+    name: json["name"],
+    organization_id: json["organization_id"],
+    environment_id: json["environment_id"],
+    spec: SqlV1AgentSpecFromJSON(json["spec"]),
+    status: json["status"] == null ? undefined : SqlV1AgentStatusFromJSON(json["status"]),
+  };
 }
 
 export function SqlV1AgentToJSON(json: any): SqlV1Agent {
-    return SqlV1AgentToJSONTyped(json, false);
+  return SqlV1AgentToJSONTyped(json, false);
 }
 
-export function SqlV1AgentToJSONTyped(value?: Omit<SqlV1Agent, 'api_version'|'kind'|'organization_id'|'environment_id'|'status'> | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1AgentToJSONTyped(
+  value?: Omit<
+    SqlV1Agent,
+    "api_version" | "kind" | "organization_id" | "environment_id" | "status"
+  > | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'metadata': SqlV1AgentMetadataToJSON(value['metadata']),
-        'name': value['name'],
-        'spec': SqlV1AgentSpecToJSON(value['spec']),
-    };
+  return {
+    metadata: SqlV1AgentMetadataToJSON(value["metadata"]),
+    name: value["name"],
+    spec: SqlV1AgentSpecToJSON(value["spec"]),
+  };
 }
-

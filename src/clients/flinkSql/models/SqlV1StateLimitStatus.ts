@@ -12,76 +12,78 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
  * State limit status for this statement.
  * @export
  * @interface SqlV1StateLimitStatus
  */
 export interface SqlV1StateLimitStatus {
-    /**
-     * OK: The statement is within state limits.
-     * 
-     * APPROACHING_SOFT_LIMIT: The statement is approaching soft state limits.
-     * 
-     * EXCEEDING_SOFT_LIMIT: The statement is exceeding soft state limits.
-     * 
-     * APPROACHING_HARD_LIMIT: The statement is approaching hard state limits.
-     * 
-     * EXCEEDING_HARD_LIMIT: The statement is exceeding hard state limits.
-     * 
-     * @type {string}
-     * @memberof SqlV1StateLimitStatus
-     */
-    readonly state_limit_state?: string;
-    /**
-     * The last time the state limit status was updated.
-     * @type {Date}
-     * @memberof SqlV1StateLimitStatus
-     */
-    readonly last_updated?: Date;
-    /**
-     * Details about why state limit status is in its current state.
-     * @type {string}
-     * @memberof SqlV1StateLimitStatus
-     */
-    readonly detail?: string;
+  /**
+   * OK: The statement is within state limits.
+   *
+   * APPROACHING_SOFT_LIMIT: The statement is approaching soft state limits.
+   *
+   * EXCEEDING_SOFT_LIMIT: The statement is exceeding soft state limits.
+   *
+   * APPROACHING_HARD_LIMIT: The statement is approaching hard state limits.
+   *
+   * EXCEEDING_HARD_LIMIT: The statement is exceeding hard state limits.
+   *
+   * @type {string}
+   * @memberof SqlV1StateLimitStatus
+   */
+  readonly state_limit_state?: string;
+  /**
+   * The last time the state limit status was updated.
+   * @type {Date}
+   * @memberof SqlV1StateLimitStatus
+   */
+  readonly last_updated?: Date;
+  /**
+   * Details about why state limit status is in its current state.
+   * @type {string}
+   * @memberof SqlV1StateLimitStatus
+   */
+  readonly detail?: string;
 }
 
 /**
  * Check if a given object implements the SqlV1StateLimitStatus interface.
  */
 export function instanceOfSqlV1StateLimitStatus(value: object): value is SqlV1StateLimitStatus {
-    return true;
+  return true;
 }
 
 export function SqlV1StateLimitStatusFromJSON(json: any): SqlV1StateLimitStatus {
-    return SqlV1StateLimitStatusFromJSONTyped(json, false);
+  return SqlV1StateLimitStatusFromJSONTyped(json, false);
 }
 
-export function SqlV1StateLimitStatusFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1StateLimitStatus {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'state_limit_state': json['state_limit_state'] == null ? undefined : json['state_limit_state'],
-        'last_updated': json['last_updated'] == null ? undefined : (new Date(json['last_updated'])),
-        'detail': json['detail'] == null ? undefined : json['detail'],
-    };
+export function SqlV1StateLimitStatusFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1StateLimitStatus {
+  if (json == null) {
+    return json;
+  }
+  return {
+    state_limit_state: json["state_limit_state"] == null ? undefined : json["state_limit_state"],
+    last_updated: json["last_updated"] == null ? undefined : new Date(json["last_updated"]),
+    detail: json["detail"] == null ? undefined : json["detail"],
+  };
 }
 
 export function SqlV1StateLimitStatusToJSON(json: any): SqlV1StateLimitStatus {
-    return SqlV1StateLimitStatusToJSONTyped(json, false);
+  return SqlV1StateLimitStatusToJSONTyped(json, false);
 }
 
-export function SqlV1StateLimitStatusToJSONTyped(value?: Omit<SqlV1StateLimitStatus, 'state_limit_state'|'last_updated'|'detail'> | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1StateLimitStatusToJSONTyped(
+  value?: Omit<SqlV1StateLimitStatus, "state_limit_state" | "last_updated" | "detail"> | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-    };
+  return {};
 }
-

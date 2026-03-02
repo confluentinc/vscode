@@ -12,88 +12,91 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
  * Represents a non-fatal issue encountered during statement processing.
  * @export
  * @interface SqlV1StatementWarning
  */
 export interface SqlV1StatementWarning {
-    /**
-     * Indicates the severity of the warning.
-     * 
-     * LOW: Indicates a low severity warning and for informing the user.
-     * 
-     * MODERATE: Indicates a moderate severity warning and may require user action. Could cause degraded statements if certain conditions apply.
-     * 
-     * CRITICAL: Indicates a critical severity warning and requires user action. It will cause degraded statements eventually.
-     * 
-     * @type {string}
-     * @memberof SqlV1StatementWarning
-     */
-    severity: string;
-    /**
-     * The timestamp when the warning was created. It is represented in RFC3339 format and is in UTC.
-     * @type {Date}
-     * @memberof SqlV1StatementWarning
-     */
-    readonly created_at: Date;
-    /**
-     * A machine-readable short, upper case summary delimited by underscore.
-     * @type {string}
-     * @memberof SqlV1StatementWarning
-     */
-    reason: string;
-    /**
-     * A human-readable string containing the description of the warning.
-     * @type {string}
-     * @memberof SqlV1StatementWarning
-     */
-    message: string;
+  /**
+   * Indicates the severity of the warning.
+   *
+   * LOW: Indicates a low severity warning and for informing the user.
+   *
+   * MODERATE: Indicates a moderate severity warning and may require user action. Could cause degraded statements if certain conditions apply.
+   *
+   * CRITICAL: Indicates a critical severity warning and requires user action. It will cause degraded statements eventually.
+   *
+   * @type {string}
+   * @memberof SqlV1StatementWarning
+   */
+  severity: string;
+  /**
+   * The timestamp when the warning was created. It is represented in RFC3339 format and is in UTC.
+   * @type {Date}
+   * @memberof SqlV1StatementWarning
+   */
+  readonly created_at: Date;
+  /**
+   * A machine-readable short, upper case summary delimited by underscore.
+   * @type {string}
+   * @memberof SqlV1StatementWarning
+   */
+  reason: string;
+  /**
+   * A human-readable string containing the description of the warning.
+   * @type {string}
+   * @memberof SqlV1StatementWarning
+   */
+  message: string;
 }
 
 /**
  * Check if a given object implements the SqlV1StatementWarning interface.
  */
 export function instanceOfSqlV1StatementWarning(value: object): value is SqlV1StatementWarning {
-    if (!('severity' in value) || value['severity'] === undefined) return false;
-    if (!('created_at' in value) || value['created_at'] === undefined) return false;
-    if (!('reason' in value) || value['reason'] === undefined) return false;
-    if (!('message' in value) || value['message'] === undefined) return false;
-    return true;
+  if (!("severity" in value) || value["severity"] === undefined) return false;
+  if (!("created_at" in value) || value["created_at"] === undefined) return false;
+  if (!("reason" in value) || value["reason"] === undefined) return false;
+  if (!("message" in value) || value["message"] === undefined) return false;
+  return true;
 }
 
 export function SqlV1StatementWarningFromJSON(json: any): SqlV1StatementWarning {
-    return SqlV1StatementWarningFromJSONTyped(json, false);
+  return SqlV1StatementWarningFromJSONTyped(json, false);
 }
 
-export function SqlV1StatementWarningFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1StatementWarning {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'severity': json['severity'],
-        'created_at': (new Date(json['created_at'])),
-        'reason': json['reason'],
-        'message': json['message'],
-    };
+export function SqlV1StatementWarningFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1StatementWarning {
+  if (json == null) {
+    return json;
+  }
+  return {
+    severity: json["severity"],
+    created_at: new Date(json["created_at"]),
+    reason: json["reason"],
+    message: json["message"],
+  };
 }
 
 export function SqlV1StatementWarningToJSON(json: any): SqlV1StatementWarning {
-    return SqlV1StatementWarningToJSONTyped(json, false);
+  return SqlV1StatementWarningToJSONTyped(json, false);
 }
 
-export function SqlV1StatementWarningToJSONTyped(value?: Omit<SqlV1StatementWarning, 'created_at'> | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1StatementWarningToJSONTyped(
+  value?: Omit<SqlV1StatementWarning, "created_at"> | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'severity': value['severity'],
-        'reason': value['reason'],
-        'message': value['message'],
-    };
+  return {
+    severity: value["severity"],
+    reason: value["reason"],
+    message: value["message"],
+  };
 }
-

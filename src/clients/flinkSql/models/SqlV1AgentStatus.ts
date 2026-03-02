@@ -12,59 +12,62 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
  * The status of the Agent.
  * @export
  * @interface SqlV1AgentStatus
  */
 export interface SqlV1AgentStatus {
-    /**
-     * Describes the status of the agent:
-     * 
-     * READY: The Agent is created;
-     * 
-     * RUNNING: The Agent is created and running in a query;
-     * 
-     * @type {string}
-     * @memberof SqlV1AgentStatus
-     */
-    phase?: string;
+  /**
+   * Describes the status of the agent:
+   *
+   * READY: The Agent is created;
+   *
+   * RUNNING: The Agent is created and running in a query;
+   *
+   * @type {string}
+   * @memberof SqlV1AgentStatus
+   */
+  phase?: string;
 }
 
 /**
  * Check if a given object implements the SqlV1AgentStatus interface.
  */
 export function instanceOfSqlV1AgentStatus(value: object): value is SqlV1AgentStatus {
-    return true;
+  return true;
 }
 
 export function SqlV1AgentStatusFromJSON(json: any): SqlV1AgentStatus {
-    return SqlV1AgentStatusFromJSONTyped(json, false);
+  return SqlV1AgentStatusFromJSONTyped(json, false);
 }
 
-export function SqlV1AgentStatusFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1AgentStatus {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'phase': json['phase'] == null ? undefined : json['phase'],
-    };
+export function SqlV1AgentStatusFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1AgentStatus {
+  if (json == null) {
+    return json;
+  }
+  return {
+    phase: json["phase"] == null ? undefined : json["phase"],
+  };
 }
 
 export function SqlV1AgentStatusToJSON(json: any): SqlV1AgentStatus {
-    return SqlV1AgentStatusToJSONTyped(json, false);
+  return SqlV1AgentStatusToJSONTyped(json, false);
 }
 
-export function SqlV1AgentStatusToJSONTyped(value?: SqlV1AgentStatus | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1AgentStatusToJSONTyped(
+  value?: SqlV1AgentStatus | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'phase': value['phase'],
-    };
+  return {
+    phase: value["phase"],
+  };
 }
-

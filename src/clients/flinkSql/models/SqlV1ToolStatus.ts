@@ -12,68 +12,70 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
  * The status of the Tool
  * @export
  * @interface SqlV1ToolStatus
  */
 export interface SqlV1ToolStatus {
-    /**
-     * Describes the status of the tool:
-     * 
-     * ACTIVE: The Tool is usable;
-     * 
-     * INACTIVE: The Tool is not currently active;
-     * 
-     * ERROR: The Tool encountered an error;
-     * 
-     * @type {string}
-     * @memberof SqlV1ToolStatus
-     */
-    readonly phase: string;
-    /**
-     * Details about why the tool transitioned into a given status.
-     * @type {string}
-     * @memberof SqlV1ToolStatus
-     */
-    readonly detail?: string;
+  /**
+   * Describes the status of the tool:
+   *
+   * ACTIVE: The Tool is usable;
+   *
+   * INACTIVE: The Tool is not currently active;
+   *
+   * ERROR: The Tool encountered an error;
+   *
+   * @type {string}
+   * @memberof SqlV1ToolStatus
+   */
+  readonly phase: string;
+  /**
+   * Details about why the tool transitioned into a given status.
+   * @type {string}
+   * @memberof SqlV1ToolStatus
+   */
+  readonly detail?: string;
 }
 
 /**
  * Check if a given object implements the SqlV1ToolStatus interface.
  */
 export function instanceOfSqlV1ToolStatus(value: object): value is SqlV1ToolStatus {
-    if (!('phase' in value) || value['phase'] === undefined) return false;
-    return true;
+  if (!("phase" in value) || value["phase"] === undefined) return false;
+  return true;
 }
 
 export function SqlV1ToolStatusFromJSON(json: any): SqlV1ToolStatus {
-    return SqlV1ToolStatusFromJSONTyped(json, false);
+  return SqlV1ToolStatusFromJSONTyped(json, false);
 }
 
-export function SqlV1ToolStatusFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1ToolStatus {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'phase': json['phase'],
-        'detail': json['detail'] == null ? undefined : json['detail'],
-    };
+export function SqlV1ToolStatusFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1ToolStatus {
+  if (json == null) {
+    return json;
+  }
+  return {
+    phase: json["phase"],
+    detail: json["detail"] == null ? undefined : json["detail"],
+  };
 }
 
 export function SqlV1ToolStatusToJSON(json: any): SqlV1ToolStatus {
-    return SqlV1ToolStatusToJSONTyped(json, false);
+  return SqlV1ToolStatusToJSONTyped(json, false);
 }
 
-export function SqlV1ToolStatusToJSONTyped(value?: Omit<SqlV1ToolStatus, 'phase'|'detail'> | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1ToolStatusToJSONTyped(
+  value?: Omit<SqlV1ToolStatus, "phase" | "detail"> | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-    };
+  return {};
 }
-

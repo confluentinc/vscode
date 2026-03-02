@@ -12,75 +12,83 @@
  * Do not edit the class manually.
  */
 
-import type { JsonPatchRequestAddReplace } from './JsonPatchRequestAddReplace';
+import type { JsonPatchRequestAddReplace } from "./JsonPatchRequestAddReplace";
 import {
-    instanceOfJsonPatchRequestAddReplace,
-    JsonPatchRequestAddReplaceFromJSON,
-    JsonPatchRequestAddReplaceFromJSONTyped,
-    JsonPatchRequestAddReplaceToJSON,
-} from './JsonPatchRequestAddReplace';
-import type { JsonPatchRequestMoveCopy } from './JsonPatchRequestMoveCopy';
+  instanceOfJsonPatchRequestAddReplace,
+  JsonPatchRequestAddReplaceFromJSON,
+  JsonPatchRequestAddReplaceFromJSONTyped,
+  JsonPatchRequestAddReplaceToJSON,
+} from "./JsonPatchRequestAddReplace";
+import type { JsonPatchRequestMoveCopy } from "./JsonPatchRequestMoveCopy";
 import {
-    instanceOfJsonPatchRequestMoveCopy,
-    JsonPatchRequestMoveCopyFromJSON,
-    JsonPatchRequestMoveCopyFromJSONTyped,
-    JsonPatchRequestMoveCopyToJSON,
-} from './JsonPatchRequestMoveCopy';
-import type { JsonPatchRequestRemove } from './JsonPatchRequestRemove';
+  instanceOfJsonPatchRequestMoveCopy,
+  JsonPatchRequestMoveCopyFromJSON,
+  JsonPatchRequestMoveCopyFromJSONTyped,
+  JsonPatchRequestMoveCopyToJSON,
+} from "./JsonPatchRequestMoveCopy";
+import type { JsonPatchRequestRemove } from "./JsonPatchRequestRemove";
 import {
-    instanceOfJsonPatchRequestRemove,
-    JsonPatchRequestRemoveFromJSON,
-    JsonPatchRequestRemoveFromJSONTyped,
-    JsonPatchRequestRemoveToJSON,
-} from './JsonPatchRequestRemove';
+  instanceOfJsonPatchRequestRemove,
+  JsonPatchRequestRemoveFromJSON,
+  JsonPatchRequestRemoveFromJSONTyped,
+  JsonPatchRequestRemoveToJSON,
+} from "./JsonPatchRequestRemove";
 
 /**
  * @type PatchRequestInner
- * 
+ *
  * @export
  */
-export type PatchRequestInner = JsonPatchRequestAddReplace | JsonPatchRequestMoveCopy | JsonPatchRequestRemove;
+export type PatchRequestInner =
+  | JsonPatchRequestAddReplace
+  | JsonPatchRequestMoveCopy
+  | JsonPatchRequestRemove;
 
 export function PatchRequestInnerFromJSON(json: any): PatchRequestInner {
-    return PatchRequestInnerFromJSONTyped(json, false);
+  return PatchRequestInnerFromJSONTyped(json, false);
 }
 
-export function PatchRequestInnerFromJSONTyped(json: any, ignoreDiscriminator: boolean): PatchRequestInner {
-    if (json == null) {
-        return json;
-    }
-    if (instanceOfJsonPatchRequestAddReplace(json)) {
-        return JsonPatchRequestAddReplaceFromJSONTyped(json, true);
-    }
-    if (instanceOfJsonPatchRequestMoveCopy(json)) {
-        return JsonPatchRequestMoveCopyFromJSONTyped(json, true);
-    }
-    if (instanceOfJsonPatchRequestRemove(json)) {
-        return JsonPatchRequestRemoveFromJSONTyped(json, true);
-    }
+export function PatchRequestInnerFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): PatchRequestInner {
+  if (json == null) {
+    return json;
+  }
+  if (instanceOfJsonPatchRequestAddReplace(json)) {
+    return JsonPatchRequestAddReplaceFromJSONTyped(json, true);
+  }
+  if (instanceOfJsonPatchRequestMoveCopy(json)) {
+    return JsonPatchRequestMoveCopyFromJSONTyped(json, true);
+  }
+  if (instanceOfJsonPatchRequestRemove(json)) {
+    return JsonPatchRequestRemoveFromJSONTyped(json, true);
+  }
 
-    return {} as any;
+  return {} as any;
 }
 
 export function PatchRequestInnerToJSON(json: any): any {
-    return PatchRequestInnerToJSONTyped(json, false);
+  return PatchRequestInnerToJSONTyped(json, false);
 }
 
-export function PatchRequestInnerToJSONTyped(value?: PatchRequestInner | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function PatchRequestInnerToJSONTyped(
+  value?: PatchRequestInner | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    if (instanceOfJsonPatchRequestAddReplace(value)) {
-        return JsonPatchRequestAddReplaceToJSON(value as JsonPatchRequestAddReplace);
-    }
-    if (instanceOfJsonPatchRequestMoveCopy(value)) {
-        return JsonPatchRequestMoveCopyToJSON(value as JsonPatchRequestMoveCopy);
-    }
-    if (instanceOfJsonPatchRequestRemove(value)) {
-        return JsonPatchRequestRemoveToJSON(value as JsonPatchRequestRemove);
-    }
+  if (instanceOfJsonPatchRequestAddReplace(value)) {
+    return JsonPatchRequestAddReplaceToJSON(value as JsonPatchRequestAddReplace);
+  }
+  if (instanceOfJsonPatchRequestMoveCopy(value)) {
+    return JsonPatchRequestMoveCopyToJSON(value as JsonPatchRequestMoveCopy);
+  }
+  if (instanceOfJsonPatchRequestRemove(value)) {
+    return JsonPatchRequestRemoveToJSON(value as JsonPatchRequestRemove);
+  }
 
-    return {};
+  return {};
 }
-

@@ -12,80 +12,83 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { DataType } from './DataType';
+import { mapValues } from "../runtime";
+import type { DataType } from "./DataType";
 import {
-    DataTypeFromJSON,
-    DataTypeFromJSONTyped,
-    DataTypeToJSON,
-    DataTypeToJSONTyped,
-} from './DataType';
+  DataTypeFromJSON,
+  DataTypeFromJSONTyped,
+  DataTypeToJSON,
+  DataTypeToJSONTyped,
+} from "./DataType";
 
 /**
- * 
+ *
  * @export
  * @interface SqlV1ColumnCommon
  */
 export interface SqlV1ColumnCommon {
-    /**
-     * The name of the column.
-     * @type {string}
-     * @memberof SqlV1ColumnCommon
-     */
-    name: string;
-    /**
-     * 
-     * @type {DataType}
-     * @memberof SqlV1ColumnCommon
-     */
-    type: DataType;
-    /**
-     * A comment or description for the column.
-     * @type {string}
-     * @memberof SqlV1ColumnCommon
-     */
-    comment?: string;
+  /**
+   * The name of the column.
+   * @type {string}
+   * @memberof SqlV1ColumnCommon
+   */
+  name: string;
+  /**
+   *
+   * @type {DataType}
+   * @memberof SqlV1ColumnCommon
+   */
+  type: DataType;
+  /**
+   * A comment or description for the column.
+   * @type {string}
+   * @memberof SqlV1ColumnCommon
+   */
+  comment?: string;
 }
 
 /**
  * Check if a given object implements the SqlV1ColumnCommon interface.
  */
 export function instanceOfSqlV1ColumnCommon(value: object): value is SqlV1ColumnCommon {
-    if (!('name' in value) || value['name'] === undefined) return false;
-    if (!('type' in value) || value['type'] === undefined) return false;
-    return true;
+  if (!("name" in value) || value["name"] === undefined) return false;
+  if (!("type" in value) || value["type"] === undefined) return false;
+  return true;
 }
 
 export function SqlV1ColumnCommonFromJSON(json: any): SqlV1ColumnCommon {
-    return SqlV1ColumnCommonFromJSONTyped(json, false);
+  return SqlV1ColumnCommonFromJSONTyped(json, false);
 }
 
-export function SqlV1ColumnCommonFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1ColumnCommon {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'name': json['name'],
-        'type': DataTypeFromJSON(json['type']),
-        'comment': json['comment'] == null ? undefined : json['comment'],
-    };
+export function SqlV1ColumnCommonFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1ColumnCommon {
+  if (json == null) {
+    return json;
+  }
+  return {
+    name: json["name"],
+    type: DataTypeFromJSON(json["type"]),
+    comment: json["comment"] == null ? undefined : json["comment"],
+  };
 }
 
 export function SqlV1ColumnCommonToJSON(json: any): SqlV1ColumnCommon {
-    return SqlV1ColumnCommonToJSONTyped(json, false);
+  return SqlV1ColumnCommonToJSONTyped(json, false);
 }
 
-export function SqlV1ColumnCommonToJSONTyped(value?: SqlV1ColumnCommon | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1ColumnCommonToJSONTyped(
+  value?: SqlV1ColumnCommon | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'name': value['name'],
-        'type': DataTypeToJSON(value['type']),
-        'comment': value['comment'],
-    };
+  return {
+    name: value["name"],
+    type: DataTypeToJSON(value["type"]),
+    comment: value["comment"],
+  };
 }
-

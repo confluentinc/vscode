@@ -12,78 +12,87 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues } from "../runtime";
 /**
  * A constraint on the materialized table.
  * @export
  * @interface SqlV1MaterializedTableConstraint
  */
 export interface SqlV1MaterializedTableConstraint {
-    /**
-     * 
-     * @type {string}
-     * @memberof SqlV1MaterializedTableConstraint
-     */
-    name?: string;
-    /**
-     * The type of constraint.
-     * @type {string}
-     * @memberof SqlV1MaterializedTableConstraint
-     */
-    kind?: string;
-    /**
-     * 
-     * @type {Array<string>}
-     * @memberof SqlV1MaterializedTableConstraint
-     */
-    column_names?: Array<string>;
-    /**
-     * Whether the constraint is enforced.
-     * @type {boolean}
-     * @memberof SqlV1MaterializedTableConstraint
-     */
-    enforced?: boolean;
+  /**
+   *
+   * @type {string}
+   * @memberof SqlV1MaterializedTableConstraint
+   */
+  name?: string;
+  /**
+   * The type of constraint.
+   * @type {string}
+   * @memberof SqlV1MaterializedTableConstraint
+   */
+  kind?: string;
+  /**
+   *
+   * @type {Array<string>}
+   * @memberof SqlV1MaterializedTableConstraint
+   */
+  column_names?: Array<string>;
+  /**
+   * Whether the constraint is enforced.
+   * @type {boolean}
+   * @memberof SqlV1MaterializedTableConstraint
+   */
+  enforced?: boolean;
 }
 
 /**
  * Check if a given object implements the SqlV1MaterializedTableConstraint interface.
  */
-export function instanceOfSqlV1MaterializedTableConstraint(value: object): value is SqlV1MaterializedTableConstraint {
-    return true;
+export function instanceOfSqlV1MaterializedTableConstraint(
+  value: object,
+): value is SqlV1MaterializedTableConstraint {
+  return true;
 }
 
-export function SqlV1MaterializedTableConstraintFromJSON(json: any): SqlV1MaterializedTableConstraint {
-    return SqlV1MaterializedTableConstraintFromJSONTyped(json, false);
+export function SqlV1MaterializedTableConstraintFromJSON(
+  json: any,
+): SqlV1MaterializedTableConstraint {
+  return SqlV1MaterializedTableConstraintFromJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableConstraintFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1MaterializedTableConstraint {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'name': json['name'] == null ? undefined : json['name'],
-        'kind': json['kind'] == null ? undefined : json['kind'],
-        'column_names': json['column_names'] == null ? undefined : json['column_names'],
-        'enforced': json['enforced'] == null ? undefined : json['enforced'],
-    };
+export function SqlV1MaterializedTableConstraintFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1MaterializedTableConstraint {
+  if (json == null) {
+    return json;
+  }
+  return {
+    name: json["name"] == null ? undefined : json["name"],
+    kind: json["kind"] == null ? undefined : json["kind"],
+    column_names: json["column_names"] == null ? undefined : json["column_names"],
+    enforced: json["enforced"] == null ? undefined : json["enforced"],
+  };
 }
 
-export function SqlV1MaterializedTableConstraintToJSON(json: any): SqlV1MaterializedTableConstraint {
-    return SqlV1MaterializedTableConstraintToJSONTyped(json, false);
+export function SqlV1MaterializedTableConstraintToJSON(
+  json: any,
+): SqlV1MaterializedTableConstraint {
+  return SqlV1MaterializedTableConstraintToJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableConstraintToJSONTyped(value?: SqlV1MaterializedTableConstraint | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1MaterializedTableConstraintToJSONTyped(
+  value?: SqlV1MaterializedTableConstraint | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'name': value['name'],
-        'kind': value['kind'],
-        'column_names': value['column_names'],
-        'enforced': value['enforced'],
-    };
+  return {
+    name: value["name"],
+    kind: value["kind"],
+    column_names: value["column_names"],
+    enforced: value["enforced"],
+  };
 }
-

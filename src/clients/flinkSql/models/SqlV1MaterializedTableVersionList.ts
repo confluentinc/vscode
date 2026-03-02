@@ -12,21 +12,21 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { SqlV1MaterializedTableVersion } from './SqlV1MaterializedTableVersion';
+import { mapValues } from "../runtime";
+import type { SqlV1MaterializedTableVersion } from "./SqlV1MaterializedTableVersion";
 import {
-    SqlV1MaterializedTableVersionFromJSON,
-    SqlV1MaterializedTableVersionFromJSONTyped,
-    SqlV1MaterializedTableVersionToJSON,
-    SqlV1MaterializedTableVersionToJSONTyped,
-} from './SqlV1MaterializedTableVersion';
-import type { ListMeta } from './ListMeta';
+  SqlV1MaterializedTableVersionFromJSON,
+  SqlV1MaterializedTableVersionFromJSONTyped,
+  SqlV1MaterializedTableVersionToJSON,
+  SqlV1MaterializedTableVersionToJSONTyped,
+} from "./SqlV1MaterializedTableVersion";
+import type { ListMeta } from "./ListMeta";
 import {
-    ListMetaFromJSON,
-    ListMetaFromJSONTyped,
-    ListMetaToJSON,
-    ListMetaToJSONTyped,
-} from './ListMeta';
+  ListMetaFromJSON,
+  ListMetaFromJSONTyped,
+  ListMetaToJSON,
+  ListMetaToJSONTyped,
+} from "./ListMeta";
 
 /**
  * A list of Materialized Table Version resources.
@@ -34,89 +34,97 @@ import {
  * @interface SqlV1MaterializedTableVersionList
  */
 export interface SqlV1MaterializedTableVersionList {
-    /**
-     * 
-     * @type {string}
-     * @memberof SqlV1MaterializedTableVersionList
-     */
-    readonly api_version: SqlV1MaterializedTableVersionListApiVersionEnum;
-    /**
-     * 
-     * @type {string}
-     * @memberof SqlV1MaterializedTableVersionList
-     */
-    readonly kind: SqlV1MaterializedTableVersionListKindEnum;
-    /**
-     * 
-     * @type {ListMeta}
-     * @memberof SqlV1MaterializedTableVersionList
-     */
-    metadata: ListMeta;
-    /**
-     * A data property that contains an array of resource items. Each entry in the array is a separate resource.
-     * @type {Set<SqlV1MaterializedTableVersion>}
-     * @memberof SqlV1MaterializedTableVersionList
-     */
-    data: Set<SqlV1MaterializedTableVersion>;
+  /**
+   *
+   * @type {string}
+   * @memberof SqlV1MaterializedTableVersionList
+   */
+  readonly api_version: SqlV1MaterializedTableVersionListApiVersionEnum;
+  /**
+   *
+   * @type {string}
+   * @memberof SqlV1MaterializedTableVersionList
+   */
+  readonly kind: SqlV1MaterializedTableVersionListKindEnum;
+  /**
+   *
+   * @type {ListMeta}
+   * @memberof SqlV1MaterializedTableVersionList
+   */
+  metadata: ListMeta;
+  /**
+   * A data property that contains an array of resource items. Each entry in the array is a separate resource.
+   * @type {Set<SqlV1MaterializedTableVersion>}
+   * @memberof SqlV1MaterializedTableVersionList
+   */
+  data: Set<SqlV1MaterializedTableVersion>;
 }
 
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1MaterializedTableVersionListApiVersionEnum {
-    SqlV1 = 'sql/v1'
+  SqlV1 = "sql/v1",
 }
 /**
-* @export
-* @enum {string}
-*/
+ * @export
+ * @enum {string}
+ */
 export enum SqlV1MaterializedTableVersionListKindEnum {
-    MaterializedTableVersionList = 'MaterializedTableVersionList'
+  MaterializedTableVersionList = "MaterializedTableVersionList",
 }
-
 
 /**
  * Check if a given object implements the SqlV1MaterializedTableVersionList interface.
  */
-export function instanceOfSqlV1MaterializedTableVersionList(value: object): value is SqlV1MaterializedTableVersionList {
-    if (!('api_version' in value) || value['api_version'] === undefined) return false;
-    if (!('kind' in value) || value['kind'] === undefined) return false;
-    if (!('metadata' in value) || value['metadata'] === undefined) return false;
-    if (!('data' in value) || value['data'] === undefined) return false;
-    return true;
+export function instanceOfSqlV1MaterializedTableVersionList(
+  value: object,
+): value is SqlV1MaterializedTableVersionList {
+  if (!("api_version" in value) || value["api_version"] === undefined) return false;
+  if (!("kind" in value) || value["kind"] === undefined) return false;
+  if (!("metadata" in value) || value["metadata"] === undefined) return false;
+  if (!("data" in value) || value["data"] === undefined) return false;
+  return true;
 }
 
-export function SqlV1MaterializedTableVersionListFromJSON(json: any): SqlV1MaterializedTableVersionList {
-    return SqlV1MaterializedTableVersionListFromJSONTyped(json, false);
+export function SqlV1MaterializedTableVersionListFromJSON(
+  json: any,
+): SqlV1MaterializedTableVersionList {
+  return SqlV1MaterializedTableVersionListFromJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableVersionListFromJSONTyped(json: any, ignoreDiscriminator: boolean): SqlV1MaterializedTableVersionList {
-    if (json == null) {
-        return json;
-    }
-    return {
-        
-        'api_version': json['api_version'],
-        'kind': json['kind'],
-        'metadata': ListMetaFromJSON(json['metadata']),
-        'data': (new Set((json['data'] as Array<any>).map(SqlV1MaterializedTableVersionFromJSON))),
-    };
+export function SqlV1MaterializedTableVersionListFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): SqlV1MaterializedTableVersionList {
+  if (json == null) {
+    return json;
+  }
+  return {
+    api_version: json["api_version"],
+    kind: json["kind"],
+    metadata: ListMetaFromJSON(json["metadata"]),
+    data: new Set((json["data"] as Array<any>).map(SqlV1MaterializedTableVersionFromJSON)),
+  };
 }
 
-export function SqlV1MaterializedTableVersionListToJSON(json: any): SqlV1MaterializedTableVersionList {
-    return SqlV1MaterializedTableVersionListToJSONTyped(json, false);
+export function SqlV1MaterializedTableVersionListToJSON(
+  json: any,
+): SqlV1MaterializedTableVersionList {
+  return SqlV1MaterializedTableVersionListToJSONTyped(json, false);
 }
 
-export function SqlV1MaterializedTableVersionListToJSONTyped(value?: Omit<SqlV1MaterializedTableVersionList, 'api_version'|'kind'> | null, ignoreDiscriminator: boolean = false): any {
-    if (value == null) {
-        return value;
-    }
+export function SqlV1MaterializedTableVersionListToJSONTyped(
+  value?: Omit<SqlV1MaterializedTableVersionList, "api_version" | "kind"> | null,
+  ignoreDiscriminator: boolean = false,
+): any {
+  if (value == null) {
+    return value;
+  }
 
-    return {
-        
-        'metadata': ListMetaToJSON(value['metadata']),
-        'data': (Array.from(value['data'] as Set<any>).map(SqlV1MaterializedTableVersionToJSON)),
-    };
+  return {
+    metadata: ListMetaToJSON(value["metadata"]),
+    data: Array.from(value["data"] as Set<any>).map(SqlV1MaterializedTableVersionToJSON),
+  };
 }
-
