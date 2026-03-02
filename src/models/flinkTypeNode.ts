@@ -32,9 +32,6 @@ export class FlinkTypeNode implements IResourceBase {
   /** If this node is nested within another FlinkTypeNode, reference to the parent */
   readonly parentNode: FlinkTypeNode | null;
 
-  /** Nesting depth (0 = direct child of column, 1+ = nested within other nodes) */
-  readonly depth: number;
-
   // IResourceBase implementation - all FlinkTypeNodes belong to CCloud
   get connectionId(): ConnectionId {
     return CCLOUD_CONNECTION_ID;
@@ -51,18 +48,15 @@ export class FlinkTypeNode implements IResourceBase {
    * @param props.parsedType The parsed FlinkType this node represents
    * @param props.parentColumn Optional parent FlinkRelationColumn (if direct child of column)
    * @param props.parentNode Optional parent FlinkTypeNode (if nested)
-   * @param props.depth Optional nesting depth (defaults to 0)
    */
   constructor(props: {
     parsedType: FlinkType;
     parentColumn?: FlinkRelationColumn;
     parentNode?: FlinkTypeNode;
-    depth?: number;
   }) {
     this.parsedType = props.parsedType;
     this.parentColumn = props.parentColumn ?? null;
     this.parentNode = props.parentNode ?? null;
-    this.depth = props.depth ?? 0;
   }
 
   /**
@@ -255,7 +249,6 @@ export class FlinkTypeNode implements IResourceBase {
             parsedType: member,
             parentNode: this,
             parentColumn: this.parentColumn ?? undefined,
-            depth: this.depth + 1,
           }),
       );
     }
@@ -267,7 +260,6 @@ export class FlinkTypeNode implements IResourceBase {
           parsedType: member,
           parentNode: this,
           parentColumn: this.parentColumn ?? undefined,
-          depth: this.depth + 1,
         }),
     );
   }

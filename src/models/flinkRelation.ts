@@ -187,7 +187,6 @@ export class FlinkRelationColumn {
       const containerNode = new FlinkTypeNode({
         parsedType: parsed,
         parentColumn: this,
-        depth: 0,
       });
 
       // Return the container's children (which skips the intermediate node)
@@ -198,7 +197,6 @@ export class FlinkRelationColumn {
             parsedType: member,
             parentNode: containerNode,
             parentColumn: this,
-            depth: 1,
           }),
       );
     }
@@ -209,7 +207,6 @@ export class FlinkRelationColumn {
         new FlinkTypeNode({
           parsedType: member,
           parentColumn: this,
-          depth: 0,
         }),
     );
   }

@@ -37,7 +37,6 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(node.parsedType, parsed);
       assert.strictEqual(node.parentColumn, null);
       assert.strictEqual(node.parentNode, null);
-      assert.strictEqual(node.depth, 0);
     });
 
     it("creates node with parentColumn", () => {
@@ -48,7 +47,7 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(node.parentColumn, column);
     });
 
-    it("creates node with parentNode and depth", () => {
+    it("creates node with parentNode", () => {
       const parsed1 = parseFlinkType("INT");
       const node1 = new FlinkTypeNode({ parsedType: parsed1 });
 
@@ -56,11 +55,9 @@ describe("FlinkTypeNode", () => {
       const node2 = new FlinkTypeNode({
         parsedType: parsed2,
         parentNode: node1,
-        depth: 1,
       });
 
       assert.strictEqual(node2.parentNode, node1);
-      assert.strictEqual(node2.depth, 1);
     });
   });
 
@@ -245,7 +242,6 @@ describe("FlinkTypeNode", () => {
       const children = node.getChildren();
       assert.strictEqual(children[0].parentNode, node);
       assert.strictEqual(children[0].parentColumn, column);
-      assert.strictEqual(children[0].depth, 1);
     });
 
     it("returns ROW fields directly for ARRAY<ROW> (skips intermediate)", () => {
@@ -552,12 +548,10 @@ describe("FlinkTypeNode", () => {
       const level1Children = node.getChildren();
       assert.strictEqual(level1Children[0].parentColumn, column);
       assert.strictEqual(level1Children[0].parentNode, node);
-      assert.strictEqual(level1Children[0].depth, 1);
 
       const level2Children = level1Children[0].getChildren();
       assert.strictEqual(level2Children[0].parentColumn, column);
       assert.strictEqual(level2Children[0].parentNode, level1Children[0]);
-      assert.strictEqual(level2Children[0].depth, 2);
     });
   });
 
