@@ -3,7 +3,7 @@
  */
 
 import assert from "assert";
-import { FlinkType, FlinkTypeKind, isCompoundFlinkType } from "../models/flinkTypes";
+import { FlinkTypeKind, isCompoundFlinkType, type FlinkType } from "../models/flinkTypes";
 import { parseFlinkType } from "./flinkTypeParser";
 
 describe("flinkTypeParser", () => {
