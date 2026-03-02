@@ -43,6 +43,8 @@ export enum UriMetadataKeys {
   FLINK_CATALOG_NAME = "flinkCatalogName",
   FLINK_DATABASE_ID = "flinkDatabaseId",
   FLINK_DATABASE_NAME = "flinkDatabaseName",
+  /** True when the document was opened from a Flink workspace deep link. */
+  FLINK_FROM_WORKSPACE = "flinkFromWorkspace",
 }
 
 export enum SecretStorageKeys {
