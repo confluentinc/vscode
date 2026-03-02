@@ -5,6 +5,7 @@
 
 import assert from "assert";
 import { TreeItemCollapsibleState } from "vscode";
+import { IconNames } from "../icons";
 import { FlinkTypeKind } from "./flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
 import { FlinkRelationColumn } from "./flinkRelation";
@@ -274,6 +275,59 @@ describe("FlinkTypeNode", () => {
 
       const children = node.getChildren();
       assert.strictEqual(children.length, 0);
+    });
+  });
+
+  describe("iconName property", () => {
+    it("should return FLINK_TYPE_ROW for ROW types", () => {
+      const parsed = parseFlinkType("ROW<id INT>");
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      assert.strictEqual(node.iconName, IconNames.FLINK_TYPE_ROW);
+    });
+
+    it("should return FLINK_TYPE_ARRAY for ARRAY types", () => {
+      const parsed = parseFlinkType("ARRAY<INT>");
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      assert.strictEqual(node.iconName, IconNames.FLINK_TYPE_ARRAY);
+    });
+
+    it("should return FLINK_TYPE_MULTISET for MULTISET types", () => {
+      const parsed = parseFlinkType("MULTISET<VARCHAR>");
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      assert.strictEqual(node.iconName, IconNames.FLINK_TYPE_MULTISET);
+    });
+
+    it("should return FLINK_TYPE_MULTISET (not ARRAY) for MULTISET with ROW", () => {
+      const parsed = parseFlinkType("MULTISET<ROW<id INT>>");
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      assert.strictEqual(node.iconName, IconNames.FLINK_TYPE_MULTISET);
+    });
+
+    it("should return FLINK_FUNCTION for MAP types", () => {
+      const parsed = parseFlinkType("MAP<INT, VARCHAR>");
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      assert.strictEqual(node.iconName, IconNames.FLINK_FUNCTION);
+    });
+
+    it("should return FLINK_FUNCTION for scalar types", () => {
+      const parsed = parseFlinkType("INT");
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      assert.strictEqual(node.iconName, IconNames.FLINK_FUNCTION);
+    });
+
+    it("should distinguish ARRAY and MULTISET icons", () => {
+      const arrayParsed = parseFlinkType("ARRAY<INT>");
+      const multisetParsed = parseFlinkType("MULTISET<INT>");
+
+      const arrayNode = new FlinkTypeNode({ parsedType: arrayParsed });
+      const multisetNode = new FlinkTypeNode({ parsedType: multisetParsed });
+
+      const arrayIcon = arrayNode.iconName;
+      const multisetIcon = multisetNode.iconName;
+
+      assert.strictEqual(arrayIcon, IconNames.FLINK_TYPE_ARRAY);
+      assert.strictEqual(multisetIcon, IconNames.FLINK_TYPE_MULTISET);
+      assert.notStrictEqual(arrayIcon, multisetIcon);
     });
   });
 

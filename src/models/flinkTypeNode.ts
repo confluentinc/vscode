@@ -8,7 +8,8 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { formatFlinkTypeForDisplay, formatSqlType, getIconForFlinkType } from "../utils/flinkTypes";
+import { IconNames } from "../icons";
+import { formatFlinkTypeForDisplay, formatSqlType } from "../utils/flinkTypes";
 import type { CompoundFlinkType, FlinkType } from "./flinkTypes";
 import { FlinkTypeKind, isCompoundFlinkType } from "./flinkTypes";
 import { CustomMarkdownString } from "./main";
@@ -92,6 +93,23 @@ export class FlinkTypeNode implements IResourceBase {
     }
 
     return path.join(".");
+  }
+
+  /**
+   * Get the icon name for this type node.
+   * Uses special icons for ROW, ARRAY, and MULTISET types, defaults to function icon for others.
+   */
+  get iconName(): IconNames {
+    switch (this.parsedType.kind) {
+      case FlinkTypeKind.ROW:
+        return IconNames.FLINK_TYPE_ROW;
+      case FlinkTypeKind.ARRAY:
+        return IconNames.FLINK_TYPE_ARRAY;
+      case FlinkTypeKind.MULTISET:
+        return IconNames.FLINK_TYPE_MULTISET;
+      default:
+        return IconNames.FLINK_FUNCTION;
+    }
   }
 
   /**
@@ -269,7 +287,7 @@ export class FlinkTypeNode implements IResourceBase {
 
     const item = new TreeItem(this.getLabel(), collapsibleState);
 
-    item.iconPath = new ThemeIcon(getIconForFlinkType(this.parsedType));
+    item.iconPath = new ThemeIcon(this.iconName);
 
     item.id = this.id;
     item.description = this.getDescription();

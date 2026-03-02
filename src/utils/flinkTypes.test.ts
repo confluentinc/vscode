@@ -1,8 +1,7 @@
 import assert from "assert";
 import { describe, it } from "mocha";
 
-import { formatSqlType, formatFlinkTypeForDisplay, getIconForFlinkType } from "./flinkTypes";
-import { IconNames } from "../icons";
+import { formatSqlType, formatFlinkTypeForDisplay } from "./flinkTypes";
 import type { FlinkType } from "../models/flinkTypes";
 import { FlinkTypeKind } from "../models/flinkTypes";
 
@@ -111,124 +110,6 @@ describe("flinkTypes.ts", () => {
       };
       const result = formatFlinkTypeForDisplay(flinkType);
       assert.strictEqual(result, "VARCHAR[]");
-    });
-  });
-
-  describe("getIconForFlinkType", () => {
-    it("should return FLINK_TYPE_ROW for ROW types", () => {
-      const flinkType: FlinkType = {
-        kind: FlinkTypeKind.ROW,
-        dataType: "ROW",
-        isFieldNullable: true,
-        members: [],
-      };
-      const result = getIconForFlinkType(flinkType);
-      assert.strictEqual(result, IconNames.FLINK_TYPE_ROW);
-    });
-
-    it("should return FLINK_TYPE_ARRAY for ARRAY types", () => {
-      const flinkType: FlinkType = {
-        kind: FlinkTypeKind.ARRAY,
-        dataType: "ARRAY",
-        isFieldNullable: true,
-        members: [
-          {
-            kind: FlinkTypeKind.SCALAR,
-            dataType: "INT",
-            isFieldNullable: true,
-          },
-        ],
-      };
-      const result = getIconForFlinkType(flinkType);
-      assert.strictEqual(result, IconNames.FLINK_TYPE_ARRAY);
-    });
-
-    it("should return FLINK_TYPE_MULTISET for MULTISET types", () => {
-      const flinkType: FlinkType = {
-        kind: FlinkTypeKind.MULTISET,
-        dataType: "MULTISET",
-        isFieldNullable: true,
-        members: [
-          {
-            kind: FlinkTypeKind.SCALAR,
-            dataType: "VARCHAR",
-            isFieldNullable: true,
-          },
-        ],
-      };
-      const result = getIconForFlinkType(flinkType);
-      assert.strictEqual(result, IconNames.FLINK_TYPE_MULTISET);
-    });
-
-    it("should return FLINK_TYPE_MULTISET (not ARRAY) for MULTISET with ROW", () => {
-      const flinkType: FlinkType = {
-        kind: FlinkTypeKind.MULTISET,
-        dataType: "MULTISET",
-        isFieldNullable: true,
-        members: [
-          {
-            kind: FlinkTypeKind.ROW,
-            dataType: "ROW",
-            isFieldNullable: true,
-            members: [],
-          },
-        ],
-      };
-      const result = getIconForFlinkType(flinkType);
-      assert.strictEqual(result, IconNames.FLINK_TYPE_MULTISET);
-    });
-
-    it("should return FLINK_FUNCTION for MAP types", () => {
-      const flinkType: FlinkType = {
-        kind: FlinkTypeKind.MAP,
-        dataType: "MAP",
-        isFieldNullable: true,
-        members: [],
-      };
-      const result = getIconForFlinkType(flinkType);
-      assert.strictEqual(result, IconNames.FLINK_FUNCTION);
-    });
-
-    it("should return FLINK_FUNCTION for scalar types", () => {
-      const flinkType: FlinkType = {
-        kind: FlinkTypeKind.SCALAR,
-        dataType: "INT",
-        isFieldNullable: true,
-      };
-      const result = getIconForFlinkType(flinkType);
-      assert.strictEqual(result, IconNames.FLINK_FUNCTION);
-    });
-
-    it("should distinguish ARRAY and MULTISET icons", () => {
-      const arrayType: FlinkType = {
-        kind: FlinkTypeKind.ARRAY,
-        dataType: "ARRAY",
-        isFieldNullable: true,
-        members: [
-          {
-            kind: FlinkTypeKind.SCALAR,
-            dataType: "INT",
-            isFieldNullable: true,
-          },
-        ],
-      };
-      const multisetType: FlinkType = {
-        kind: FlinkTypeKind.MULTISET,
-        dataType: "MULTISET",
-        isFieldNullable: true,
-        members: [
-          {
-            kind: FlinkTypeKind.SCALAR,
-            dataType: "INT",
-            isFieldNullable: true,
-          },
-        ],
-      };
-      const arrayIcon = getIconForFlinkType(arrayType);
-      const multisetIcon = getIconForFlinkType(multisetType);
-      assert.strictEqual(arrayIcon, IconNames.FLINK_TYPE_ARRAY);
-      assert.strictEqual(multisetIcon, IconNames.FLINK_TYPE_MULTISET);
-      assert.notStrictEqual(arrayIcon, multisetIcon);
     });
   });
 });
