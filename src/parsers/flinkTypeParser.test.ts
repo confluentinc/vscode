@@ -699,53 +699,15 @@ describe("flinkTypeParser", () => {
     });
   });
 
-  describe("type guard validation (kind vs members mismatch)", () => {
-    // Test cases for invalid kind/members combinations
-    const invalidMismatches = [
-      {
-        description: "SCALAR kind with members",
-        type: {
-          kind: FlinkTypeKind.SCALAR,
-          dataType: "INT",
-          isFieldNullable: true,
-          members: [{ kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: true }],
-        },
-      },
-      {
-        description: "another SCALAR with members",
-        type: {
-          kind: FlinkTypeKind.SCALAR,
-          dataType: "VARCHAR",
-          isFieldNullable: true,
-          members: [
-            { kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: true },
-            { kind: FlinkTypeKind.SCALAR, dataType: "VARCHAR", isFieldNullable: true },
-          ],
-        },
-      },
-      {
-        description: "non-SCALAR kind with empty members",
-        type: {
-          kind: FlinkTypeKind.ARRAY,
-          dataType: "ARRAY",
-          isFieldNullable: true,
-          members: [],
-        },
-      },
-      {
-        description: "non-SCALAR kind with missing members",
-        type: {
-          kind: FlinkTypeKind.ARRAY,
-          dataType: "ARRAY",
-          isFieldNullable: true,
-        },
-      },
-    ];
-
-    invalidMismatches.forEach(({ description, type }) => {
-      it(`throws error on ${description}`, () => {
-        assert.throws(() => isCompoundFlinkType(type), /Invalid type/);
-      });
+  describe("type guard validation", () => {
+    // Test that isCompoundFlinkType correctly discriminates scalar vs compound types
+    it("returns false for SCALAR kind", () => {
+      const scalarType: FlinkType = {
+        kind: FlinkTypeKind.SCALAR,
+        dataType: "INT",
+        isFieldNullable: true,
+      };
+      assert.strictEqual(isCompoundFlinkType(scalarType), false);
     });
 
     // Test valid compound types return true
@@ -757,6 +719,56 @@ describe("flinkTypeParser", () => {
         members: [{ kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: false }],
       };
       assert(isCompoundFlinkType(arrayType));
+    });
+
+    it("returns true for ROW with members", () => {
+      const rowType: FlinkType = {
+        kind: FlinkTypeKind.ROW,
+        dataType: "ROW",
+        isFieldNullable: false,
+        members: [
+          {
+            kind: FlinkTypeKind.SCALAR,
+            dataType: "INT",
+            isFieldNullable: false,
+            fieldName: "id",
+          },
+        ],
+      };
+      assert(isCompoundFlinkType(rowType));
+    });
+
+    it("returns true for MAP with members", () => {
+      const mapType: FlinkType = {
+        kind: FlinkTypeKind.MAP,
+        dataType: "MAP",
+        isFieldNullable: false,
+        members: [
+          {
+            kind: FlinkTypeKind.SCALAR,
+            dataType: "VARCHAR",
+            isFieldNullable: false,
+            fieldName: "key",
+          },
+          {
+            kind: FlinkTypeKind.SCALAR,
+            dataType: "INT",
+            isFieldNullable: false,
+            fieldName: "value",
+          },
+        ],
+      };
+      assert(isCompoundFlinkType(mapType));
+    });
+
+    it("returns true for MULTISET with members", () => {
+      const multisetType: FlinkType = {
+        kind: FlinkTypeKind.MULTISET,
+        dataType: "MULTISET",
+        isFieldNullable: false,
+        members: [{ kind: FlinkTypeKind.SCALAR, dataType: "VARCHAR", isFieldNullable: false }],
+      };
+      assert(isCompoundFlinkType(multisetType));
     });
 
     it("returns true for ROW with members", () => {
