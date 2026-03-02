@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2026-2-19
+Date generated: 2026-3-2
 
-Revision ID: 3fee66998b3a7f44565f38d66b41bd73d9266d57
+Revision ID: d48cf91459f1a4adf8257fb6f72276981416cceb
 
 ================================================================================
 ================================================================================
@@ -170,7 +170,7 @@ No licenses found
 - @volar/source-map (2.4.0-alpha.18) [MIT]
 - @vscode/codicons (0.0.36) [CC-BY-4.0, MIT, CC-BY-SA-4.0]
 - @vscode/l10n (0.0.18) [MIT]
-- @vscode/webview-ui-toolkit (1.4.0) [MIT, CC0-1.0, bsd-2-clause-views, 0BSD]
+- @vscode/webview-ui-toolkit (1.4.0) [MIT, CC0-1.0, 0BSD, bsd-2-clause-views]
 - @vue/compiler-core (3.4.34) [MIT]
 - @vue/compiler-dom (3.4.34) [MIT]
 - @vue/compiler-vue2 (2.7.16) [MIT, 0BSD]
@@ -14512,7 +14512,7 @@ SOFTWARE.
 
 
 * Other Licenses *
-CC0-1.0, bsd-2-clause-views, 0BSD
+CC0-1.0, 0BSD, bsd-2-clause-views
 
 * CC0-1.0 *
 --------------------------------------------------------------------------------
@@ -14542,6 +14542,17 @@ For these and/or other purposes and motivations, and without any expectation of 
       b. Affirmer offers the Work as-is and makes no representations or warranties of any kind concerning the Work, express, implied, statutory or otherwise, including without limitation warranties of title, merchantability, fitness for a particular purpose, non infringement, or the absence of latent or other defects, accuracy, or the present or absence of errors, whether or not discoverable, all to the greatest extent permissible under applicable law.
       c. Affirmer disclaims responsibility for clearing rights of other persons that may apply to the Work or any use thereof, including without limitation any person's Copyright and Related Rights in the Work. Further, Affirmer disclaims responsibility for obtaining any necessary consents, permissions or other rights required for any use of the Work.
       d. Affirmer understands and acknowledges that Creative Commons is not a party to this document and has no duty or obligation with respect to this CC0 or use of the Work.
+
+* 0BSD *
+--------------------------------------------------------------------------------
+File matches:
+NOTICES
+--------------------------------------------------------------------------------
+
+
+Copyright (C) 2006 by Rob Landley <rob@landley.net>
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 * bsd-2-clause-views *
 --------------------------------------------------------------------------------
@@ -14574,17 +14585,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
-
-* 0BSD *
---------------------------------------------------------------------------------
-File matches:
-dist/toolkit.js
---------------------------------------------------------------------------------
-
-
-Copyright (C) 2006 by Rob Landley <rob@landley.net>
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 --------------------------------------------------------------------------------
@@ -45614,7 +45614,43 @@ Copyright (c) Microsoft Corporation.
 
 Copyright (c)  Microsoft Corporation.
 
-Copyright (c)  Micro
+Copyright (c) 2011 Gary Court.
+
+Copyright (c) 2011 Gary Court. All rights reserved.
+
+Copyright (c)  Microsoft Corporation. All rights reserved.
+
+Copyright (c) 2015-2017 Evgeny Poberezkin
+
+Copyright (c) 2018 Chris Holt
+
+Copyright (c) 2017 Evgeny Poberezkin
+
+Copyright (c) 2013 James Halliday
+
+Copyright (c) 2013 Raynos.
+
+Copyright (c) 2013 Thiago de Arruda
+
+Copyright (c) 2014 Dave Justice
+
+Copyright (c) 2013 Alex Kocharin
+
+Copyright (c)  OpenJS Foundation and other contributors <https://openjsf.org/>
+
+Copyright (c)  Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+
+Copyright (c)  Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors <http://underscorejs.org/>
+
+Copyright (c)  Jeremy Ashkenas,
+
+Copyright (c) 2015 Javier Blanco
+
+Copyright (c)  Mathias Bynens <https://mathiasbynens.be/>
+
+Copyright (c) 2012 James Halliday
+
+Copyright (c) 2015 David Clark
 Copyright (C) 2006 by Rob Landley <rob@landley.net>
 Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
@@ -46879,4 +46915,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2026-2-19
+Report Generated by FOSSA on 2026-3-2
