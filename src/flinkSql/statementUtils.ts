@@ -314,6 +314,16 @@ export async function parseAllFlinkStatementResults<RT>(
 }
 
 /**
+ * Returns true if the given URI metadata indicates the document was opened from a Flink workspace
+ * deep link, false otherwise.
+ *
+ * @param metadata The URI metadata to check.
+ */
+export function isFromFlinkWorkspace(metadata: UriMetadata | undefined): boolean {
+  return metadata?.[UriMetadataKeys.FLINK_FROM_WORKSPACE] === true;
+}
+
+/**
  * Set or reset the Flink-related metadata on a document to refer to
  * the given environment, database, and/or compute pool. Handles setting
  * the metadata, then fires uriMetadataSet to notify listeners of the change.
@@ -328,11 +338,12 @@ export async function setFlinkDocumentMetadata(
     catalog?: CCloudEnvironment;
     database?: CCloudFlinkDbKafkaCluster;
     computePool?: CCloudFlinkComputePool;
+    fromWorkspace?: boolean;
   },
 ): Promise<void> {
   const metadata: UriMetadata = {};
 
-  const { catalog: environment, database, computePool } = opts;
+  const { catalog: environment, database, computePool, fromWorkspace } = opts;
 
   if (environment) {
     metadata[UriMetadataKeys.FLINK_CATALOG_ID] = environment.id;
@@ -346,6 +357,10 @@ export async function setFlinkDocumentMetadata(
 
   if (computePool) {
     metadata[UriMetadataKeys.FLINK_COMPUTE_POOL_ID] = computePool.id;
+  }
+
+  if (fromWorkspace) {
+    metadata[UriMetadataKeys.FLINK_FROM_WORKSPACE] = true;
   }
 
   logger.debug(`setting Flink catalog / database / compute pool metadata for URI`, {
