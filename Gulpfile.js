@@ -998,7 +998,9 @@ export async function apigen() {
     .map(([key, value]) => `${key}=${value}`)
     .join(",");
 
-  const format = await prettier();
+  // bypass .prettierignore since it excludes src/clients/ (to prevent other tools from
+  // reformatting generated code), but apigen itself should always format its own output
+  const format = await prettier({ ignoreIgnoreFile: true });
 
   for (const [spec, path] of clients) {
     // other client generator types: https://openapi-generator.tech/docs/generators#client-generators
@@ -1053,7 +1055,7 @@ export async function format() {
   );
 }
 
-async function prettier() {
+async function prettier({ ignoreIgnoreFile = false } = {}) {
   const { check, format, getFileInfo, resolveConfigFile, resolveConfig } = await import("prettier");
   const configFile = (await resolveConfigFile()) ?? ".prettierrc";
   const config = await resolveConfig(configFile);
@@ -1061,10 +1063,12 @@ async function prettier() {
   return async function* process(source) {
     for await (const file of source) {
       if (file.contents != null) {
-        // check if the file is in .prettierignore before trying to format it
-        const fileInfo = await getFileInfo(file.path, { ignorePath: ".prettierignore" });
-        if (fileInfo.ignored) {
-          continue;
+        if (!ignoreIgnoreFile) {
+          // check if the file is in .prettierignore before trying to format it
+          const fileInfo = await getFileInfo(file.path, { ignorePath: ".prettierignore" });
+          if (fileInfo.ignored) {
+            continue;
+          }
         }
         const options = { filepath: file.path, ...config };
         const code = file.contents.toString();
