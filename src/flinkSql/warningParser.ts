@@ -5,8 +5,8 @@
 
 /** API warning shape from the new structured warnings field */
 export interface StatementWarning {
-  severity: "LOW" | "MODERATE" | "CRITICAL";
-  created_at: string;
+  severity: string;
+  created_at: Date | null;
   reason: string;
   message: string;
 }
@@ -33,7 +33,7 @@ export function parseLegacyWarnings(detail: string | undefined): StatementWarnin
     if (message) {
       warnings.push({
         severity: "MODERATE",
-        created_at: "", // No timestamp in legacy format
+        created_at: null, // No timestamp in legacy format
         reason: "", // No reason in legacy format
         message,
       });

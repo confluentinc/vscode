@@ -273,8 +273,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
    * Prefers structured API warnings, falls back to parsing legacy [Warning] format from detail.
    */
   get warnings(): StatementWarning[] {
-    // TODO: remove type assertion when OpenAPI spec includes warnings field on status
-    const statusWarnings = (this.status as { warnings?: StatementWarning[] })?.warnings;
+    const statusWarnings = this.status.warnings;
     return extractWarnings(statusWarnings, this.detail);
   }
 
