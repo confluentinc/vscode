@@ -519,6 +519,52 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         sinon.assert.calledOnce(treeViewRevealStub);
       });
+
+      it("should reveal a top-level FlinkTypeNode directly", async () => {
+        const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
+        parsed.fieldName = "record";
+        const typeNode = new FlinkTypeNode({
+          parsedType: parsed,
+          parentColumnId: TEST_VARCHAR_COLUMN.id,
+        });
+
+        await viewProvider.revealResource(typeNode);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, typeNode, defaultOptions);
+      });
+
+      it("should reveal a nested FlinkTypeNode directly", async () => {
+        const parentParsed = parseFlinkType("ROW<id INT, name VARCHAR>");
+        const parentNode = new FlinkTypeNode({ parsedType: parentParsed });
+
+        const childParsed = parseFlinkType("INT");
+        childParsed.fieldName = "id";
+        const childNode = new FlinkTypeNode({
+          parsedType: childParsed,
+          parentNode: parentNode,
+          parentColumnId: TEST_VARCHAR_COLUMN.id,
+        });
+
+        await viewProvider.revealResource(childNode);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, childNode, defaultOptions);
+      });
+
+      it("should reveal a FlinkTypeNode with custom options", async () => {
+        const parsed = parseFlinkType("INT ARRAY");
+        const typeNode = new FlinkTypeNode({
+          parsedType: parsed,
+          parentColumnId: TEST_VARCHAR_COLUMN.id,
+        });
+
+        const customOptions = { select: true, focus: false, expand: 1 };
+        await viewProvider.revealResource(typeNode, customOptions);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, typeNode, customOptions);
+      });
     });
 
     describe("refresh()", () => {
