@@ -176,7 +176,10 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     } else if (element instanceof FlinkAIAgent) {
       treeItem = new FlinkAIAgentTreeItem(element);
     } else {
-      treeItem = element as TreeItem;
+      // This should be unreachable - all types in DatabaseChildrenType are handled above.
+      // The exhaustiveness check is implicit: if a new type is added to DatabaseChildrenType,
+      // TypeScript will flag this else block as unreachable (under strict type checking).
+      throw new TypeError(`Unhandled DatabaseChildrenType: ${typeof element}`);
     }
 
     this.adjustTreeItemForSearch(element, treeItem);
