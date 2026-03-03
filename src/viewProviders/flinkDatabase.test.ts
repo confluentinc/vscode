@@ -168,7 +168,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
           comment: null,
         });
 
-        const typeChildren = rowColumn.getTypeChildren();
+        const typeChildren = rowColumn.getChildren();
         filterChildrenStub.returns(typeChildren);
 
         const children = viewProvider.getChildren(rowColumn);

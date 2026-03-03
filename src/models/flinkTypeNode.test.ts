@@ -125,7 +125,7 @@ describe("FlinkTypeNode", () => {
       });
 
       // Get children from the column - they are the ROW fields
-      const children = column2.getTypeChildren();
+      const children = column2.getChildren();
       assert.strictEqual(children.length, 1, "Should have 1 field child (id)");
 
       // The id should be: table.columnName.fieldName
@@ -140,7 +140,7 @@ describe("FlinkTypeNode", () => {
         fullDataType: "MULTISET<ROW<id INT>>",
       });
 
-      const children = column.getTypeChildren();
+      const children = column.getChildren();
       assert.strictEqual(children.length, 1, "Should have 1 field child (id)");
 
       // The id should be: table.columnName.fieldName
@@ -764,8 +764,8 @@ describe("FlinkTypeNode", () => {
 
       // Get type children from the columns (which creates synthetic parent nodes)
       // This is the real-world usage pattern
-      const col1Children = col1.getTypeChildren();
-      const col2Children = col2.getTypeChildren();
+      const col1Children = col1.getChildren();
+      const col2Children = col2.getChildren();
 
       assert.strictEqual(col1Children.length, 2);
       assert.strictEqual(col2Children.length, 2);

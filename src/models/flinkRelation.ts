@@ -139,7 +139,7 @@ export class FlinkRelationColumn {
    * we can safely access members[0].members without additional checks. We set a synthetic container
    * as parentNode to ensure ID uniqueness includes ARRAY/MULTISET context.
    */
-  getTypeChildren(): FlinkTypeNode[] {
+  getChildren(): FlinkTypeNode[] {
     if (!this.isExpandable) {
       return [];
     }

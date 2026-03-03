@@ -243,11 +243,11 @@ describe("flinkRelation.ts", () => {
       });
     });
 
-    describe("getTypeChildren()", () => {
+    describe("getChildren()", () => {
       // Helper to verify isExpandable consistency: children exist iff isExpandable is true
       function assertExpandableConsistency(column: FlinkRelationColumn, expectedLength: number) {
         const isExpandable = column.isExpandable;
-        const children = column.getTypeChildren();
+        const children = column.getChildren();
         const hasChildren = children.length > 0;
 
         if (expectedLength === 0) {
@@ -322,7 +322,7 @@ describe("flinkRelation.ts", () => {
           });
 
           assertExpandableConsistency(column, 2);
-          const children = column.getTypeChildren();
+          const children = column.getChildren();
           assert.strictEqual(children[0].parsedType.fieldName, "id");
           assert.strictEqual(children[1].parsedType.fieldName, "name");
         });
@@ -336,7 +336,7 @@ describe("flinkRelation.ts", () => {
           });
 
           assertExpandableConsistency(column, 4);
-          const children = column.getTypeChildren();
+          const children = column.getChildren();
           assert.strictEqual(
             children.map((c) => c.parsedType.fieldName).join(","),
             "id,name,age,active",
@@ -353,7 +353,7 @@ describe("flinkRelation.ts", () => {
           });
 
           assertExpandableConsistency(column, 3);
-          const children = column.getTypeChildren();
+          const children = column.getChildren();
           assert.strictEqual(
             children.map((c) => c.parsedType.fieldName).join(","),
             "street,city,location",
@@ -371,7 +371,7 @@ describe("flinkRelation.ts", () => {
           });
 
           assertExpandableConsistency(column, 2);
-          const children = column.getTypeChildren();
+          const children = column.getChildren();
           assert.strictEqual(children[0].parsedType.fieldName, "key");
           assert.strictEqual(children[1].parsedType.fieldName, "value");
         });
@@ -385,7 +385,7 @@ describe("flinkRelation.ts", () => {
           });
 
           assertExpandableConsistency(column, 2);
-          const children = column.getTypeChildren();
+          const children = column.getChildren();
           assert.strictEqual(children[0].parsedType.fieldName, "key");
           assert.strictEqual(children[1].parsedType.fieldName, "value");
         });
@@ -436,7 +436,7 @@ describe("flinkRelation.ts", () => {
           });
 
           assertExpandableConsistency(column, 2);
-          const children = column.getTypeChildren();
+          const children = column.getChildren();
           assert.strictEqual(children[0].parsedType.fieldName, "id");
           assert.strictEqual(children[1].parsedType.fieldName, "name");
         });
@@ -450,7 +450,7 @@ describe("flinkRelation.ts", () => {
           });
 
           assertExpandableConsistency(column, 2);
-          const children = column.getTypeChildren();
+          const children = column.getChildren();
           assert.strictEqual(children[0].parsedType.fieldName, "key");
           assert.strictEqual(children[1].parsedType.fieldName, "value");
         });
@@ -466,7 +466,7 @@ describe("flinkRelation.ts", () => {
           // ARRAY<ARRAY<ROW>> is expandable (outer ARRAY has compound element ARRAY<ROW>)
           // Returns the ROW field from the inner ARRAY, skipping the intermediate container
           assertExpandableConsistency(column, 1);
-          const children = column.getTypeChildren();
+          const children = column.getChildren();
           assert.strictEqual(children[0].parsedType.kind, "ROW");
           assert.strictEqual(children[0].parsedType.dataType, "ROW");
           assert.strictEqual(children[0].parsedType.members.length, 1);
@@ -478,7 +478,7 @@ describe("flinkRelation.ts", () => {
           // ROW structures with the same field names, their child nodes have globally
           // unique IDs within the tree view.
           // This is critical for handling the synthetic parent node pattern where
-          // FlinkRelationColumn.getTypeChildren() creates a non-displayed ARRAY/MULTISET
+          // FlinkRelationColumn.getChildren() creates a non-displayed ARRAY/MULTISET
           // node to maintain proper ID hierarchy.
 
           const column1 = new FlinkRelationColumn({
@@ -500,8 +500,8 @@ describe("flinkRelation.ts", () => {
           assert.strictEqual(column2.isExpandable, true, "column2 should be expandable");
 
           // Get children from both columns
-          const children1 = column1.getTypeChildren();
-          const children2 = column2.getTypeChildren();
+          const children1 = column1.getChildren();
+          const children2 = column2.getChildren();
 
           // Both should have 2 children (the ROW's two fields)
           assert.strictEqual(children1.length, 2, "Column 1 should have 2 field children");
@@ -586,7 +586,7 @@ describe("flinkRelation.ts", () => {
           });
 
           assertExpandableConsistency(column, 2);
-          const children = column.getTypeChildren();
+          const children = column.getChildren();
           assert.strictEqual(children[0].parsedType.fieldName, "id");
           assert.strictEqual(children[1].parsedType.fieldName, "value");
         });
@@ -600,7 +600,7 @@ describe("flinkRelation.ts", () => {
           });
 
           assertExpandableConsistency(column, 2);
-          const children = column.getTypeChildren();
+          const children = column.getChildren();
           assert.strictEqual(children[0].parsedType.fieldName, "key");
           assert.strictEqual(children[1].parsedType.fieldName, "value");
         });
@@ -616,7 +616,7 @@ describe("flinkRelation.ts", () => {
           // Verify expandable
           assert.strictEqual(column.isExpandable, true, "Should be expandable");
 
-          const children = column.getTypeChildren();
+          const children = column.getChildren();
 
           assert.strictEqual(children.length, 2, "Should have 2 field children from MULTISET<ROW>");
 
