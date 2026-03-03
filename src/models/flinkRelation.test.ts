@@ -55,7 +55,7 @@ describe("flinkRelation.ts", () => {
         assert.strictEqual(TEST_VARCHAR_COLUMN.isMetadata, false);
       });
 
-      describe("treeItemDescription", () => {
+      describe("getTreeItem() description", () => {
         it("no comment, nullable", () => {
           const column = new FlinkRelationColumn({
             ...TEST_VARCHAR_COLUMN,
@@ -63,7 +63,8 @@ describe("flinkRelation.ts", () => {
             fullDataType: "INT",
             comment: null,
           });
-          assert.strictEqual(column["getTreeItemDescription"](column.getParsedType()), "INT");
+          const treeItem = column.getTreeItem();
+          assert.strictEqual(treeItem.description, "INT");
         });
         it("with short comment", () => {
           const column = new FlinkRelationColumn({
@@ -72,10 +73,8 @@ describe("flinkRelation.ts", () => {
             fullDataType: "VARCHAR(2147483647)",
             comment: "This is a test column",
           });
-          assert.strictEqual(
-            column["getTreeItemDescription"](column.getParsedType()),
-            "VARCHAR NOT NULL - This is a test column",
-          );
+          const treeItem = column.getTreeItem();
+          assert.strictEqual(treeItem.description, "VARCHAR NOT NULL - This is a test column");
         });
 
         it("with long comment + nullable", () => {
@@ -86,11 +85,8 @@ describe("flinkRelation.ts", () => {
             fullDataType: "INT",
             comment: longComment,
           });
-          // At this time, James is choosing to no
-          assert.strictEqual(
-            column["getTreeItemDescription"](column.getParsedType()),
-            `INT - ${longComment.substring(0, 30)}...`,
-          );
+          const treeItem = column.getTreeItem();
+          assert.strictEqual(treeItem.description, `INT - ${longComment.substring(0, 30)}...`);
         });
       });
 
@@ -180,16 +176,14 @@ describe("flinkRelation.ts", () => {
           isNullable: false,
           comment: "Test column comment",
         });
+        const parsed = column.getParsedType();
         const treeItem = column.getTreeItem();
         assert.strictEqual(treeItem.label, column.name);
-        assert.strictEqual(
-          treeItem.description,
-          column["getTreeItemDescription"](column.getParsedType()),
-        );
+        assert.ok(treeItem.description); // description is computed from parsed type and column properties
         assert.strictEqual(treeItem.contextValue, "ccloud-flink-column");
         assert.deepStrictEqual(
           treeItem.tooltip,
-          column.getToolTip(FlinkTypeNode.getIconForType(column.getParsedType())),
+          column.getToolTip(FlinkTypeNode.getIconForType(parsed)),
         );
       });
     });
