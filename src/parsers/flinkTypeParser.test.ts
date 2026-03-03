@@ -3,7 +3,7 @@
  */
 
 import assert from "assert";
-import { FlinkType, FlinkTypeKind, isCompoundFlinkType } from "../models/flinkTypes";
+import { FlinkTypeKind, isCompoundFlinkType, type FlinkType } from "../models/flinkTypes";
 import { parseFlinkType } from "./flinkTypeParser";
 
 describe("flinkTypeParser", () => {
@@ -705,6 +705,7 @@ describe("flinkTypeParser", () => {
       const scalarType: FlinkType = {
         kind: FlinkTypeKind.SCALAR,
         dataType: "INT",
+        fullDataTypeString: "INT",
         isFieldNullable: true,
       };
       assert.strictEqual(isCompoundFlinkType(scalarType), false);
@@ -715,8 +716,16 @@ describe("flinkTypeParser", () => {
       const arrayType: FlinkType = {
         kind: FlinkTypeKind.ARRAY,
         dataType: "ARRAY",
+        fullDataTypeString: "INT ARRAY",
         isFieldNullable: false,
-        members: [{ kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: false }],
+        members: [
+          {
+            kind: FlinkTypeKind.SCALAR,
+            dataType: "INT",
+            fullDataTypeString: "INT",
+            isFieldNullable: false,
+          },
+        ],
       };
       assert(isCompoundFlinkType(arrayType));
     });
@@ -725,11 +734,13 @@ describe("flinkTypeParser", () => {
       const rowType: FlinkType = {
         kind: FlinkTypeKind.ROW,
         dataType: "ROW",
+        fullDataTypeString: "ROW<id INT>",
         isFieldNullable: false,
         members: [
           {
             kind: FlinkTypeKind.SCALAR,
             dataType: "INT",
+            fullDataTypeString: "INT",
             isFieldNullable: false,
             fieldName: "id",
           },
@@ -742,17 +753,20 @@ describe("flinkTypeParser", () => {
       const mapType: FlinkType = {
         kind: FlinkTypeKind.MAP,
         dataType: "MAP",
+        fullDataTypeString: "MAP<VARCHAR, INT>",
         isFieldNullable: false,
         members: [
           {
             kind: FlinkTypeKind.SCALAR,
             dataType: "VARCHAR",
+            fullDataTypeString: "VARCHAR",
             isFieldNullable: false,
             fieldName: "key",
           },
           {
             kind: FlinkTypeKind.SCALAR,
             dataType: "INT",
+            fullDataTypeString: "INT",
             isFieldNullable: false,
             fieldName: "value",
           },
@@ -765,43 +779,16 @@ describe("flinkTypeParser", () => {
       const multisetType: FlinkType = {
         kind: FlinkTypeKind.MULTISET,
         dataType: "MULTISET",
-        isFieldNullable: false,
-        members: [{ kind: FlinkTypeKind.SCALAR, dataType: "VARCHAR", isFieldNullable: false }],
-      };
-      assert(isCompoundFlinkType(multisetType));
-    });
-
-    it("returns true for ROW with members", () => {
-      const rowType: FlinkType = {
-        kind: FlinkTypeKind.ROW,
-        dataType: "ROW",
+        fullDataTypeString: "VARCHAR MULTISET",
         isFieldNullable: false,
         members: [
-          { kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: false, fieldName: "id" },
+          {
+            kind: FlinkTypeKind.SCALAR,
+            dataType: "VARCHAR",
+            fullDataTypeString: "VARCHAR",
+            isFieldNullable: false,
+          },
         ],
-      };
-      assert(isCompoundFlinkType(rowType));
-    });
-
-    it("returns true for MAP with members", () => {
-      const mapType: FlinkType = {
-        kind: FlinkTypeKind.MAP,
-        dataType: "MAP",
-        isFieldNullable: false,
-        members: [
-          { kind: FlinkTypeKind.SCALAR, dataType: "STRING", isFieldNullable: false },
-          { kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: false },
-        ],
-      };
-      assert(isCompoundFlinkType(mapType));
-    });
-
-    it("returns true for MULTISET with members", () => {
-      const multisetType: FlinkType = {
-        kind: FlinkTypeKind.MULTISET,
-        dataType: "MULTISET",
-        isFieldNullable: false,
-        members: [{ kind: FlinkTypeKind.SCALAR, dataType: "DOUBLE", isFieldNullable: false }],
       };
       assert(isCompoundFlinkType(multisetType));
     });
@@ -811,6 +798,7 @@ describe("flinkTypeParser", () => {
       const scalarType: FlinkType = {
         kind: FlinkTypeKind.SCALAR,
         dataType: "INT",
+        fullDataTypeString: "INT",
         isFieldNullable: false,
       };
       assert(!isCompoundFlinkType(scalarType));
@@ -821,16 +809,19 @@ describe("flinkTypeParser", () => {
       const nestedType: FlinkType = {
         kind: FlinkTypeKind.ARRAY,
         dataType: "ARRAY",
+        fullDataTypeString: "ROW<id INT> ARRAY",
         isFieldNullable: false,
         members: [
           {
             kind: FlinkTypeKind.ROW,
             dataType: "ROW",
+            fullDataTypeString: "ROW<id INT>",
             isFieldNullable: false,
             members: [
               {
                 kind: FlinkTypeKind.SCALAR,
                 dataType: "INT",
+                fullDataTypeString: "INT",
                 isFieldNullable: false,
                 fieldName: "id",
               },

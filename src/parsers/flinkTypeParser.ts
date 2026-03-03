@@ -71,6 +71,7 @@ class FlinkTypeParser {
    * Parse an ARRAY<T> type.
    */
   private parseArrayType(): CompoundFlinkType {
+    const startPos = this.state.getCurrentPos() - "ARRAY".length;
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after ARRAY");
@@ -81,8 +82,10 @@ class FlinkTypeParser {
     }
     this.state.skipWhitespace();
     const isFieldNullable = this.parseNullability();
+    const fullDataTypeString = this.state.extractSince(startPos);
     return {
       dataType: "ARRAY",
+      fullDataTypeString,
       isFieldNullable,
       kind: FlinkTypeKind.ARRAY,
       members: [innerType],
@@ -93,6 +96,7 @@ class FlinkTypeParser {
    * Parse a MULTISET<T> type.
    */
   private parseMultisetType(): CompoundFlinkType {
+    const startPos = this.state.getCurrentPos() - "MULTISET".length;
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after MULTISET");
@@ -103,8 +107,10 @@ class FlinkTypeParser {
     }
     this.state.skipWhitespace();
     const isFieldNullable = this.parseNullability();
+    const fullDataTypeString = this.state.extractSince(startPos);
     return {
       dataType: "MULTISET",
+      fullDataTypeString,
       isFieldNullable,
       kind: FlinkTypeKind.MULTISET,
       members: [innerType],
@@ -115,6 +121,7 @@ class FlinkTypeParser {
    * Parse a ROW<...> type.
    */
   private parseRowType(): CompoundFlinkType {
+    const startPos = this.state.getCurrentPos() - "ROW".length;
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after ROW");
@@ -125,8 +132,10 @@ class FlinkTypeParser {
     }
     this.state.skipWhitespace();
     const isFieldNullable = this.parseNullability();
+    const fullDataTypeString = this.state.extractSince(startPos);
     return {
       dataType: "ROW",
+      fullDataTypeString,
       isFieldNullable,
       kind: FlinkTypeKind.ROW,
       members,
@@ -137,6 +146,7 @@ class FlinkTypeParser {
    * Parse a MAP<K, V> type.
    */
   private parseMapType(): CompoundFlinkType {
+    const startPos = this.state.getCurrentPos() - "MAP".length;
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after MAP");
@@ -147,8 +157,10 @@ class FlinkTypeParser {
     }
     this.state.skipWhitespace();
     const isFieldNullable = this.parseNullability();
+    const fullDataTypeString = this.state.extractSince(startPos);
     return {
       dataType: "MAP",
+      fullDataTypeString,
       isFieldNullable,
       kind: FlinkTypeKind.MAP,
       members,
@@ -159,6 +171,7 @@ class FlinkTypeParser {
    * Parse a scalar or parameterized type (e.g., INT, VARCHAR(255), TIMESTAMP WITH TIME ZONE).
    */
   private parseScalarType(): FlinkType {
+    const startPos = this.state.getCurrentPos();
     // Parse base type, then consume any parameters and keywords
     let dataType = this.state.parseIdentifierWithSpaces(() => this.shouldStopParsingType());
 
@@ -180,8 +193,10 @@ class FlinkTypeParser {
     }
 
     this.state.skipWhitespace();
+    const fullDataTypeString = this.state.extractSince(startPos);
     return {
       dataType,
+      fullDataTypeString,
       isFieldNullable: this.parseNullability(),
       kind: FlinkTypeKind.SCALAR,
     };
