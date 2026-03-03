@@ -630,20 +630,22 @@ describe("FlinkTypeNode", () => {
       assert(text.includes("User email address"));
     });
 
-    it("includes type kind for compound types", () => {
+    it("includes data type for ROW types", () => {
       const parsed = parseFlinkType("ROW<id INT>");
       const node = new FlinkTypeNode({ parsedType: parsed });
       const text = node.searchableText();
 
-      assert(text.includes("row"));
+      assert(text.includes("ROW"));
     });
 
-    it("includes member count for ROW types", () => {
+    it("includes data type for compound ROW types with multiple fields", () => {
       const parsed = parseFlinkType("ROW<id INT, name VARCHAR, email VARCHAR>");
+      parsed.fieldName = "user_profile";
       const node = new FlinkTypeNode({ parsedType: parsed });
       const text = node.searchableText();
 
-      assert(text.includes("3 fields"));
+      assert(text.includes("user_profile"));
+      assert(text.includes("ROW"));
     });
   });
 

@@ -122,14 +122,6 @@ export class FlinkTypeNode implements IResourceBase {
   }
 
   /**
-   * Get the formatted display string for this type.
-   * For use in UI labels, descriptions, and other display contexts.
-   */
-  get formattedType(): string {
-    return formatFlinkTypeForDisplay(this.parsedType);
-  }
-
-  /**
    * Determine if this node should be expandable in the tree view.
    *
    * Expandable if:
@@ -306,14 +298,6 @@ export class FlinkTypeNode implements IResourceBase {
 
     if (this.parsedType.comment) {
       parts.push(this.parsedType.comment);
-    }
-
-    // For compound types, include member info
-    if (isCompoundFlinkType(this.parsedType)) {
-      parts.push(this.parsedType.kind.toLowerCase());
-      if (this.parsedType.kind === FlinkTypeKind.ROW) {
-        parts.push(`${this.parsedType.members.length} fields`);
-      }
     }
 
     return parts.join(" ");
