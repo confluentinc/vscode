@@ -32,8 +32,8 @@ describe("flinkSql/warningParser", () => {
       assert.strictEqual(result[0].severity, "MODERATE");
       assert.strictEqual(result[0].reason, "");
       assert.strictEqual(result[0].message, "The primary key does not match the upsert key.");
-      // created_at is empty string for legacy warnings (no timestamp available)
-      assert.strictEqual(result[0].created_at, "");
+      // created_at is null for legacy warnings (no timestamp available)
+      assert.strictEqual(result[0].created_at, null);
     });
 
     it("should parse multiple legacy warnings", () => {
@@ -87,7 +87,7 @@ describe("flinkSql/warningParser", () => {
       const apiWarnings: StatementWarning[] = [
         {
           severity: "CRITICAL",
-          created_at: "2025-11-14T16:01:00Z",
+          created_at: new Date("2025-11-14T16:01:00Z"),
           reason: "UPSERT_PRIMARY_KEY_MISMATCH",
           message: "API warning message",
         },
