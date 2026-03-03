@@ -46,32 +46,32 @@ class FlinkTypeParser {
    */
   parse(): FlinkType {
     this.state.skipWhitespace();
+    const startPos = this.state.getCurrentPos();
 
     if (this.state.tryConsume("ARRAY")) {
-      return this.parseArrayType();
+      return this.parseArrayType(startPos);
     }
 
     if (this.state.tryConsume("MULTISET")) {
-      return this.parseMultisetType();
+      return this.parseMultisetType(startPos);
     }
 
     if (this.state.tryConsume("ROW")) {
-      return this.parseRowType();
+      return this.parseRowType(startPos);
     }
 
     if (this.state.tryConsume("MAP")) {
-      return this.parseMapType();
+      return this.parseMapType(startPos);
     }
 
     // Default to scalar or parameterized type
-    return this.parseScalarType();
+    return this.parseScalarType(startPos);
   }
 
   /**
    * Parse an ARRAY<T> type.
    */
-  private parseArrayType(): CompoundFlinkType {
-    const startPos = this.state.getCurrentPos() - "ARRAY".length;
+  private parseArrayType(startPos: number): CompoundFlinkType {
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after ARRAY");
@@ -95,8 +95,7 @@ class FlinkTypeParser {
   /**
    * Parse a MULTISET<T> type.
    */
-  private parseMultisetType(): CompoundFlinkType {
-    const startPos = this.state.getCurrentPos() - "MULTISET".length;
+  private parseMultisetType(startPos: number): CompoundFlinkType {
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after MULTISET");
@@ -120,8 +119,7 @@ class FlinkTypeParser {
   /**
    * Parse a ROW<...> type.
    */
-  private parseRowType(): CompoundFlinkType {
-    const startPos = this.state.getCurrentPos() - "ROW".length;
+  private parseRowType(startPos: number): CompoundFlinkType {
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after ROW");
@@ -145,8 +143,7 @@ class FlinkTypeParser {
   /**
    * Parse a MAP<K, V> type.
    */
-  private parseMapType(): CompoundFlinkType {
-    const startPos = this.state.getCurrentPos() - "MAP".length;
+  private parseMapType(startPos: number): CompoundFlinkType {
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after MAP");
@@ -170,8 +167,7 @@ class FlinkTypeParser {
   /**
    * Parse a scalar or parameterized type (e.g., INT, VARCHAR(255), TIMESTAMP WITH TIME ZONE).
    */
-  private parseScalarType(): FlinkType {
-    const startPos = this.state.getCurrentPos();
+  private parseScalarType(startPos: number): FlinkType {
     // Parse base type, then consume any parameters and keywords
     let dataType = this.state.parseIdentifierWithSpaces(() => this.shouldStopParsingType());
 
