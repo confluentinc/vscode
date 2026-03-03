@@ -16,7 +16,14 @@ export class FlinkTypeNode implements IResourceBase {
   /** The parsed Flink type this node wraps */
   readonly parsedType: FlinkType;
 
-  /** ID of the parent FlinkRelationColumn this node originates from */
+  /**
+   * ID of the parent FlinkRelationColumn this node originates from.
+   * Critical for TreeView uniqueness: ensures that nodes with identical field names across different
+   * columns have distinct IDs. Used as the root of the hierarchical ID that uniquely identifies this
+   * node in the tree (combined with field names via parentNode chain).
+   * Example: columns "track" and "artist" both have nested field "uri" → generates distinct IDs:
+   * "table.track.uri" vs "table.artist.uri"
+   */
   readonly parentColumnId: string;
 
   /**
