@@ -189,11 +189,12 @@ class FlinkTypeParser {
     }
 
     this.state.skipWhitespace();
+    const isFieldNullable = this.parseNullability();
     const fullDataTypeString = this.state.extractSince(startPos);
     return {
       dataType,
       fullDataTypeString,
-      isFieldNullable: this.parseNullability(),
+      isFieldNullable,
       kind: FlinkTypeKind.SCALAR,
     };
   }
