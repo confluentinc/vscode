@@ -215,6 +215,19 @@ export class FlinkTypeNode implements IResourceBase {
    * Get child type nodes from this node (for tree expansion).
    * Returns empty array if not expandable. If expandable, returns the appropriate child nodes.
    *
+   * IMPORTANT: This method manufactures transient child FlinkTypeNode instances on each call.
+   * These instances are NOT persisted or cached. This is intentional and necessary because:
+   *
+   * **Tree Navigation via getParent()**: VS Code's tree view API calls getParent() to navigate
+   * up the tree hierarchy. For nested type expansions, the parent instance must be the exact
+   * FlinkTypeNode that was returned from this method. By setting `parentNode: this` on each
+   * child, we ensure getParent() returns the correct parent instance. The view provider's
+   * getParent() method (flinkDatabase.ts line 193-196) uses this reference to navigate.
+   *
+   * Note: IDs are unique even without the parentNode chain - they're unique via the combination
+   * of parentColumnId + field names. However, the parentNode reference is essential for the
+   * view provider's tree navigation logic.
+   *
    * For ROW/MAP: returns member field nodes directly.
    * For ARRAY/MULTISET with compound element types: returns the element's children directly
    * (skips the intermediate container node for better UX). Since isExpandable() validates this
