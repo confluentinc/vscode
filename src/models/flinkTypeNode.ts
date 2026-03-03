@@ -193,14 +193,9 @@ export class FlinkTypeNode implements IResourceBase {
   private getTooltip(): CustomMarkdownString {
     const tooltip = new CustomMarkdownString();
 
-    // Header with type kind label
-    const kindLabel = this.getTypeKindLabel();
-    tooltip.addHeader(kindLabel);
-
-    // Field/member name if present
-    if (this.parsedType.fieldName) {
-      tooltip.addField("Name", this.parsedType.fieldName);
-    }
+    // Use field name as header if present, otherwise use generic "Type"
+    const headerText = this.parsedType.fieldName || "Type";
+    tooltip.addHeader(headerText);
 
     // Full data type string (the complete SQL definition)
     tooltip.addField("Data Type", formatSqlType(this.parsedType.fullDataTypeString));
@@ -213,37 +208,7 @@ export class FlinkTypeNode implements IResourceBase {
       tooltip.addField("Comment", this.parsedType.comment);
     }
 
-    // Member count for compound types
-    if (isCompoundFlinkType(this.parsedType)) {
-      const memberCount = this.parsedType.members.length;
-      if (this.parsedType.kind === FlinkTypeKind.ROW) {
-        tooltip.addField("Fields", memberCount.toString());
-      } else if (this.parsedType.kind === FlinkTypeKind.MAP) {
-        tooltip.addField("Entries", memberCount.toString());
-      }
-    }
-
     return tooltip;
-  }
-
-  /**
-   * Get a human-readable label for the type kind.
-   */
-  private getTypeKindLabel(): string {
-    switch (this.parsedType.kind) {
-      case FlinkTypeKind.SCALAR:
-        return "Scalar Type";
-      case FlinkTypeKind.ROW:
-        return "Row Field";
-      case FlinkTypeKind.MAP:
-        return "Map Entry";
-      case FlinkTypeKind.ARRAY:
-        return "Array Element";
-      case FlinkTypeKind.MULTISET:
-        return "Multiset Element";
-      default:
-        return "Type";
-    }
   }
 
   /**

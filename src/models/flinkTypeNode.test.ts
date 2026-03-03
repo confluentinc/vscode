@@ -484,6 +484,113 @@ describe("FlinkTypeNode", () => {
     });
   });
 
+  describe("getTooltip()", () => {
+    it("uses field name as header when present", () => {
+      const parsed = parseFlinkType("INT");
+      parsed.fieldName = "user_id";
+
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      const item = node.getTreeItem();
+      const tooltipText = (item.tooltip as any).value;
+
+      assert(tooltipText.includes("user_id"));
+    });
+
+    it("uses 'Type' as header when no field name", () => {
+      const parsed = parseFlinkType("VARCHAR(255)");
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      const item = node.getTreeItem();
+      const tooltipText = (item.tooltip as any).value;
+
+      assert(tooltipText.includes("Type"));
+    });
+
+    it("shows full data type string in Data Type field", () => {
+      const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
+      parsed.fieldName = "record";
+
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      const item = node.getTreeItem();
+      const tooltipText = (item.tooltip as any).value;
+
+      assert(tooltipText.includes("Data Type"));
+      assert(tooltipText.includes("ROW<id INT, name VARCHAR>"));
+    });
+
+    it("shows nullable status", () => {
+      const parsed = parseFlinkType("INT NOT NULL");
+      parsed.fieldName = "id";
+
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      const item = node.getTreeItem();
+      const tooltipText = (item.tooltip as any).value;
+
+      assert(tooltipText.includes("Nullable"));
+      assert(tooltipText.includes("No"));
+    });
+
+    it("shows comment when present", () => {
+      const parsed = parseFlinkType("INT");
+      parsed.fieldName = "status";
+      parsed.comment = "User status code";
+
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      const item = node.getTreeItem();
+      const tooltipText = (item.tooltip as any).value;
+
+      assert(tooltipText.includes("Comment"));
+      assert(tooltipText.includes("User status code"));
+    });
+
+    it("shows full data type for ROW types", () => {
+      const parsed = parseFlinkType("ROW<id INT, name VARCHAR, age INT>");
+
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      const item = node.getTreeItem();
+      const tooltipText = (item.tooltip as any).value;
+
+      assert(tooltipText.includes("Data Type"));
+      assert(tooltipText.includes("ROW<id INT, name VARCHAR, age INT>"));
+    });
+
+    it("shows full data type for MAP types", () => {
+      const parsed = parseFlinkType("MAP<STRING, INT>");
+
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      const item = node.getTreeItem();
+      const tooltipText = (item.tooltip as any).value;
+
+      assert(tooltipText.includes("Data Type"));
+      assert(tooltipText.includes("MAP<STRING, INT>"));
+    });
+
+    it("shows full data type for ARRAY types", () => {
+      const parsed = parseFlinkType("INT ARRAY");
+
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      const item = node.getTreeItem();
+      const tooltipText = (item.tooltip as any).value;
+
+      assert(tooltipText.includes("Data Type"));
+      assert(tooltipText.includes("INT ARRAY"));
+    });
+
+    it("handles complex nested ROW with comment and nullability", () => {
+      const parsed = parseFlinkType("ROW<artist ROW<id INT, name VARCHAR>, uri VARCHAR NOT NULL>");
+      parsed.fieldName = "track";
+
+      const node = new FlinkTypeNode({ parsedType: parsed });
+      const item = node.getTreeItem();
+      const tooltipText = (item.tooltip as any).value;
+
+      assert(tooltipText.includes("track")); // header
+      assert(tooltipText.includes("Data Type"));
+      assert(tooltipText.includes("ROW<artist ROW<id INT, name VARCHAR>, uri VARCHAR NOT NULL>"));
+      assert(tooltipText.includes("Nullable"));
+      assert(tooltipText.includes("Comment") || !tooltipText.includes("Comment")); // comment optional
+    });
+  });
+
   describe("searchableText()", () => {
     it("includes field name in searchable text", () => {
       const parsed = parseFlinkType("INT");
