@@ -202,7 +202,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
           severity: w.severity,
           message: w.message,
           reason: w.reason,
-          createdAt: w.created_at ? w.created_at.toISOString() : undefined,
+          createdAt: w.created_at ? String(w.created_at) : undefined,
         });
       }
 
