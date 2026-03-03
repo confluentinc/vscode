@@ -191,19 +191,17 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
       return;
     }
     if (element instanceof FlinkTypeNode) {
-      // If has immediate parent node, return it
+      // Parent is either a FlinkTypeNode or FlinkRelationColumn
       if (element.parentNode) {
         return element.parentNode;
       }
-      // Otherwise, look up and return the parent column by ID
-      if (element.parentColumnId) {
-        for (const relation of this.relationsContainer.children) {
-          const column = relation.columns.find(
-            (col: FlinkRelationColumn) => col.id === element.parentColumnId,
-          );
-          if (column) {
-            return column;
-          }
+      // Fallback for test nodes without parentNode set: look up column by ID
+      for (const relation of this.relationsContainer.children) {
+        const column = relation.columns.find(
+          (col: FlinkRelationColumn) => col.id === element.parentColumnId,
+        );
+        if (column) {
+          return column;
         }
       }
       return undefined;
