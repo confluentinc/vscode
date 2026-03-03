@@ -184,7 +184,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
       it("should return scalar children when expanding a FlinkTypeNode with ROW type", () => {
         viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
         const rowParsed = parseFlinkType("ROW<id INT, name VARCHAR>");
-        const rowNode = new FlinkTypeNode({ parsedType: rowParsed });
+        const rowNode = new FlinkTypeNode({ parsedType: rowParsed, parentColumnId: "test-col" });
 
         const typeChildren = rowNode.getChildren();
         filterChildrenStub.returns(typeChildren);
@@ -203,7 +203,10 @@ describe("viewProviders/flinkDatabase.ts", () => {
       it("should return empty array when expanding a FlinkTypeNode with scalar type", () => {
         viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
         const scalarParsed = parseFlinkType("INT");
-        const scalarNode = new FlinkTypeNode({ parsedType: scalarParsed });
+        const scalarNode = new FlinkTypeNode({
+          parsedType: scalarParsed,
+          parentColumnId: "test-col",
+        });
 
         filterChildrenStub.returns([]);
 
@@ -217,7 +220,10 @@ describe("viewProviders/flinkDatabase.ts", () => {
       it("should skip intermediate nodes when expanding ARRAY<ROW> FlinkTypeNode", () => {
         viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
         const arrayRowParsed = parseFlinkType("ARRAY<ROW<id INT, name VARCHAR>>");
-        const arrayRowNode = new FlinkTypeNode({ parsedType: arrayRowParsed });
+        const arrayRowNode = new FlinkTypeNode({
+          parsedType: arrayRowParsed,
+          parentColumnId: "test-col",
+        });
 
         const typeChildren = arrayRowNode.getChildren();
         filterChildrenStub.returns(typeChildren);
@@ -407,7 +413,10 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should return the parent FlinkTypeNode for a nested FlinkTypeNode", () => {
         const parentParsed = parseFlinkType("ROW<id INT, name VARCHAR>");
-        const parentNode = new FlinkTypeNode({ parsedType: parentParsed });
+        const parentNode = new FlinkTypeNode({
+          parsedType: parentParsed,
+          parentColumnId: "test-col",
+        });
 
         const childParsed = parseFlinkType("INT");
         childParsed.fieldName = "id";
@@ -616,7 +625,10 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a nested FlinkTypeNode directly", async () => {
         const parentParsed = parseFlinkType("ROW<id INT, name VARCHAR>");
-        const parentNode = new FlinkTypeNode({ parsedType: parentParsed });
+        const parentNode = new FlinkTypeNode({
+          parsedType: parentParsed,
+          parentColumnId: "test-col",
+        });
 
         const childParsed = parseFlinkType("INT");
         childParsed.fieldName = "id";

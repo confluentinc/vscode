@@ -1,10 +1,3 @@
-/**
- * Represents a parsed Flink type node for display in the TreeView.
- *
- * Used as intermediate tree items when expanding columns with compound types (ROW, MAP, ARRAY<compound>, etc.).
- * Provides tree item rendering with proper icons, labels, and descriptions for each type kind.
- */
-
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
@@ -16,19 +9,15 @@ import { CustomMarkdownString } from "./main";
 import type { ConnectionId, IResourceBase } from "./resource";
 
 /**
- * Represents a parsed Flink type node in the tree hierarchy.
- *
- * Each node corresponds to a parsed FlinkType structure and can be expanded if it contains
- * nested compound types (ROW, MAP, or compound ARRAY/MULTISET elements).
- * Implements IResourceBase to fit into the view provider type hierarchy.
+ * Represents a parsed Flink type node in the tree hierarchy, wrapping the
+ * from-parser FlinkType with additional metadata for tree display and navigation.
  */
 export class FlinkTypeNode implements IResourceBase {
-  /** The parsed Flink type this node represents */
+  /** The parsed Flink type this node wraps */
   readonly parsedType: FlinkType;
 
-  /** If this node came from expanding a FlinkRelationColumn, reference to the parent column */
-  /** ID of the parent FlinkRelationColumn (if this is a direct child of a column) */
-  readonly parentColumnId: string | null;
+  /** ID of the parent FlinkRelationColumn this node originates from */
+  readonly parentColumnId: string;
 
   /** If this node is nested within another FlinkTypeNode, reference to the parent */
   readonly parentNode: FlinkTypeNode | null;
@@ -47,16 +36,16 @@ export class FlinkTypeNode implements IResourceBase {
    *
    * @param props Configuration object
    * @param props.parsedType The parsed FlinkType this node represents
-   * @param props.parentColumnId Optional ID of parent FlinkRelationColumn (if direct child of column)
-   * @param props.parentNode Optional parent FlinkTypeNode (if nested)
+   * @param props.parentColumnId ID of parent FlinkRelationColumn this node originates from
+   * @param props.parentNode Optional parent FlinkTypeNode (if nested within another type node)
    */
   constructor(props: {
     parsedType: FlinkType;
-    parentColumnId?: string;
+    parentColumnId: string;
     parentNode?: FlinkTypeNode;
   }) {
     this.parsedType = props.parsedType;
-    this.parentColumnId = props.parentColumnId ?? null;
+    this.parentColumnId = props.parentColumnId;
     this.parentNode = props.parentNode ?? null;
   }
 
@@ -69,7 +58,7 @@ export class FlinkTypeNode implements IResourceBase {
    * Example: "spotify-listening-data.track.artists.uri"
    */
   get id(): string {
-    const path: string[] = [];
+    const path: string[] = [this.parentColumnId];
 
     // Collect all parent nodes in order from root to this node
     const nodeChain: FlinkTypeNode[] = [this];
@@ -77,11 +66,6 @@ export class FlinkTypeNode implements IResourceBase {
     while (node) {
       nodeChain.unshift(node); // prepends to maintain root-to-leaf order
       node = node.parentNode;
-    }
-
-    // Add column id first if we have one
-    if (this.parentColumnId) {
-      path.push(this.parentColumnId);
     }
 
     // Add field names from all nodes in the chain
@@ -239,7 +223,7 @@ export class FlinkTypeNode implements IResourceBase {
           new FlinkTypeNode({
             parsedType: member,
             parentNode: this,
-            parentColumnId: this.parentColumnId ?? undefined,
+            parentColumnId: this.parentColumnId,
           }),
       );
     }
@@ -253,7 +237,7 @@ export class FlinkTypeNode implements IResourceBase {
         new FlinkTypeNode({
           parsedType: member,
           parentNode: this,
-          parentColumnId: this.parentColumnId ?? undefined,
+          parentColumnId: this.parentColumnId,
         }),
     );
   }

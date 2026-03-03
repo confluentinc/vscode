@@ -143,11 +143,8 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     } else if (element instanceof FlinkRelation) {
       // expanding a FlinkRelation to show its columns
       children = element.columns;
-    } else if (element instanceof FlinkRelationColumn) {
-      // expanding a column to show type structure
-      children = element.getChildren();
-    } else if (element instanceof FlinkTypeNode) {
-      // expanding a type node to show nested structure
+    } else if (element instanceof FlinkRelationColumn || element instanceof FlinkTypeNode) {
+      // expanding a column or type node to show type structure
       children = element.getChildren();
     }
 
