@@ -61,7 +61,6 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
       compute_pool_id: overrides.computePoolId || TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
       statement: overrides.sqlStatement || "SELECT * FROM test_table",
       principal: "test-principal",
-      authorized_principals: [],
       properties: {
         "sql.current-catalog": TEST_CCLOUD_ENVIRONMENT.name,
         "sql.current-database": TEST_CCLOUD_KAFKA_CLUSTER.name,
