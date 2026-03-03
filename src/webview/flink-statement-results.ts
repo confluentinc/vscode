@@ -14,7 +14,7 @@ import { createWebviewStorage, sendWebviewMessage } from "./comms/comms";
 
 /** A single error, warning, or info message for display in the statement results header. */
 interface DetailItem {
-  severity: "ERROR" | "CRITICAL" | "MODERATE" | "LOW" | "INFO";
+  severity: string;
   message: string;
   reason?: string;
   createdAt?: string;
@@ -202,7 +202,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
           severity: w.severity,
           message: w.message,
           reason: w.reason,
-          createdAt: w.created_at,
+          createdAt: w.created_at ? w.created_at.toISOString() : undefined,
         });
       }
 
