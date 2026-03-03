@@ -19,7 +19,12 @@ export class FlinkTypeNode implements IResourceBase {
   /** ID of the parent FlinkRelationColumn this node originates from */
   readonly parentColumnId: string;
 
-  /** If this node is nested within another FlinkTypeNode, reference to the parent */
+  /**
+   * Reference to the parent FlinkTypeNode for nested nodes (e.g., fields within a ROW, or elements in ARRAY<ROW>).
+   * Required by VS Code's TreeView API: getParent() must return the exact parent instance that was created
+   * by getChildren(). By maintaining this reference chain, we enable proper tree navigation and collapse/expand behavior.
+   * Used to build the complete ID path via the parent node chain.
+   */
   readonly parentNode: FlinkTypeNode | null;
 
   // IResourceBase implementation - all FlinkTypeNodes belong to CCloud
