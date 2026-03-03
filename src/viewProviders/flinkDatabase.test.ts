@@ -31,10 +31,12 @@ import {
   FlinkDatabaseResourceContainer,
 } from "../models/flinkDatabaseResourceContainer";
 import { FlinkUdfTreeItem } from "../models/flinkUDF";
+import { FlinkTypeNode } from "../models/flinkTypeNode";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { CustomMarkdownString } from "../models/main";
 import type { EnvironmentId, IEnvProviderRegion } from "../models/resource";
+import { parseFlinkType } from "../parsers/flinkTypeParser";
 import { FlinkDatabaseViewProvider } from "./flinkDatabase";
 
 describe("viewProviders/flinkDatabase.ts", () => {
@@ -321,6 +323,53 @@ describe("viewProviders/flinkDatabase.ts", () => {
         const parent = viewProvider.getParent(testAgent);
 
         assert.strictEqual(parent, viewProvider.aiAgentsContainer);
+      });
+
+      it("should return the parent FlinkTypeNode for a nested FlinkTypeNode", () => {
+        const parentParsed = parseFlinkType("ROW<id INT, name VARCHAR>");
+        const parentNode = new FlinkTypeNode({ parsedType: parentParsed });
+
+        const childParsed = parseFlinkType("INT");
+        childParsed.fieldName = "id";
+        const childNode = new FlinkTypeNode({
+          parsedType: childParsed,
+          parentNode: parentNode,
+          parentColumnId: TEST_VARCHAR_COLUMN.id,
+        });
+
+        const retrievedParent = viewProvider.getParent(childNode);
+
+        assert.strictEqual(retrievedParent, parentNode);
+      });
+
+      it("should return the FlinkRelationColumn parent for a top-level FlinkTypeNode", () => {
+        const testColumn = TEST_VARCHAR_COLUMN;
+        viewProvider.relationsContainer.children = [TEST_FLINK_RELATION];
+
+        const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
+        parsed.fieldName = "record";
+        const node = new FlinkTypeNode({
+          parsedType: parsed,
+          parentColumnId: testColumn.id,
+        });
+
+        const parent = viewProvider.getParent(node);
+
+        assert.strictEqual(parent, testColumn);
+      });
+
+      it("should return undefined when FlinkTypeNode parent column is not found", () => {
+        viewProvider.relationsContainer.children = [];
+
+        const parsed = parseFlinkType("INT");
+        const node = new FlinkTypeNode({
+          parsedType: parsed,
+          parentColumnId: TEST_VARCHAR_COLUMN.id,
+        });
+
+        const parent = viewProvider.getParent(node);
+
+        assert.strictEqual(parent, undefined);
       });
     });
 
