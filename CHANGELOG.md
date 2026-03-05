@@ -6,6 +6,12 @@ All notable changes to this extension will be documented in this file.
 
 - Direct connections form now supports OAuth authentication for WarpStream connections.
 
+## 2.2.2
+
+### Changed
+
+- Added telemetry for Flink statements triggered via workspace URI
+
 ## 2.2.0
 
 ### Added
