@@ -3,6 +3,9 @@
  * Handles both new structured API warnings and legacy [Warning] format in detail strings.
  */
 
+/** Regex matching `[Warning] message` blocks in legacy detail strings. */
+const LEGACY_WARNING_PATTERN = /\[Warning\]\s*([\s\S]*?)(?=\s*\[Warning\]|$)/gi;
+
 /** API warning shape from the new structured warnings field */
 export interface StatementWarning {
   readonly severity: string;
@@ -23,12 +26,10 @@ export function parseLegacyWarnings(detail: string | undefined): StatementWarnin
   }
 
   const warnings: StatementWarning[] = [];
-  // Split on [Warning] but keep the delimiter context
-  // The pattern matches [Warning] followed by text until the next [Warning] or end
-  const warningPattern = /\[Warning\]\s*([\s\S]*?)(?=\s*\[Warning\]|$)/gi;
+  LEGACY_WARNING_PATTERN.lastIndex = 0;
   let match: RegExpExecArray | null;
 
-  while ((match = warningPattern.exec(detail)) !== null) {
+  while ((match = LEGACY_WARNING_PATTERN.exec(detail)) !== null) {
     const message = match[1].trim();
     if (message) {
       warnings.push({
@@ -72,7 +73,7 @@ export function stripWarningsFromDetail(detail: string | undefined): string | nu
   if (!detail) {
     return null;
   }
-  const warningPattern = /\[Warning\]\s*[\s\S]*?(?=\s*\[Warning\]|$)/gi;
-  const stripped = detail.replace(warningPattern, "").trim();
+  LEGACY_WARNING_PATTERN.lastIndex = 0;
+  const stripped = detail.replace(LEGACY_WARNING_PATTERN, "").trim();
   return stripped.length > 0 ? stripped : null;
 }
