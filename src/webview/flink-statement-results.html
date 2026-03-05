@@ -79,7 +79,6 @@
                   <div
                     class="detail-item"
                     data-attr-class="'detail-item ' + this.item().severity.toLowerCase()"
-                    data-attr-data-testid="'statement-detail-' + this.item().severity.toLowerCase()"
                   >
                     <div class="detail-header">
                       <span
@@ -100,7 +99,11 @@
                         ></span>
                       </template>
                     </div>
-                    <div class="detail-message" data-text="this.item().message"></div>
+                    <div
+                      class="detail-message"
+                      data-text="this.item().message"
+                      data-attr-data-testid="'statement-detail-' + this.item().severity.toLowerCase()"
+                    ></div>
                   </div>
                 </template>
               </div>
