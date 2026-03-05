@@ -185,7 +185,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       if (rawDetail) {
         const hasApiWarnings = meta.warnings.length > 0;
         const processedDetail = hasApiWarnings ? stripWarningsFromDetail(rawDetail) : rawDetail;
-        detail = processedDetail ? processedDetail.replace(/\n/g, "<br>") : null;
+        detail = processedDetail ?? null;
       }
 
       // Add error message if statement failed
@@ -202,7 +202,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
           severity: w.severity,
           message: w.message,
           reason: w.reason,
-          createdAt: w.created_at ? String(w.created_at) : undefined,
+          createdAt: w.created_at ? w.created_at.toLocaleString() : undefined,
         });
       }
 
