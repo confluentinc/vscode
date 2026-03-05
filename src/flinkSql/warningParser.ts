@@ -5,10 +5,10 @@
 
 /** API warning shape from the new structured warnings field */
 export interface StatementWarning {
-  severity: string;
-  created_at: Date | null;
-  reason: string;
-  message: string;
+  readonly severity: string;
+  readonly created_at: Date | null;
+  readonly reason: string;
+  readonly message: string;
 }
 
 /**
