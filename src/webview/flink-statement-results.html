@@ -100,7 +100,7 @@
                         ></span>
                       </template>
                     </div>
-                    <div class="detail-message" data-html="this.item().message"></div>
+                    <div class="detail-message" data-text="this.item().message"></div>
                   </div>
                 </template>
               </div>
@@ -672,6 +672,7 @@
 
       .detail-message {
         line-height: 1.5;
+        white-space: pre-wrap;
       }
 
       .toggle-actions {
