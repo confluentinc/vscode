@@ -635,6 +635,66 @@ describe("flinkRelation.ts", () => {
           assert.strictEqual(ids.length, uniqueIds.size, "All IDs should be unique");
         });
       });
+
+      describe("getChildren() caching", () => {
+        it("returns exact same object instances on consecutive calls for ROW", () => {
+          const column = new FlinkRelationColumn({
+            ...TEST_VARCHAR_COLUMN,
+            relationName: "test_table",
+            name: "person",
+            fullDataType: "ROW<id INT, name VARCHAR>",
+          });
+
+          const children1 = column.getChildren();
+          const children2 = column.getChildren();
+
+          // Verify same array instance
+          assert.strictEqual(
+            children1,
+            children2,
+            "getChildren() should return the exact same array instance on consecutive calls",
+          );
+
+          // Verify same child node instances
+          assert.strictEqual(children1.length, 2, "Should have 2 children");
+          for (let i = 0; i < children1.length; i++) {
+            assert.strictEqual(
+              children1[i],
+              children2[i],
+              `Child ${i} should be the exact same instance (not just equal)`,
+            );
+          }
+        });
+
+        it("returns exact same object instances on consecutive calls for ARRAY<ROW>", () => {
+          const column = new FlinkRelationColumn({
+            ...TEST_VARCHAR_COLUMN,
+            relationName: "test_table",
+            name: "items",
+            fullDataType: "ARRAY<ROW<id INT, value VARCHAR>>",
+          });
+
+          const children1 = column.getChildren();
+          const children2 = column.getChildren();
+
+          // Verify same array instance
+          assert.strictEqual(
+            children1,
+            children2,
+            "getChildren() should return the exact same array instance on consecutive calls",
+          );
+
+          // Verify same child node instances (children of the ROW inside ARRAY)
+          assert.strictEqual(children1.length, 2, "Should have 2 children from ROW<>");
+          for (let i = 0; i < children1.length; i++) {
+            assert.strictEqual(
+              children1[i],
+              children2[i],
+              `Child ${i} should be the exact same instance`,
+            );
+          }
+        });
+      });
     });
 
     describe("getParsedType()", () => {

@@ -29,6 +29,9 @@ export class FlinkTypeNode implements IResourceBase {
    */
   readonly id: string;
 
+  /** Cached children nodes (lazy initialization) */
+  private _children: FlinkTypeNode[] | null = null;
+
   // IResourceBase implementation - all FlinkTypeNodes belong to CCloud
   get connectionId(): ConnectionId {
     return CCLOUD_CONNECTION_ID;
@@ -168,8 +171,14 @@ export class FlinkTypeNode implements IResourceBase {
    * condition, we can safely access members[0].members without additional checks.
    *
    * Child IDs are computed by appending field names to the parent ID.
+   * Results are cached to avoid regenerating FlinkTypeNode instances on repeated calls.
    */
   getChildren(): FlinkTypeNode[] {
+    // Return cached children if available
+    if (this._children !== null) {
+      return this._children;
+    }
+
     if (!this.isExpandable) {
       return [];
     }
@@ -178,7 +187,7 @@ export class FlinkTypeNode implements IResourceBase {
 
     // ROW and MAP: return member nodes directly
     if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
-      return members.map((member: FlinkType) => {
+      this._children = members.map((member: FlinkType) => {
         const fieldName = member.fieldName;
         const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
         return new FlinkTypeNode({
@@ -186,13 +195,14 @@ export class FlinkTypeNode implements IResourceBase {
           id: childId,
         });
       });
+      return this._children;
     }
 
     // ARRAY/MULTISET with compound elements: return the element's children directly
     // (skips the intermediate [element] node for cleaner UX)
     // Note: isExpandable() ensures the element is compound, so we can safely access members[0].members
     const elementType = members[0] as CompoundFlinkType;
-    return elementType.members.map((member: FlinkType) => {
+    this._children = elementType.members.map((member: FlinkType) => {
       const fieldName = member.fieldName;
       const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
       return new FlinkTypeNode({
@@ -200,6 +210,7 @@ export class FlinkTypeNode implements IResourceBase {
         id: childId,
       });
     });
+    return this._children;
   }
 
   /**

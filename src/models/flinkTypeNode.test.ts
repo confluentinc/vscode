@@ -287,6 +287,64 @@ describe("FlinkTypeNode", () => {
     });
   });
 
+  describe("getChildren() caching", () => {
+    it("returns exact same object instances on consecutive calls for ROW children", () => {
+      const rowType = parseFlinkType("ROW<id INT, name VARCHAR, active BOOLEAN>");
+      const node = new FlinkTypeNode({
+        parsedType: rowType,
+        id: "test.table.column",
+      });
+
+      const children1 = node.getChildren();
+      const children2 = node.getChildren();
+
+      // Verify same array instance
+      assert.strictEqual(
+        children1,
+        children2,
+        "getChildren() should return the exact same array instance on consecutive calls",
+      );
+
+      // Verify same child node instances
+      assert.strictEqual(children1.length, 3, "Should have 3 children");
+      for (let i = 0; i < children1.length; i++) {
+        assert.strictEqual(
+          children1[i],
+          children2[i],
+          `Child ${i} should be the exact same instance (not just equal)`,
+        );
+      }
+    });
+
+    it("returns exact same object instances on consecutive calls for ARRAY<ROW> children", () => {
+      const arrayType = parseFlinkType("ARRAY<ROW<id INT, status VARCHAR>>");
+      const node = new FlinkTypeNode({
+        parsedType: arrayType,
+        id: "test.table.array_col",
+      });
+
+      const children1 = node.getChildren();
+      const children2 = node.getChildren();
+
+      // Verify same array instance
+      assert.strictEqual(
+        children1,
+        children2,
+        "getChildren() should return the exact same array instance on consecutive calls",
+      );
+
+      // Verify same child node instances
+      assert.strictEqual(children1.length, 2, "Should have 2 children from ROW<>");
+      for (let i = 0; i < children1.length; i++) {
+        assert.strictEqual(
+          children1[i],
+          children2[i],
+          `Child ${i} should be the exact same instance`,
+        );
+      }
+    });
+  });
+
   describe("iconName property", () => {
     it("should return FLINK_TYPE_ROW for ROW types", () => {
       const parsed = parseFlinkType("ROW<id INT>");
