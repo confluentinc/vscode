@@ -10,6 +10,7 @@ import { FlinkTypeKind } from "./flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
 import { FlinkRelationColumn } from "./flinkRelation";
 import { parseFlinkType } from "../parsers/flinkTypeParser";
+import { CustomMarkdownString } from "./main";
 
 /**
  * Helper to create a test FlinkRelationColumn.
@@ -498,7 +499,7 @@ describe("FlinkTypeNode", () => {
 
       const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
       const item = node.getTreeItem();
-      const tooltipText = (item.tooltip as any).value;
+      const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
       assert(tooltipText.includes("user_id"));
     });
@@ -507,7 +508,7 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("VARCHAR(255)");
       const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
       const item = node.getTreeItem();
-      const tooltipText = (item.tooltip as any).value;
+      const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
       assert(tooltipText.includes("Type"));
     });
@@ -518,7 +519,7 @@ describe("FlinkTypeNode", () => {
 
       const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
       const item = node.getTreeItem();
-      const tooltipText = (item.tooltip as any).value;
+      const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
       assert(tooltipText.includes("Data Type"));
       assert(tooltipText.includes("ROW<id INT, name VARCHAR>"));
@@ -530,7 +531,7 @@ describe("FlinkTypeNode", () => {
 
       const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
       const item = node.getTreeItem();
-      const tooltipText = (item.tooltip as any).value;
+      const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
       assert(tooltipText.includes("Nullable"));
       assert(tooltipText.includes("No"));
@@ -543,7 +544,7 @@ describe("FlinkTypeNode", () => {
 
       const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
       const item = node.getTreeItem();
-      const tooltipText = (item.tooltip as any).value;
+      const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
       assert(tooltipText.includes("Comment"));
       assert(tooltipText.includes("User status code"));
@@ -554,7 +555,7 @@ describe("FlinkTypeNode", () => {
 
       const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
       const item = node.getTreeItem();
-      const tooltipText = (item.tooltip as any).value;
+      const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
       assert(tooltipText.includes("Data Type"));
       assert(tooltipText.includes("ROW<id INT, name VARCHAR, age INT>"));
@@ -565,7 +566,7 @@ describe("FlinkTypeNode", () => {
 
       const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
       const item = node.getTreeItem();
-      const tooltipText = (item.tooltip as any).value;
+      const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
       assert(tooltipText.includes("Data Type"));
       assert(tooltipText.includes("MAP<STRING, INT>"));
@@ -576,7 +577,7 @@ describe("FlinkTypeNode", () => {
 
       const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
       const item = node.getTreeItem();
-      const tooltipText = (item.tooltip as any).value;
+      const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
       assert(tooltipText.includes("Data Type"));
       assert(tooltipText.includes("INT ARRAY"));
@@ -588,7 +589,7 @@ describe("FlinkTypeNode", () => {
 
       const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
       const item = node.getTreeItem();
-      const tooltipText = (item.tooltip as any).value;
+      const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
       assert(tooltipText.includes("track")); // header
       assert(tooltipText.includes("Data Type"));
