@@ -30,27 +30,45 @@ function createTestColumn(fullDataType: string, name: string = "test_col"): Flin
   });
 }
 
+/**
+ * Shared test parent column for all FlinkTypeNode tests.
+ * Used as the parent for all test node creations.
+ */
+const TEST_PARENT_COLUMN = createTestColumn("INT", "test_col");
+
 describe("FlinkTypeNode", () => {
   describe("constructor and properties", () => {
     it("creates node with minimal properties", () => {
       const parsed = parseFlinkType("INT");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.parsedType, parsed);
       assert.strictEqual(node.parentColumnId, "test-col-id");
-      assert.strictEqual(node.parentNode, null);
+      assert.strictEqual(node.parentNode, TEST_PARENT_COLUMN);
     });
 
     it("creates node with parentColumnId", () => {
       const parsed = parseFlinkType("INT");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test_table.test_col" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test_table.test_col",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.parentColumnId, "test_table.test_col");
     });
 
     it("creates node with parentNode", () => {
       const parsed1 = parseFlinkType("INT");
-      const node1 = new FlinkTypeNode({ parsedType: parsed1, parentColumnId: "test-col-id" });
+      const node1 = new FlinkTypeNode({
+        parsedType: parsed1,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       const parsed2 = parseFlinkType("VARCHAR");
       const node2 = new FlinkTypeNode({
@@ -66,14 +84,22 @@ describe("FlinkTypeNode", () => {
   describe("IResourceBase implementation", () => {
     it("has correct connectionId", () => {
       const parsed = parseFlinkType("INT");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.connectionId, "vscode-confluent-cloud-connection");
     });
 
     it("has correct connectionType", () => {
       const parsed = parseFlinkType("INT");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.connectionType, "CCLOUD");
     });
@@ -83,7 +109,11 @@ describe("FlinkTypeNode", () => {
     it("generates id from parentColumn alone", () => {
       const column = createTestColumn("INT");
       const parsed = parseFlinkType("INT");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
 
       assert.strictEqual(node.id, "test_table.test_col");
     });
@@ -93,7 +123,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("INT");
       parsed.fieldName = "id";
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
       assert.strictEqual(node.id, "test_table.test_col.id");
     });
 
@@ -105,6 +139,7 @@ describe("FlinkTypeNode", () => {
       const outerNode = new FlinkTypeNode({
         parsedType: outerFieldParsed,
         parentColumnId: column.id,
+        parentNode: column,
       });
 
       const innerFieldParsed = parseFlinkType("INT");
@@ -154,63 +189,99 @@ describe("FlinkTypeNode", () => {
   describe("isExpandable property", () => {
     it("returns false for scalar types", () => {
       const parsed = parseFlinkType("INT");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.isExpandable, false);
     });
 
     it("returns true for ROW types", () => {
       const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.isExpandable, true);
     });
 
     it("returns true for MAP types", () => {
       const parsed = parseFlinkType("MAP<VARCHAR, INT>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.isExpandable, true);
     });
 
     it("returns false for ARRAY<scalar>", () => {
       const parsed = parseFlinkType("ARRAY<INT>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.isExpandable, false);
     });
 
     it("returns true for ARRAY<ROW>", () => {
       const parsed = parseFlinkType("ARRAY<ROW<id INT, name VARCHAR>>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.isExpandable, true);
     });
 
     it("returns true for ARRAY<MAP>", () => {
       const parsed = parseFlinkType("ARRAY<MAP<VARCHAR, INT>>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.isExpandable, true);
     });
 
     it("returns false for MULTISET<scalar>", () => {
       const parsed = parseFlinkType("MULTISET<VARCHAR>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.isExpandable, false);
     });
 
     it("returns true for MULTISET<ROW>", () => {
       const parsed = parseFlinkType("MULTISET<ROW<id INT>>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.isExpandable, true);
     });
 
     it("returns true for nested ARRAY<ARRAY<ROW>>", () => {
       const parsed = parseFlinkType("ARRAY<ARRAY<ROW<id INT>>>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.isExpandable, true);
     });
@@ -219,7 +290,11 @@ describe("FlinkTypeNode", () => {
   describe("getChildren()", () => {
     it("returns empty array for scalar types", () => {
       const parsed = parseFlinkType("INT");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       const children = node.getChildren();
       assert.strictEqual(children.length, 0);
@@ -228,7 +303,11 @@ describe("FlinkTypeNode", () => {
     it("returns member nodes for ROW types", () => {
       const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
       const column = createTestColumn("ROW<id INT, name VARCHAR>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
 
       const children = node.getChildren();
       assert.strictEqual(children.length, 2);
@@ -239,7 +318,11 @@ describe("FlinkTypeNode", () => {
     it("children have correct parent references", () => {
       const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
       const column = createTestColumn("ROW<id INT, name VARCHAR>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
 
       const children = node.getChildren();
       assert.strictEqual(children[0].parentNode, node);
@@ -249,7 +332,11 @@ describe("FlinkTypeNode", () => {
     it("returns ROW fields directly for ARRAY<ROW> (skips intermediate)", () => {
       const parsed = parseFlinkType("ARRAY<ROW<id INT, name VARCHAR>>");
       const column = createTestColumn("ARRAY<ROW<id INT, name VARCHAR>>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
 
       const children = node.getChildren();
       // Should return the ROW's fields directly, not the ROW itself
@@ -262,7 +349,11 @@ describe("FlinkTypeNode", () => {
     it("returns key and value nodes for MAP types", () => {
       const parsed = parseFlinkType("MAP<VARCHAR, INT>");
       const column = createTestColumn("MAP<VARCHAR, INT>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
 
       const children = node.getChildren();
       assert.strictEqual(children.length, 2);
@@ -273,7 +364,11 @@ describe("FlinkTypeNode", () => {
     it("returns empty array for ARRAY<scalar>", () => {
       const parsed = parseFlinkType("ARRAY<INT>");
       const column = createTestColumn("ARRAY<INT>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
 
       const children = node.getChildren();
       assert.strictEqual(children.length, 0);
@@ -283,37 +378,61 @@ describe("FlinkTypeNode", () => {
   describe("iconName property", () => {
     it("should return FLINK_TYPE_ROW for ROW types", () => {
       const parsed = parseFlinkType("ROW<id INT>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       assert.strictEqual(node.iconName, IconNames.FLINK_TYPE_ROW);
     });
 
     it("should return FLINK_TYPE_ARRAY for ARRAY types", () => {
       const parsed = parseFlinkType("ARRAY<INT>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       assert.strictEqual(node.iconName, IconNames.FLINK_TYPE_ARRAY);
     });
 
     it("should return FLINK_TYPE_MULTISET for MULTISET types", () => {
       const parsed = parseFlinkType("MULTISET<VARCHAR>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       assert.strictEqual(node.iconName, IconNames.FLINK_TYPE_MULTISET);
     });
 
     it("should return FLINK_TYPE_MULTISET (not ARRAY) for MULTISET with ROW", () => {
       const parsed = parseFlinkType("MULTISET<ROW<id INT>>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       assert.strictEqual(node.iconName, IconNames.FLINK_TYPE_MULTISET);
     });
 
     it("should return FLINK_FUNCTION for MAP types", () => {
       const parsed = parseFlinkType("MAP<INT, VARCHAR>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       assert.strictEqual(node.iconName, IconNames.FLINK_FUNCTION);
     });
 
     it("should return FLINK_FUNCTION for scalar types", () => {
       const parsed = parseFlinkType("INT");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       assert.strictEqual(node.iconName, IconNames.FLINK_FUNCTION);
     });
 
@@ -324,10 +443,12 @@ describe("FlinkTypeNode", () => {
       const arrayNode = new FlinkTypeNode({
         parsedType: arrayParsed,
         parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
       });
       const multisetNode = new FlinkTypeNode({
         parsedType: multisetParsed,
         parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
       });
 
       const arrayIcon = arrayNode.iconName;
@@ -345,7 +466,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("INT");
       parsed.fieldName = "test_field";
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
       const item = node.getTreeItem();
 
       assert.strictEqual(item.label, "test_field");
@@ -353,7 +478,11 @@ describe("FlinkTypeNode", () => {
 
     it("creates tree item with element type in label for ARRAY<scalar>", () => {
       const parsed = parseFlinkType("ARRAY<VARCHAR(255)>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
 
       // formatSqlType only removes 2147483647, keeps other parameters
@@ -362,7 +491,11 @@ describe("FlinkTypeNode", () => {
 
     it("creates tree item with element type in label for ARRAY<ROW>", () => {
       const parsed = parseFlinkType("ARRAY<ROW<id INT>>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
 
       assert.strictEqual(item.label, "ROW[]");
@@ -370,7 +503,11 @@ describe("FlinkTypeNode", () => {
 
     it("creates tree item with element type in label for MULTISET<scalar>", () => {
       const parsed = parseFlinkType("MULTISET<INT>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
 
       assert.strictEqual(item.label, "INT MULTISET");
@@ -378,7 +515,11 @@ describe("FlinkTypeNode", () => {
 
     it("sets collapsibleState to None for non-expandable types", () => {
       const parsed = parseFlinkType("INT");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
 
       assert.strictEqual(item.collapsibleState, TreeItemCollapsibleState.None);
@@ -386,7 +527,11 @@ describe("FlinkTypeNode", () => {
 
     it("sets collapsibleState to Collapsed for expandable types", () => {
       const parsed = parseFlinkType("ROW<id INT>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
 
       assert.strictEqual(item.collapsibleState, TreeItemCollapsibleState.Collapsed);
@@ -396,7 +541,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("VARCHAR(255)");
       parsed.isFieldNullable = false;
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
 
       assert(typeof item.description === "string");
@@ -408,7 +557,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("VARCHAR(255)");
       parsed.isFieldNullable = true;
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
 
       assert(typeof item.description === "string");
@@ -419,7 +572,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("ARRAY<VARCHAR(255)>");
       parsed.isFieldNullable = true;
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
 
       assert(typeof item.description === "string");
@@ -430,7 +587,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("ARRAY<INT>");
       parsed.isFieldNullable = false;
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
 
       assert(typeof item.description === "string");
@@ -441,7 +602,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("MULTISET<DECIMAL>");
       parsed.isFieldNullable = true;
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
 
       assert(typeof item.description === "string");
@@ -452,7 +617,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("ARRAY<ROW<id INT>>");
       parsed.isFieldNullable = true;
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
 
       assert(typeof item.description === "string");
@@ -461,7 +630,11 @@ describe("FlinkTypeNode", () => {
 
     it("sets correct contextValue", () => {
       const parsed = parseFlinkType("INT");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
 
       assert.strictEqual(item.contextValue, "ccloud-flink-type-node");
@@ -469,7 +642,11 @@ describe("FlinkTypeNode", () => {
 
     it("sets icon for ROW type", () => {
       const parsed = parseFlinkType("ROW<id INT>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
 
       // Icon should be a ThemeIcon with "symbol-struct"
@@ -482,7 +659,11 @@ describe("FlinkTypeNode", () => {
       parsed.fieldName = "my_field";
       parsed.comment = "Test field";
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
       const item = node.getTreeItem();
 
       assert(item.tooltip);
@@ -497,7 +678,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("INT");
       parsed.fieldName = "user_id";
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
       const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
@@ -506,7 +691,11 @@ describe("FlinkTypeNode", () => {
 
     it("uses 'Type' as header when no field name", () => {
       const parsed = parseFlinkType("VARCHAR(255)");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
       const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
@@ -517,7 +706,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
       parsed.fieldName = "record";
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
       const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
@@ -529,7 +722,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("INT NOT NULL");
       parsed.fieldName = "id";
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
       const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
@@ -542,7 +739,11 @@ describe("FlinkTypeNode", () => {
       parsed.fieldName = "status";
       parsed.comment = "User status code";
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
       const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
@@ -553,7 +754,11 @@ describe("FlinkTypeNode", () => {
     it("shows full data type for ROW types", () => {
       const parsed = parseFlinkType("ROW<id INT, name VARCHAR, age INT>");
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
       const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
@@ -564,7 +769,11 @@ describe("FlinkTypeNode", () => {
     it("shows full data type for MAP types", () => {
       const parsed = parseFlinkType("MAP<STRING, INT>");
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
       const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
@@ -575,7 +784,11 @@ describe("FlinkTypeNode", () => {
     it("shows full data type for ARRAY types", () => {
       const parsed = parseFlinkType("INT ARRAY");
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
       const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
@@ -587,7 +800,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("ROW<artist ROW<id INT, name VARCHAR>, uri VARCHAR NOT NULL>");
       parsed.fieldName = "track";
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const item = node.getTreeItem();
       const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
@@ -604,7 +821,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("INT");
       parsed.fieldName = "user_id";
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const text = node.searchableText();
 
       assert(text.includes("user_id"));
@@ -612,7 +833,11 @@ describe("FlinkTypeNode", () => {
 
     it("includes data type in searchable text", () => {
       const parsed = parseFlinkType("VARCHAR(255)");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const text = node.searchableText();
 
       assert(text.includes("VARCHAR"));
@@ -622,7 +847,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("INT");
       parsed.isFieldNullable = false;
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const text = node.searchableText();
 
       assert(text.includes("NOT NULL"));
@@ -632,7 +861,11 @@ describe("FlinkTypeNode", () => {
       const parsed = parseFlinkType("VARCHAR");
       parsed.comment = "User email address";
 
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const text = node.searchableText();
 
       assert(text.includes("User email address"));
@@ -640,7 +873,11 @@ describe("FlinkTypeNode", () => {
 
     it("includes data type for ROW types", () => {
       const parsed = parseFlinkType("ROW<id INT>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const text = node.searchableText();
 
       assert(text.includes("ROW"));
@@ -649,7 +886,11 @@ describe("FlinkTypeNode", () => {
     it("includes data type for compound ROW types with multiple fields", () => {
       const parsed = parseFlinkType("ROW<id INT, name VARCHAR, email VARCHAR>");
       parsed.fieldName = "user_profile";
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
       const text = node.searchableText();
 
       assert(text.includes("user_profile"));
@@ -661,7 +902,11 @@ describe("FlinkTypeNode", () => {
     it("handles deeply nested ROW structures", () => {
       const parsed = parseFlinkType("ROW<outer ROW<middle ROW<inner INT>>>");
       const column = createTestColumn("ROW<outer ROW<middle ROW<inner INT>>>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
 
       assert.strictEqual(node.isExpandable, true);
 
@@ -681,7 +926,11 @@ describe("FlinkTypeNode", () => {
     it("handles ARRAY<ROW> with nested expansion", () => {
       const parsed = parseFlinkType("ARRAY<ROW<id INT, nested ROW<inner VARCHAR>>>");
       const column = createTestColumn("ARRAY<ROW<id INT, nested ROW<inner VARCHAR>>>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
 
       assert.strictEqual(node.isExpandable, true);
 
@@ -702,7 +951,11 @@ describe("FlinkTypeNode", () => {
     it("handles MAP with ROW values", () => {
       const parsed = parseFlinkType("MAP<VARCHAR, ROW<value INT>>");
       const column = createTestColumn("MAP<VARCHAR, ROW<value INT>>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
 
       const children = node.getChildren();
       assert.strictEqual(children.length, 2);
@@ -713,7 +966,11 @@ describe("FlinkTypeNode", () => {
     it("preserves parent chain through nested expansion", () => {
       const parsed = parseFlinkType("ROW<nested ROW<inner INT>>");
       const column = createTestColumn("ROW<nested ROW<inner INT>>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
 
       const level1Children = node.getChildren();
       assert.strictEqual(level1Children[0].parentColumnId, column.id);
@@ -729,7 +986,11 @@ describe("FlinkTypeNode", () => {
     it("handles types with comments", () => {
       const parsed = parseFlinkType("ROW<id INT 'User ID'>");
       const column = createTestColumn("ROW<id INT 'User ID'>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
 
       const children = node.getChildren();
       assert.strictEqual(children[0].parsedType.comment, "User ID");
@@ -738,7 +999,11 @@ describe("FlinkTypeNode", () => {
     it("ROW field with comment displays Comment in tooltip", () => {
       const parsed = parseFlinkType("ROW<id INT 'User ID'>");
       const column = createTestColumn("ROW<id INT 'User ID'>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: column.id,
+        parentNode: column,
+      });
 
       const children = node.getChildren();
       const fieldNode = children[0]; // the "id INT 'User ID'" field
@@ -751,7 +1016,11 @@ describe("FlinkTypeNode", () => {
 
     it("handles types with explicit NULL keyword", () => {
       const parsed = parseFlinkType("INT NULL");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.isExpandable, false);
       const item = node.getTreeItem();
@@ -761,7 +1030,11 @@ describe("FlinkTypeNode", () => {
 
     it("handles ARRAY<ARRAY<>> correctly", () => {
       const parsed = parseFlinkType("ARRAY<ARRAY<ROW<id INT>>>");
-      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: "test-col-id" });
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        parentColumnId: "test-col-id",
+        parentNode: TEST_PARENT_COLUMN,
+      });
 
       assert.strictEqual(node.isExpandable, true);
 

@@ -29,12 +29,12 @@ export class FlinkTypeNode implements IResourceBase {
 
   /**
    * Parent in the tree hierarchy: either a FlinkRelationColumn (for top-level type nodes created
-   * when expanding a column) or a FlinkTypeNode (for nested nodes within compound types like ROW), or null in tests.
+   * when expanding a column) or a FlinkTypeNode (for nested nodes within compound types like ROW).
    * Required by VS Code's TreeView API: getParent() must return the exact parent instance that was created
    * by getChildren(). By maintaining this reference, we enable proper tree navigation and collapse/expand behavior.
    * Also used to build the complete ID path via the parent chain (stops at FlinkRelationColumn).
    */
-  readonly parentNode: FlinkRelationColumn | FlinkTypeNode | null;
+  readonly parentNode: FlinkRelationColumn | FlinkTypeNode;
 
   // IResourceBase implementation - all FlinkTypeNodes belong to CCloud
   get connectionId(): ConnectionId {
@@ -51,16 +51,16 @@ export class FlinkTypeNode implements IResourceBase {
    * @param props Configuration object
    * @param props.parsedType The parsed FlinkType this node represents
    * @param props.parentColumnId ID of parent FlinkRelationColumn this node originates from
-   * @param props.parentNode Parent (FlinkRelationColumn for top-level, FlinkTypeNode for nested)
+   * @param props.parentNode Parent (FlinkRelationColumn for top-level, FlinkTypeNode for nested) - required
    */
   constructor(props: {
     parsedType: FlinkType;
     parentColumnId: string;
-    parentNode?: FlinkRelationColumn | FlinkTypeNode;
+    parentNode: FlinkRelationColumn | FlinkTypeNode;
   }) {
     this.parsedType = props.parsedType;
     this.parentColumnId = props.parentColumnId;
-    this.parentNode = props.parentNode ?? null;
+    this.parentNode = props.parentNode;
   }
 
   /**

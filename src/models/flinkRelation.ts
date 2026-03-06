@@ -154,6 +154,7 @@ export class FlinkRelationColumn {
           new FlinkTypeNode({
             parsedType: member,
             parentColumnId: this.id,
+            parentNode: this,
           }),
       );
     }
@@ -164,6 +165,7 @@ export class FlinkRelationColumn {
     const containerNode = new FlinkTypeNode({
       parsedType: parsed,
       parentColumnId: this.id,
+      parentNode: this,
     });
 
     const elementType = members[0] as CompoundFlinkType;
