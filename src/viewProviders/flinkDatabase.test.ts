@@ -14,6 +14,7 @@ import {
   TEST_FLINK_RELATION,
   TEST_VARCHAR_COLUMN,
 } from "../../tests/unit/testResources/flinkRelation";
+import { FlinkRelationColumn } from "../models/flinkRelation";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources/kafkaCluster";
 import { TEST_CCLOUD_SUBJECT_WITH_SCHEMAS } from "../../tests/unit/testResources/schema";
@@ -31,10 +32,12 @@ import {
   FlinkDatabaseResourceContainer,
 } from "../models/flinkDatabaseResourceContainer";
 import { FlinkUdfTreeItem } from "../models/flinkUDF";
+import { FlinkTypeNode } from "../models/flinkTypeNode";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { CustomMarkdownString } from "../models/main";
 import type { EnvironmentId, IEnvProviderRegion } from "../models/resource";
+import { parseFlinkType } from "../parsers/flinkTypeParser";
 import { FlinkDatabaseViewProvider } from "./flinkDatabase";
 
 describe("viewProviders/flinkDatabase.ts", () => {
@@ -148,6 +151,97 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         assert.deepStrictEqual(children, testColumns);
         sinon.assert.calledOnceWithExactly(filterChildrenStub, TEST_FLINK_RELATION, children);
+      });
+
+      it("should return type children when expanding a FlinkRelationColumn with compound type", () => {
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+        const rowColumn = new FlinkRelationColumn({
+          relationName: "test_relation",
+          name: "row_column",
+          fullDataType: "ROW<id INT, name VARCHAR>",
+          isNullable: true,
+          distributionKeyNumber: null,
+          isGenerated: false,
+          isPersisted: true,
+          isHidden: false,
+          metadataKey: null,
+          comment: null,
+        });
+
+        const typeChildren = rowColumn.getChildren();
+        filterChildrenStub.returns(typeChildren);
+
+        const children = viewProvider.getChildren(rowColumn);
+
+        // Should return type children, which are FlinkTypeNode instances
+        assert.strictEqual(children.length, typeChildren.length);
+        for (let i = 0; i < children.length; i++) {
+          assert.strictEqual(children[i].constructor.name, "FlinkTypeNode");
+        }
+        sinon.assert.calledOnceWithExactly(filterChildrenStub, rowColumn, typeChildren);
+      });
+
+      it("should return scalar children when expanding a FlinkTypeNode with ROW type", () => {
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+        const rowParsed = parseFlinkType("ROW<id INT, name VARCHAR>");
+        const rowNode = new FlinkTypeNode({
+          parsedType: rowParsed,
+          parentColumnId: "test-col",
+          parentNode: TEST_VARCHAR_COLUMN,
+        });
+
+        const typeChildren = rowNode.getChildren();
+        filterChildrenStub.returns(typeChildren);
+
+        const children = viewProvider.getChildren(rowNode);
+
+        // Should return child nodes for the ROW fields
+        assert.strictEqual(children.length, typeChildren.length);
+        assert.strictEqual(children.length, 2); // id and name fields
+        for (const child of children) {
+          assert.strictEqual(child.constructor.name, "FlinkTypeNode");
+        }
+        sinon.assert.calledOnceWithExactly(filterChildrenStub, rowNode, typeChildren);
+      });
+
+      it("should return empty array when expanding a FlinkTypeNode with scalar type", () => {
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+        const scalarParsed = parseFlinkType("INT");
+        const scalarNode = new FlinkTypeNode({
+          parsedType: scalarParsed,
+          parentColumnId: "test-col",
+          parentNode: TEST_VARCHAR_COLUMN,
+        });
+
+        filterChildrenStub.returns([]);
+
+        const children = viewProvider.getChildren(scalarNode);
+
+        // Scalar types are not expandable
+        assert.deepStrictEqual(children, []);
+        sinon.assert.calledOnceWithExactly(filterChildrenStub, scalarNode, []);
+      });
+
+      it("should skip intermediate nodes when expanding ARRAY<ROW> FlinkTypeNode", () => {
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+        const arrayRowParsed = parseFlinkType("ARRAY<ROW<id INT, name VARCHAR>>");
+        const arrayRowNode = new FlinkTypeNode({
+          parsedType: arrayRowParsed,
+          parentColumnId: "test-col",
+          parentNode: TEST_VARCHAR_COLUMN,
+        });
+
+        const typeChildren = arrayRowNode.getChildren();
+        filterChildrenStub.returns(typeChildren);
+
+        const children = viewProvider.getChildren(arrayRowNode);
+
+        // Should return ROW fields directly, skipping the [element] intermediate node
+        assert.strictEqual(children.length, 2); // id and name fields
+        for (const child of children) {
+          assert.strictEqual(child.constructor.name, "FlinkTypeNode");
+        }
+        sinon.assert.calledOnceWithExactly(filterChildrenStub, arrayRowNode, typeChildren);
       });
     });
 
@@ -322,6 +416,60 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         assert.strictEqual(parent, viewProvider.aiAgentsContainer);
       });
+
+      it("should return the parent FlinkTypeNode for a nested FlinkTypeNode", () => {
+        const parentParsed = parseFlinkType("ROW<id INT, name VARCHAR>");
+        const parentNode = new FlinkTypeNode({
+          parsedType: parentParsed,
+          parentColumnId: "test-col",
+          parentNode: TEST_VARCHAR_COLUMN,
+        });
+
+        const childParsed = parseFlinkType("INT");
+        childParsed.fieldName = "id";
+        const childNode = new FlinkTypeNode({
+          parsedType: childParsed,
+          parentNode: parentNode,
+          parentColumnId: TEST_VARCHAR_COLUMN.id,
+        });
+
+        const retrievedParent = viewProvider.getParent(childNode);
+
+        assert.strictEqual(retrievedParent, parentNode);
+      });
+
+      it("should return the FlinkRelationColumn parent for a top-level FlinkTypeNode", () => {
+        const testColumn = TEST_VARCHAR_COLUMN;
+        viewProvider.relationsContainer.children = [TEST_FLINK_RELATION];
+
+        const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
+        parsed.fieldName = "record";
+        const node = new FlinkTypeNode({
+          parsedType: parsed,
+          parentColumnId: testColumn.id,
+          parentNode: testColumn,
+        });
+
+        const parent = viewProvider.getParent(node);
+
+        assert.strictEqual(parent, testColumn);
+      });
+
+      it("should return the parentNode even when parent column is not in relations", () => {
+        viewProvider.relationsContainer.children = [];
+
+        const parsed = parseFlinkType("INT");
+        const node = new FlinkTypeNode({
+          parsedType: parsed,
+          parentColumnId: TEST_VARCHAR_COLUMN.id,
+          parentNode: TEST_VARCHAR_COLUMN,
+        });
+
+        const parent = viewProvider.getParent(node);
+
+        // Now that parentNode is required and always set, getParent returns it directly
+        assert.strictEqual(parent, TEST_VARCHAR_COLUMN);
+      });
     });
 
     describe("revealResource()", () => {
@@ -469,6 +617,58 @@ describe("viewProviders/flinkDatabase.ts", () => {
         await viewProvider.revealResource(testArtifact);
 
         sinon.assert.calledOnce(treeViewRevealStub);
+      });
+
+      it("should reveal a top-level FlinkTypeNode directly", async () => {
+        const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
+        parsed.fieldName = "record";
+        const typeNode = new FlinkTypeNode({
+          parsedType: parsed,
+          parentColumnId: TEST_VARCHAR_COLUMN.id,
+          parentNode: TEST_VARCHAR_COLUMN,
+        });
+
+        await viewProvider.revealResource(typeNode);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, typeNode, defaultOptions);
+      });
+
+      it("should reveal a nested FlinkTypeNode directly", async () => {
+        const parentParsed = parseFlinkType("ROW<id INT, name VARCHAR>");
+        const parentNode = new FlinkTypeNode({
+          parsedType: parentParsed,
+          parentColumnId: "test-col",
+          parentNode: TEST_VARCHAR_COLUMN,
+        });
+
+        const childParsed = parseFlinkType("INT");
+        childParsed.fieldName = "id";
+        const childNode = new FlinkTypeNode({
+          parsedType: childParsed,
+          parentNode: parentNode,
+          parentColumnId: TEST_VARCHAR_COLUMN.id,
+        });
+
+        await viewProvider.revealResource(childNode);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, childNode, defaultOptions);
+      });
+
+      it("should reveal a FlinkTypeNode with custom options", async () => {
+        const parsed = parseFlinkType("INT ARRAY");
+        const typeNode = new FlinkTypeNode({
+          parsedType: parsed,
+          parentColumnId: TEST_VARCHAR_COLUMN.id,
+          parentNode: TEST_VARCHAR_COLUMN,
+        });
+
+        const customOptions = { select: true, focus: false, expand: 1 };
+        await viewProvider.revealResource(typeNode, customOptions);
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, typeNode, customOptions);
       });
     });
 
