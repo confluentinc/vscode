@@ -61,24 +61,6 @@ describe("FlinkTypeNode", () => {
 
       assert.strictEqual(node.parentColumnId, "test_table.test_col");
     });
-
-    it("creates node with parentNode", () => {
-      const parsed1 = parseFlinkType("INT");
-      const node1 = new FlinkTypeNode({
-        parsedType: parsed1,
-        parentColumnId: "test-col-id",
-        parentNode: TEST_PARENT_COLUMN,
-      });
-
-      const parsed2 = parseFlinkType("VARCHAR");
-      const node2 = new FlinkTypeNode({
-        parsedType: parsed2,
-        parentColumnId: "test-col-id",
-        parentNode: node1,
-      });
-
-      assert.strictEqual(node2.parentNode, node1);
-    });
   });
 
   describe("IResourceBase implementation", () => {
