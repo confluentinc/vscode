@@ -1,9 +1,45 @@
+import type { FlinkType } from "../models/flinkTypes";
+import { FlinkTypeKind } from "../models/flinkTypes";
+
 /**
  * Returns a display-friendly version of the data type by removing max-int size specifications and escaping backticks.
  */
 export function formatSqlType(sqlType: string): string {
   // Remove noisy (2GBs) max size type values
-  const cleaned = sqlType.replace(/\(2147483647\)/g, "");
+  const cleaned = sqlType.replaceAll(/\(2147483647\)/g, "");
   // Remove backticks that are part of SQL syntax (e.g., in ROW<`field` VARCHAR>)
-  return cleaned.replace(/`/g, "");
+  return cleaned.replaceAll("`", "");
+}
+
+/**
+ * Format a parsed FlinkType for display in the UI.
+ * Provides unified display format for Flink types whether they are top-level columns or nested within structures.
+ *
+ * Rules:
+ * - ROW types: "ROW"
+ * - MAP types: "MAP"
+ * - ARRAY types: "{ElementType}[]" (e.g., "INT[]", "ROW[]")
+ * - MULTISET types: "{ElementType} MULTISET" (e.g., "VARCHAR MULTISET")
+ * - Scalar types: Formatted type name (e.g., "INT", "VARCHAR(255)")
+ *
+ * @param flinkType - The parsed FlinkType to format
+ * @returns A display-friendly string representation of the type
+ */
+export function formatFlinkTypeForDisplay(flinkType: FlinkType): string {
+  switch (flinkType.kind) {
+    case FlinkTypeKind.ROW:
+      return "ROW";
+    case FlinkTypeKind.MAP:
+      return "MAP";
+    case FlinkTypeKind.ARRAY: {
+      const elementType = formatFlinkTypeForDisplay(flinkType.members[0]);
+      return `${elementType}[]`;
+    }
+    case FlinkTypeKind.MULTISET: {
+      const elementType = formatFlinkTypeForDisplay(flinkType.members[0]);
+      return `${elementType} MULTISET`;
+    }
+    default:
+      return formatSqlType(flinkType.dataType);
+  }
 }
