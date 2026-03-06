@@ -727,12 +727,26 @@ describe("FlinkTypeNode", () => {
 
   describe("edge cases", () => {
     it("handles types with comments", () => {
-      const parsed = parseFlinkType("ROW<id INT COMMENT 'User ID'>");
-      const column = createTestColumn("ROW<id INT COMMENT 'User ID'>");
+      const parsed = parseFlinkType("ROW<id INT 'User ID'>");
+      const column = createTestColumn("ROW<id INT 'User ID'>");
       const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
 
       const children = node.getChildren();
       assert.strictEqual(children[0].parsedType.comment, "User ID");
+    });
+
+    it("ROW field with comment displays Comment in tooltip", () => {
+      const parsed = parseFlinkType("ROW<id INT 'User ID'>");
+      const column = createTestColumn("ROW<id INT 'User ID'>");
+      const node = new FlinkTypeNode({ parsedType: parsed, parentColumnId: column.id });
+
+      const children = node.getChildren();
+      const fieldNode = children[0]; // the "id INT 'User ID'" field
+      const item = fieldNode.getTreeItem();
+      const tooltipText = (item.tooltip as CustomMarkdownString).value;
+
+      assert(tooltipText.includes("Comment"));
+      assert(tooltipText.includes("User ID"));
     });
 
     it("handles types with explicit NULL keyword", () => {
