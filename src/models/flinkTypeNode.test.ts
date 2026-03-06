@@ -10,7 +10,7 @@ import { FlinkTypeKind } from "./flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
 import { FlinkRelationColumn } from "./flinkRelation";
 import { parseFlinkType } from "../parsers/flinkTypeParser";
-import { CustomMarkdownString } from "./main";
+import type { CustomMarkdownString } from "./main";
 
 /**
  * Helper to create a test FlinkRelationColumn.
