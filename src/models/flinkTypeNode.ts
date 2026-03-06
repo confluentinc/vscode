@@ -7,7 +7,6 @@ import type { CompoundFlinkType, FlinkType } from "./flinkTypes";
 import { FlinkTypeKind, isCompoundFlinkType } from "./flinkTypes";
 import { CustomMarkdownString } from "./main";
 import type { ConnectionId, IResourceBase } from "./resource";
-import type { FlinkRelationColumn } from "./flinkRelation";
 
 /**
  * Represents a parsed Flink type node in the tree hierarchy, wrapping the
@@ -18,23 +17,17 @@ export class FlinkTypeNode implements IResourceBase {
   readonly parsedType: FlinkType;
 
   /**
-   * ID of the parent FlinkRelationColumn this node originates from.
-   * Critical for TreeView uniqueness: ensures that nodes with identical field names across different
-   * columns have distinct IDs. Used as the root of the hierarchical ID that uniquely identifies this
-   * node in the tree (combined with field names via parentNode chain).
-   * Example: columns "track" and "artist" both have nested field "uri" → generates distinct IDs:
-   * "table.track.uri" vs "table.artist.uri"
+   * Unique identifier for this node in the tree hierarchy.
+   * Format: "tableRelation.columnName.fieldPath.fieldPath..."
+   *
+   * Uses field names for all path segments, including ARRAY/MULTISET containers.
+   * All segments separated by '.' for consistency.
+   * Example: "spotify-listening-data.track.artists.uri"
+   *
+   * Set explicitly at construction time rather than computed from parent chain,
+   * enabling independent nodes without circular parent references.
    */
-  readonly parentColumnId: string;
-
-  /**
-   * Parent in the tree hierarchy: either a FlinkRelationColumn (for top-level type nodes created
-   * when expanding a column) or a FlinkTypeNode (for nested nodes within compound types like ROW).
-   * Required by VS Code's TreeView API: getParent() must return the exact parent instance that was created
-   * by getChildren(). By maintaining this reference, we enable proper tree navigation and collapse/expand behavior.
-   * Also used to build the complete ID path via the parent chain (stops at FlinkRelationColumn).
-   */
-  readonly parentNode: FlinkRelationColumn | FlinkTypeNode;
+  readonly id: string;
 
   // IResourceBase implementation - all FlinkTypeNodes belong to CCloud
   get connectionId(): ConnectionId {
@@ -50,47 +43,11 @@ export class FlinkTypeNode implements IResourceBase {
    *
    * @param props Configuration object
    * @param props.parsedType The parsed FlinkType this node represents
-   * @param props.parentColumnId ID of parent FlinkRelationColumn this node originates from
-   * @param props.parentNode Parent (FlinkRelationColumn for top-level, FlinkTypeNode for nested) - required
+   * @param props.id Unique identifier for this node in the tree hierarchy
    */
-  constructor(props: {
-    parsedType: FlinkType;
-    parentColumnId: string;
-    parentNode: FlinkRelationColumn | FlinkTypeNode;
-  }) {
+  constructor(props: { parsedType: FlinkType; id: string }) {
     this.parsedType = props.parsedType;
-    this.parentColumnId = props.parentColumnId;
-    this.parentNode = props.parentNode;
-  }
-
-  /**
-   * Unique identifier for this node in the tree hierarchy.
-   * Format: "tableRelation.columnName.fieldPath.fieldPath..."
-   *
-   * Uses field names for all path segments, including ARRAY/MULTISET containers.
-   * All segments separated by '.' for consistency.
-   * Example: "spotify-listening-data.track.artists.uri"
-   */
-  get id(): string {
-    const path: string[] = [this.parentColumnId];
-
-    // Collect all FlinkTypeNode parents in order from root to this node
-    const nodeChain: FlinkTypeNode[] = [this];
-    let node: FlinkRelationColumn | FlinkTypeNode | null = this.parentNode;
-    while (node && node instanceof FlinkTypeNode) {
-      nodeChain.unshift(node); // prepends to maintain root-to-leaf order
-      node = node.parentNode;
-    }
-
-    // Add field names from all nodes in the chain
-    for (const chainNode of nodeChain) {
-      const fieldName = chainNode.parsedType.fieldName;
-      if (fieldName) {
-        path.push(fieldName);
-      }
-    }
-
-    return path.join(".");
+    this.id = props.id;
   }
 
   /**
@@ -205,23 +162,12 @@ export class FlinkTypeNode implements IResourceBase {
    * Get child type nodes from this node (for tree expansion).
    * Returns empty array if not expandable. If expandable, returns the appropriate child nodes.
    *
-   * IMPORTANT: This method manufactures transient child FlinkTypeNode instances on each call.
-   * These instances are NOT persisted or cached. This is intentional and necessary because:
-   *
-   * **Tree Navigation via getParent()**: VS Code's tree view API calls getParent() to navigate
-   * up the tree hierarchy. For nested type expansions, the parent instance must be the exact
-   * FlinkTypeNode that was returned from this method. By setting `parentNode: this` on each
-   * child, we ensure getParent() returns the correct parent instance. The view provider's
-   * getParent() method (flinkDatabase.ts line 193-196) uses this reference to navigate.
-   *
-   * Note: IDs are unique even without the parentNode chain - they're unique via the combination
-   * of parentColumnId + field names. However, the parentNode reference is essential for the
-   * view provider's tree navigation logic.
-   *
    * For ROW/MAP: returns member field nodes directly.
    * For ARRAY/MULTISET with compound element types: returns the element's children directly
    * (skips the intermediate container node for better UX). Since isExpandable() validates this
    * condition, we can safely access members[0].members without additional checks.
+   *
+   * Child IDs are computed by appending field names to the parent ID.
    */
   getChildren(): FlinkTypeNode[] {
     if (!this.isExpandable) {
@@ -232,28 +178,28 @@ export class FlinkTypeNode implements IResourceBase {
 
     // ROW and MAP: return member nodes directly
     if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
-      return members.map(
-        (member: FlinkType) =>
-          new FlinkTypeNode({
-            parsedType: member,
-            parentNode: this,
-            parentColumnId: this.parentColumnId,
-          }),
-      );
+      return members.map((member: FlinkType) => {
+        const fieldName = member.fieldName;
+        const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
+        return new FlinkTypeNode({
+          parsedType: member,
+          id: childId,
+        });
+      });
     }
 
     // ARRAY/MULTISET with compound elements: return the element's children directly
     // (skips the intermediate [element] node for cleaner UX)
     // Note: isExpandable() ensures the element is compound, so we can safely access members[0].members
     const elementType = members[0] as CompoundFlinkType;
-    return elementType.members.map(
-      (member: FlinkType) =>
-        new FlinkTypeNode({
-          parsedType: member,
-          parentNode: this,
-          parentColumnId: this.parentColumnId,
-        }),
-    );
+    return elementType.members.map((member: FlinkType) => {
+      const fieldName = member.fieldName;
+      const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
+      return new FlinkTypeNode({
+        parsedType: member,
+        id: childId,
+      });
+    });
   }
 
   /**

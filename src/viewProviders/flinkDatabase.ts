@@ -190,22 +190,6 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
       // root-level item
       return;
     }
-    if (element instanceof FlinkTypeNode) {
-      // Parent is either a FlinkTypeNode or FlinkRelationColumn
-      if (element.parentNode) {
-        return element.parentNode;
-      }
-      // Fallback for test nodes without parentNode set: look up column by ID
-      for (const relation of this.relationsContainer.children) {
-        const column = relation.columns.find(
-          (col: FlinkRelationColumn) => col.id === element.parentColumnId,
-        );
-        if (column) {
-          return column;
-        }
-      }
-      return undefined;
-    }
     if (element instanceof FlinkRelationColumn) {
       // look up the FlinkRelation parent
       return this.relationsContainer.children.find((relation) =>
@@ -251,21 +235,18 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     const expandResource = options?.expand ?? false;
     const revealOptions = { select: selectResource, focus: focusResource, expand: expandResource };
 
+    if (resource instanceof FlinkTypeNode) {
+      throw new TypeError("revealResource() is not supported for FlinkTypeNode instances");
+    }
+
     // just for logging:
     const resourceLogLabel =
-      resource instanceof FlinkDatabaseResourceContainer
-        ? resource.label
-        : resource instanceof FlinkTypeNode
-          ? resource.id
-          : resource.name;
+      resource instanceof FlinkDatabaseResourceContainer ? resource.label : resource.name;
 
     // look up the instance and reveal the item instead of the instance that was passed in since
     // VS Code needs the exact same object reference to find it in the tree
     let exactInstance: DatabaseChildrenType | undefined;
-    if (resource instanceof FlinkTypeNode) {
-      // FlinkTypeNode instances are not stored anywhere, so just use the passed-in instance
-      exactInstance = resource;
-    } else if (resource instanceof FlinkDatabaseResourceContainer) {
+    if (resource instanceof FlinkDatabaseResourceContainer) {
       // reveal the container directly
       exactInstance = resource;
     } else if (resource instanceof FlinkRelationColumn) {

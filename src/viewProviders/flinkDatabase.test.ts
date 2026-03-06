@@ -186,8 +186,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
         const rowParsed = parseFlinkType("ROW<id INT, name VARCHAR>");
         const rowNode = new FlinkTypeNode({
           parsedType: rowParsed,
-          parentColumnId: "test-col",
-          parentNode: TEST_VARCHAR_COLUMN,
+          id: "test_table.test_col",
         });
 
         const typeChildren = rowNode.getChildren();
@@ -209,8 +208,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
         const scalarParsed = parseFlinkType("INT");
         const scalarNode = new FlinkTypeNode({
           parsedType: scalarParsed,
-          parentColumnId: "test-col",
-          parentNode: TEST_VARCHAR_COLUMN,
+          id: "test_table.test_col",
         });
 
         filterChildrenStub.returns([]);
@@ -227,8 +225,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
         const arrayRowParsed = parseFlinkType("ARRAY<ROW<id INT, name VARCHAR>>");
         const arrayRowNode = new FlinkTypeNode({
           parsedType: arrayRowParsed,
-          parentColumnId: "test-col",
-          parentNode: TEST_VARCHAR_COLUMN,
+          id: "test_table.test_col",
         });
 
         const typeChildren = arrayRowNode.getChildren();
@@ -417,58 +414,16 @@ describe("viewProviders/flinkDatabase.ts", () => {
         assert.strictEqual(parent, viewProvider.aiAgentsContainer);
       });
 
-      it("should return the parent FlinkTypeNode for a nested FlinkTypeNode", () => {
-        const parentParsed = parseFlinkType("ROW<id INT, name VARCHAR>");
-        const parentNode = new FlinkTypeNode({
-          parsedType: parentParsed,
-          parentColumnId: "test-col",
-          parentNode: TEST_VARCHAR_COLUMN,
-        });
-
-        const childParsed = parseFlinkType("INT");
-        childParsed.fieldName = "id";
-        const childNode = new FlinkTypeNode({
-          parsedType: childParsed,
-          parentNode: parentNode,
-          parentColumnId: TEST_VARCHAR_COLUMN.id,
-        });
-
-        const retrievedParent = viewProvider.getParent(childNode);
-
-        assert.strictEqual(retrievedParent, parentNode);
-      });
-
-      it("should return the FlinkRelationColumn parent for a top-level FlinkTypeNode", () => {
-        const testColumn = TEST_VARCHAR_COLUMN;
-        viewProvider.relationsContainer.children = [TEST_FLINK_RELATION];
-
+      it("should return undefined for FlinkTypeNode", () => {
         const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
-        parsed.fieldName = "record";
         const node = new FlinkTypeNode({
           parsedType: parsed,
-          parentColumnId: testColumn.id,
-          parentNode: testColumn,
+          id: "test_table.test_col",
         });
 
         const parent = viewProvider.getParent(node);
 
-        assert.strictEqual(parent, testColumn);
-      });
-
-      it("should return the parentNode even when parent column is not in relations", () => {
-        viewProvider.relationsContainer.children = [];
-
-        const parsed = parseFlinkType("INT");
-        const node = new FlinkTypeNode({
-          parsedType: parsed,
-          parentColumnId: TEST_VARCHAR_COLUMN.id,
-          parentNode: TEST_VARCHAR_COLUMN,
-        });
-
-        const parent = viewProvider.getParent(node);
-
-        // Now that parentNode is required and always set, getParent returns it directly
-        assert.strictEqual(parent, TEST_VARCHAR_COLUMN);
+        assert.strictEqual(parent, undefined);
       });
     });
 
@@ -619,56 +574,19 @@ describe("viewProviders/flinkDatabase.ts", () => {
         sinon.assert.calledOnce(treeViewRevealStub);
       });
 
-      it("should reveal a top-level FlinkTypeNode directly", async () => {
+      it("should throw when trying to reveal a FlinkTypeNode", async () => {
         const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
-        parsed.fieldName = "record";
         const typeNode = new FlinkTypeNode({
           parsedType: parsed,
-          parentColumnId: TEST_VARCHAR_COLUMN.id,
-          parentNode: TEST_VARCHAR_COLUMN,
+          id: "test_table.test_col",
         });
 
-        await viewProvider.revealResource(typeNode);
+        await assert.rejects(
+          () => viewProvider.revealResource(typeNode),
+          /revealResource\(\) is not supported for FlinkTypeNode instances/,
+        );
 
-        sinon.assert.calledOnce(treeViewRevealStub);
-        sinon.assert.calledOnceWithExactly(treeViewRevealStub, typeNode, defaultOptions);
-      });
-
-      it("should reveal a nested FlinkTypeNode directly", async () => {
-        const parentParsed = parseFlinkType("ROW<id INT, name VARCHAR>");
-        const parentNode = new FlinkTypeNode({
-          parsedType: parentParsed,
-          parentColumnId: "test-col",
-          parentNode: TEST_VARCHAR_COLUMN,
-        });
-
-        const childParsed = parseFlinkType("INT");
-        childParsed.fieldName = "id";
-        const childNode = new FlinkTypeNode({
-          parsedType: childParsed,
-          parentNode: parentNode,
-          parentColumnId: TEST_VARCHAR_COLUMN.id,
-        });
-
-        await viewProvider.revealResource(childNode);
-
-        sinon.assert.calledOnce(treeViewRevealStub);
-        sinon.assert.calledOnceWithExactly(treeViewRevealStub, childNode, defaultOptions);
-      });
-
-      it("should reveal a FlinkTypeNode with custom options", async () => {
-        const parsed = parseFlinkType("INT ARRAY");
-        const typeNode = new FlinkTypeNode({
-          parsedType: parsed,
-          parentColumnId: TEST_VARCHAR_COLUMN.id,
-          parentNode: TEST_VARCHAR_COLUMN,
-        });
-
-        const customOptions = { select: true, focus: false, expand: 1 };
-        await viewProvider.revealResource(typeNode, customOptions);
-
-        sinon.assert.calledOnce(treeViewRevealStub);
-        sinon.assert.calledOnceWithExactly(treeViewRevealStub, typeNode, customOptions);
+        sinon.assert.notCalled(treeViewRevealStub);
       });
     });
 

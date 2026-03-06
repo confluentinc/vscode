@@ -136,8 +136,7 @@ export class FlinkRelationColumn {
    * For ROW/MAP: returns member field nodes directly.
    * For ARRAY/MULTISET with compound elements: skips the intermediate container node and returns
    * the element's children directly for better UX. Since isExpandable() validates this condition,
-   * we can safely access members[0].members without additional checks. We set a synthetic container
-   * as parentNode to ensure ID uniqueness includes ARRAY/MULTISET context.
+   * we can safely access members[0].members without additional checks.
    */
   getChildren(): FlinkTypeNode[] {
     if (!this.isExpandable) {
@@ -149,34 +148,28 @@ export class FlinkRelationColumn {
 
     // ROW and MAP: return member nodes directly
     if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
-      return members.map(
-        (member: FlinkType) =>
-          new FlinkTypeNode({
-            parsedType: member,
-            parentColumnId: this.id,
-            parentNode: this,
-          }),
-      );
+      return members.map((member: FlinkType) => {
+        const fieldName = member.fieldName;
+        const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
+        return new FlinkTypeNode({
+          parsedType: member,
+          id: childId,
+        });
+      });
     }
 
-    // ARRAY/MULTISET with compound elements: create a synthetic parent node
-    // so that the element's children have the correct ID hierarchy
+    // ARRAY/MULTISET with compound elements: return the element's children directly
+    // (skips the intermediate [element] node for cleaner UX)
     // Note: isExpandable() ensures the element is compound, so we can safely access members[0].members
-    const containerNode = new FlinkTypeNode({
-      parsedType: parsed,
-      parentColumnId: this.id,
-      parentNode: this,
-    });
-
     const elementType = members[0] as CompoundFlinkType;
-    return elementType.members.map(
-      (member: FlinkType) =>
-        new FlinkTypeNode({
-          parsedType: member,
-          parentNode: containerNode,
-          parentColumnId: this.id,
-        }),
-    );
+    return elementType.members.map((member: FlinkType) => {
+      const fieldName = member.fieldName;
+      const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
+      return new FlinkTypeNode({
+        parsedType: member,
+        id: childId,
+      });
+    });
   }
 
   /** Is this column a metadata column? */
