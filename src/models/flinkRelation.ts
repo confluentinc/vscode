@@ -137,6 +137,18 @@ export class FlinkRelationColumn {
    * For ARRAY/MULTISET with compound elements: skips the intermediate container node and returns
    * the element's children directly for better UX. Since isExpandable() validates this condition,
    * we can safely access members[0].members without additional checks.
+   *
+   * All returned FlinkTypeNode instances are created with IDs prefixed by `relationName.columnName`.
+   * This ensures global ID uniqueness across the entire tree view: two columns with identical
+   * structures in different relations, or different columns in the same relation, will have
+   * distinct child IDs. For example:
+   * - Column "users.metadata" with ROW<id INT, name VARCHAR> generates:
+   *   - "users.metadata.id"
+   *   - "users.metadata.name"
+   * - Column "orders.metadata" with identical structure generates:
+   *   - "orders.metadata.id"
+   *   - "orders.metadata.name"
+   * This prefix inheritance cascades through nested types, maintaining uniqueness at all levels.
    */
   getChildren(): FlinkTypeNode[] {
     if (!this.isExpandable) {
