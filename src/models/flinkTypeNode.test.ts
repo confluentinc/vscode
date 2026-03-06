@@ -595,7 +595,7 @@ describe("FlinkTypeNode", () => {
       assert(tooltipText.includes("Data Type"));
       assert(tooltipText.includes("ROW<artist ROW<id INT, name VARCHAR>, uri VARCHAR NOT NULL>"));
       assert(tooltipText.includes("Nullable"));
-      assert(tooltipText.includes("Comment") || !tooltipText.includes("Comment")); // comment optional
+      assert(!tooltipText.includes("Comment")); // no comment provided, so Comment field should not appear
     });
   });
 
