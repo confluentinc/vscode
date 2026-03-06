@@ -223,7 +223,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
 
   /** Reveal a specific Flink Database resource in the view, if possible. */
   async revealResource(
-    resource: DatabaseChildrenType,
+    resource: Exclude<DatabaseChildrenType, FlinkTypeNode>,
     options?: { select?: boolean; focus?: boolean; expand?: number | boolean },
   ): Promise<void> {
     if (!this.database) {
@@ -234,10 +234,6 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     const focusResource = options?.focus ?? true;
     const expandResource = options?.expand ?? false;
     const revealOptions = { select: selectResource, focus: focusResource, expand: expandResource };
-
-    if (resource instanceof FlinkTypeNode) {
-      throw new TypeError("revealResource() is not supported for FlinkTypeNode instances");
-    }
 
     // just for logging:
     const resourceLogLabel =

@@ -574,21 +574,6 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         sinon.assert.calledOnce(treeViewRevealStub);
       });
-
-      it("should throw when trying to reveal a FlinkTypeNode", async () => {
-        const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
-        const typeNode = new FlinkTypeNode({
-          parsedType: parsed,
-          id: "test_table.test_col",
-        });
-
-        await assert.rejects(
-          () => viewProvider.revealResource(typeNode),
-          /revealResource\(\) is not supported for FlinkTypeNode instances/,
-        );
-
-        sinon.assert.notCalled(treeViewRevealStub);
-      });
     });
 
     describe("refresh()", () => {
