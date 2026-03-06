@@ -40,6 +40,18 @@ interface BaseFlinkType {
   dataType: string;
 
   /**
+   * The full SQL data type string for this node and all its nested members.
+   * This is the substring of the original data type string that corresponds to this specific type.
+   * Examples:
+   * - Scalar: "INT", "VARCHAR(255)"
+   * - ROW: "ROW<id INT, name VARCHAR>"
+   * - ARRAY: "ARRAY<INT>"
+   * - MULTISET: "MULTISET<ROW<...>>"
+   * Used for tooltip display to show users the exact SQL definition.
+   */
+  fullDataTypeString: string;
+
+  /**
    * Is this field/type nullable as a whole?
    */
   isFieldNullable: boolean;
