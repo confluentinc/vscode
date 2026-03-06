@@ -6,7 +6,7 @@ import { FlinkTypeKind } from "../models/flinkTypes";
  */
 export function formatSqlType(sqlType: string): string {
   // Remove noisy (2GBs) max size type values
-  const cleaned = sqlType.replaceAll(/\(2147483647\)/g, "");
+  const cleaned = sqlType.replaceAll("(2147483647)", "");
   // Remove backticks that are part of SQL syntax (e.g., in ROW<`field` VARCHAR>)
   return cleaned.replaceAll("`", "");
 }
