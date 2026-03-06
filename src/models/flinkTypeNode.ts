@@ -176,9 +176,7 @@ export class FlinkTypeNode implements IResourceBase {
   getChildren(): FlinkTypeNode[] {
     // Construct children if not cached
     if (this._children === null) {
-      if (!this.isExpandable) {
-        this._children = [];
-      } else {
+      if (this.isExpandable) {
         const { kind, members } = this.parsedType as CompoundFlinkType;
 
         // ROW and MAP: return member nodes directly
@@ -205,6 +203,9 @@ export class FlinkTypeNode implements IResourceBase {
             });
           });
         }
+      } else {
+        // not expandable; no children
+        this._children = [];
       }
     }
 

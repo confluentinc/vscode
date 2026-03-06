@@ -162,9 +162,7 @@ export class FlinkRelationColumn {
   getChildren(): FlinkTypeNode[] {
     // Construct children if not cached
     if (this._children === null) {
-      if (!this.isExpandable) {
-        this._children = [];
-      } else {
+      if (this.isExpandable) {
         const parsed = this.getParsedType() as CompoundFlinkType;
         const { kind, members } = parsed;
 
@@ -192,6 +190,9 @@ export class FlinkRelationColumn {
             });
           });
         }
+      } else {
+        // not expandable; no children
+        this._children = [];
       }
     }
 
