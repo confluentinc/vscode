@@ -32,11 +32,11 @@ export function formatFlinkTypeForDisplay(flinkType: FlinkType): string {
     case FlinkTypeKind.MAP:
       return "MAP";
     case FlinkTypeKind.ARRAY: {
-      const elementType = formatSqlType(flinkType.members[0].dataType);
+      const elementType = formatFlinkTypeForDisplay(flinkType.members[0]);
       return `${elementType}[]`;
     }
     case FlinkTypeKind.MULTISET: {
-      const elementType = formatSqlType(flinkType.members[0].dataType);
+      const elementType = formatFlinkTypeForDisplay(flinkType.members[0]);
       return `${elementType} MULTISET`;
     }
     default:

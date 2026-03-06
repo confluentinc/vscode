@@ -120,5 +120,106 @@ describe("flinkTypes.ts", () => {
       const result = formatFlinkTypeForDisplay(flinkType);
       assert.strictEqual(result, "VARCHAR[]");
     });
+
+    it("should format ARRAY<ROW> with proper nesting", () => {
+      const flinkType: FlinkType = {
+        kind: FlinkTypeKind.ARRAY,
+        dataType: "ARRAY",
+        fullDataTypeString: "ARRAY<ROW<>>",
+        isFieldNullable: true,
+        members: [
+          {
+            kind: FlinkTypeKind.ROW,
+            dataType: "ROW",
+            fullDataTypeString: "ROW<>",
+            isFieldNullable: true,
+            members: [],
+          },
+        ],
+      };
+      const result = formatFlinkTypeForDisplay(flinkType);
+      assert.strictEqual(result, "ROW[]");
+    });
+
+    it("should format nested ARRAY<ARRAY<INT>> correctly", () => {
+      const flinkType: FlinkType = {
+        kind: FlinkTypeKind.ARRAY,
+        dataType: "ARRAY",
+        fullDataTypeString: "ARRAY<ARRAY<INT>>",
+        isFieldNullable: true,
+        members: [
+          {
+            kind: FlinkTypeKind.ARRAY,
+            dataType: "ARRAY",
+            fullDataTypeString: "ARRAY<INT>",
+            isFieldNullable: true,
+            members: [
+              {
+                kind: FlinkTypeKind.SCALAR,
+                dataType: "INT",
+                fullDataTypeString: "INT",
+                isFieldNullable: true,
+              },
+            ],
+          },
+        ],
+      };
+      const result = formatFlinkTypeForDisplay(flinkType);
+      assert.strictEqual(result, "INT[][]");
+    });
+
+    it("should format ARRAY<MULTISET<INT>> correctly", () => {
+      const flinkType: FlinkType = {
+        kind: FlinkTypeKind.ARRAY,
+        dataType: "ARRAY",
+        fullDataTypeString: "ARRAY<MULTISET<INT>>",
+        isFieldNullable: true,
+        members: [
+          {
+            kind: FlinkTypeKind.MULTISET,
+            dataType: "MULTISET",
+            fullDataTypeString: "MULTISET<INT>",
+            isFieldNullable: true,
+            members: [
+              {
+                kind: FlinkTypeKind.SCALAR,
+                dataType: "INT",
+                fullDataTypeString: "INT",
+                isFieldNullable: true,
+              },
+            ],
+          },
+        ],
+      };
+      const result = formatFlinkTypeForDisplay(flinkType);
+      assert.strictEqual(result, "INT MULTISET[]");
+    });
+
+    it("should format MULTISET<ARRAY<INT>> correctly", () => {
+      const flinkType: FlinkType = {
+        kind: FlinkTypeKind.MULTISET,
+        dataType: "MULTISET",
+        fullDataTypeString: "MULTISET<ARRAY<INT>>",
+        isFieldNullable: true,
+        members: [
+          {
+            kind: FlinkTypeKind.ARRAY,
+            dataType: "ARRAY",
+            fullDataTypeString: "ARRAY<INT>",
+            isFieldNullable: true,
+            members: [
+              {
+                kind: FlinkTypeKind.SCALAR,
+                dataType: "INT",
+                fullDataTypeString: "INT",
+                isFieldNullable: true,
+              },
+            ],
+          },
+        ],
+      };
+      const result = formatFlinkTypeForDisplay(flinkType);
+      assert.strictEqual(result, "INT[] MULTISET");
+    });
   });
 });
