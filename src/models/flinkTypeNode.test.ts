@@ -5,6 +5,7 @@
 
 import assert from "assert";
 import { TreeItemCollapsibleState } from "vscode";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
 import { FlinkTypeKind } from "./flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
@@ -72,7 +73,7 @@ describe("FlinkTypeNode", () => {
         parentNode: TEST_PARENT_COLUMN,
       });
 
-      assert.strictEqual(node.connectionId, "vscode-confluent-cloud-connection");
+      assert.strictEqual(node.connectionId, CCLOUD_CONNECTION_ID);
     });
 
     it("has correct connectionType", () => {
