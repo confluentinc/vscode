@@ -174,42 +174,40 @@ export class FlinkTypeNode implements IResourceBase {
    * Results are cached to avoid regenerating FlinkTypeNode instances on repeated calls.
    */
   getChildren(): FlinkTypeNode[] {
-    // Return cached children if available
-    if (this._children !== null) {
-      return this._children;
+    // Construct children if not cached
+    if (this._children === null) {
+      if (!this.isExpandable) {
+        this._children = [];
+      } else {
+        const { kind, members } = this.parsedType as CompoundFlinkType;
+
+        // ROW and MAP: return member nodes directly
+        if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
+          this._children = members.map((member: FlinkType) => {
+            const fieldName = member.fieldName;
+            const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
+            return new FlinkTypeNode({
+              parsedType: member,
+              id: childId,
+            });
+          });
+        } else {
+          // ARRAY/MULTISET with compound elements: return the element's children directly
+          // (skips the intermediate [element] node for cleaner UX)
+          // Note: isExpandable() ensures the element is compound, so we can safely access members[0].members
+          const elementType = members[0] as CompoundFlinkType;
+          this._children = elementType.members.map((member: FlinkType) => {
+            const fieldName = member.fieldName;
+            const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
+            return new FlinkTypeNode({
+              parsedType: member,
+              id: childId,
+            });
+          });
+        }
+      }
     }
 
-    if (!this.isExpandable) {
-      return [];
-    }
-
-    const { kind, members } = this.parsedType as CompoundFlinkType;
-
-    // ROW and MAP: return member nodes directly
-    if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
-      this._children = members.map((member: FlinkType) => {
-        const fieldName = member.fieldName;
-        const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
-        return new FlinkTypeNode({
-          parsedType: member,
-          id: childId,
-        });
-      });
-      return this._children;
-    }
-
-    // ARRAY/MULTISET with compound elements: return the element's children directly
-    // (skips the intermediate [element] node for cleaner UX)
-    // Note: isExpandable() ensures the element is compound, so we can safely access members[0].members
-    const elementType = members[0] as CompoundFlinkType;
-    this._children = elementType.members.map((member: FlinkType) => {
-      const fieldName = member.fieldName;
-      const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
-      return new FlinkTypeNode({
-        parsedType: member,
-        id: childId,
-      });
-    });
     return this._children;
   }
 
