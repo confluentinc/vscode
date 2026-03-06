@@ -42,7 +42,13 @@ export class FlinkRelationColumn {
   /** Cached parsed type result (lazy initialization) */
   private _parsedType: FlinkType | null = null;
 
-  /** Cached children nodes (lazy initialization) */
+  /** Cached children nodes if the column is of an expandable Flink type (with lazy initialization, see {@link getChildren}).
+   * When the column is expandable (i.e. has ROW, MAP, or ARRAY/MULTISET with compound element), this will hold the child nodes representing the member fields.
+   * For ROW/MAP: children are the member fields directly.
+   * For ARRAY/MULTISET with compound elements: children are the element's member fields (skipping the intermediate container node).
+   * This flattening for ARRAY/MULTISET is a UX choice to avoid unnecessary nesting in the tree view, since the container itself does not have meaningful
+   * metadata and the element type is guaranteed to be compound if expandable.
+   */
   private _children: FlinkTypeNode[] | null = null;
 
   constructor(
