@@ -176,7 +176,9 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
       // This should be unreachable - all types in DatabaseChildrenType are handled above.
       // The exhaustiveness check is implicit: if a new type is added to DatabaseChildrenType,
       // TypeScript will flag this else block as unreachable (under strict type checking).
-      throw new TypeError(`Unhandled DatabaseChildrenType: ${typeof element}`);
+      const className = (element as any)?.constructor?.name || typeof element;
+      const id = (element as any)?.id || "unknown";
+      throw new TypeError(`Unhandled DatabaseChildrenType: ${className} (id: ${id})`);
     }
 
     this.adjustTreeItemForSearch(element, treeItem);

@@ -45,8 +45,8 @@ interface BaseFlinkType {
    * Examples:
    * - Scalar: "INT", "VARCHAR(255)"
    * - ROW: "ROW<id INT, name VARCHAR>"
-   * - ARRAY: "INT ARRAY"
-   * - MULTISET: "ROW<...> MULTISET"
+   * - ARRAY: "ARRAY<INT>"
+   * - MULTISET: "MULTISET<ROW<...>>"
    * Used for tooltip display to show users the exact SQL definition.
    */
   fullDataTypeString: string;

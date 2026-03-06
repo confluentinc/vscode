@@ -722,7 +722,7 @@ describe("FlinkTypeNode", () => {
     });
 
     it("shows full data type for ARRAY types", () => {
-      const parsed = parseFlinkType("INT ARRAY");
+      const parsed = parseFlinkType("ARRAY<INT>");
 
       const node = new FlinkTypeNode({
         parsedType: parsed,
@@ -732,7 +732,7 @@ describe("FlinkTypeNode", () => {
       const tooltipText = (item.tooltip as CustomMarkdownString).value;
 
       assert(tooltipText.includes("Data Type"));
-      assert(tooltipText.includes("INT ARRAY"));
+      assert(tooltipText.includes("ARRAY<INT>"));
     });
 
     it("handles complex nested ROW with comment and nullability", () => {

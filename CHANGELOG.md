@@ -6,7 +6,7 @@ All notable changes to this extension will be documented in this file.
 
 - Direct connections form now supports OAuth authentication for WarpStream connections.
 - Columns of compound Flink types (`ROW`s, `MAP`s, `ARRAY`s or `MULTISET`s thereof) are now
-  expandable in the Fink Database view list of Tables and Views.
+  expandable in the Flink Database view list of Tables and Views.
 
 ## 2.2.2
 

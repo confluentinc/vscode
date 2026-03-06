@@ -7,7 +7,7 @@ import { IconNames } from "../icons";
 import { parseFlinkType } from "../parsers/flinkTypeParser";
 import { formatFlinkTypeForDisplay, formatSqlType } from "../utils/flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
-import type { CompoundFlinkType, FlinkType } from "./flinkTypes";
+import type { FlinkType } from "./flinkTypes";
 import { FlinkTypeKind, isCompoundFlinkType } from "./flinkTypes";
 import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
@@ -163,33 +163,15 @@ export class FlinkRelationColumn {
     // Construct children if not cached
     if (this._children === null) {
       if (this.isExpandable) {
-        const parsed = this.getParsedType() as CompoundFlinkType;
-        const { kind, members } = parsed;
-
-        // ROW and MAP: return member nodes directly
-        if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
-          this._children = members.map((member: FlinkType) => {
-            const fieldName = member.fieldName;
-            const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
-            return new FlinkTypeNode({
-              parsedType: member,
-              id: childId,
-            });
-          });
-        } else {
-          // ARRAY/MULTISET with compound elements: return the element's children directly
-          // (skips the intermediate [element] node for cleaner UX)
-          // Note: isExpandable() ensures the element is compound, so we can safely access members[0].members
-          const elementType = members[0] as CompoundFlinkType;
-          this._children = elementType.members.map((member: FlinkType) => {
-            const fieldName = member.fieldName;
-            const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
-            return new FlinkTypeNode({
-              parsedType: member,
-              id: childId,
-            });
-          });
-        }
+        // Delegate to FlinkTypeNode to avoid duplicating type-flattening logic.
+        // Create a temporary root node wrapping this column's parsed type, then
+        // return its children (which handles ROW/MAP/ARRAY/MULTISET cases consistently).
+        const parsed = this.getParsedType();
+        const rootTypeNode = new FlinkTypeNode({
+          parsedType: parsed,
+          id: this.id,
+        });
+        this._children = rootTypeNode.getChildren();
       } else {
         // not expandable; no children
         this._children = [];
