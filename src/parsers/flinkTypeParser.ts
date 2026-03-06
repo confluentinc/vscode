@@ -46,31 +46,32 @@ class FlinkTypeParser {
    */
   parse(): FlinkType {
     this.state.skipWhitespace();
+    const startPos = this.state.getCurrentPos();
 
     if (this.state.tryConsume("ARRAY")) {
-      return this.parseArrayType();
+      return this.parseArrayType(startPos);
     }
 
     if (this.state.tryConsume("MULTISET")) {
-      return this.parseMultisetType();
+      return this.parseMultisetType(startPos);
     }
 
     if (this.state.tryConsume("ROW")) {
-      return this.parseRowType();
+      return this.parseRowType(startPos);
     }
 
     if (this.state.tryConsume("MAP")) {
-      return this.parseMapType();
+      return this.parseMapType(startPos);
     }
 
     // Default to scalar or parameterized type
-    return this.parseScalarType();
+    return this.parseScalarType(startPos);
   }
 
   /**
    * Parse an ARRAY<T> type.
    */
-  private parseArrayType(): CompoundFlinkType {
+  private parseArrayType(startPos: number): CompoundFlinkType {
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after ARRAY");
@@ -81,8 +82,10 @@ class FlinkTypeParser {
     }
     this.state.skipWhitespace();
     const isFieldNullable = this.parseNullability();
+    const fullDataTypeString = this.state.extractSince(startPos);
     return {
       dataType: "ARRAY",
+      fullDataTypeString,
       isFieldNullable,
       kind: FlinkTypeKind.ARRAY,
       members: [innerType],
@@ -92,7 +95,7 @@ class FlinkTypeParser {
   /**
    * Parse a MULTISET<T> type.
    */
-  private parseMultisetType(): CompoundFlinkType {
+  private parseMultisetType(startPos: number): CompoundFlinkType {
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after MULTISET");
@@ -103,8 +106,10 @@ class FlinkTypeParser {
     }
     this.state.skipWhitespace();
     const isFieldNullable = this.parseNullability();
+    const fullDataTypeString = this.state.extractSince(startPos);
     return {
       dataType: "MULTISET",
+      fullDataTypeString,
       isFieldNullable,
       kind: FlinkTypeKind.MULTISET,
       members: [innerType],
@@ -114,7 +119,7 @@ class FlinkTypeParser {
   /**
    * Parse a ROW<...> type.
    */
-  private parseRowType(): CompoundFlinkType {
+  private parseRowType(startPos: number): CompoundFlinkType {
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after ROW");
@@ -125,8 +130,10 @@ class FlinkTypeParser {
     }
     this.state.skipWhitespace();
     const isFieldNullable = this.parseNullability();
+    const fullDataTypeString = this.state.extractSince(startPos);
     return {
       dataType: "ROW",
+      fullDataTypeString,
       isFieldNullable,
       kind: FlinkTypeKind.ROW,
       members,
@@ -136,7 +143,7 @@ class FlinkTypeParser {
   /**
    * Parse a MAP<K, V> type.
    */
-  private parseMapType(): CompoundFlinkType {
+  private parseMapType(startPos: number): CompoundFlinkType {
     this.state.skipWhitespace();
     if (!this.state.tryConsume("<")) {
       throw new Error("Expected '<' after MAP");
@@ -147,8 +154,10 @@ class FlinkTypeParser {
     }
     this.state.skipWhitespace();
     const isFieldNullable = this.parseNullability();
+    const fullDataTypeString = this.state.extractSince(startPos);
     return {
       dataType: "MAP",
+      fullDataTypeString,
       isFieldNullable,
       kind: FlinkTypeKind.MAP,
       members,
@@ -158,7 +167,7 @@ class FlinkTypeParser {
   /**
    * Parse a scalar or parameterized type (e.g., INT, VARCHAR(255), TIMESTAMP WITH TIME ZONE).
    */
-  private parseScalarType(): FlinkType {
+  private parseScalarType(startPos: number): FlinkType {
     // Parse base type, then consume any parameters and keywords
     let dataType = this.state.parseIdentifierWithSpaces(() => this.shouldStopParsingType());
 
@@ -180,9 +189,12 @@ class FlinkTypeParser {
     }
 
     this.state.skipWhitespace();
+    const isFieldNullable = this.parseNullability();
+    const fullDataTypeString = this.state.extractSince(startPos);
     return {
       dataType,
-      isFieldNullable: this.parseNullability(),
+      fullDataTypeString,
+      isFieldNullable,
       kind: FlinkTypeKind.SCALAR,
     };
   }

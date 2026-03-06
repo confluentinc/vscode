@@ -3,7 +3,7 @@
  */
 
 import assert from "assert";
-import { FlinkType, FlinkTypeKind, isCompoundFlinkType } from "../models/flinkTypes";
+import { FlinkTypeKind, isCompoundFlinkType, type FlinkType } from "../models/flinkTypes";
 import { parseFlinkType } from "./flinkTypeParser";
 
 describe("flinkTypeParser", () => {
@@ -705,6 +705,7 @@ describe("flinkTypeParser", () => {
       const scalarType: FlinkType = {
         kind: FlinkTypeKind.SCALAR,
         dataType: "INT",
+        fullDataTypeString: "INT",
         isFieldNullable: true,
       };
       assert.strictEqual(isCompoundFlinkType(scalarType), false);
@@ -715,8 +716,16 @@ describe("flinkTypeParser", () => {
       const arrayType: FlinkType = {
         kind: FlinkTypeKind.ARRAY,
         dataType: "ARRAY",
+        fullDataTypeString: "INT ARRAY",
         isFieldNullable: false,
-        members: [{ kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: false }],
+        members: [
+          {
+            kind: FlinkTypeKind.SCALAR,
+            dataType: "INT",
+            fullDataTypeString: "INT",
+            isFieldNullable: false,
+          },
+        ],
       };
       assert(isCompoundFlinkType(arrayType));
     });
@@ -725,11 +734,13 @@ describe("flinkTypeParser", () => {
       const rowType: FlinkType = {
         kind: FlinkTypeKind.ROW,
         dataType: "ROW",
+        fullDataTypeString: "ROW<id INT>",
         isFieldNullable: false,
         members: [
           {
             kind: FlinkTypeKind.SCALAR,
             dataType: "INT",
+            fullDataTypeString: "INT",
             isFieldNullable: false,
             fieldName: "id",
           },
@@ -742,17 +753,20 @@ describe("flinkTypeParser", () => {
       const mapType: FlinkType = {
         kind: FlinkTypeKind.MAP,
         dataType: "MAP",
+        fullDataTypeString: "MAP<VARCHAR, INT>",
         isFieldNullable: false,
         members: [
           {
             kind: FlinkTypeKind.SCALAR,
             dataType: "VARCHAR",
+            fullDataTypeString: "VARCHAR",
             isFieldNullable: false,
             fieldName: "key",
           },
           {
             kind: FlinkTypeKind.SCALAR,
             dataType: "INT",
+            fullDataTypeString: "INT",
             isFieldNullable: false,
             fieldName: "value",
           },
@@ -765,43 +779,16 @@ describe("flinkTypeParser", () => {
       const multisetType: FlinkType = {
         kind: FlinkTypeKind.MULTISET,
         dataType: "MULTISET",
-        isFieldNullable: false,
-        members: [{ kind: FlinkTypeKind.SCALAR, dataType: "VARCHAR", isFieldNullable: false }],
-      };
-      assert(isCompoundFlinkType(multisetType));
-    });
-
-    it("returns true for ROW with members", () => {
-      const rowType: FlinkType = {
-        kind: FlinkTypeKind.ROW,
-        dataType: "ROW",
+        fullDataTypeString: "VARCHAR MULTISET",
         isFieldNullable: false,
         members: [
-          { kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: false, fieldName: "id" },
+          {
+            kind: FlinkTypeKind.SCALAR,
+            dataType: "VARCHAR",
+            fullDataTypeString: "VARCHAR",
+            isFieldNullable: false,
+          },
         ],
-      };
-      assert(isCompoundFlinkType(rowType));
-    });
-
-    it("returns true for MAP with members", () => {
-      const mapType: FlinkType = {
-        kind: FlinkTypeKind.MAP,
-        dataType: "MAP",
-        isFieldNullable: false,
-        members: [
-          { kind: FlinkTypeKind.SCALAR, dataType: "STRING", isFieldNullable: false },
-          { kind: FlinkTypeKind.SCALAR, dataType: "INT", isFieldNullable: false },
-        ],
-      };
-      assert(isCompoundFlinkType(mapType));
-    });
-
-    it("returns true for MULTISET with members", () => {
-      const multisetType: FlinkType = {
-        kind: FlinkTypeKind.MULTISET,
-        dataType: "MULTISET",
-        isFieldNullable: false,
-        members: [{ kind: FlinkTypeKind.SCALAR, dataType: "DOUBLE", isFieldNullable: false }],
       };
       assert(isCompoundFlinkType(multisetType));
     });
@@ -811,6 +798,7 @@ describe("flinkTypeParser", () => {
       const scalarType: FlinkType = {
         kind: FlinkTypeKind.SCALAR,
         dataType: "INT",
+        fullDataTypeString: "INT",
         isFieldNullable: false,
       };
       assert(!isCompoundFlinkType(scalarType));
@@ -821,16 +809,19 @@ describe("flinkTypeParser", () => {
       const nestedType: FlinkType = {
         kind: FlinkTypeKind.ARRAY,
         dataType: "ARRAY",
+        fullDataTypeString: "ROW<id INT> ARRAY",
         isFieldNullable: false,
         members: [
           {
             kind: FlinkTypeKind.ROW,
             dataType: "ROW",
+            fullDataTypeString: "ROW<id INT>",
             isFieldNullable: false,
             members: [
               {
                 kind: FlinkTypeKind.SCALAR,
                 dataType: "INT",
+                fullDataTypeString: "INT",
                 isFieldNullable: false,
                 fieldName: "id",
               },
@@ -958,6 +949,109 @@ describe("flinkTypeParser", () => {
 
     it("throws error on MULTISET with EOF before closing bracket", () => {
       assert.throws(() => parseFlinkType("MULTISET<BIGINT"), /Expected '>' to close MULTISET/);
+    });
+  });
+
+  describe("fullDataTypeString generation", () => {
+    it("generates correct fullDataTypeString for scalar types", () => {
+      const result = parseFlinkType("INT");
+      assert.strictEqual(result.fullDataTypeString, "INT");
+    });
+
+    it("generates correct fullDataTypeString for parameterized types", () => {
+      const result = parseFlinkType("VARCHAR(255)");
+      assert.strictEqual(result.fullDataTypeString, "VARCHAR(255)");
+    });
+
+    it("generates correct fullDataTypeString for types with parameters and nullability", () => {
+      const result = parseFlinkType("VARCHAR(100) NOT NULL");
+      assert.strictEqual(result.fullDataTypeString, "VARCHAR(100) NOT NULL");
+    });
+
+    it("generates correct fullDataTypeString for ARRAY<scalar>", () => {
+      const result = parseFlinkType("ARRAY<INT>");
+      assert.strictEqual(result.fullDataTypeString, "ARRAY<INT>");
+    });
+
+    it("generates correct fullDataTypeString for ARRAY<parameterized>", () => {
+      const result = parseFlinkType("ARRAY<VARCHAR(255)>");
+      assert.strictEqual(result.fullDataTypeString, "ARRAY<VARCHAR(255)>");
+    });
+
+    it("generates correct fullDataTypeString for ARRAY with nullability", () => {
+      const result = parseFlinkType("ARRAY<INT> NOT NULL");
+      assert.strictEqual(result.fullDataTypeString, "ARRAY<INT> NOT NULL");
+    });
+
+    it("generates correct fullDataTypeString for MULTISET<scalar>", () => {
+      const result = parseFlinkType("MULTISET<VARCHAR>");
+      assert.strictEqual(result.fullDataTypeString, "MULTISET<VARCHAR>");
+    });
+
+    it("generates correct fullDataTypeString for MULTISET with nullability", () => {
+      const result = parseFlinkType("MULTISET<INT> NOT NULL");
+      assert.strictEqual(result.fullDataTypeString, "MULTISET<INT> NOT NULL");
+    });
+
+    it("generates correct fullDataTypeString for ROW<fields>", () => {
+      const result = parseFlinkType("ROW<id INT, name VARCHAR>");
+      assert.strictEqual(result.fullDataTypeString, "ROW<id INT, name VARCHAR>");
+    });
+
+    it("generates correct fullDataTypeString for ROW with parameterized field types", () => {
+      const result = parseFlinkType("ROW<id INT, email VARCHAR(255)>");
+      assert.strictEqual(result.fullDataTypeString, "ROW<id INT, email VARCHAR(255)>");
+    });
+
+    it("generates correct fullDataTypeString for ROW with nullability", () => {
+      const result = parseFlinkType("ROW<id INT> NOT NULL");
+      assert.strictEqual(result.fullDataTypeString, "ROW<id INT> NOT NULL");
+    });
+
+    it("generates correct fullDataTypeString for MAP<K, V>", () => {
+      const result = parseFlinkType("MAP<INT, VARCHAR>");
+      assert.strictEqual(result.fullDataTypeString, "MAP<INT, VARCHAR>");
+    });
+
+    it("generates correct fullDataTypeString for MAP with nullability", () => {
+      const result = parseFlinkType("MAP<VARCHAR, INT> NOT NULL");
+      assert.strictEqual(result.fullDataTypeString, "MAP<VARCHAR, INT> NOT NULL");
+    });
+
+    it("generates correct fullDataTypeString for nested ARRAY<ROW>", () => {
+      const result = parseFlinkType("ARRAY<ROW<id INT, name VARCHAR>>");
+      assert.strictEqual(result.fullDataTypeString, "ARRAY<ROW<id INT, name VARCHAR>>");
+    });
+
+    it("generates correct fullDataTypeString for nested ARRAY<MAP>", () => {
+      const result = parseFlinkType("ARRAY<MAP<INT, VARCHAR>>");
+      assert.strictEqual(result.fullDataTypeString, "ARRAY<MAP<INT, VARCHAR>>");
+    });
+
+    it("generates correct fullDataTypeString for nested MULTISET<ARRAY>", () => {
+      const result = parseFlinkType("MULTISET<ARRAY<INT>>");
+      assert.strictEqual(result.fullDataTypeString, "MULTISET<ARRAY<INT>>");
+    });
+
+    it("generates correct fullDataTypeString for TIMESTAMP WITH TIME ZONE", () => {
+      const result = parseFlinkType("TIMESTAMP WITH TIME ZONE");
+      assert.strictEqual(result.fullDataTypeString, "TIMESTAMP WITH TIME ZONE");
+    });
+
+    it("generates correct fullDataTypeString for TIMESTAMP_LTZ", () => {
+      const result = parseFlinkType("TIMESTAMP_LTZ");
+      assert.strictEqual(result.fullDataTypeString, "TIMESTAMP_LTZ");
+    });
+
+    it("generates correct fullDataTypeString for INTERVAL YEAR TO MONTH", () => {
+      const result = parseFlinkType("INTERVAL YEAR TO MONTH");
+      assert.strictEqual(result.fullDataTypeString, "INTERVAL YEAR TO MONTH");
+    });
+
+    it("generates correct fullDataTypeString preserving all whitespace and structure", () => {
+      // Test that we preserve the exact structure without extra/missing whitespace
+      const result = parseFlinkType("ROW<outer ROW<inner INT>>");
+      assert.strictEqual(result.fullDataTypeString, "ROW<outer ROW<inner INT>>");
     });
   });
 });
