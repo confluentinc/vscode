@@ -133,12 +133,22 @@ describe("flinkTypeParser", () => {
       assert.strictEqual(result.members[0].dataType, "BIGINT");
     });
 
-    it("parses ARRAY<INT> NULL (explicit null on array)", () => {
-      const result = parseFlinkType("ARRAY<INT> NULL");
+    it("parses ARRAY<INT> NOT NULL (explicit not null on array)", () => {
+      const result = parseFlinkType("ARRAY<INT> NOT NULL");
       assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
-      assert.strictEqual(result.isFieldNullable, true);
+      assert.strictEqual(result.isFieldNullable, false);
       assert(isCompoundFlinkType(result));
       assert.strictEqual(result.members[0].dataType, "INT");
+      assert.strictEqual(result.members[0].isFieldNullable, true); // Members are nullable by default unless specified otherwise
+    });
+
+    it("parses ARRAY<INT NOT NULL> NOT NULL (explicit not null on array and members)", () => {
+      const result = parseFlinkType("ARRAY<INT NOT NULL> NOT NULL");
+      assert.strictEqual(result.kind, FlinkTypeKind.ARRAY);
+      assert.strictEqual(result.isFieldNullable, false);
+      assert(isCompoundFlinkType(result));
+      assert.strictEqual(result.members[0].dataType, "INT");
+      assert.strictEqual(result.members[0].isFieldNullable, false); // Members are explicitly NOT NULL
     });
 
     it("parses MULTISET<VARCHAR> NULL (explicit null on multiset)", () => {
@@ -716,7 +726,7 @@ describe("flinkTypeParser", () => {
       const arrayType: FlinkType = {
         kind: FlinkTypeKind.ARRAY,
         dataType: "ARRAY",
-        fullDataTypeString: "INT ARRAY",
+        fullDataTypeString: "ARRAY<INT>",
         isFieldNullable: false,
         members: [
           {
@@ -809,7 +819,7 @@ describe("flinkTypeParser", () => {
       const nestedType: FlinkType = {
         kind: FlinkTypeKind.ARRAY,
         dataType: "ARRAY",
-        fullDataTypeString: "ROW<id INT> ARRAY",
+        fullDataTypeString: "ARRAY<ROW<id INT>>",
         isFieldNullable: false,
         members: [
           {

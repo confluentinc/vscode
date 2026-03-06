@@ -14,7 +14,6 @@ import {
   TEST_FLINK_RELATION,
   TEST_VARCHAR_COLUMN,
 } from "../../tests/unit/testResources/flinkRelation";
-import { FlinkRelationColumn } from "../models/flinkRelation";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources/kafkaCluster";
 import { TEST_CCLOUD_SUBJECT_WITH_SCHEMAS } from "../../tests/unit/testResources/schema";
@@ -31,8 +30,9 @@ import {
   FlinkDatabaseContainerLabel,
   FlinkDatabaseResourceContainer,
 } from "../models/flinkDatabaseResourceContainer";
-import { FlinkUdfTreeItem } from "../models/flinkUDF";
+import { FlinkRelationColumn } from "../models/flinkRelation";
 import { FlinkTypeNode } from "../models/flinkTypeNode";
+import { FlinkUdfTreeItem } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { CustomMarkdownString } from "../models/main";
@@ -415,6 +415,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
       });
 
       it("should return undefined for FlinkTypeNode", () => {
+        // We do not support revealing FlinkTypeNode instances at this time.
         const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
         const node = new FlinkTypeNode({
           parsedType: parsed,
