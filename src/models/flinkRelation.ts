@@ -204,10 +204,7 @@ export class FlinkRelationColumn {
   }
 
   searchableText(): string {
-    const parts = [];
-
-    parts.push(this.name);
-    parts.push(formatFlinkTypeForDisplay(this.getParsedType()));
+    const parts = [this.name, formatFlinkTypeForDisplay(this.getParsedType())];
     if (this.metadataKey) {
       parts.push(this.metadataKey);
     }
@@ -412,16 +409,12 @@ export class FlinkRelation implements IResourceBase, IdItem, ISearchable {
   }
 
   searchableText(): string {
-    const parts = [];
-
-    parts.push(this.name);
-    parts.push(this.type);
+    const parts = [this.name, this.type];
     if (this.comment) {
       parts.push(this.comment);
     }
     for (const col of this.columns) {
-      parts.push(col.name);
-      parts.push(formatFlinkTypeForDisplay(col.getParsedType()));
+      parts.push(col.name, formatFlinkTypeForDisplay(col.getParsedType()));
       if (col.metadataKey) {
         parts.push(col.metadataKey);
       }
