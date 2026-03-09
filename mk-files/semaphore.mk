@@ -90,3 +90,4 @@ merge-blob-reports:
 	$(eval FILENAME := playwright-report-$(PLATFORM)-$(ARCH)-vscode-$(VSCODE_VERSION)--$(TEST_SUITE_NAME).zip)
 	tar -zcvf $(FILENAME) playwright-report
 	artifact push workflow $(FILENAME) --destination "playwright-reports/$(FILENAME)" --force
+	artifact push job $(FILENAME) --destination "playwright-reports/$(FILENAME)" --force
