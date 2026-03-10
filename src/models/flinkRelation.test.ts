@@ -464,13 +464,19 @@ describe("flinkRelation.ts", () => {
           });
 
           // ARRAY<ARRAY<ROW>> is expandable (outer ARRAY has compound element ARRAY<ROW>)
-          // Returns the ROW field from the inner ARRAY, skipping the intermediate container
+          // Creates intermediate node for nested ARRAY with [element] ID segment
           assertExpandableConsistency(column, 1);
           const children = column.getChildren();
-          assert.strictEqual(children[0].parsedType.kind, "ROW");
-          assert.strictEqual(children[0].parsedType.dataType, "ROW");
-          assert.strictEqual(children[0].parsedType.members.length, 1);
-          assert.strictEqual(children[0].parsedType.members[0].fieldName, "id");
+          assert.strictEqual(children[0].parsedType.kind, "ARRAY");
+          assert.strictEqual(children[0].id, "test_table.nested_people.[element]");
+
+          // Expanding the intermediate ARRAY node skips the ROW and returns its field directly
+          // (applies the ARRAY<ROW> optimization to nested containers)
+          const innerChildren = children[0].getChildren();
+          assert.strictEqual(innerChildren.length, 1);
+          assert.strictEqual(innerChildren[0].parsedType.kind, "SCALAR");
+          assert.strictEqual(innerChildren[0].parsedType.fieldName, "id");
+          assert.strictEqual(innerChildren[0].id, "test_table.nested_people.[element].id");
         });
 
         it("generates globally unique IDs across multiple ARRAY<ROW> columns with same field names", () => {

@@ -946,17 +946,19 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(node.isExpandable, true);
 
       // ARRAY<ARRAY<ROW<>>> - outer array's element is inner ARRAY (compound)
-      // Outer array returns inner array's members, which is [ROW<id INT>]
-      // So children1 is the ROW<id INT> directly (skips inner ARRAY node)
+      // Outer array creates intermediate node for inner ARRAY with [element] ID segment
       const children1 = node.getChildren();
       assert.strictEqual(children1.length, 1);
-      assert.strictEqual(children1[0].parsedType.kind, FlinkTypeKind.ROW);
+      assert.strictEqual(children1[0].parsedType.kind, FlinkTypeKind.ARRAY);
+      assert.strictEqual(children1[0].id, "test-table.test-col.[element]");
       assert.strictEqual(children1[0].isExpandable, true);
 
-      // When we expand the ROW, we get its field
+      // When we expand the inner ARRAY, it skips the ROW and returns its field directly
       const children2 = children1[0].getChildren();
       assert.strictEqual(children2.length, 1);
+      assert.strictEqual(children2[0].parsedType.kind, FlinkTypeKind.SCALAR);
       assert.strictEqual(children2[0].parsedType.fieldName, "id");
+      assert.strictEqual(children2[0].id, "test-table.test-col.[element].id");
     });
 
     it("generates unique IDs across complex table structure with multiple array columns", () => {

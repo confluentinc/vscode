@@ -80,11 +80,43 @@ export class FlinkTypeNode implements IResourceBase {
   }
 
   /**
+   * Recursively check if a FlinkType eventually contains ROW or MAP at any depth.
+   * Used to determine if nested ARRAY/MULTISET types should be expandable.
+   *
+   * Examples:
+   * - ROW<...> → true
+   * - MAP<...> → true
+   * - ARRAY<ROW<...>> → true
+   * - ARRAY<ARRAY<ROW<...>>> → true
+   * - ARRAY<INT> → false
+   * - ARRAY<ARRAY<INT>> → false
+   */
+  private static hasRowOrMapAtAnyDepth(type: FlinkType): boolean {
+    // Base case: ROW or MAP found
+    if (type.kind === FlinkTypeKind.ROW || type.kind === FlinkTypeKind.MAP) {
+      return true;
+    }
+
+    // Base case: scalar type (no further nesting)
+    if (!isCompoundFlinkType(type)) {
+      return false;
+    }
+
+    // Recursive case: ARRAY/MULTISET - check element type
+    if (type.kind === FlinkTypeKind.ARRAY || type.kind === FlinkTypeKind.MULTISET) {
+      return FlinkTypeNode.hasRowOrMapAtAnyDepth((type as CompoundFlinkType).members[0]);
+    }
+
+    // Should not reach here (would mean ROW/MAP with members, already handled above)
+    return false;
+  }
+
+  /**
    * Determine if this node should be expandable in the tree view.
    *
    * Expandable if:
    * - ROW or MAP: Always (always have structure)
-   * - ARRAY/MULTISET: Only if element type is compound (ROW or MAP)
+   * - ARRAY/MULTISET: Only if element type eventually contains ROW or MAP at any depth
    * - SCALAR: Never
    */
   get isExpandable(): boolean {
@@ -99,8 +131,9 @@ export class FlinkTypeNode implements IResourceBase {
       return true;
     }
 
-    // ARRAY/MULTISET: only if element is compound
-    return isCompoundFlinkType(members[0]);
+    // ARRAY/MULTISET: check recursively if element eventually contains ROW or MAP
+    // This handles nested containers: ARRAY<ARRAY<ROW>> is expandable, ARRAY<ARRAY<INT>> is not
+    return FlinkTypeNode.hasRowOrMapAtAnyDepth(members[0]);
   }
 
   /**
@@ -166,11 +199,13 @@ export class FlinkTypeNode implements IResourceBase {
    * Returns empty array if not expandable. If expandable, returns the appropriate child nodes.
    *
    * For ROW/MAP: returns member field nodes directly.
-   * For ARRAY/MULTISET with compound element types: returns the element's children directly
-   * (skips the intermediate container node for better UX). Since isExpandable() validates this
-   * condition, we can safely access members[0].members without additional checks.
+   * For ARRAY/MULTISET with ROW/MAP elements: skips the intermediate container node for better UX
+   * and returns the element's member fields directly.
+   * For ARRAY/MULTISET with nested container elements: creates an intermediate node with synthetic
+   * [element] ID segment to represent the nested container, enabling proper ID uniqueness and hierarchy.
    *
-   * Child IDs are computed by appending field names to the parent ID.
+   * Child IDs are computed by appending field names (for ROW/MAP members) or synthetic [element]
+   * segments (for nested containers) to the parent ID.
    * Results are cached to avoid regenerating FlinkTypeNode instances on repeated calls.
    */
   getChildren(): FlinkTypeNode[] {
@@ -190,18 +225,30 @@ export class FlinkTypeNode implements IResourceBase {
             });
           });
         } else {
-          // ARRAY/MULTISET with compound elements: return the element's children directly
-          // (skips the intermediate [element] node for cleaner UX)
-          // Note: isExpandable() ensures the element is compound, so we can safely access members[0].members
-          const elementType = members[0] as CompoundFlinkType;
-          this._children = elementType.members.map((member: FlinkType) => {
-            const fieldName = member.fieldName;
-            const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
-            return new FlinkTypeNode({
-              parsedType: member,
-              id: childId,
+          // ARRAY/MULTISET: check if element is directly ROW/MAP or needs intermediate node
+          const elementType = members[0];
+
+          if (elementType.kind === FlinkTypeKind.ROW || elementType.kind === FlinkTypeKind.MAP) {
+            // Element is ROW/MAP: skip directly to its members (existing optimization)
+            const compoundElement = elementType as CompoundFlinkType;
+            this._children = compoundElement.members.map((member: FlinkType) => {
+              const fieldName = member.fieldName;
+              const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
+              return new FlinkTypeNode({
+                parsedType: member,
+                id: childId,
+              });
             });
-          });
+          } else {
+            // Element is nested ARRAY/MULTISET: create intermediate node with synthetic ID
+            const childId = `${this.id}.[element]`;
+            this._children = [
+              new FlinkTypeNode({
+                parsedType: elementType,
+                id: childId,
+              }),
+            ];
+          }
         }
       } else {
         // not expandable; no children

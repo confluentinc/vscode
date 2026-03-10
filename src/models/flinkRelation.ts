@@ -7,7 +7,7 @@ import { IconNames } from "../icons";
 import { parseFlinkType } from "../parsers/flinkTypeParser";
 import { formatFlinkTypeForDisplay, formatSqlType } from "../utils/flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
-import type { FlinkType } from "./flinkTypes";
+import type { CompoundFlinkType, FlinkType } from "./flinkTypes";
 import { FlinkTypeKind, isCompoundFlinkType } from "./flinkTypes";
 import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
@@ -118,8 +118,40 @@ export class FlinkRelationColumn {
   }
 
   /**
+   * Recursively check if a FlinkType eventually contains ROW or MAP at any depth.
+   * Used to determine if nested ARRAY/MULTISET types should be expandable.
+   *
+   * Examples:
+   * - ROW<...> → true
+   * - MAP<...> → true
+   * - ARRAY<ROW<...>> → true
+   * - ARRAY<ARRAY<ROW<...>>> → true
+   * - ARRAY<INT> → false
+   * - ARRAY<ARRAY<INT>> → false
+   */
+  private static hasRowOrMapAtAnyDepth(type: FlinkType): boolean {
+    // Base case: ROW or MAP found
+    if (type.kind === FlinkTypeKind.ROW || type.kind === FlinkTypeKind.MAP) {
+      return true;
+    }
+
+    // Base case: scalar type (no further nesting)
+    if (!isCompoundFlinkType(type)) {
+      return false;
+    }
+
+    // Recursive case: ARRAY/MULTISET - check element type
+    if (type.kind === FlinkTypeKind.ARRAY || type.kind === FlinkTypeKind.MULTISET) {
+      return FlinkRelationColumn.hasRowOrMapAtAnyDepth((type as CompoundFlinkType).members[0]);
+    }
+
+    // Should not reach here (would mean ROW/MAP with members, already handled above)
+    return false;
+  }
+
+  /**
    * Determine if this column should be expandable in the tree view.
-   * Expandable if the parsed type is compound (ROW, MAP, ARRAY<compound>, MULTISET<compound>).
+   * Expandable if the parsed type is compound and eventually contains ROW or MAP at any depth.
    */
   get isExpandable(): boolean {
     const parsed = this.getParsedType();
@@ -134,8 +166,8 @@ export class FlinkRelationColumn {
       return true;
     }
 
-    // ARRAY/MULTISET: only if element is compound
-    return isCompoundFlinkType(members[0]);
+    // ARRAY/MULTISET: check recursively if element eventually contains ROW or MAP
+    return FlinkRelationColumn.hasRowOrMapAtAnyDepth(members[0]);
   }
 
   /**
