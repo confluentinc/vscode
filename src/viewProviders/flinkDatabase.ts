@@ -160,14 +160,20 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
   /**
    * Build a TreeItem for the given element.
    * Routes to appropriate builder based on element type.
+   * Uses exhaustiveness checking: if a new type is added to DatabaseChildrenType,
+   * TypeScript will flag the final assignment as unreachable.
    */
   private buildTreeItem(element: DatabaseChildrenType): TreeItem {
     if (element instanceof FlinkDatabaseResourceContainer) {
       return element; // already a TreeItem (subclass)
     }
 
-    if ("getTreeItem" in element && typeof element.getTreeItem === "function") {
-      // FlinkRelations/FlinkRelationColumn/FlinkTypeNode since they can produce their own TreeItems.
+    if (
+      element instanceof FlinkRelation ||
+      element instanceof FlinkRelationColumn ||
+      element instanceof FlinkTypeNode
+    ) {
+      // Types that produce their own TreeItems via getTreeItem()
       return element.getTreeItem();
     }
 
@@ -195,38 +201,10 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
       return new FlinkAIAgentTreeItem(element);
     }
 
-    // This should be unreachable - all types in DatabaseChildrenType are handled above.
-    // The exhaustiveness check is implicit: if a new type is added to DatabaseChildrenType,
-    // TypeScript will flag this else block as unreachable (under strict type checking).
-    throw this.createUnhandledTypeError(element);
-  }
-
-  /**
-   * Create an error for an unhandled element type.
-   * Extracts type and ID information for debugging.
-   */
-  private createUnhandledTypeError(element: unknown): TypeError {
-    const { className, id } = this.extractElementInfo(element);
-    return new TypeError(`Unhandled DatabaseChildrenType: ${className} (id: ${id})`);
-  }
-
-  /**
-   * Extract debug information from an element.
-   * Used for error reporting when an unexpected type is encountered.
-   */
-  private extractElementInfo(element: unknown): { className: string; id: string } {
-    if (typeof element === "object" && element !== null) {
-      const elementWithConstructor = element as { constructor?: { name?: string } };
-      const elementWithId = element as { id?: unknown };
-
-      const className = elementWithConstructor.constructor?.name ?? "object";
-      const rawId = elementWithId.id;
-      const id = typeof rawId === "string" || typeof rawId === "number" ? String(rawId) : "unknown";
-
-      return { className, id };
-    }
-
-    return { className: typeof element, id: "unknown" };
+    // Exhaustiveness check: if we reach here, a new type was added to DatabaseChildrenType
+    // and this assignment will fail at compile time.
+    const exhaustiveCheck: never = element;
+    return exhaustiveCheck;
   }
 
   /** Get the parent of the given element, or `undefined` if it's a root-level item. */
