@@ -110,7 +110,7 @@ export class FlinkRelationColumn {
         kind: FlinkTypeKind.SCALAR,
         dataType: this.fullDataType,
         fullDataTypeString: this.fullDataType,
-        isFieldNullable: true,
+        isFieldNullable: this.isNullable,
       };
     }
 
