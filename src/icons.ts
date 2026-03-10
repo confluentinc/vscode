@@ -42,6 +42,14 @@ export enum IconNames {
   LOADING = "loading~spin",
   /** General-purpose icon to use when we don't have a dedicated icon for a given resource. */
   PLACEHOLDER = "symbol-misc",
+  /** Icon for ROW types in TreeView */
+  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
+  FLINK_TYPE_ROW = "confluent-function",
+  /** Icon for ARRAY types in TreeView */
+  FLINK_TYPE_ARRAY = "symbol-array",
+  /** Icon for MULTISET types in TreeView */
+  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
+  FLINK_TYPE_MULTISET = "confluent-function",
 }
 
 /** Red "warning" icon to use when dealing with connectivity issues or failed resource fetching. */

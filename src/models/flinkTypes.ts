@@ -40,6 +40,18 @@ interface BaseFlinkType {
   dataType: string;
 
   /**
+   * The full SQL data type string for this node and all its nested members.
+   * This is the substring of the original data type string that corresponds to this specific type.
+   * Examples:
+   * - Scalar: "INT", "VARCHAR(255)"
+   * - ROW: "ROW<id INT, name VARCHAR>"
+   * - ARRAY: "ARRAY<INT>"
+   * - MULTISET: "MULTISET<ROW<...>>"
+   * Used for tooltip display to show users the exact SQL definition.
+   */
+  fullDataTypeString: string;
+
+  /**
    * Is this field/type nullable as a whole?
    */
   isFieldNullable: boolean;
@@ -118,4 +130,40 @@ export function isCompoundFlinkType(type: FlinkType): type is CompoundFlinkType 
     type.kind === FlinkTypeKind.MULTISET ||
     type.kind === FlinkTypeKind.MAP
   );
+}
+
+/**
+ * Recursively check if a FlinkType eventually contains ROW or MAP at any depth.
+ *
+ * Used to determine if nested ARRAY/MULTISET types should be expandable in tree views.
+ * Traverses through container types (ARRAY, MULTISET) to find structural types (ROW, MAP).
+ *
+ * @param type - The FlinkType to check
+ * @returns true if ROW or MAP is found at any nesting depth, false otherwise
+ *
+ * @example
+ * hasRowOrMapAtAnyDepth(parseFlinkType("ROW<id INT>")) // true
+ * hasRowOrMapAtAnyDepth(parseFlinkType("ARRAY<ROW<...>>")) // true
+ * hasRowOrMapAtAnyDepth(parseFlinkType("ARRAY<ARRAY<ROW<...>>>")) // true
+ * hasRowOrMapAtAnyDepth(parseFlinkType("ARRAY<INT>")) // false
+ * hasRowOrMapAtAnyDepth(parseFlinkType("ARRAY<ARRAY<INT>>")) // false
+ */
+export function hasRowOrMapAtAnyDepth(type: FlinkType): boolean {
+  // Base case: ROW or MAP found
+  if (type.kind === FlinkTypeKind.ROW || type.kind === FlinkTypeKind.MAP) {
+    return true;
+  }
+
+  // Base case: scalar type (no further nesting)
+  if (!isCompoundFlinkType(type)) {
+    return false;
+  }
+
+  // Recursive case: ARRAY/MULTISET - check element type
+  if (type.kind === FlinkTypeKind.ARRAY || type.kind === FlinkTypeKind.MULTISET) {
+    return hasRowOrMapAtAnyDepth(type.members[0]);
+  }
+
+  // Should not reach here (would mean ROW/MAP with members, already handled above)
+  return false;
 }
