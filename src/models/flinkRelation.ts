@@ -7,7 +7,7 @@ import { IconNames } from "../icons";
 import { parseFlinkType } from "../parsers/flinkTypeParser";
 import { formatFlinkTypeForDisplay, formatSqlType } from "../utils/flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
-import type { CompoundFlinkType, FlinkType } from "./flinkTypes";
+import type { FlinkType } from "./flinkTypes";
 import { FlinkTypeKind, hasRowOrMapAtAnyDepth, isCompoundFlinkType } from "./flinkTypes";
 import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
