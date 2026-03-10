@@ -48,7 +48,7 @@ export function getTestEnvironmentIdForConnectionType(
  */
 export function createTestResource(
   id: string,
-  name: string,
+  name?: string,
   connectionType: ConnectionType = ConnectionType.Ccloud,
   children?: BaseViewProviderData[],
 ): BaseViewProviderData {
@@ -56,7 +56,7 @@ export function createTestResource(
     id,
     connectionId: getTestConnectionIdForType(connectionType),
     connectionType,
-    searchableText: () => name,
+    searchableText: () => name ?? id,
     children,
   };
 }
@@ -73,16 +73,16 @@ export interface TestParentedResource extends EnvironmentedBaseViewProviderData 
  */
 export function createParentedTestResource(
   id: string,
-  name: string,
+  name?: string,
   connectionType: ConnectionType = ConnectionType.Ccloud,
 ): TestParentedResource {
   const base: TestParentedResource = {
     id,
-    name,
+    name: name ?? id,
     connectionId: getTestConnectionIdForType(connectionType),
     connectionType,
     environmentId: getTestEnvironmentIdForConnectionType(connectionType),
-    searchableText: () => name,
+    searchableText: () => name ?? id,
   };
 
   if (connectionType === ConnectionType.Ccloud) {
