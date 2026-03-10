@@ -4,7 +4,7 @@ import { CCLOUD_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
 import { formatFlinkTypeForDisplay, formatSqlType } from "../utils/flinkTypes";
 import type { CompoundFlinkType, FlinkType } from "./flinkTypes";
-import { FlinkTypeKind, isCompoundFlinkType } from "./flinkTypes";
+import { FlinkTypeKind, hasRowOrMapAtAnyDepth, isCompoundFlinkType } from "./flinkTypes";
 import { CustomMarkdownString } from "./main";
 import type { ConnectionId, IResourceBase } from "./resource";
 
@@ -80,38 +80,6 @@ export class FlinkTypeNode implements IResourceBase {
   }
 
   /**
-   * Recursively check if a FlinkType eventually contains ROW or MAP at any depth.
-   * Used to determine if nested ARRAY/MULTISET types should be expandable.
-   *
-   * Examples:
-   * - ROW<...> → true
-   * - MAP<...> → true
-   * - ARRAY<ROW<...>> → true
-   * - ARRAY<ARRAY<ROW<...>>> → true
-   * - ARRAY<INT> → false
-   * - ARRAY<ARRAY<INT>> → false
-   */
-  private static hasRowOrMapAtAnyDepth(type: FlinkType): boolean {
-    // Base case: ROW or MAP found
-    if (type.kind === FlinkTypeKind.ROW || type.kind === FlinkTypeKind.MAP) {
-      return true;
-    }
-
-    // Base case: scalar type (no further nesting)
-    if (!isCompoundFlinkType(type)) {
-      return false;
-    }
-
-    // Recursive case: ARRAY/MULTISET - check element type
-    if (type.kind === FlinkTypeKind.ARRAY || type.kind === FlinkTypeKind.MULTISET) {
-      return FlinkTypeNode.hasRowOrMapAtAnyDepth((type as CompoundFlinkType).members[0]);
-    }
-
-    // Should not reach here (would mean ROW/MAP with members, already handled above)
-    return false;
-  }
-
-  /**
    * Determine if this node should be expandable in the tree view.
    *
    * Expandable if:
@@ -133,7 +101,7 @@ export class FlinkTypeNode implements IResourceBase {
 
     // ARRAY/MULTISET: check recursively if element eventually contains ROW or MAP
     // This handles nested containers: ARRAY<ARRAY<ROW>> is expandable, ARRAY<ARRAY<INT>> is not
-    return FlinkTypeNode.hasRowOrMapAtAnyDepth(members[0]);
+    return hasRowOrMapAtAnyDepth(members[0]);
   }
 
   /**
