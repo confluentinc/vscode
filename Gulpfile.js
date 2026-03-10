@@ -10,7 +10,7 @@ import { runTests } from "@vscode/test-electron";
 import { configDotenv } from "dotenv";
 import { ESLint } from "eslint";
 import { globSync } from "glob";
-import { dest, parallel, series, src } from "gulp";
+import { parallel, series } from "gulp";
 import libCoverage from "istanbul-lib-coverage";
 import libInstrument from "istanbul-lib-instrument";
 import libReport from "istanbul-lib-report";
@@ -20,7 +20,6 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { appendFile, readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
-import { pipeline } from "node:stream/promises";
 import { rimrafSync } from "rimraf";
 import { rollup, watch } from "rollup";
 import copy from "rollup-plugin-copy";
@@ -1009,8 +1008,6 @@ export async function apigen() {
     .map(([key, value]) => `${key}=${value}`)
     .join(",");
 
-  const format = await prettier();
-
   for (const [spec, path] of clients) {
     // other client generator types: https://openapi-generator.tech/docs/generators#client-generators
     const result = spawnSync(
@@ -1032,15 +1029,18 @@ export async function apigen() {
         shell: IS_WINDOWS,
       },
     );
-
-    // apply prettier formatting to generated code
-    await pipeline(
-      src(join(path, "**", "*.ts")),
-      format,
-      dest((file) => file.base),
-    );
     if (result.error) throw result.error;
     if (result.status !== 0) throw new Error(`Failed to generate client for ${spec}`);
+
+    // apply prettier formatting to generated code, bypassing .prettierignore since it
+    // excludes src/clients/ (to prevent other tools from reformatting generated code)
+    const prettierResult = spawnSync(
+      "npx",
+      ["prettier", "--write", "--ignore-path", "/dev/null", join(path, "**", "*.ts")],
+      { stdio: "inherit", shell: IS_WINDOWS },
+    );
+    if (prettierResult.error) throw prettierResult.error;
+    if (prettierResult.status !== 0) throw new Error(`Failed to format generated code in ${path}`);
   }
 
   // While here, also run `npx gql-tada generate output` to generate GraphQL types.
@@ -1053,41 +1053,14 @@ export async function apigen() {
 }
 
 format.description = "Enforce Prettier formatting for all TS/JS/MD/HTML/YAML files.";
-export async function format() {
-  const transform = await prettier();
-  // Prettier's API does not have a magic method to just fix everything
-  // So this is where we add some Gulp FileSystem API to make it work
-  return pipeline(
-    src(["src/**/*.{ts,css,html,json}", "*.md", "*.js"]),
-    transform,
-    dest((file) => file.base),
+export function format() {
+  const result = spawnSync(
+    "npx",
+    ["prettier", "--write", "src/**/*.{ts,css,html,json}", "*.md", "*.js"],
+    { stdio: "inherit", shell: IS_WINDOWS },
   );
-}
-
-async function prettier() {
-  const { check, format, getFileInfo, resolveConfigFile, resolveConfig } = await import("prettier");
-  const configFile = (await resolveConfigFile()) ?? ".prettierrc";
-  const config = await resolveConfig(configFile);
-  /** @param {AsyncIterator<import("vinyl")>} source */
-  return async function* process(source) {
-    for await (const file of source) {
-      if (file.contents != null) {
-        // check if the file is in .prettierignore before trying to format it
-        const fileInfo = await getFileInfo(file.path, { ignorePath: ".prettierignore" });
-        if (fileInfo.ignored) {
-          continue;
-        }
-        const options = { filepath: file.path, ...config };
-        const code = file.contents.toString();
-        const valid = await check(code, options);
-        if (!valid) {
-          const contents = await format(code, options);
-          const clone = file.clone({ contents: false });
-          yield Object.assign(clone, { contents: Buffer.from(contents) });
-        }
-      }
-    }
-  };
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error("Prettier formatting failed");
 }
 
 icongen.description = "Generate font files from SVG icons, and update package.json accordingly.";
