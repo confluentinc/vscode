@@ -1058,25 +1058,29 @@ export async function format() {
   // Prettier's API does not have a magic method to just fix everything
   // So this is where we add some Gulp FileSystem API to make it work
   return pipeline(
-    src(["src/**/*.{ts,css,html,json}", "*.md", "*.js"]),
+    src([
+      "src/**/*.ts",
+      "!src/clients/**/*.ts", // don't reformat apigen generated code
+      "!src/graphql/sidecarGraphQL.d.ts", // don't reformat gql.tada generated code
+      "src/**/*.css",
+      "src/**/*.html",
+      "src/**/*.json",
+      "*.md",
+      "*.js",
+    ]),
     transform,
     dest((file) => file.base),
   );
 }
 
 async function prettier() {
-  const { check, format, getFileInfo, resolveConfigFile, resolveConfig } = await import("prettier");
+  const { check, format, resolveConfigFile, resolveConfig } = await import("prettier");
   const configFile = (await resolveConfigFile()) ?? ".prettierrc";
   const config = await resolveConfig(configFile);
   /** @param {AsyncIterator<import("vinyl")>} source */
   return async function* process(source) {
     for await (const file of source) {
       if (file.contents != null) {
-        // check if the file is in .prettierignore before trying to format it
-        const fileInfo = await getFileInfo(file.path, { ignorePath: ".prettierignore" });
-        if (fileInfo.ignored) {
-          continue;
-        }
         const options = { filepath: file.path, ...config };
         const code = file.contents.toString();
         const valid = await check(code, options);
