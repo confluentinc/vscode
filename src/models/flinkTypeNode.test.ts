@@ -946,11 +946,11 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(node.isExpandable, true);
 
       // ARRAY<ARRAY<ROW<>>> - outer array's element is inner ARRAY (compound)
-      // Outer array creates intermediate node for inner ARRAY with [element] ID segment
+      // Outer array creates intermediate node for inner ARRAY with [array] ID segment
       const children1 = node.getChildren();
       assert.strictEqual(children1.length, 1);
       assert.strictEqual(children1[0].parsedType.kind, FlinkTypeKind.ARRAY);
-      assert.strictEqual(children1[0].id, "test-table.test-col.[element]");
+      assert.strictEqual(children1[0].id, "test-table.test-col.[array]");
       assert.strictEqual(children1[0].isExpandable, true);
 
       // When we expand the inner ARRAY, it skips the ROW and returns its field directly
@@ -958,7 +958,7 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(children2.length, 1);
       assert.strictEqual(children2[0].parsedType.kind, FlinkTypeKind.SCALAR);
       assert.strictEqual(children2[0].parsedType.fieldName, "id");
-      assert.strictEqual(children2[0].id, "test-table.test-col.[element].id");
+      assert.strictEqual(children2[0].id, "test-table.test-col.[array].id");
     });
 
     it("generates unique IDs across complex table structure with multiple array columns", () => {
@@ -997,6 +997,50 @@ describe("FlinkTypeNode", () => {
         col1Children[0].id,
         col2Children[0].id,
         "Different columns should have different IDs even with same field names",
+      );
+    });
+
+    it("handles deeply nested ARRAY<ARRAY<MULTISET<ROW>>> with proper ID generation", () => {
+      // Complex deeply nested type: ARRAY<ARRAY<MULTISET<ROW<id INT>>>>
+      // This tests multiple levels of container nesting with different container types
+      const parsed = parseFlinkType("ARRAY<ARRAY<MULTISET<ROW<id INT>>>>");
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.complex_field",
+      });
+
+      assert.strictEqual(node.isExpandable, true);
+      assert.strictEqual(node.parsedType.kind, FlinkTypeKind.ARRAY);
+
+      // Level 1: Expand outer ARRAY -> get intermediate [array] node for inner ARRAY
+      const level1 = node.getChildren();
+      assert.strictEqual(level1.length, 1, "Outer ARRAY should have one child (inner ARRAY)");
+      assert.strictEqual(level1[0].parsedType.kind, FlinkTypeKind.ARRAY);
+      assert.strictEqual(level1[0].id, "test_table.complex_field.[array]");
+      assert.strictEqual(level1[0].isExpandable, true);
+
+      // Level 2: Expand inner ARRAY -> get intermediate [multiset] node for MULTISET
+      const level2 = level1[0].getChildren();
+      assert.strictEqual(level2.length, 1, "Inner ARRAY should have one child (MULTISET)");
+      assert.strictEqual(level2[0].parsedType.kind, FlinkTypeKind.MULTISET);
+      assert.strictEqual(level2[0].id, "test_table.complex_field.[array].[multiset]");
+      assert.strictEqual(level2[0].isExpandable, true);
+
+      // Level 3: Expand MULTISET -> get ROW fields directly (skip ROW node, show its members)
+      const level3 = level2[0].getChildren();
+      assert.strictEqual(level3.length, 1, "MULTISET should have one child (id field from ROW)");
+      assert.strictEqual(level3[0].parsedType.kind, FlinkTypeKind.SCALAR);
+      assert.strictEqual(level3[0].parsedType.fieldName, "id");
+      assert.strictEqual(level3[0].id, "test_table.complex_field.[array].[multiset].id");
+      assert.strictEqual(level3[0].isExpandable, false);
+
+      // Verify all IDs are unique in the hierarchy
+      const allIds = [node.id, level1[0].id, level2[0].id, level3[0].id];
+      const uniqueIds = new Set(allIds);
+      assert.strictEqual(
+        allIds.length,
+        uniqueIds.size,
+        `Found duplicate IDs in hierarchy: ${allIds}`,
       );
     });
   });

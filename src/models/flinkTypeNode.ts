@@ -170,9 +170,9 @@ export class FlinkTypeNode implements IResourceBase {
    * For ARRAY/MULTISET with ROW/MAP elements: skips the intermediate container node for better UX
    * and returns the element's member fields directly.
    * For ARRAY/MULTISET with nested container elements: creates an intermediate node with synthetic
-   * [element] ID segment to represent the nested container, enabling proper ID uniqueness and hierarchy.
+   * [array] or [multiset] ID segment to represent the nested container, enabling proper ID uniqueness and hierarchy.
    *
-   * Child IDs are computed by appending field names (for ROW/MAP members) or synthetic [element]
+   * Child IDs are computed by appending field names (for ROW/MAP members) or synthetic [array]/[multiset]
    * segments (for nested containers) to the parent ID.
    * Results are cached to avoid regenerating FlinkTypeNode instances on repeated calls.
    */
@@ -208,8 +208,11 @@ export class FlinkTypeNode implements IResourceBase {
               });
             });
           } else {
-            // Element is nested ARRAY/MULTISET: create intermediate node with synthetic ID
-            const childId = `${this.id}.[element]`;
+            // Element is nested ARRAY/MULTISET: create intermediate node with descriptive synthetic ID
+            // Use the element's kind to determine the label
+            const containerLabel =
+              elementType.kind === FlinkTypeKind.ARRAY ? "[array]" : "[multiset]";
+            const childId = `${this.id}.${containerLabel}`;
             this._children = [
               new FlinkTypeNode({
                 parsedType: elementType,
