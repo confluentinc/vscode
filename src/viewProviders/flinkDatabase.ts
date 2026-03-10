@@ -152,51 +152,81 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
   }
 
   getTreeItem(element: DatabaseChildrenType): TreeItem {
-    let treeItem: TreeItem;
+    const treeItem = this.buildTreeItem(element);
+    this.adjustTreeItemForSearch(element, treeItem);
+    return treeItem;
+  }
 
+  /**
+   * Build a TreeItem for the given element.
+   * Routes to appropriate builder based on element type.
+   */
+  private buildTreeItem(element: DatabaseChildrenType): TreeItem {
     if (element instanceof FlinkDatabaseResourceContainer) {
-      // already a TreeItem (subclass)
-      treeItem = element;
-    } else if ("getTreeItem" in element && typeof element.getTreeItem === "function") {
-      // FlinkRelations/FlinkRelationColumn/FlinkTypeNode since they can produce their own TreeItems.
-      treeItem = element.getTreeItem();
-    } else if (element instanceof FlinkArtifact) {
-      treeItem = new FlinkArtifactTreeItem(element);
-    } else if (element instanceof FlinkUdf) {
-      treeItem = new FlinkUdfTreeItem(element);
-    } else if (element instanceof FlinkAIConnection) {
-      treeItem = new FlinkAIConnectionTreeItem(element);
-    } else if (element instanceof FlinkAIModel) {
-      treeItem = new FlinkAIModelTreeItem(element);
-    } else if (element instanceof FlinkAITool) {
-      treeItem = new FlinkAIToolTreeItem(element);
-    } else if (element instanceof FlinkAIAgent) {
-      treeItem = new FlinkAIAgentTreeItem(element);
-    } else {
-      // This should be unreachable - all types in DatabaseChildrenType are handled above.
-      // The exhaustiveness check is implicit: if a new type is added to DatabaseChildrenType,
-      // TypeScript will flag this else block as unreachable (under strict type checking).
-      const unknownElement: unknown = element;
-      let className: string;
-      let id: string;
-
-      if (typeof unknownElement === "object" && unknownElement !== null) {
-        const elementWithConstructor = unknownElement as { constructor?: { name?: string } };
-        const elementWithId = unknownElement as { id?: unknown };
-
-        className = elementWithConstructor.constructor?.name ?? "object";
-        const rawId = elementWithId.id;
-        id = typeof rawId === "string" || typeof rawId === "number" ? String(rawId) : "unknown";
-      } else {
-        className = typeof unknownElement;
-        id = "unknown";
-      }
-      throw new TypeError(`Unhandled DatabaseChildrenType: ${className} (id: ${id})`);
+      return element; // already a TreeItem (subclass)
     }
 
-    this.adjustTreeItemForSearch(element, treeItem);
+    if ("getTreeItem" in element && typeof element.getTreeItem === "function") {
+      // FlinkRelations/FlinkRelationColumn/FlinkTypeNode since they can produce their own TreeItems.
+      return element.getTreeItem();
+    }
 
-    return treeItem;
+    if (element instanceof FlinkArtifact) {
+      return new FlinkArtifactTreeItem(element);
+    }
+
+    if (element instanceof FlinkUdf) {
+      return new FlinkUdfTreeItem(element);
+    }
+
+    if (element instanceof FlinkAIConnection) {
+      return new FlinkAIConnectionTreeItem(element);
+    }
+
+    if (element instanceof FlinkAIModel) {
+      return new FlinkAIModelTreeItem(element);
+    }
+
+    if (element instanceof FlinkAITool) {
+      return new FlinkAIToolTreeItem(element);
+    }
+
+    if (element instanceof FlinkAIAgent) {
+      return new FlinkAIAgentTreeItem(element);
+    }
+
+    // This should be unreachable - all types in DatabaseChildrenType are handled above.
+    // The exhaustiveness check is implicit: if a new type is added to DatabaseChildrenType,
+    // TypeScript will flag this else block as unreachable (under strict type checking).
+    throw this.createUnhandledTypeError(element);
+  }
+
+  /**
+   * Create an error for an unhandled element type.
+   * Extracts type and ID information for debugging.
+   */
+  private createUnhandledTypeError(element: unknown): TypeError {
+    const { className, id } = this.extractElementInfo(element);
+    return new TypeError(`Unhandled DatabaseChildrenType: ${className} (id: ${id})`);
+  }
+
+  /**
+   * Extract debug information from an element.
+   * Used for error reporting when an unexpected type is encountered.
+   */
+  private extractElementInfo(element: unknown): { className: string; id: string } {
+    if (typeof element === "object" && element !== null) {
+      const elementWithConstructor = element as { constructor?: { name?: string } };
+      const elementWithId = element as { id?: unknown };
+
+      const className = elementWithConstructor.constructor?.name ?? "object";
+      const rawId = elementWithId.id;
+      const id = typeof rawId === "string" || typeof rawId === "number" ? String(rawId) : "unknown";
+
+      return { className, id };
+    }
+
+    return { className: typeof element, id: "unknown" };
   }
 
   /** Get the parent of the given element, or `undefined` if it's a root-level item. */
