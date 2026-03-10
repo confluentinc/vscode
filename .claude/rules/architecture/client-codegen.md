@@ -6,16 +6,20 @@ paths:
 
 # Client Code Generation
 
-**NEVER manually edit files in `src/clients/`** — all auto-generated from OpenAPI specs.
+**NEVER manually edit generated client code** under the auto-generated directories listed below.
+These clients are produced from OpenAPI specs and should only be changed via spec/patch updates and
+regeneration.
 
 ## OpenAPI (REST) Clients
 
-To modify client code:
+OpenAPI specs typically come from upstream services — don't edit them directly. To adjust generated
+output, add a `.patch` file to `src/clients/sidecar-openapi-specs/patches/` (applied automatically
+during `npx gulp apigen`).
 
-1. Update the OpenAPI spec in `src/clients/sidecar-openapi-specs/`
-2. Run `npx gulp apigen`
-3. Commit both the spec changes AND a `.patch` file to `src/clients/sidecar-openapi-specs/patches/`
-   so subsequent generations apply cleanly
+To regenerate clients after spec or patch changes:
+
+1. Run `npx gulp apigen`
+2. Commit both any new/updated spec files AND corresponding `.patch` files
 
 ## GraphQL
 

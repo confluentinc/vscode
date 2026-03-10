@@ -42,7 +42,8 @@ class MyClass extends DisposableCollection {
     super();
     this.disposables.push(vscode.workspace.onDidChangeConfiguration(...));
   }
-  // .dispose() is automatically handled by DisposableCollection
+  // DisposableCollection implements .dispose() to clean up this.disposables
+  // remember to register MyClass for disposal (e.g. in context.subscriptions)
 }
 ```
 
