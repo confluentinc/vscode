@@ -8,7 +8,7 @@ import { parseFlinkType } from "../parsers/flinkTypeParser";
 import { formatFlinkTypeForDisplay, formatSqlType } from "../utils/flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
 import type { FlinkType } from "./flinkTypes";
-import { FlinkTypeKind, hasRowOrMapAtAnyDepth, isCompoundFlinkType } from "./flinkTypes";
+import { FlinkTypeKind, isFlinkTypeExpandable } from "./flinkTypes";
 import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
 import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
@@ -119,23 +119,10 @@ export class FlinkRelationColumn {
 
   /**
    * Determine if this column should be expandable in the tree view.
-   * Expandable if the parsed type is compound and eventually contains ROW or MAP at any depth.
+   * Uses isFlinkTypeExpandable() to check the underlying type structure.
    */
   get isExpandable(): boolean {
-    const parsed = this.getParsedType();
-    if (!isCompoundFlinkType(parsed)) {
-      return false;
-    }
-
-    const { kind, members } = parsed;
-
-    // ROW and MAP always expand
-    if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
-      return true;
-    }
-
-    // ARRAY/MULTISET: check recursively if element eventually contains ROW or MAP
-    return hasRowOrMapAtAnyDepth(members[0]);
+    return isFlinkTypeExpandable(this.getParsedType());
   }
 
   /**

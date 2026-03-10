@@ -4,7 +4,7 @@ import { CCLOUD_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
 import { formatFlinkTypeForDisplay, formatSqlType } from "../utils/flinkTypes";
 import type { CompoundFlinkType, FlinkType } from "./flinkTypes";
-import { FlinkTypeKind, hasRowOrMapAtAnyDepth, isCompoundFlinkType } from "./flinkTypes";
+import { FlinkTypeKind, isFlinkTypeExpandable } from "./flinkTypes";
 import { CustomMarkdownString } from "./main";
 import type { ConnectionId, IResourceBase } from "./resource";
 
@@ -81,27 +81,10 @@ export class FlinkTypeNode implements IResourceBase {
 
   /**
    * Determine if this node should be expandable in the tree view.
-   *
-   * Expandable if:
-   * - ROW or MAP: Always (always have structure)
-   * - ARRAY/MULTISET: Only if element type eventually contains ROW or MAP at any depth
-   * - SCALAR: Never
+   * Uses isFlinkTypeExpandable() to check the underlying type structure.
    */
   get isExpandable(): boolean {
-    if (!isCompoundFlinkType(this.parsedType)) {
-      return false;
-    }
-
-    const { kind, members } = this.parsedType;
-
-    // ROW and MAP always expand
-    if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
-      return true;
-    }
-
-    // ARRAY/MULTISET: check recursively if element eventually contains ROW or MAP
-    // This handles nested containers: ARRAY<ARRAY<ROW>> is expandable, ARRAY<ARRAY<INT>> is not
-    return hasRowOrMapAtAnyDepth(members[0]);
+    return isFlinkTypeExpandable(this.parsedType);
   }
 
   /**

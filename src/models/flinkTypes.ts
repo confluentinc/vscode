@@ -167,3 +167,37 @@ export function hasRowOrMapAtAnyDepth(type: FlinkType): boolean {
   // Should not reach here (would mean ROW/MAP with members, already handled above)
   return false;
 }
+
+/**
+ * Determine if a FlinkType should be expandable in a tree view.
+ *
+ * A type is expandable if it can be expanded to show children in the tree:
+ * - ROW and MAP types are always expandable (have structural children)
+ * - ARRAY/MULTISET types are expandable only if their element eventually contains ROW or MAP at any depth
+ * - SCALAR types are never expandable
+ *
+ * @param type - The FlinkType to check
+ * @returns true if the type should be expandable in a tree view, false otherwise
+ *
+ * @example
+ * isFlinkTypeExpandable(parseFlinkType("ROW<id INT>")) // true
+ * isFlinkTypeExpandable(parseFlinkType("ARRAY<ROW<...>>")) // true
+ * isFlinkTypeExpandable(parseFlinkType("ARRAY<ARRAY<ROW<...>>>")) // true
+ * isFlinkTypeExpandable(parseFlinkType("ARRAY<INT>")) // false
+ * isFlinkTypeExpandable(parseFlinkType("INT")) // false
+ */
+export function isFlinkTypeExpandable(type: FlinkType): boolean {
+  if (!isCompoundFlinkType(type)) {
+    return false;
+  }
+
+  const { kind, members } = type;
+
+  // ROW and MAP always expand
+  if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
+    return true;
+  }
+
+  // ARRAY/MULTISET: check recursively if element eventually contains ROW or MAP
+  return hasRowOrMapAtAnyDepth(members[0]);
+}
