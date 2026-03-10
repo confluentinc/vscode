@@ -161,9 +161,7 @@ export class FlinkTypeNode implements IResourceBase {
    */
   getChildren(): FlinkTypeNode[] {
     // Construct children if not cached
-    if (this._children === null) {
-      this._children = this.isExpandable ? this.buildChildNodes() : [];
-    }
+    this._children ??= this.isExpandable ? this.buildChildNodes() : [];
 
     return this._children;
   }
