@@ -414,8 +414,8 @@ describe("viewProviders/flinkDatabase.ts", () => {
         assert.strictEqual(parent, viewProvider.aiAgentsContainer);
       });
 
-      it("should return undefined for FlinkTypeNode", () => {
-        // We do not support revealing FlinkTypeNode instances at this time.
+      it("should return relationsContainer for FlinkTypeNode", () => {
+        // FlinkTypeNode parents are FlinkRelationColumns, which belong to relationsContainer
         const parsed = parseFlinkType("ROW<id INT, name VARCHAR>");
         const node = new FlinkTypeNode({
           parsedType: parsed,
@@ -424,7 +424,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         const parent = viewProvider.getParent(node);
 
-        assert.strictEqual(parent, undefined);
+        assert.strictEqual(parent, viewProvider.relationsContainer);
       });
     });
 
