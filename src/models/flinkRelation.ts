@@ -1,9 +1,14 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
+import { logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { IconNames } from "../icons";
-import { formatSqlType } from "../utils/flinkTypes";
+import { parseFlinkType } from "../parsers/flinkTypeParser";
+import { formatFlinkTypeForDisplay, formatSqlType } from "../utils/flinkTypes";
+import { FlinkTypeNode } from "./flinkTypeNode";
+import type { FlinkType } from "./flinkTypes";
+import { FlinkTypeKind, hasRowOrMapAtAnyDepth, isCompoundFlinkType } from "./flinkTypes";
 import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
 import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
@@ -33,6 +38,18 @@ export class FlinkRelationColumn {
 
   /** If a metadata column, what Kafka topic metadata key does it map to? */
   readonly metadataKey: string | null;
+
+  /** Cached parsed type result (lazy initialization) */
+  private _parsedType: FlinkType | null = null;
+
+  /** Cached children nodes if the column is of an expandable Flink type (with lazy initialization, see {@link getChildren}).
+   * When the column is expandable (i.e. has ROW, MAP, or ARRAY/MULTISET with compound element), this will hold the child nodes representing the member fields.
+   * For ROW/MAP: children are the member fields directly.
+   * For ARRAY/MULTISET with compound elements: children are the element's member fields (skipping the intermediate container node).
+   * This flattening for ARRAY/MULTISET is a UX choice to avoid unnecessary nesting in the tree view, since the container itself does not have meaningful
+   * metadata and the element type is guaranteed to be compound if expandable.
+   */
+  private _children: FlinkTypeNode[] | null = null;
 
   constructor(
     props: Pick<
@@ -65,37 +82,6 @@ export class FlinkRelationColumn {
     return `${this.relationName}.${this.name}`;
   }
 
-  /**
-   * Simplified spelling of the datatype.
-   * Compound types reduced, max varchar lengths eroded away.
-   **/
-  get simpleDataType(): string {
-    let type = this.fullDataType;
-
-    // if is a ROW<...> type, just return "ROW"
-    if (type.startsWith("ROW<")) {
-      return "ROW";
-    }
-
-    // if is a MAP<...> type, just return "MAP"
-    if (type.startsWith("MAP<")) {
-      return "MAP";
-    }
-
-    // Likewise ARRAY
-    if (type.startsWith("ARRAY<")) {
-      return "ARRAY";
-    }
-
-    // and MULTISET
-    if (type.startsWith("MULTISET<")) {
-      return "MULTISET";
-    }
-
-    // Erode max size specifications like VARCHAR(2147483647) to just VARCHAR.
-    return formatSqlType(type);
-  }
-
   get connectionId(): ConnectionId {
     return CCLOUD_CONNECTION_ID;
   }
@@ -104,16 +90,104 @@ export class FlinkRelationColumn {
     return ConnectionType.Ccloud;
   }
 
+  /**
+   * Parse the fullDataType into a FlinkType structure.
+   * Always returns a FlinkType. If parsing fails, returns a synthetic SCALAR type with the full dataType.
+   * Caches result after first parse attempt.
+   */
+  getParsedType(): FlinkType {
+    if (this._parsedType !== null) {
+      return this._parsedType;
+    }
+
+    try {
+      this._parsedType = parseFlinkType(this.fullDataType);
+    } catch (error) {
+      const errorMessage = `Failed to parse Flink type for column '${this.name}' in table '${this.relationName}'. Data type: ${this.fullDataType}`;
+      logError(error, errorMessage);
+      // Return a synthetic SCALAR type as fallback (visible in UI with full type string)
+      this._parsedType = {
+        kind: FlinkTypeKind.SCALAR,
+        dataType: this.fullDataType,
+        fullDataTypeString: this.fullDataType,
+        isFieldNullable: this.isNullable,
+      };
+    }
+
+    return this._parsedType;
+  }
+
+  /**
+   * Determine if this column should be expandable in the tree view.
+   * Expandable if the parsed type is compound and eventually contains ROW or MAP at any depth.
+   */
+  get isExpandable(): boolean {
+    const parsed = this.getParsedType();
+    if (!isCompoundFlinkType(parsed)) {
+      return false;
+    }
+
+    const { kind, members } = parsed;
+
+    // ROW and MAP always expand
+    if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
+      return true;
+    }
+
+    // ARRAY/MULTISET: check recursively if element eventually contains ROW or MAP
+    return hasRowOrMapAtAnyDepth(members[0]);
+  }
+
+  /**
+   * Get child type nodes for this column (for tree expansion).
+   * Returns empty array if not expandable. If expandable, returns the appropriate child nodes.
+   *
+   * For ROW/MAP: returns member field nodes directly.
+   * For ARRAY/MULTISET with compound elements: skips the intermediate container node and returns
+   * the element's children directly for better UX. Since isExpandable() validates this condition,
+   * we can safely access members[0].members without additional checks.
+   *
+   * All returned FlinkTypeNode instances are created with IDs prefixed by `relationName.columnName`.
+   * This ensures global ID uniqueness across the entire tree view: two columns with identical
+   * structures in different relations, or different columns in the same relation, will have
+   * distinct child IDs. For example:
+   * - Column "users.metadata" with ROW<id INT, name VARCHAR> generates:
+   *   - "users.metadata.id"
+   *   - "users.metadata.name"
+   * - Column "orders.metadata" with identical structure generates:
+   *   - "orders.metadata.id"
+   *   - "orders.metadata.name"
+   * This prefix inheritance cascades through nested types, maintaining uniqueness at all levels.
+   */
+  getChildren(): FlinkTypeNode[] {
+    // Construct children if not cached
+    if (this._children === null) {
+      if (this.isExpandable) {
+        // Delegate to FlinkTypeNode to avoid duplicating type-flattening logic.
+        // Create a temporary root node wrapping this column's parsed type, then
+        // return its children (which handles ROW/MAP/ARRAY/MULTISET cases consistently).
+        const parsed = this.getParsedType();
+        const rootTypeNode = new FlinkTypeNode({
+          parsedType: parsed,
+          id: this.id,
+        });
+        this._children = rootTypeNode.getChildren();
+      } else {
+        // not expandable; no children
+        this._children = [];
+      }
+    }
+
+    return this._children;
+  }
+
   /** Is this column a metadata column? */
   get isMetadata(): boolean {
     return this.metadataKey !== null;
   }
 
   searchableText(): string {
-    const parts = [];
-
-    parts.push(this.name);
-    parts.push(this.simpleDataType);
+    const parts = [this.name, formatFlinkTypeForDisplay(this.getParsedType())];
     if (this.metadataKey) {
       parts.push(this.metadataKey);
     }
@@ -125,19 +199,32 @@ export class FlinkRelationColumn {
   }
 
   getTreeItem(): TreeItem {
-    const item = new TreeItem(this.name, TreeItemCollapsibleState.None);
-    item.iconPath = new ThemeIcon("symbol-constant"); // TODO replace with column specific icon when available
+    const collapsibleState = this.isExpandable
+      ? TreeItemCollapsibleState.Collapsed
+      : TreeItemCollapsibleState.None;
+
+    const item = new TreeItem(this.name, collapsibleState);
+
+    const parsed = this.getParsedType();
+    const iconName = FlinkTypeNode.getIconForType(parsed);
+
+    item.iconPath = new ThemeIcon(iconName);
+
     item.id = this.id;
     item.contextValue = "ccloud-flink-column";
-    item.tooltip = this.getToolTip();
-    item.description = this.treeItemDescription;
+    item.tooltip = this.getToolTip(iconName);
+    item.description = this.getTreeItemDescription(parsed);
 
     return item;
   }
 
-  /** Make a nice overview of the column type, nullability, comment prefix */
-  get treeItemDescription(): string {
-    let desc = this.simpleDataType;
+  /**
+   * Make a nice overview of the column type, nullability, comment prefix.
+   * Takes the parsed type as parameter to avoid redundant parsing.
+   */
+  private getTreeItemDescription(parsed: FlinkType): string {
+    let desc = formatFlinkTypeForDisplay(parsed);
+
     // Only show NOT NULL if applicable, as NULL is default in DB-lands and would be noisy
     if (!this.isNullable) {
       desc += " NOT NULL";
@@ -153,9 +240,9 @@ export class FlinkRelationColumn {
     return desc;
   }
 
-  getToolTip(): CustomMarkdownString {
+  getToolTip(iconName: IconNames): CustomMarkdownString {
     const tooltip = new CustomMarkdownString()
-      .addHeader("Flink Column", IconNames.FLINK_FUNCTION) // TODO replace with column specific icon when available
+      .addHeader("Flink Column", iconName)
       .addField("Name", this.name)
       .addField("Data Type", formatSqlType(this.fullDataType))
       .addField("Nullable", this.isNullable ? "Yes" : "No")
@@ -176,29 +263,6 @@ export class FlinkRelationColumn {
     }
 
     return tooltip;
-  }
-
-  /** Returns a single line representation of this column, for use within the containing relation's tooltip */
-  tooltipLine(): string {
-    const parts: string[] = [`${this.name}: ${formatSqlType(this.simpleDataType)}`];
-    if (!this.isNullable) {
-      parts.push("NOT NULL");
-    } else {
-      parts.push("NULL");
-    }
-    if (this.isGenerated) {
-      parts.push("GENERATED");
-    }
-
-    if (this.distributionKeyNumber !== null) {
-      parts.push(`DISTKEY(${this.distributionKeyNumber})`);
-    }
-
-    if (this.isMetadata) {
-      parts.push(`METADATA('${this.metadataKey}')`);
-    }
-
-    return parts.join(" ");
   }
 }
 
@@ -328,16 +392,12 @@ export class FlinkRelation implements IResourceBase, IdItem, ISearchable {
   }
 
   searchableText(): string {
-    const parts = [];
-
-    parts.push(this.name);
-    parts.push(this.type);
+    const parts = [this.name, this.type];
     if (this.comment) {
       parts.push(this.comment);
     }
     for (const col of this.columns) {
-      parts.push(col.name);
-      parts.push(col.simpleDataType);
+      parts.push(col.name, formatFlinkTypeForDisplay(col.getParsedType()));
       if (col.metadataKey) {
         parts.push(col.metadataKey);
       }
