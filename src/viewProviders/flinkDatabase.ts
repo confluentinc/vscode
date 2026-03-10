@@ -24,6 +24,7 @@ import {
   FlinkDatabaseResourceContainer,
 } from "../models/flinkDatabaseResourceContainer";
 import { FlinkRelation, FlinkRelationColumn } from "../models/flinkRelation";
+import { FlinkTypeNode } from "../models/flinkTypeNode";
 import { FlinkUdf, FlinkUdfTreeItem } from "../models/flinkUDF";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { CustomMarkdownString } from "../models/main";
@@ -37,7 +38,9 @@ export type DatabaseChildrenType =
   // not specifically a FlinkDatabaseResource, but it's being handled here for now:
   | FlinkArtifact
   // visible when a FlinkRelation is expanded:
-  | FlinkRelationColumn;
+  | FlinkRelationColumn
+  // visible when a FlinkRelationColumn or FlinkTypeNode is expanded:
+  | FlinkTypeNode;
 
 // top-level container tree items with context values for attaching commands
 const RELATIONS_CONTAINER = new FlinkDatabaseResourceContainer<FlinkRelation>(
@@ -140,40 +143,68 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
     } else if (element instanceof FlinkRelation) {
       // expanding a FlinkRelation to show its columns
       children = element.columns;
+    } else if (element instanceof FlinkRelationColumn || element instanceof FlinkTypeNode) {
+      // expanding a column or type node to show type structure
+      children = element.getChildren();
     }
 
     return this.filterChildren(element, children);
   }
 
   getTreeItem(element: DatabaseChildrenType): TreeItem {
-    let treeItem: TreeItem;
+    const treeItem = this.buildTreeItem(element);
+    this.adjustTreeItemForSearch(element, treeItem);
+    return treeItem;
+  }
 
+  /**
+   * Build a TreeItem for the given element.
+   * Routes to appropriate builder based on element type.
+   * Uses exhaustiveness checking: if a new type is added to DatabaseChildrenType,
+   * TypeScript will flag the final assignment as unreachable.
+   */
+  private buildTreeItem(element: DatabaseChildrenType): TreeItem {
     if (element instanceof FlinkDatabaseResourceContainer) {
-      // already a TreeItem (subclass)
-      treeItem = element;
-    } else if ("getTreeItem" in element && typeof element.getTreeItem === "function") {
-      // just for FlinkRelations/FlinkRelationColumn since they use getTreeItem() instead of separate
-      // classes, but we might migrate other classes to this pattern in the future
-      treeItem = element.getTreeItem();
-    } else if (element instanceof FlinkArtifact) {
-      treeItem = new FlinkArtifactTreeItem(element);
-    } else if (element instanceof FlinkUdf) {
-      treeItem = new FlinkUdfTreeItem(element);
-    } else if (element instanceof FlinkAIConnection) {
-      treeItem = new FlinkAIConnectionTreeItem(element);
-    } else if (element instanceof FlinkAIModel) {
-      treeItem = new FlinkAIModelTreeItem(element);
-    } else if (element instanceof FlinkAITool) {
-      treeItem = new FlinkAIToolTreeItem(element);
-    } else if (element instanceof FlinkAIAgent) {
-      treeItem = new FlinkAIAgentTreeItem(element);
-    } else {
-      treeItem = element as TreeItem;
+      return element; // already a TreeItem (subclass)
     }
 
-    this.adjustTreeItemForSearch(element, treeItem);
+    if (
+      element instanceof FlinkRelation ||
+      element instanceof FlinkRelationColumn ||
+      element instanceof FlinkTypeNode
+    ) {
+      // Types that produce their own TreeItems via getTreeItem()
+      return element.getTreeItem();
+    }
 
-    return treeItem;
+    if (element instanceof FlinkArtifact) {
+      return new FlinkArtifactTreeItem(element);
+    }
+
+    if (element instanceof FlinkUdf) {
+      return new FlinkUdfTreeItem(element);
+    }
+
+    if (element instanceof FlinkAIConnection) {
+      return new FlinkAIConnectionTreeItem(element);
+    }
+
+    if (element instanceof FlinkAIModel) {
+      return new FlinkAIModelTreeItem(element);
+    }
+
+    if (element instanceof FlinkAITool) {
+      return new FlinkAIToolTreeItem(element);
+    }
+
+    if (element instanceof FlinkAIAgent) {
+      return new FlinkAIAgentTreeItem(element);
+    }
+
+    // Exhaustiveness check: if we reach here, a new type was added to DatabaseChildrenType
+    // and this assignment will fail at compile time.
+    const exhaustiveCheck: never = element;
+    return exhaustiveCheck;
   }
 
   /** Get the parent of the given element, or `undefined` if it's a root-level item. */
@@ -188,34 +219,52 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
         relation.columns.includes(element),
       );
     }
-    // the rest of these don't have nested hierarchies, so return their container
+
     if (element instanceof FlinkRelation) {
       return this.relationsContainer;
     }
+
+    // the rest of these don't have nested hierarchies, so return their container
+
     if (element instanceof FlinkArtifact) {
       return this.artifactsContainer;
     }
+
     if (element instanceof FlinkUdf) {
       return this.udfsContainer;
     }
+
     if (element instanceof FlinkAIConnection) {
       return this.aiConnectionsContainer;
     }
+
     if (element instanceof FlinkAITool) {
       return this.aiToolsContainer;
     }
+
     if (element instanceof FlinkAIModel) {
       return this.aiModelsContainer;
     }
+
     if (element instanceof FlinkAIAgent) {
       return this.aiAgentsContainer;
     }
-    return;
+
+    // Won't ever be asked to reveal() a FlinkTypeNode, but
+    // "handle" through returning the parent container.
+    if (element instanceof FlinkTypeNode) {
+      return this.relationsContainer;
+    }
+
+    // Exhaustiveness check: if we reach here, a new type was added to DatabaseChildrenType
+    // and this assignment will fail at compile time.
+    const exhaustiveCheck: never = element;
+    return exhaustiveCheck;
   }
 
   /** Reveal a specific Flink Database resource in the view, if possible. */
   async revealResource(
-    resource: DatabaseChildrenType,
+    resource: Exclude<DatabaseChildrenType, FlinkTypeNode>,
     options?: { select?: boolean; focus?: boolean; expand?: number | boolean },
   ): Promise<void> {
     if (!this.database) {
