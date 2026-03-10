@@ -219,29 +219,47 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
         relation.columns.includes(element),
       );
     }
-    // the rest of these don't have nested hierarchies, so return their container
+
     if (element instanceof FlinkRelation) {
       return this.relationsContainer;
     }
+
+    // the rest of these don't have nested hierarchies, so return their container
+
     if (element instanceof FlinkArtifact) {
       return this.artifactsContainer;
     }
+
     if (element instanceof FlinkUdf) {
       return this.udfsContainer;
     }
+
     if (element instanceof FlinkAIConnection) {
       return this.aiConnectionsContainer;
     }
+
     if (element instanceof FlinkAITool) {
       return this.aiToolsContainer;
     }
+
     if (element instanceof FlinkAIModel) {
       return this.aiModelsContainer;
     }
+
     if (element instanceof FlinkAIAgent) {
       return this.aiAgentsContainer;
     }
-    return;
+
+    // Won't ever be asked to reveal() a FlinkTypeNode, but
+    // "handle" through returning the parent container.
+    if (element instanceof FlinkTypeNode) {
+      return this.relationsContainer;
+    }
+
+    // Exhaustiveness check: if we reach here, a new type was added to DatabaseChildrenType
+    // and this assignment will fail at compile time.
+    const exhaustiveCheck: never = element;
+    return exhaustiveCheck;
   }
 
   /** Reveal a specific Flink Database resource in the view, if possible. */
