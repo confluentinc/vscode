@@ -42,7 +42,8 @@ class MyClass extends DisposableCollection {
     super();
     this.disposables.push(vscode.workspace.onDidChangeConfiguration(...));
   }
-  // .dispose() is automatically handled by DisposableCollection
+  // DisposableCollection implements .dispose() to clean up this.disposables
+  // remember to register MyClass for disposal (e.g. in context.subscriptions)
 }
 ```
 
@@ -62,8 +63,13 @@ Common mistakes:
 
 ## Never Edit (Auto-Generated)
 
-- `src/clients/` — generated from OpenAPI specs via `npx gulp apigen`
+- Generated client code under `src/clients/<service>/` — produced from OpenAPI specs via
+  `npx gulp apigen`
 - `src/graphql/sidecarGraphQL.d.ts` — generated from `src/graphql/sidecar.graphql`
+
+OpenAPI specs under `src/clients/` typically come from upstream services — don't edit them directly.
+To adjust generated output, add a `.patch` file to `src/clients/sidecar-openapi-specs/patches/`
+(applied automatically by `npx gulp apigen`).
 
 ## Before Writing New Code
 
