@@ -162,55 +162,71 @@ export class FlinkTypeNode implements IResourceBase {
   getChildren(): FlinkTypeNode[] {
     // Construct children if not cached
     if (this._children === null) {
-      if (this.isExpandable) {
-        const { kind, members } = this.parsedType as CompoundFlinkType;
-
-        // ROW and MAP: return member nodes directly
-        if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
-          this._children = members.map((member: FlinkType) => {
-            const fieldName = member.fieldName;
-            const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
-            return new FlinkTypeNode({
-              parsedType: member,
-              id: childId,
-            });
-          });
-        } else {
-          // ARRAY/MULTISET: check if element is directly ROW/MAP or needs intermediate node
-          const elementType = members[0];
-
-          if (elementType.kind === FlinkTypeKind.ROW || elementType.kind === FlinkTypeKind.MAP) {
-            // Element is ROW/MAP: skip directly to its members (existing optimization)
-            const compoundElement = elementType as CompoundFlinkType;
-            this._children = compoundElement.members.map((member: FlinkType) => {
-              const fieldName = member.fieldName;
-              const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
-              return new FlinkTypeNode({
-                parsedType: member,
-                id: childId,
-              });
-            });
-          } else {
-            // Element is nested ARRAY/MULTISET: create intermediate node with descriptive synthetic ID
-            // Use the element's kind to determine the label
-            const containerLabel =
-              elementType.kind === FlinkTypeKind.ARRAY ? "[array]" : "[multiset]";
-            const childId = `${this.id}.${containerLabel}`;
-            this._children = [
-              new FlinkTypeNode({
-                parsedType: elementType,
-                id: childId,
-              }),
-            ];
-          }
-        }
-      } else {
-        // not expandable; no children
-        this._children = [];
-      }
+      this._children = this.isExpandable ? this.buildChildNodes() : [];
     }
 
     return this._children;
+  }
+
+  /**
+   * Build child nodes for expandable compound types.
+   * Delegates to specific builders based on type kind.
+   */
+  private buildChildNodes(): FlinkTypeNode[] {
+    const { kind, members } = this.parsedType as CompoundFlinkType;
+
+    if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
+      return this.buildMemberNodes(members);
+    }
+
+    // ARRAY/MULTISET types
+    return this.buildContainerChildNodes(members[0]);
+  }
+
+  /**
+   * Build child nodes for ROW/MAP members.
+   * Each member becomes a direct child node with its field name appended to the parent ID.
+   */
+  private buildMemberNodes(members: FlinkType[]): FlinkTypeNode[] {
+    return members.map((member) => {
+      const fieldName = member.fieldName;
+      const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
+      return new FlinkTypeNode({
+        parsedType: member,
+        id: childId,
+      });
+    });
+  }
+
+  /**
+   * Build child nodes for ARRAY/MULTISET container types.
+   * Optimizes by skipping intermediate node when element is ROW/MAP,
+   * or creates synthetic container node for nested ARRAY/MULTISET elements.
+   */
+  private buildContainerChildNodes(elementType: FlinkType): FlinkTypeNode[] {
+    if (elementType.kind === FlinkTypeKind.ROW || elementType.kind === FlinkTypeKind.MAP) {
+      // Element is ROW/MAP: skip directly to its members (existing optimization)
+      return this.buildMemberNodes(elementType.members);
+    }
+
+    // Element is nested ARRAY/MULTISET: create intermediate node with descriptive synthetic ID
+    return this.buildNestedContainerNode(elementType);
+  }
+
+  /**
+   * Build an intermediate node for nested ARRAY/MULTISET elements.
+   * Uses synthetic [array] or [multiset] label for the ID segment.
+   */
+  private buildNestedContainerNode(elementType: FlinkType): FlinkTypeNode[] {
+    const containerLabel = elementType.kind === FlinkTypeKind.ARRAY ? "[array]" : "[multiset]";
+    const childId = `${this.id}.${containerLabel}`;
+
+    return [
+      new FlinkTypeNode({
+        parsedType: elementType,
+        id: childId,
+      }),
+    ];
   }
 
   /**
