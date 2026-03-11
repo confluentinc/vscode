@@ -130,11 +130,12 @@ generates `src/graphql/sidecarGraphQL.d.ts` (auto-generated, do not edit).
   names (`keyof T` excludes `protected`/`private` members), so it cannot stub non-public methods
   directly. Use bracket notation assignment instead: `obj["methodName"] = sandbox.stub()`. Bracket
   notation bypasses TypeScript's access modifier checks for keyword-declared `protected`/`private`
-  members (not ES `#private` fields). Note that direct assignment is not sandbox-managed, so
-  `sandbox.restore()` won't undo it — ensure the object is re-created or re-assigned in `beforeEach`
-  to prevent stubs from leaking across tests. If the variable's declared type doesn't include the
-  member, narrow it to the concrete subclass (e.g. `LocalResourceLoader` instead of
-  `ResourceLoader`).
+  members (not ES `#private` fields). Never use `as never` or `as any` to bypass access
+  modifiers—bracket notation is type-aware and only bypasses visibility, while `as never` suppresses
+  all type checking. Note that direct assignment is not sandbox-managed, so `sandbox.restore()`
+  won't undo it — ensure the object is re-created or re-assigned in `beforeEach` to prevent stubs
+  from leaking across tests. If the variable's declared type doesn't include the member, narrow it
+  to the concrete subclass (e.g. `LocalResourceLoader` instead of `ResourceLoader`).
 - Do not test side effects like logging.
 - Make sure to set up any common stubs in the top-level describe block to ensure they apply to all
   tests.
