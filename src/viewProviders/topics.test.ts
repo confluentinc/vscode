@@ -25,7 +25,12 @@ import type { CCloudResourceLoader } from "../loaders";
 import { TopicFetchError } from "../loaders/utils/loaderUtils";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { Consumer, type ConsumerGroup } from "../models/consumerGroup";
+import {
+  Consumer,
+  type ConsumerGroup,
+  ConsumerGroupTreeItem,
+  ConsumerTreeItem,
+} from "../models/consumerGroup";
 import type { CustomMarkdownString } from "../models/main";
 import { KafkaClusterResourceContainer } from "../models/containers/kafkaClusterResourceContainer";
 import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
@@ -337,6 +342,26 @@ describe("viewProviders/topics.ts", () => {
         const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
         assert.ok(treeItem instanceof SubjectTreeItem);
       });
+
+      it("should return a ConsumerGroupTreeItem for a ConsumerGroup instance", () => {
+        const treeItem = provider.getTreeItem(TEST_CCLOUD_CONSUMER_GROUP);
+        assert.ok(treeItem instanceof ConsumerGroupTreeItem);
+      });
+
+      it("should return a ConsumerTreeItem for a Consumer instance", () => {
+        const treeItem = provider.getTreeItem(TEST_CCLOUD_CONSUMER);
+        assert.ok(treeItem instanceof ConsumerTreeItem);
+      });
+
+      it("should return the container itself for a KafkaClusterResourceContainer", () => {
+        const container = new KafkaClusterResourceContainer<KafkaTopic>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Topics",
+        );
+        const treeItem = provider.getTreeItem(container);
+        assert.strictEqual(treeItem, container);
+      });
     });
 
     describe("isFocusedOnCCloud()", () => {
@@ -430,6 +455,32 @@ describe("viewProviders/topics.ts", () => {
 
         assert.strictEqual(children.length, 0);
       });
+
+      it("should return members when expanding a ConsumerGroup in the cache", () => {
+        provider["consumerGroupsInTreeView"].set(
+          TEST_CCLOUD_CONSUMER_GROUP.consumerGroupId,
+          TEST_CCLOUD_CONSUMER_GROUP,
+        );
+
+        const children = provider.getChildren(TEST_CCLOUD_CONSUMER_GROUP);
+
+        assert.strictEqual(children.length, TEST_CCLOUD_CONSUMER_GROUP.members.length);
+        assert.ok(children[0] instanceof Consumer);
+      });
+
+      it("should return an empty array when expanding a ConsumerGroup not in the cache", () => {
+        const otherGroup = createConsumerGroup({
+          connectionId: CCLOUD_CONNECTION_ID,
+          connectionType: ConnectionType.Ccloud,
+          environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+          clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+          consumerGroupId: "not-in-cache",
+        });
+
+        const children = provider.getChildren(otherGroup);
+
+        assert.strictEqual(children.length, 0);
+      });
     });
 
     describe("getParent()", () => {
@@ -475,6 +526,41 @@ describe("viewProviders/topics.ts", () => {
 
       it("should return undefined for a Schema whose subject is not in the cache", () => {
         const parent = provider.getParent(TEST_CCLOUD_SCHEMA);
+
+        assert.strictEqual(parent, undefined);
+      });
+
+      it("should return the consumer groups container for a ConsumerGroup", () => {
+        provider["consumerGroupsContainer"] = new KafkaClusterResourceContainer<ConsumerGroup>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Consumer Groups",
+        );
+
+        const parent = provider.getParent(TEST_CCLOUD_CONSUMER_GROUP);
+
+        assert.strictEqual(parent, provider["consumerGroupsContainer"]);
+      });
+
+      it("should return the parent ConsumerGroup for a Consumer", () => {
+        provider["consumerGroupsInTreeView"].set(
+          TEST_CCLOUD_CONSUMER_GROUP.consumerGroupId,
+          TEST_CCLOUD_CONSUMER_GROUP,
+        );
+
+        const parent = provider.getParent(TEST_CCLOUD_CONSUMER);
+
+        assert.strictEqual(parent, TEST_CCLOUD_CONSUMER_GROUP);
+      });
+
+      it("should return undefined for a KafkaClusterResourceContainer", () => {
+        const container = new KafkaClusterResourceContainer<KafkaTopic>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Topics",
+        );
+
+        const parent = provider.getParent(container);
 
         assert.strictEqual(parent, undefined);
       });
@@ -621,6 +707,27 @@ describe("viewProviders/topics.ts", () => {
         await provider.reveal(TEST_CCLOUD_CONSUMER_GROUP);
 
         sinon.assert.notCalled(treeViewRevealStub);
+      });
+
+      it("should reveal a KafkaClusterResourceContainer (consumer groups container)", async () => {
+        provider["consumerGroupsContainer"] = new KafkaClusterResourceContainer<ConsumerGroup>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Consumer Groups",
+        );
+        const lookupContainer = new KafkaClusterResourceContainer<ConsumerGroup>(
+          CCLOUD_CONNECTION_ID,
+          ConnectionType.Ccloud,
+          "Consumer Groups",
+        );
+
+        await provider.reveal(lookupContainer, { focus: true });
+
+        sinon.assert.calledOnceWithExactly(
+          treeViewRevealStub,
+          provider["consumerGroupsContainer"],
+          { focus: true },
+        );
       });
     });
 
