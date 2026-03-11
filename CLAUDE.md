@@ -126,6 +126,11 @@ generates `src/graphql/sidecarGraphQL.d.ts` (auto-generated, do not edit).
 - **Design for stubbing**: When writing new functions, avoid calling other functions in the same
   module that you'll need to stub—Sinon can only stub module exports, not internal calls within the
   same file. Extract such dependencies to separate modules or pass them as parameters.
+- **Stubbing non-public methods**: Use bracket notation (`obj["methodName"] = sandbox.stub()`) to
+  stub protected or private members. Never use `as never` or `as any` to bypass access
+  modifiers—bracket notation is type-aware and only bypasses visibility, while `as never` suppresses
+  all type checking. If the variable's declared type doesn't include the member, narrow it to the
+  concrete subclass (e.g. `LocalResourceLoader` instead of `ResourceLoader`).
 - Do not test side effects like logging.
 - Make sure to set up any common stubs in the top-level describe block to ensure they apply to all
   tests.
