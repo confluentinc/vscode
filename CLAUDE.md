@@ -5,222 +5,90 @@ repository.
 
 ## Project Overview
 
-This is the **Confluent for VS Code** extension - a VS Code extension for building stream processing
-applications using Confluent Cloud, Apache Kafka, and Apache Flink. The extension integrates with
-Confluent Cloud products and Apache Kafka-compatible clusters within VS Code.
+**Confluent for VS Code** — a VS Code extension for building stream processing applications using
+Confluent Cloud, Apache Kafka, and Apache Flink. Integrates with Confluent Cloud products and Apache
+Kafka-compatible clusters within VS Code.
 
 ## Core Commands
 
-### Build & Development
-
 ```bash
-npx gulp build          # Development build (same as "Build for development")
-npx gulp check          # TypeScript type checking
-npx gulp lint           # ESLint (add -f for auto-fix)
+npx gulp build              # Development build
+npx gulp check              # TypeScript type checking
+npx gulp lint               # ESLint (add -f for auto-fix)
+npx gulp test               # Unit tests (Mocha/Sinon)
+npx gulp test -t "name"     # Run specific test(s) by name
+npx gulp functional          # Webview tests (Playwright)
+npx gulp e2e                # End-to-end tests (Playwright + Electron)
+npx gulp e2e -t "name"      # Run specific E2E test(s) by name
+npx gulp test --coverage    # Generate Istanbul coverage reports
 ```
 
-### Testing
+## Golden Rules
 
-```bash
-npx gulp test                         # Unit tests (Mocha/Sinon)
-npx gulp test -t "test name"          # Run specific test(s) by name
-npx gulp functional                   # Webview tests (Playwright) - same as functional tests
-npx gulp e2e                          # End-to-end tests (Playwright)
-npx gulp e2e -t "test name"           # Run specific end-to-end tests by name
-npx gulp test --coverage              # Generate Istanbul coverage reports
-```
+1. **Disposable resource management**: ALL event-listening classes MUST extend
+   `DisposableCollection` (`src/utils/disposables.ts`). Push every `onDid*` subscription to
+   `this.disposables`.
+2. **Type safety**: NEVER use `any` type. Prefer `enum` over string union types. JSDoc on all
+   exported functions and public methods. TypeScript strict mode enforced.
+3. **Single responsibility**: one class/one purpose, one function/one task, one file/one concept.
 
-## Architecture Overview
+## Disposable Pattern (MANDATORY)
 
-### Sidecar Process Pattern
-
-The extension uses a separate `ide-sidecar` process for all heavy operations:
-
-- **SidecarManager** (`src/sidecar/sidecarManager.ts`): Singleton managing the sidecar process
-  lifecycle
-- **SidecarHandle** (`src/sidecar/sidecarHandle.ts`): Short-lived client for individual operations
-- **WebsocketManager** (`src/sidecar/websocketManager.ts`): Maintains persistent WebSocket
-  connection for real-time updates
-
-**Critical Pattern**: Always use short-lived handles via `await getSidecar()` → use handle →
-discard. This enables automatic reconnection and proper resource management.
-
-### View Provider Architecture
-
-Tree views extend `BaseViewProvider` or `ParentedBaseViewProvider`:
-
-- **BaseViewProvider** (`src/viewProviders/baseModels/base.ts`): Abstract base for all tree views
-  with search/filter capability
-- **ParentedBaseViewProvider** (`src/viewProviders/baseModels/parentedBase.ts`): For parent-child
-  resource hierarchies (e.g., Topics under a Kafka Cluster)
-
-**Main View Providers**:
-
-- `ResourceViewProvider` - Environments, Kafka clusters, Schema registries
-- `TopicViewProvider` - Topics within selected Kafka cluster
-- `SchemasViewProvider` - Schemas within selected Schema Registry
-- `FlinkStatementsViewProvider` - Flink SQL statements
-- `FlinkDatabaseViewProvider` - Flink databases and tables
-
-### Resource Loader Pattern
-
-Abstract layer for loading resources from different connection types:
-
-```
-ResourceLoader (abstract base at src/loaders/resourceLoader.ts)
-  └── CachingResourceLoader (intermediate abstract at src/loaders/cachingResourceLoader.ts)
-      ├── CCloudResourceLoader - Confluent Cloud via OAuth
-      ├── LocalResourceLoader - Local Docker-based Kafka/SR
-      └── DirectResourceLoader - Direct TCP connections
-```
-
-- `CachingResourceLoader` encapsulates caching of environments, Kafka clusters, schema registries,
-  and topics
-- Generic types (EnvironmentType, KafkaClusterType, SchemaRegistryType) are defined at the
-  CachingResourceLoader level
-- Registry pattern: `ResourceLoader.getInstance(connectionId)` for lookup
-- Constructed during extension activation in `constructResourceLoaderSingletons()`
-- Uses GraphQL to query sidecar for resource metadata
-
-### Client Code Generation
-
-**NEVER manually edit** files in `src/clients/` - all auto-generated from OpenAPI specs.
-
-**To modify client code**:
-
-1. Update the OpenAPI spec in `src/clients/sidecar-openapi-specs/`
-2. Run `npx gulp apigen`
-3. Commit both the spec changes AND a `.patch` file to `src/clients/sidecar-openapi-specs/patches/`
-   so subsequent generations apply cleanly
-
-**GraphQL**: Uses `gql.tada` for type-safe queries. Schema at `src/graphql/sidecar.graphql`
-generates `src/graphql/sidecarGraphQL.d.ts` (auto-generated, do not edit).
-
-### Extension Settings Pattern
-
-- Define settings in `src/extensionSettings/constants.ts` as `ExtensionSetting<T>` instances
-- Must match `package.json`'s `contributes.configuration` sections
-- Access via `.value` property - automatically syncs with VS Code configuration
-- Changes handled by `src/extensionSettings/listener.ts`
-
-### Webview Architecture
-
-- HTML templates in `src/webview/*.html` with template variables & functions like `this.${var}()`
-  bound to the `ViewModel` in corresponding `.ts` files
-- Signal-based data binding for Template + ViewModel via custom template engine in
-  `src/webview/bindings`
-- Communication between webviews and VS Code host environment via `sendWebviewMessage()` and message
-  handlers in `src/webview/comms`, which wrap the vscode webview message api to provide type safety
-- General CSS styles in `src/webview/uikit/uikit.css` with view-specific overrides in individual
-  HTML templates. VS Code color theme variables preferred and used when appropriate
-- `@vscode/webview-ui-toolkit` is a deprecated dependency - don't use it in new code; use UIKit
-  styles on HTML elements instead.
-
-## Testing Strategy
-
-### Unit Tests
-
-- Co-located `.test.ts` files using Mocha + Sinon + assert
-- Focus on isolated behavior, mocking external dependencies
-- Use `.only` for focused testing (remember to remove before PR!)
-- **Design for stubbing**: When writing new functions, avoid calling other functions in the same
-  module that you'll need to stub—Sinon can only stub module exports, not internal calls within the
-  same file. Extract such dependencies to separate modules or pass them as parameters.
-- Do not test side effects like logging.
-- Make sure to set up any common stubs in the top-level describe block to ensure they apply to all
-  tests.
-
-### Functional Tests
-
-- Webview tests in `src/webview/*.spec.ts` using Playwright
-- Test UI validation and user interactions
-
-### E2E Tests
-
-- Full workflows in `tests/e2e/` with Page Object Model pattern
-- Located in separate directory from source code
-- Require Docker for local Kafka/SR instances
-- Do not include conditionals within E2E tests to manage tests dimensions, as it violates ESLint
-  rules. Instead, use test tags and filtering at runtime.
-
-## Critical Requirements
-
-### 1. Disposable Resource Management (MANDATORY)
-
-- **ALL** classes with event listeners MUST implement `vscode.Disposable`
-- **ALWAYS** call `.dispose()` on resources when done - especially `.event()` listeners
-- **USE** `DisposableCollection` base class (`src/utils/disposables.ts`) to manage multiple
-  disposables automatically
-- **PATTERN**: Store disposables from constructors, dispose in class `.dispose()` method
-
-Example:
+Violations cause memory leaks and stale event handlers.
 
 ```typescript
 class MyClass extends DisposableCollection {
   constructor() {
     super();
-    // DisposableCollection provides this.disposables array
-    this.disposables.push(
-      vscode.workspace.onDidChangeConfiguration(...)
-    );
+    this.disposables.push(vscode.workspace.onDidChangeConfiguration(...));
   }
-  // .dispose() is automatically handled by DisposableCollection
+  // DisposableCollection implements .dispose() to clean up this.disposables
+  // remember to register MyClass for disposal (e.g. in context.subscriptions)
 }
 ```
 
-### 2. Type Safety (NO EXCEPTIONS)
+Common mistakes:
 
-- **NEVER** use `any` type - provide explicit types or interfaces
-- **PREFER** `enum` over string union types for constants
-- **REQUIRE** JSDoc comments on all exported functions and public class methods
-- TypeScript strict mode is enforced - code must compile without errors
-
-### 3. Single Responsibility Principle (ENFORCE STRICTLY)
-
-- One class, one purpose - split classes with multiple responsibilities
-- One function, one task - keep functions small and focused
-- One file, one concept - group related functionality, separate unrelated
-- Example: ResourceLoader handles loading, ResourceManager handles state, TreeProvider handles UI
+- Subscribing to `onDid*` events without pushing the return value to disposables
+- Creating event listeners in a class that doesn't extend DisposableCollection
+- Forgetting to register the class itself for disposal in the activation code
 
 ## Error Handling
 
-- **Logging**: Always use `logError()` utility (`src/utils/errors.ts`) for consistent error capture
-  rather than `logger.warn()` or `logger.error()`
-- **User-facing**: Use `showErrorNotificationWithButtons()` with "Open Logs" and "File Issue"
-  actions
-- **Messages**: Write actionable error messages explaining what happened, why, and how to resolve
+- Always use `logError()` (`src/errors.ts`) for consistent error capture rather than `logger.warn()`
+  or `logger.error()`. Ensures proper context and telemetry.
+- Use `showErrorNotificationWithButtons()` (`src/notifications.ts`) with "Open Logs" and "File
+  Issue" actions for user-facing errors. Write actionable messages explaining what happened, why,
+  and how to resolve it.
 
-## Connection Types
+## Never Edit (Auto-Generated)
 
-The extension supports three connection types, each with different resource loading strategies:
+- Generated client code under `src/clients/<service>/` — produced from OpenAPI specs via
+  `npx gulp apigen`
+- `src/graphql/sidecarGraphQL.d.ts` — generated from `src/graphql/sidecar.graphql`
 
-1. **CCLOUD**: Confluent Cloud via OAuth authentication
+OpenAPI specs under `src/clients/` typically come from upstream services — don't edit them directly.
+To adjust generated output, add a `.patch` file to `src/clients/sidecar-openapi-specs/patches/`
+(applied automatically by `npx gulp apigen`).
 
-   - Uses `CCloudResourceLoader` with GraphQL queries to the sidecar
-   - Sign-in/sign-out actions manage OAuth tokens
-   - Access to Environments, Kafka clusters, Schema registries, Flink resources
+## Before Writing New Code
 
-2. **LOCAL**: Local Docker-based Kafka and Schema Registry
-
-   - Uses `LocalResourceLoader` with Docker engine API
-   - Automatically detects local Kafka/SR containers
-   - No authentication required
-
-3. **DIRECT**: Direct TCP connections to custom Kafka/SR endpoints
-   - Uses `DirectResourceLoader` with manual connection configuration
-   - Supports custom brokers and schema registry URLs
-   - Optional SASL authentication
-
-Each connection type has its own ResourceLoader implementation managing the specific connection
-details and API calls.
+- Check if a similar pattern already exists in the codebase
+- Design for stubbing: avoid calling same-module functions you'll need to stub (Sinon limitation)
+- Follow the resource loader / view provider / sidecar patterns already in use
+- New event listeners → extend `DisposableCollection`
 
 ## Code Style
 
-- **Preserve comments**: When refactoring code, keep all existing comments. Update them if the code
-  changes, but don't remove them.
-- **No decorative comment blocks**: Do not add large comment separators like `// ======...` or
-  `// ------...` to divide sections of code. Readability should come from code structure itself
-  (well-named functions, logical grouping, small files), not formatting.
-- **Main functions first**: Place primary public functions and entry point handlers at the top of
-  files, with utility/helper functions below. Readers should understand what a file does without
-  scrolling past implementation details.
+- **Preserve comments**: when refactoring, keep existing comments. Update them if code changes.
+- **No decorative comment blocks**: no `// ======...` or `// ------...` separators.
+- **Main functions first**: primary public functions and entry points at the top of files, helpers
+  below.
+
+## Architecture Reference
+
+Detailed architecture docs auto-load from `.claude/rules/` when you work on relevant files:
+
+- `architecture/` — sidecar pattern, view providers, resource loaders, webview, client codegen,
+  extension settings, connection types
+- `testing/` — unit tests, functional tests, E2E tests
