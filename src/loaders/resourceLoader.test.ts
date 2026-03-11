@@ -1,5 +1,6 @@
 import assert from "assert";
 import * as sinon from "sinon";
+import { getStubbedResourceManager } from "../../tests/stubs/extensionStorage";
 import { getStubbedLocalResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
@@ -17,16 +18,17 @@ import {
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
 import { createTestSubject, createTestTopicData } from "../../tests/unit/testUtils";
-import type { TopicData } from "../clients/kafkaRest";
+import type { ConsumerData, ConsumerGroupData, TopicData } from "../clients/kafkaRest";
 import { SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import * as errors from "../errors";
+import { Consumer, ConsumerGroup, ConsumerGroupState } from "../models/consumerGroup";
 import type { ConnectionId } from "../models/resource";
 import type { Subject } from "../models/schema";
 import { Schema } from "../models/schema";
 import * as notifications from "../notifications";
 import type { SidecarHandle } from "../sidecar";
-import { getResourceManager } from "../storage/resourceManager";
+import { getResourceManager, type ResourceManager } from "../storage/resourceManager";
 import { clearWorkspaceState } from "../storage/utils";
 import { CCloudResourceLoader } from "./ccloudResourceLoader";
 import { DirectResourceLoader } from "./directResourceLoader";
@@ -466,6 +468,130 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     assert.ok(!topics[0].hasSchema);
 
     sinon.assert.calledOnce(showWarningNotificationWithButtonsStub);
+  });
+});
+
+describe("ResourceLoader::getConsumerGroupsForCluster()", () => {
+  let loaderInstance: LocalResourceLoader;
+  let sandbox: sinon.SinonSandbox;
+  let fetchConsumerGroupsStub: sinon.SinonStub;
+  let fetchConsumerGroupMembersStub: sinon.SinonStub;
+  let rmStub: sinon.SinonStubbedInstance<ResourceManager>;
+
+  // minimal ConsumerGroupData fixture matching the API response shape
+  const testConsumerGroupData: ConsumerGroupData = {
+    kind: "KafkaConsumerGroup",
+    metadata: { self: "", resource_name: "" },
+    cluster_id: TEST_LOCAL_KAFKA_CLUSTER.id,
+    consumer_group_id: "test-group-1",
+    is_simple: false,
+    partition_assignor: "range",
+    state: "STABLE",
+    coordinator: {
+      related: `http://localhost/kafka/v3/clusters/${TEST_LOCAL_KAFKA_CLUSTER.id}/brokers/0`,
+    },
+    lag_summary: { related: "" },
+  };
+
+  const testConsumerData: ConsumerData = {
+    kind: "KafkaConsumer",
+    metadata: { self: "", resource_name: "" },
+    cluster_id: TEST_LOCAL_KAFKA_CLUSTER.id,
+    consumer_group_id: "test-group-1",
+    consumer_id: "consumer-1",
+    client_id: "client-1",
+    assignments: { related: "" },
+  };
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    fetchConsumerGroupsStub = sandbox.stub(loaderUtils, "fetchConsumerGroups");
+    fetchConsumerGroupMembersStub = sandbox.stub(loaderUtils, "fetchConsumerGroupMembers");
+    loaderInstance = LocalResourceLoader.getInstance();
+    // bracket notation to stub protected method (same pattern as ccloudResourceLoader.test.ts)
+    loaderInstance["ensureCoarseResourcesLoaded"] = sandbox.stub().resolves();
+
+    rmStub = getStubbedResourceManager(sandbox);
+    rmStub.getConsumerGroupsForCluster.resolves(undefined);
+    rmStub.setConsumerGroupsForCluster.resolves();
+  });
+
+  afterEach(async () => {
+    await clearWorkspaceState();
+    sandbox.restore();
+  });
+
+  it("raises error for mismatched connectionId", async () => {
+    await assert.rejects(
+      loaderInstance.getConsumerGroupsForCluster(TEST_CCLOUD_KAFKA_CLUSTER),
+      (err) => {
+        return (err as Error).message.startsWith("Mismatched connectionId");
+      },
+    );
+  });
+
+  it("returns cached data if available", async () => {
+    const cachedGroups = [
+      new ConsumerGroup({
+        connectionId: TEST_LOCAL_KAFKA_CLUSTER.connectionId,
+        connectionType: TEST_LOCAL_KAFKA_CLUSTER.connectionType,
+        environmentId: TEST_LOCAL_KAFKA_CLUSTER.environmentId,
+        clusterId: TEST_LOCAL_KAFKA_CLUSTER.id,
+        consumerGroupId: "cached-group",
+        state: ConsumerGroupState.Stable,
+        isSimple: false,
+        partitionAssignor: "range",
+        coordinatorId: 0,
+        members: [],
+      }),
+    ];
+    rmStub.getConsumerGroupsForCluster.resolves(cachedGroups);
+
+    const groups = await loaderInstance.getConsumerGroupsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
+
+    assert.deepStrictEqual(groups, cachedGroups);
+    sinon.assert.notCalled(fetchConsumerGroupsStub);
+    sinon.assert.calledOnce(rmStub.getConsumerGroupsForCluster);
+  });
+
+  it("fetches consumer groups and members from the API on cache miss", async () => {
+    fetchConsumerGroupsStub.resolves([testConsumerGroupData]);
+    fetchConsumerGroupMembersStub.resolves([testConsumerData]);
+
+    const groups = await loaderInstance.getConsumerGroupsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
+
+    assert.strictEqual(groups.length, 1);
+    assert.ok(groups[0] instanceof ConsumerGroup);
+    assert.strictEqual(groups[0].consumerGroupId, "test-group-1");
+    assert.strictEqual(groups[0].members.length, 1);
+    assert.ok(groups[0].members[0] instanceof Consumer);
+    assert.strictEqual(groups[0].members[0].consumerId, "consumer-1");
+    sinon.assert.calledOnce(fetchConsumerGroupsStub);
+    sinon.assert.calledOnce(fetchConsumerGroupMembersStub);
+  });
+
+  it("returns group with empty members when member fetch fails", async () => {
+    fetchConsumerGroupsStub.resolves([testConsumerGroupData]);
+    fetchConsumerGroupMembersStub.rejects(new Error("member fetch failed"));
+
+    const groups = await loaderInstance.getConsumerGroupsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
+
+    assert.strictEqual(groups.length, 1);
+    assert.strictEqual(groups[0].members.length, 0);
+  });
+
+  it("bypasses cache when forceDeepRefresh is true", async () => {
+    // even though cache returns data, forceDeepRefresh should re-fetch
+    rmStub.getConsumerGroupsForCluster.resolves([]);
+
+    fetchConsumerGroupsStub.resolves([testConsumerGroupData]);
+    fetchConsumerGroupMembersStub.resolves([]);
+
+    const groups = await loaderInstance.getConsumerGroupsForCluster(TEST_LOCAL_KAFKA_CLUSTER, true);
+
+    assert.strictEqual(groups.length, 1);
+    sinon.assert.calledOnce(fetchConsumerGroupsStub);
   });
 });
 
