@@ -21,7 +21,7 @@ import type { CCloudResourceLoader } from "../loaders";
 import {
   FlinkDatabaseContainerLabel,
   FlinkDatabaseResourceContainer,
-} from "../models/flinkDatabaseResourceContainer";
+} from "../models/containers/flinkDatabaseResourceContainer";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 
 describe("commands/flinkDatabaseView.ts", () => {

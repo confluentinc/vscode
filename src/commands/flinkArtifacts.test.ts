@@ -12,7 +12,7 @@ import type {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrl200Response";
 import type { FlinkArtifact } from "../models/flinkArtifact";
-import { FlinkDatabaseResourceContainer } from "../models/flinkDatabaseResourceContainer";
+import { FlinkDatabaseResourceContainer } from "../models/containers/flinkDatabaseResourceContainer";
 import { type EnvironmentId } from "../models/resource";
 import * as notifications from "../notifications";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";

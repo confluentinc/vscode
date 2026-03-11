@@ -20,16 +20,16 @@ import { TEST_CCLOUD_SUBJECT_WITH_SCHEMAS } from "../../tests/unit/testResources
 import { ResponseError } from "../clients/flinkArtifacts";
 import type { EventChangeType } from "../emitters";
 import type { CCloudResourceLoader } from "../loaders";
+import {
+  FlinkDatabaseContainerLabel,
+  FlinkDatabaseResourceContainer,
+} from "../models/containers/flinkDatabaseResourceContainer";
 import { FlinkAIAgentTreeItem } from "../models/flinkAiAgent";
 import { FlinkAIConnectionTreeItem } from "../models/flinkAiConnection";
 import { FlinkAIModelTreeItem } from "../models/flinkAiModel";
 import { FlinkAIToolTreeItem } from "../models/flinkAiTool";
 import { FlinkArtifactTreeItem } from "../models/flinkArtifact";
 import type { FlinkDatabaseResource } from "../models/flinkDatabaseResource";
-import {
-  FlinkDatabaseContainerLabel,
-  FlinkDatabaseResourceContainer,
-} from "../models/flinkDatabaseResourceContainer";
 import { FlinkRelationColumn } from "../models/flinkRelation";
 import { FlinkTypeNode } from "../models/flinkTypeNode";
 import { FlinkUdfTreeItem } from "../models/flinkUDF";
@@ -342,7 +342,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
       it("should return the FlinkRelation parent for a FlinkRelationColumn", () => {
         const testRelation = TEST_FLINK_RELATION;
         const testColumn = TEST_VARCHAR_COLUMN;
-        viewProvider.relationsContainer.children = [testRelation];
+        viewProvider.relationsContainer.setLoaded([testRelation]);
 
         const parent = viewProvider.getParent(testColumn);
 
@@ -351,7 +351,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should return undefined when a FlinkRelationColumn parent is not found", () => {
         const testColumn = TEST_VARCHAR_COLUMN;
-        viewProvider.relationsContainer.children = [];
+        viewProvider.relationsContainer.setLoaded([]);
 
         const parent = viewProvider.getParent(testColumn);
 
@@ -456,7 +456,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkArtifact by finding it in the artifacts container", async () => {
         const testArtifact = createFlinkArtifact({ id: "art1", name: "TestArtifact" });
-        viewProvider.artifactsContainer.children = [testArtifact];
+        viewProvider.artifactsContainer.setLoaded([testArtifact]);
 
         await viewProvider.revealResource(testArtifact);
 
@@ -466,7 +466,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkUdf by finding it in the UDFs container", async () => {
         const testUdf = createFlinkUDF("TestUDF");
-        viewProvider.udfsContainer.children = [testUdf];
+        viewProvider.udfsContainer.setLoaded([testUdf]);
 
         await viewProvider.revealResource(testUdf);
 
@@ -476,7 +476,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkRelation by finding it in the relations container", async () => {
         const testRelation = TEST_FLINK_RELATION;
-        viewProvider.relationsContainer.children = [testRelation];
+        viewProvider.relationsContainer.setLoaded([testRelation]);
 
         await viewProvider.revealResource(testRelation);
 
@@ -487,7 +487,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
       it("should reveal a FlinkRelationColumn by finding its parent relation", async () => {
         const testRelation = TEST_FLINK_RELATION;
         const testColumn = TEST_VARCHAR_COLUMN;
-        viewProvider.relationsContainer.children = [testRelation];
+        viewProvider.relationsContainer.setLoaded([testRelation]);
 
         await viewProvider.revealResource(testColumn);
 
@@ -498,7 +498,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkAIConnection by finding it in the AI connections container", async () => {
         const testConnection = createFlinkAIConnection("TestConnection");
-        viewProvider.aiConnectionsContainer.children = [testConnection];
+        viewProvider.aiConnectionsContainer.setLoaded([testConnection]);
 
         await viewProvider.revealResource(testConnection);
 
@@ -508,7 +508,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkAITool by finding it in the AI tools container", async () => {
         const testTool = createFlinkAITool("TestTool");
-        viewProvider.aiToolsContainer.children = [testTool];
+        viewProvider.aiToolsContainer.setLoaded([testTool]);
 
         await viewProvider.revealResource(testTool);
 
@@ -518,7 +518,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkAIModel by finding it in the AI models container", async () => {
         const testModel = createFlinkAIModel("TestModel");
-        viewProvider.aiModelsContainer.children = [testModel];
+        viewProvider.aiModelsContainer.setLoaded([testModel]);
 
         await viewProvider.revealResource(testModel);
 
@@ -528,7 +528,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should reveal a FlinkAIAgent by finding it in the AI agents container", async () => {
         const testAgent = createFlinkAIAgent("TestAgent");
-        viewProvider.aiAgentsContainer.children = [testAgent];
+        viewProvider.aiAgentsContainer.setLoaded([testAgent]);
 
         await viewProvider.revealResource(testAgent);
 
@@ -541,7 +541,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
           id: "nope-this-belongs-somewhere-else",
           name: "TestArtifact",
         });
-        viewProvider.artifactsContainer.children = [];
+        viewProvider.artifactsContainer.setLoaded([]);
 
         await viewProvider.revealResource(testArtifact);
 
@@ -550,7 +550,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should use custom options when provided", async () => {
         const testArtifact = createFlinkArtifact({ id: "art1", name: "TestArtifact" });
-        viewProvider.artifactsContainer.children = [testArtifact];
+        viewProvider.artifactsContainer.setLoaded([testArtifact]);
 
         const customOptions = {
           select: false,
@@ -565,7 +565,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       it("should handle treeView.reveal errors gracefully", async () => {
         const testArtifact = createFlinkArtifact({ id: "art1", name: "TestArtifact" });
-        viewProvider.artifactsContainer.children = [testArtifact];
+        viewProvider.artifactsContainer.setLoaded([testArtifact]);
         const error = new Error("TreeView reveal failed");
         treeViewRevealStub.rejects(error);
 
