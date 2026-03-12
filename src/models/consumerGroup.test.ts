@@ -16,7 +16,12 @@ import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources/kafkaC
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
-import { ConsumerGroupState, ConsumerGroupTreeItem, ConsumerTreeItem } from "./consumerGroup";
+import {
+  ConsumerGroup,
+  ConsumerGroupState,
+  ConsumerGroupTreeItem,
+  ConsumerTreeItem,
+} from "./consumerGroup";
 
 describe("models/consumerGroup.ts", () => {
   describe("ConsumerGroup", () => {
@@ -308,6 +313,39 @@ describe("models/consumerGroup.ts", () => {
         const text = (new ConsumerGroupTreeItem(group).tooltip as MarkdownString).value;
 
         assert.ok(text.includes("currently rebalancing"));
+      });
+
+      it("should show 'Yes' for simple consumer groups", () => {
+        const group = createConsumerGroup({
+          connectionId: CCLOUD_CONNECTION_ID,
+          connectionType: ConnectionType.Ccloud,
+          environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+          clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+          isSimple: true,
+        });
+        const item = new ConsumerGroupTreeItem(group);
+        const tooltip = (item.tooltip as MarkdownString).value;
+
+        assert.ok(tooltip.includes("Yes"));
+      });
+
+      it("should omit coordinator when coordinatorId is null", () => {
+        const group = new ConsumerGroup({
+          connectionId: CCLOUD_CONNECTION_ID,
+          connectionType: ConnectionType.Ccloud,
+          environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+          clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+          consumerGroupId: "test-group",
+          state: ConsumerGroupState.Stable,
+          isSimple: false,
+          partitionAssignor: "range",
+          coordinatorId: null,
+          members: [],
+        });
+        const item = new ConsumerGroupTreeItem(group);
+        const tooltip = (item.tooltip as MarkdownString).value;
+
+        assert.ok(!tooltip.includes("Coordinator Broker"));
       });
     });
   });
