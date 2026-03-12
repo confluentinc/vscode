@@ -125,6 +125,39 @@ describe("viewProviders/topics.ts", () => {
         sinon.assert.callCount(onDidChangeTreeDataFireStub, 4);
       });
 
+      it("refresh() reuses existing container instances so targeted fires match VS Code's references", async () => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+        await provider.refresh();
+
+        const topicsContainerAfterFirst = provider["topicsContainer"];
+        const consumerGroupsContainerAfterFirst = provider["consumerGroupsContainer"];
+
+        // second refresh on the same cluster should reuse the same container instances
+        onDidChangeTreeDataFireStub.resetHistory();
+        await provider.refresh(true);
+
+        assert.strictEqual(
+          provider["topicsContainer"],
+          topicsContainerAfterFirst,
+          "topicsContainer should be the same instance after refresh",
+        );
+        assert.strictEqual(
+          provider["consumerGroupsContainer"],
+          consumerGroupsContainerAfterFirst,
+          "consumerGroupsContainer should be the same instance after refresh",
+        );
+        // targeted fires should reference the same container instances
+        const firedElements = onDidChangeTreeDataFireStub.args.map((args: unknown[]) => args[0]);
+        assert.ok(
+          firedElements.includes(topicsContainerAfterFirst),
+          "should fire with the reused topicsContainer",
+        );
+        assert.ok(
+          firedElements.includes(consumerGroupsContainerAfterFirst),
+          "should fire with the reused consumerGroupsContainer",
+        );
+      });
+
       it("onlyIfMatching a contained Kafka topic when the cluster doesn't match should do nothing", async () => {
         provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
         await provider.refresh(false, TEST_CCLOUD_KAFKA_TOPIC);
