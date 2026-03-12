@@ -836,6 +836,12 @@
         "category": "Confluent: Topics"
       },
       {
+        "command": "confluent.topics.refreshResourceContainer",
+        "icon": "$(sync)",
+        "title": "Refresh Group",
+        "category": "Confluent: Topics View"
+      },
+      {
         "command": "confluent.topics.search",
         "icon": "$(search)",
         "title": "Search",
@@ -1723,6 +1729,10 @@
           "when": "true"
         },
         {
+          "command": "confluent.topics.refreshResourceContainer",
+          "when": "false"
+        },
+        {
           "command": "confluent.topics.search",
           "when": "true"
         },
@@ -2190,6 +2200,21 @@
         {
           "command": "confluent.topics.query",
           "when": "view == confluent-topics && viewItem =~ /ccloud-kafka-topic.*-flinkable.*/",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.topics.refreshResourceContainer",
+          "when": "view == confluent-topics && viewItem =~ /.*-container/",
+          "group": "inline@2"
+        },
+        {
+          "command": "confluent.copyResourceId",
+          "when": "view == confluent-topics && viewItem =~ /.*-consumer-group-.*/",
+          "group": "2_copy@1"
+        },
+        {
+          "command": "confluent.openCCloudLink",
+          "when": "view == confluent-topics && viewItem =~ /ccloud-consumer-group-.*/",
           "group": "z_openInCloud"
         },
         {
