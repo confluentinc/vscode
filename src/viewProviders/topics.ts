@@ -82,11 +82,9 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
   private consumerGroupsInTreeView: Map<string, ConsumerGroup> = new Map();
 
   private clearCaches(): void {
-    this.topicsContainer = null;
     this.topicsInTreeView.clear();
     this.subjectsInTreeView.clear();
     this.subjectToTopicMap.clear();
-    this.consumerGroupsContainer = null;
     this.consumerGroupsInTreeView.clear();
   }
 
@@ -194,31 +192,39 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
     this.clearCaches();
     if (!this.kafkaCluster) {
       // nothing focused; return to empty state
+      this.topicsContainer = null;
+      this.consumerGroupsContainer = null;
       this._onDidChangeTreeData.fire();
       return;
     }
 
     const cluster: KafkaCluster = this.kafkaCluster;
     await this.withProgress("Loading topics and consumer groups...", async () => {
-      // set up containers with the focused cluster's connection info
-      this.topicsContainer = new KafkaClusterResourceContainer<KafkaTopic>(
-        cluster.connectionId,
-        cluster.connectionType,
-        KafkaClusterContainerLabel.TOPICS,
-        [],
-        "topics-container",
-        new ThemeIcon(IconNames.TOPIC),
-      );
-      this.topicsContainer.collapsibleState = TreeItemCollapsibleState.Expanded;
+      // reuse existing containers so VS Code can match targeted tree-data-change fires
+      // against the same object references it already tracks; only create when absent
+      // (e.g. first load after reset or cluster change)
+      if (!this.topicsContainer) {
+        this.topicsContainer = new KafkaClusterResourceContainer<KafkaTopic>(
+          cluster.connectionId,
+          cluster.connectionType,
+          KafkaClusterContainerLabel.TOPICS,
+          [],
+          "topics-container",
+          new ThemeIcon(IconNames.TOPIC),
+        );
+        this.topicsContainer.collapsibleState = TreeItemCollapsibleState.Expanded;
+      }
 
-      this.consumerGroupsContainer = new KafkaClusterResourceContainer<ConsumerGroup>(
-        cluster.connectionId,
-        cluster.connectionType,
-        KafkaClusterContainerLabel.CONSUMER_GROUPS,
-        [],
-        undefined, // no context value for now since no commands are needed yet for this container
-        new ThemeIcon(IconNames.CONSUMER_GROUP),
-      );
+      if (!this.consumerGroupsContainer) {
+        this.consumerGroupsContainer = new KafkaClusterResourceContainer<ConsumerGroup>(
+          cluster.connectionId,
+          cluster.connectionType,
+          KafkaClusterContainerLabel.CONSUMER_GROUPS,
+          [],
+          undefined, // no context value for now since no commands are needed yet for this container
+          new ThemeIcon(IconNames.CONSUMER_GROUP),
+        );
+      }
 
       await Promise.allSettled([
         this.refreshTopics(cluster, forceDeepRefresh),
@@ -388,6 +394,8 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
   }
 
   async reset(): Promise<void> {
+    this.topicsContainer = null;
+    this.consumerGroupsContainer = null;
     this.clearCaches();
     await super.reset();
   }
