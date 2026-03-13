@@ -1,5 +1,5 @@
 import type { Disposable, TreeItem } from "vscode";
-import { ThemeIcon, TreeItemCollapsibleState, window } from "vscode";
+import { ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { ContextValues } from "../context/values";
 import type {
   EnvironmentChangeEvent,
@@ -34,6 +34,7 @@ import { CustomMarkdownString } from "../models/main";
 import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { ParentedBaseViewProvider } from "./baseModels/parentedBase";
 
 /**
@@ -267,7 +268,7 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
           .addCodeBlock(message),
       );
       if (err instanceof TopicFetchError) {
-        window.showErrorMessage(
+        void showErrorNotificationWithButtons(
           `Failed to list topics for cluster "${cluster.name}": ${err.message}`,
         );
       }
@@ -304,6 +305,9 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
         new CustomMarkdownString()
           .addWarning(`Failed to load consumer groups for **${cluster.name}**:`)
           .addCodeBlock(message),
+      );
+      void showErrorNotificationWithButtons(
+        `Failed to load consumer groups for cluster "${cluster.name}": ${message}`,
       );
     }
 
