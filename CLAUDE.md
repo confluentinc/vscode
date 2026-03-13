@@ -126,6 +126,16 @@ generates `src/graphql/sidecarGraphQL.d.ts` (auto-generated, do not edit).
 - **Design for stubbing**: When writing new functions, avoid calling other functions in the same
   module that you'll need to stub—Sinon can only stub module exports, not internal calls within the
   same file. Extract such dependencies to separate modules or pass them as parameters.
+- **Stubbing non-public methods**: Sinon's `sandbox.stub(obj, "method")` only accepts public member
+  names (`keyof T` excludes `protected`/`private` members), so it cannot stub non-public methods
+  directly. Use bracket notation assignment instead: `obj["methodName"] = sandbox.stub()`. Bracket
+  notation bypasses TypeScript's access modifier checks for keyword-declared `protected`/`private`
+  members (not ES `#private` fields). Never use `as never` or `as any` to bypass access
+  modifiers—bracket notation is type-aware and only bypasses visibility, while `as never` suppresses
+  all type checking. Note that direct assignment is not sandbox-managed, so `sandbox.restore()`
+  won't undo it — ensure the object is re-created or re-assigned in `beforeEach` to prevent stubs
+  from leaking across tests. If the variable's declared type doesn't include the member, narrow it
+  to the concrete subclass (e.g. `LocalResourceLoader` instead of `ResourceLoader`).
 - Do not test side effects like logging.
 - Make sure to set up any common stubs in the top-level describe block to ensure they apply to all
   tests.
@@ -195,13 +205,11 @@ class MyClass extends DisposableCollection {
 The extension supports three connection types, each with different resource loading strategies:
 
 1. **CCLOUD**: Confluent Cloud via OAuth authentication
-
    - Uses `CCloudResourceLoader` with GraphQL queries to the sidecar
    - Sign-in/sign-out actions manage OAuth tokens
    - Access to Environments, Kafka clusters, Schema registries, Flink resources
 
 2. **LOCAL**: Local Docker-based Kafka and Schema Registry
-
    - Uses `LocalResourceLoader` with Docker engine API
    - Automatically detects local Kafka/SR containers
    - No authentication required
