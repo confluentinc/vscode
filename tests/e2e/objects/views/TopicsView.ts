@@ -56,11 +56,9 @@ export class TopicsView extends SearchableView {
     return this.body.locator("[role='treeitem'][aria-level='1']").filter({ hasText: "Topics" });
   }
 
-  /** Get all topic items in the view (filtered by topic icon classes to exclude consumer groups). */
+  /** Get all topic items in the view (filtered by aria-label to exclude consumer groups). */
   get topics(): Locator {
-    return this.body.locator("[role='treeitem'][aria-level='2']").filter({
-      has: this.page.locator(".codicon-confluent-topic, .codicon-confluent-topic-without-schema"),
-    });
+    return this.body.locator("[role='treeitem'][aria-label^='Kafka Topic:']");
   }
 
   /** Get a topic item by its label/name. */
@@ -86,8 +84,7 @@ export class TopicsView extends SearchableView {
    * (One level below {@link topicsWithSchemas topic items with schemas}.)
    */
   get subjects(): Locator {
-    // we don't use `this.topicsWithSchemas` because these are sibling elements to topics in the DOM
-    return this.body.locator("[role='treeitem'][aria-level='3']");
+    return this.body.locator("[role='treeitem'][aria-label^='Schema Subject:']");
   }
 
   /**

@@ -185,6 +185,10 @@ export class ConsumerGroupTreeItem extends vscode.TreeItem {
     );
 
     this.tooltip = createConsumerGroupTooltip(resource);
+
+    this.accessibilityInformation = {
+      label: `Consumer Group: ${resource.consumerGroupId}`,
+    };
   }
 }
 
@@ -239,6 +243,10 @@ export class ConsumerTreeItem extends vscode.TreeItem {
 
     this.iconPath = new vscode.ThemeIcon(resource.iconName);
     this.tooltip = createConsumerTooltip(resource);
+
+    this.accessibilityInformation = {
+      label: `Consumer: ${resource.consumerId}`,
+    };
   }
 }
 
