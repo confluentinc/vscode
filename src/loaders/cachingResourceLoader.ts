@@ -1,5 +1,7 @@
-import type { TopicData } from "../clients/kafkaRest";
+import type { ConsumerGroupData, TopicData } from "../clients/kafkaRest";
 import { Logger } from "../logging";
+import type { ConsumerGroupState } from "../models/consumerGroup";
+import { Consumer, ConsumerGroup } from "../models/consumerGroup";
 import type { Environment, EnvironmentType } from "../models/environment";
 import type { KafkaCluster, KafkaClusterType } from "../models/kafkaCluster";
 import type { EnvironmentId } from "../models/resource";
@@ -7,8 +9,15 @@ import type { Subject } from "../models/schema";
 import type { SchemaRegistry, SchemaRegistryType } from "../models/schemaRegistry";
 import type { KafkaTopic } from "../models/topic";
 import { getResourceManager } from "../storage/resourceManager";
+import { executeInWorkerPool } from "../utils/workerPool";
 import { ResourceLoader } from "./resourceLoader";
-import { correlateTopicsWithSchemaSubjects, fetchTopics } from "./utils/loaderUtils";
+import {
+  correlateTopicsWithSchemaSubjects,
+  fetchConsumerGroupMembers,
+  fetchConsumerGroups,
+  fetchTopics,
+  parseCoordinatorId,
+} from "./utils/loaderUtils";
 
 const logger = new Logger("cachingResourceLoader");
 
@@ -245,5 +254,81 @@ export abstract class CachingResourceLoader<
     await resourceManager.setTopicsForCluster(cluster, topics);
 
     return topics;
+  }
+
+  /**
+   * Return the consumer groups for a given Kafka cluster.
+   *
+   * Caches the consumer groups for the cluster in the resource manager.
+   */
+  public async getConsumerGroupsForCluster(
+    cluster: KCT,
+    forceDeepRefresh: boolean = false,
+  ): Promise<ConsumerGroup[]> {
+    if (cluster.connectionId !== this.connectionId) {
+      throw new Error(
+        `Mismatched connectionId ${this.connectionId} for cluster ${JSON.stringify(cluster, null, 2)}`,
+      );
+    }
+
+    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
+
+    const resourceManager = getResourceManager();
+    const cachedConsumerGroups = await resourceManager.getConsumerGroupsForCluster(cluster);
+    if (cachedConsumerGroups !== undefined && !forceDeepRefresh) {
+      // Cache hit.
+      logger.debug(
+        `Returning ${cachedConsumerGroups.length} cached consumer groups for cluster ${cluster.id}`,
+      );
+      return cachedConsumerGroups;
+    }
+
+    // Deep fetch consumer groups from the API.
+    const responseConsumerGroups: ConsumerGroupData[] = await fetchConsumerGroups(cluster);
+
+    // Fetch members for each group with bounded concurrency to avoid overwhelming
+    // the sidecar/Kafka REST API on clusters with many consumer groups.
+    const memberResults = await executeInWorkerPool(
+      (data: ConsumerGroupData) => fetchConsumerGroupMembers(cluster, data.consumer_group_id),
+      responseConsumerGroups,
+      { maxWorkers: 5, taskName: "fetchConsumerGroupMembers" },
+    );
+
+    // Convert API responses to ConsumerGroup models.
+    const consumerGroups: ConsumerGroup[] = responseConsumerGroups.map((data, index) => {
+      const memberResult = memberResults[index];
+      const members: Consumer[] =
+        memberResult?.result?.map(
+          (m) =>
+            new Consumer({
+              connectionId: cluster.connectionId,
+              connectionType: cluster.connectionType,
+              environmentId: cluster.environmentId,
+              clusterId: cluster.id,
+              consumerGroupId: data.consumer_group_id,
+              consumerId: m.consumer_id,
+              clientId: m.client_id,
+              instanceId: m.instance_id ?? null,
+            }),
+        ) ?? [];
+
+      return new ConsumerGroup({
+        connectionId: cluster.connectionId,
+        connectionType: cluster.connectionType,
+        environmentId: cluster.environmentId,
+        clusterId: cluster.id,
+        consumerGroupId: data.consumer_group_id,
+        state: data.state as ConsumerGroupState,
+        isSimple: data.is_simple,
+        partitionAssignor: data.partition_assignor,
+        coordinatorId: parseCoordinatorId(data.coordinator?.related),
+        members,
+      });
+    });
+
+    // Cache the consumer groups for this cluster.
+    await resourceManager.setConsumerGroupsForCluster(cluster, consumerGroups);
+
+    return consumerGroups;
   }
 }
