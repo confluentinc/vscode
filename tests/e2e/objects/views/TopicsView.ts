@@ -56,9 +56,11 @@ export class TopicsView extends SearchableView {
     return this.body.locator("[role='treeitem'][aria-level='1']").filter({ hasText: "Topics" });
   }
 
-  /** Get all topic items in the view (nested under the Topics container). */
+  /** Get all topic items in the view (filtered by topic icon classes to exclude consumer groups). */
   get topics(): Locator {
-    return this.body.locator("[role='treeitem'][aria-level='2']");
+    return this.body.locator("[role='treeitem'][aria-level='2']").filter({
+      has: this.page.locator(".codicon-confluent-topic, .codicon-confluent-topic-without-schema"),
+    });
   }
 
   /** Get a topic item by its label/name. */
