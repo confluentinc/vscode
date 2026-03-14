@@ -315,3 +315,13 @@ export function generateFlinkStatementKey(params: IFlinkStatementSubmitParameter
   hasher.update(params.statement);
   return hasher.digest("hex");
 }
+
+/** Parse a broker ID from a Kafka REST API relationship URL, returning null if non-numeric.
+ *  e.g. "http://localhost:26636/kafka/v3/clusters/lkc-abc123/brokers/1" → 1 */
+export function parseCoordinatorId(related: string | undefined): number | null {
+  if (!related) return null;
+  const lastSegment = related.split("/").pop();
+  if (!lastSegment) return null;
+  const parsed = parseInt(lastSegment, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+}
