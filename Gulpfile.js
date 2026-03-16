@@ -756,7 +756,7 @@ export async function testRun() {
       ],
     });
   } finally {
-    if (reportCoverage) {
+    if (reportCoverage && existsSync("./coverage.json")) {
       let coverageMap = libCoverage.createCoverageMap();
       let sourceMapStore = libSourceMaps.createSourceMapStore();
       coverageMap.merge(JSON.parse(await readFile("./coverage.json")));
