@@ -2675,5 +2675,10 @@
     "vscode-languageserver": "^9.0.1",
     "ws": "^8.18.0",
     "yauzl": "^2.10.0"
+  },
+  "overrides": {
+    "rollwright": {
+      "@hono/node-server": "1.11.4"
+    }
   }
 }
