@@ -24,6 +24,40 @@ set-node-bumped-version:
 			git add package.json && git add package-lock.json) \
 		|| true
 
+# print the latest non-prerelease GitHub release tag (e.g., v2.3.0)
+.PHONY: get-latest-stable-release-tag
+get-latest-stable-release-tag:
+	@TAG=$$(gh release list --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName'); \
+	if [ -z "$$TAG" ] || [ "$$TAG" = "null" ]; then \
+		echo "ERROR: Could not determine latest stable release tag." >&2; \
+		exit 1; \
+	fi; \
+	echo "$$TAG"
+
+# look up and check out the release branch (vX.Y.x) based on the provided release tag (vX.Y.Z) 
+.PHONY: checkout-release-branch
+checkout-release-branch:
+	@if [ -z "$(RELEASE_TAG)" ]; then \
+		echo "ERROR: RELEASE_TAG is required (e.g., make checkout-release-branch RELEASE_TAG=v2.2.2)" >&2; \
+		exit 1; \
+	fi; \
+	BRANCH=$$(echo "$(RELEASE_TAG)" | sed -E 's/^(v[0-9]+\.[0-9]+)\.[0-9]+$$/\1.x/'); \
+	if [ "$$BRANCH" = "$(RELEASE_TAG)" ]; then \
+		echo "ERROR: Could not derive release branch from tag '$(RELEASE_TAG)'. Expected vX.Y.Z format." >&2; \
+		exit 1; \
+	fi; \
+	echo "Checking out release branch $$BRANCH for tag $(RELEASE_TAG)..."; \
+	git fetch $(GIT_REMOTE_NAME) "$$BRANCH:$$BRANCH" || { echo "ERROR: Branch $$BRANCH not found on $(GIT_REMOTE_NAME)." >&2; exit 1; }; \
+	git checkout "$$BRANCH"; \
+	echo "Checked out: $$(git rev-parse --abbrev-ref HEAD) at $$(git rev-parse --short HEAD)"
+
+# look up the latest release tag, then check out its associated release branch
+.PHONY: checkout-latest-release-branch
+checkout-latest-release-branch:
+	@TAG=$$($(MAKE) --no-print-directory $(MAKE_ARGS) get-latest-stable-release-tag); \
+	echo "Latest stable release: $$TAG"; \
+	$(MAKE) --no-print-directory $(MAKE_ARGS) checkout-release-branch RELEASE_TAG=$$TAG
+
 .PHONY: create-gh-release
 create-gh-release:
 ifeq ($(CI),true)
