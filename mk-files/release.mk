@@ -54,9 +54,9 @@ checkout-release-branch:
 # look up the latest release tag, then check out its associated release branch
 .PHONY: checkout-latest-release-branch
 checkout-latest-release-branch:
-	@TAG=$$($(MAKE) $(MAKE_ARGS) get-latest-stable-release-tag); \
+	@TAG=$$($(MAKE) --no-print-directory $(MAKE_ARGS) get-latest-stable-release-tag); \
 	echo "Latest stable release: $$TAG"; \
-	$(MAKE) $(MAKE_ARGS) checkout-release-branch RELEASE_TAG=$$TAG
+	$(MAKE) --no-print-directory $(MAKE_ARGS) checkout-release-branch RELEASE_TAG=$$TAG
 
 .PHONY: create-gh-release
 create-gh-release:
