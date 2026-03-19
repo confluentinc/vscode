@@ -1,0 +1,58 @@
+version: v1.0
+name: availability-tests
+agent:
+  machine:
+    type: s1-prod-ubuntu24-04-amd64-1
+
+execution_time_limit:
+  hours: 1
+
+global_job_config:
+  prologue:
+    commands:
+      - checkout
+      - make ci-bin-sem-cache-restore
+  epilogue:
+    always:
+      commands:
+        - make ci-bin-sem-cache-store
+
+blocks:
+  - name: "Linux x64: Availability Smoke Tests"
+    dependencies: []
+    task:
+      prologue:
+        commands:
+          - |
+            if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
+              echo "Skipping Vault setup for Semaphore CI"
+            else
+              . vault-setup
+            fi
+          - make checkout-latest-release-branch
+          - make load-cached-docker-images
+      jobs:
+        - name: "Playwright: Availability Smoke Tests (VS Code stable)"
+          commands:
+            - make test-playwright-e2e TEST_SUITE=@smoke
+          env_vars:
+            - name: FORCE_COLOR
+              value: "1"
+            - name: TERM
+              value: "xterm-256color"
+            - name: VSCODE_VERSION
+              value: "stable"
+      epilogue:
+        always:
+          commands:
+            - make remove-test-env
+            - make cache-docker-images
+            - make store-test-results-to-semaphore
+            - make merge-blob-reports
+
+after_pipeline:
+  task:
+    jobs:
+      - name: Publish Test Results to Semaphore
+        commands:
+          - test-results gen-pipeline-report || echo "Could not publish pipeline test result report"
