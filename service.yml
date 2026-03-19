@@ -140,6 +140,11 @@ semaphore:
           required: false
           default_value: 'main'
           description: 'The branch to audit and base the PR against. Defaults to main; override for release branches like v1.2.x.'
+    - name: scheduled-availability-tests
+      branch: main
+      pipeline_file: ".semaphore/availability-tests.yml"
+      scheduled: true
+      at: "*/15 * * * *"
   managed_sections:
     - version
     - name
