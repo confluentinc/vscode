@@ -107,10 +107,10 @@ cache-docker-images:
 		cache store $$SEMAPHORE_SCHEMA_REGISTRY_KEY schema-registry.tgz && \
 		rm -rf schema-registry.tgz)
 
-# Run E2E (Playwright) tests with optional test name
+# Run E2E (Playwright) tests with optional test name and exclusion
 # Usage: make test-playwright-e2e (runs all tests)
 # Usage: make test-playwright-e2e TEST_SUITE=@smoke
-# Usage: make test-playwright-e2e TEST_SUITE=@regression
+# Usage: make test-playwright-e2e TEST_SUITE=@smoke TEST_EXCLUDE=@local
 .PHONY: test-playwright-e2e
 test-playwright-e2e: setup-test-env install-test-dependencies install-dependencies
 	@if [ -n "$(TEST_SUITE)" ] && [ "$(TEST_SUITE)" != "" ] && [ "$(TEST_SUITE)" != "TEST_SUITE" ]; then \
@@ -118,10 +118,15 @@ test-playwright-e2e: setup-test-env install-test-dependencies install-dependenci
 	else \
 			TEST_SUITE_ARG=""; \
 	fi; \
-	if [ $$(uname -s) = "Linux" ]; then \
-			xvfb-run -a npx gulp e2e $$TEST_SUITE_ARG; \
+	if [ -n "$(TEST_EXCLUDE)" ] && [ "$(TEST_EXCLUDE)" != "" ] && [ "$(TEST_EXCLUDE)" != "TEST_EXCLUDE" ]; then \
+			TEST_EXCLUDE_ARG="-x $(TEST_EXCLUDE)"; \
 	else \
-			npx gulp e2e $$TEST_SUITE_ARG; \
+			TEST_EXCLUDE_ARG=""; \
+	fi; \
+	if [ $$(uname -s) = "Linux" ]; then \
+			xvfb-run -a npx gulp e2e $$TEST_SUITE_ARG $$TEST_EXCLUDE_ARG; \
+	else \
+			npx gulp e2e $$TEST_SUITE_ARG $$TEST_EXCLUDE_ARG; \
 	fi
 
 # Validates bump based on current version (in package.json)
