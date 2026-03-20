@@ -699,6 +699,7 @@ export async function testBuild() {
       "mocha",
       "@playwright/test",
       "@confluentinc/kafka-javascript",
+      "@confluentinc/schemaregistry",
       "dotenv",
       "glob",
       "electron",
