@@ -11,7 +11,7 @@
 const fs = require("fs");
 const path = require("path");
 const readline = require("readline");
-const { execSync } = require("child_process");
+const { execFileSync } = require("child_process");
 
 function usage() {
   console.error("Usage: node parse-trace.cjs <trace.zip | trace.trace>");
@@ -28,16 +28,16 @@ function resolveTracePath(input) {
 
   if (resolved.endsWith(".zip")) {
     const tmpDir = fs.mkdtempSync(path.join(require("os").tmpdir(), "trace-"));
-    execSync(`unzip -q -o "${resolved}" -d "${tmpDir}"`);
+    execFileSync("unzip", ["-q", "-o", resolved, "-d", tmpDir]);
     const traceFile = path.join(tmpDir, "trace.trace");
     if (!fs.existsSync(traceFile)) {
       console.error(`trace.trace not found inside ${input}`);
       process.exit(1);
     }
-    return traceFile;
+    return { tracePath: traceFile, tmpDir };
   }
 
-  return resolved;
+  return { tracePath: resolved, tmpDir: null };
 }
 
 /** Derive a concise API label from the class and method fields. */
@@ -83,58 +83,72 @@ async function main() {
   const input = process.argv[2];
   if (!input) usage();
 
-  const tracePath = resolveTracePath(input);
+  const { tracePath, tmpDir } = resolveTracePath(input);
 
-  // first pass: collect all before/after entries keyed by callId
-  const befores = new Map();
-  const afters = new Map();
+  try {
+    // first pass: collect all before/after entries keyed by callId
+    const befores = new Map();
+    const afters = new Map();
 
-  const rl = readline.createInterface({
-    input: fs.createReadStream(tracePath),
-    crlfDelay: Infinity,
-  });
+    const rl = readline.createInterface({
+      input: fs.createReadStream(tracePath),
+      crlfDelay: Infinity,
+    });
 
-  for await (const line of rl) {
-    if (!line.trim()) continue;
-    try {
-      const obj = JSON.parse(line);
-      if (obj.type === "before" && obj.callId) {
-        befores.set(obj.callId, obj);
-      } else if (obj.type === "after" && obj.callId) {
-        afters.set(obj.callId, obj);
+    for await (const line of rl) {
+      if (!line.trim()) continue;
+      try {
+        const obj = JSON.parse(line);
+        if (obj.type === "before" && obj.callId) {
+          befores.set(obj.callId, obj);
+        } else if (obj.type === "after" && obj.callId) {
+          afters.set(obj.callId, obj);
+        }
+      } catch {
+        // skip malformed lines (trace files may contain non-NDJSON metadata)
       }
-    } catch {
-      // skip malformed lines
+    }
+
+    if (befores.size === 0) {
+      console.error("Warning: no trace actions found. Is this a valid Playwright trace file?");
+    }
+
+    // correlate before/after pairs and output in order
+    const callIds = [...befores.keys()];
+    const pad = (s, n) => s.slice(0, n).padEnd(n);
+
+    for (let i = 0; i < callIds.length; i++) {
+      const id = callIds[i];
+      const before = befores.get(id);
+      const after = afters.get(id);
+
+      const status = after?.error ? "error" : after ? "ok" : "incomplete";
+      const api = apiLabel(before);
+      const sel = selectorLabel(before);
+      const err = after?.error?.message || "";
+
+      const idx = String(i).padStart(3);
+      const statusStr = pad(status, 10);
+      const apiStr = pad(api, 28);
+      const selStr = pad(`sel=${sel}`, 50);
+      const errStr = err ? `err=${err}` : "";
+
+      console.log(`${idx} ${statusStr}| ${apiStr}| ${selStr}| ${errStr}`);
+    }
+
+    // summary
+    const total = callIds.length;
+    const errors = callIds.filter((id) => afters.get(id)?.error).length;
+    const incomplete = callIds.filter((id) => !afters.has(id)).length;
+    const counts = [`${errors} error(s)`, incomplete > 0 && `${incomplete} incomplete`]
+      .filter(Boolean)
+      .join(", ");
+    console.log(`\n${total} actions, ${counts}`);
+  } finally {
+    if (tmpDir) {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   }
-
-  // correlate before/after pairs and output in order
-  const callIds = [...befores.keys()];
-  const pad = (s, n) => s.slice(0, n).padEnd(n);
-
-  for (let i = 0; i < callIds.length; i++) {
-    const id = callIds[i];
-    const before = befores.get(id);
-    const after = afters.get(id);
-
-    const status = after?.error ? "error" : "ok";
-    const api = apiLabel(before);
-    const sel = selectorLabel(before);
-    const err = after?.error?.message || "";
-
-    const idx = String(i).padStart(3);
-    const statusStr = pad(status, 8);
-    const apiStr = pad(api, 28);
-    const selStr = pad(`sel=${sel}`, 50);
-    const errStr = err ? `err=${err}` : "";
-
-    console.log(`${idx} ${statusStr}| ${apiStr}| ${selStr}| ${errStr}`);
-  }
-
-  // summary
-  const total = callIds.length;
-  const errors = callIds.filter((id) => afters.get(id)?.error).length;
-  console.log(`\n${total} actions, ${errors} error(s)`);
 }
 
 main().catch((err) => {
