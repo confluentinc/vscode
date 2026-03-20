@@ -107,26 +107,46 @@ cache-docker-images:
 		cache store $$SEMAPHORE_SCHEMA_REGISTRY_KEY schema-registry.tgz && \
 		rm -rf schema-registry.tgz)
 
-# Run E2E (Playwright) tests with optional test name and exclusion
+# Run E2E (Playwright) tests by building from source, then testing the resulting .vsix.
 # Usage: make test-playwright-e2e (runs all tests)
 # Usage: make test-playwright-e2e TEST_SUITE=@smoke
 # Usage: make test-playwright-e2e TEST_SUITE=@smoke TEST_EXCLUDE=@local
 .PHONY: test-playwright-e2e
 test-playwright-e2e: setup-test-env install-test-dependencies install-dependencies
-	@if [ -n "$(TEST_SUITE)" ] && [ "$(TEST_SUITE)" != "" ] && [ "$(TEST_SUITE)" != "TEST_SUITE" ]; then \
-			TEST_SUITE_ARG="-t $(TEST_SUITE)"; \
-	else \
-			TEST_SUITE_ARG=""; \
+	npx gulp bundle pullDockerImages
+	@$(MAKE) --no-print-directory _run-playwright-e2e E2E_VSIX_PATH="out/*.vsix" \
+		TEST_SUITE="$(TEST_SUITE)" TEST_EXCLUDE="$(TEST_EXCLUDE)"
+
+# Run Playwright E2E tests directly against a pre-built .vsix (bypasses gulp build/bundle).
+# Requires E2E_VSIX_PATH to be set (path or glob to the .vsix file).
+# Usage: make test-playwright-vsix E2E_VSIX_PATH=/tmp/vsix/*.vsix
+# Usage: make test-playwright-vsix E2E_VSIX_PATH=/tmp/vsix/*.vsix TEST_SUITE=@smoke TEST_EXCLUDE=@local
+.PHONY: test-playwright-vsix
+test-playwright-vsix: setup-test-env install-test-dependencies install-dependencies
+	@if [ -z "$(E2E_VSIX_PATH)" ]; then \
+		echo "ERROR: E2E_VSIX_PATH is required (path or glob to a .vsix file)" >&2; \
+		exit 1; \
+	fi
+	@$(MAKE) --no-print-directory _run-playwright-e2e E2E_VSIX_PATH="$(E2E_VSIX_PATH)" \
+		TEST_SUITE="$(TEST_SUITE)" TEST_EXCLUDE="$(TEST_EXCLUDE)"
+
+# internal: shared Playwright E2E invocation (sets up env vars, filters, and xvfb wrapper)
+.PHONY: _run-playwright-e2e
+_run-playwright-e2e:
+	@GREP_ARG=""; \
+	if [ -n "$(TEST_SUITE)" ] && [ "$(TEST_SUITE)" != "TEST_SUITE" ]; then \
+		GREP_ARG="--grep $(TEST_SUITE)"; \
 	fi; \
-	if [ -n "$(TEST_EXCLUDE)" ] && [ "$(TEST_EXCLUDE)" != "" ] && [ "$(TEST_EXCLUDE)" != "TEST_EXCLUDE" ]; then \
-			TEST_EXCLUDE_ARG="-x $(TEST_EXCLUDE)"; \
-	else \
-			TEST_EXCLUDE_ARG=""; \
+	GREP_INVERT_ARG=""; \
+	if [ -n "$(TEST_EXCLUDE)" ] && [ "$(TEST_EXCLUDE)" != "TEST_EXCLUDE" ]; then \
+		GREP_INVERT_ARG="--grep-invert $(TEST_EXCLUDE)"; \
 	fi; \
+	export E2E_VSIX_PATH="$(E2E_VSIX_PATH)"; \
+	export CONFLUENT_VSCODE_E2E_TESTING=true; \
 	if [ $$(uname -s) = "Linux" ]; then \
-			xvfb-run -a npx gulp e2e $$TEST_SUITE_ARG $$TEST_EXCLUDE_ARG; \
+		xvfb-run -a npx playwright test -c tests/e2e/playwright.config.ts tests/e2e $$GREP_ARG $$GREP_INVERT_ARG; \
 	else \
-			npx gulp e2e $$TEST_SUITE_ARG $$TEST_EXCLUDE_ARG; \
+		npx playwright test -c tests/e2e/playwright.config.ts tests/e2e $$GREP_ARG $$GREP_INVERT_ARG; \
 	fi
 
 # Validates bump based on current version (in package.json)
