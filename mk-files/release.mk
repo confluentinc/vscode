@@ -24,6 +24,34 @@ set-node-bumped-version:
 			git add package.json && git add package-lock.json) \
 		|| true
 
+# print the latest non-prerelease GitHub release tag (e.g., v2.3.0)
+.PHONY: get-latest-stable-release-tag
+get-latest-stable-release-tag:
+	@TAG=$$(gh release list --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName'); \
+	if [ -z "$$TAG" ] || [ "$$TAG" = "null" ]; then \
+		echo "ERROR: Could not determine latest stable release tag." >&2; \
+		exit 1; \
+	fi; \
+	echo "$$TAG"
+
+# download the platform-specific .vsix from the latest stable GitHub release
+# Usage: make download-latest-release-vsix
+# Usage: make download-latest-release-vsix RELEASE_TAG=v2.3.0
+# Usage: make download-latest-release-vsix VSIX_PLATFORM=darwin-arm64
+.PHONY: download-latest-release-vsix
+download-latest-release-vsix:
+	@if [ -z "$(RELEASE_TAG)" ]; then \
+		TAG=$$($(MAKE) --no-print-directory $(MAKE_ARGS) get-latest-stable-release-tag); \
+	else \
+		TAG="$(RELEASE_TAG)"; \
+	fi; \
+	PLATFORM=$${VSIX_PLATFORM:-linux-x64}; \
+	VSIX_DIR="/tmp/vsix"; \
+	mkdir -p "$$VSIX_DIR"; \
+	echo "Downloading $$PLATFORM .vsix for release $$TAG..."; \
+	gh release download "$$TAG" --pattern "*$$PLATFORM*.vsix" --dir "$$VSIX_DIR" --clobber; \
+	echo "Downloaded: $$(ls $$VSIX_DIR/*.vsix)"
+
 .PHONY: create-gh-release
 create-gh-release:
 ifeq ($(CI),true)
