@@ -2642,7 +2642,7 @@
     "rollup": "^4.18.0",
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-esbuild": "^6.1.1",
-    "rollwright": "^0.0.6",
+    "rollwright": "^0.0.7",
     "sanitize-html": "^2.14.0",
     "sinon": "^18.0.1",
     "typescript": "^5.4.2",
