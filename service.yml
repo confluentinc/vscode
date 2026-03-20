@@ -110,9 +110,9 @@ semaphore:
           required: true
           description: The test tag(s) (pipe-separated, e.g. `@smoke|@topic-message-viewer`) to run. By default, runs the smoke tests and critical user flow tests.
           default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts"
-    - name: scheduled-availability-tests
+    - name: scheduled-release-e2e-smoketests
       branch: main
-      pipeline_file: ".semaphore/availability-tests.yml"
+      pipeline_file: ".semaphore/release-e2e-smoketests.yml"
       scheduled: true
       at: "*/15 * * * *"
   managed_sections:
