@@ -1,6 +1,5 @@
-import type { ElectronApplication, Page } from "@playwright/test";
-import { TextDocument } from "../objects/editor/TextDocument";
-import { executeVSCodeCommand } from "./commands";
+import { mkdirSync, writeFileSync } from "fs";
+import path from "path";
 
 // `window.menuStyle` must be set to "custom" for right-click context menu actions (e.g. deleting
 // schemas, generating projects from sidebar resources, etc), but Windows already sets this to
@@ -37,32 +36,22 @@ const DEFAULT_EDITOR_SETTINGS = {
 const DEFAULT_SETTINGS = { ...DEFAULT_EDITOR_SETTINGS, ...DEFAULT_UI_SETTINGS };
 
 /**
- * Configures VS Code settings via the (temporary) User Settings JSON file.
+ * Write VS Code user settings directly to the `--user-data-dir` on disk.
+ *
  * If `settings` is not provided, the settings will be reset to {@link DEFAULT_SETTINGS test defaults}.
+ * VS Code watches this file and auto-reloads when it changes.
  *
  * (User settings are not carried over between test runs since we launch with a fresh temporary
  * `--user-data-dir` each time, so we don't need to reset after tests run.)
  */
-export async function configureVSCodeSettings(
-  page: Page,
-  electronApp: ElectronApplication,
-  settings?: Record<string, any>,
-): Promise<void> {
-  await executeVSCodeCommand(page, "Preferences: Open User Settings (JSON)");
-
-  const settingsJson = new TextDocument(page, "settings.json");
-  await settingsJson.locator.waitFor({ state: "visible" });
-
-  // XXX: VS Code will have some file-formatting settings enabled by default. As a result of this,
-  // we can't really insert text directly without risking it being auto-formatted, auto-indented,
-  // pairs auto-closed/etc. Instead, we write to the clipboard and paste directly into the document.
-  await electronApp.context().grantPermissions(["clipboard-write"]);
-  await page.evaluate(
-    async (content) => await navigator.clipboard.writeText(content),
+export function configureVSCodeSettings(
+  testTempDir: string,
+  settings?: Record<string, unknown>,
+): void {
+  const userDir = path.join(testTempDir, "User");
+  mkdirSync(userDir, { recursive: true });
+  writeFileSync(
+    path.join(userDir, "settings.json"),
     JSON.stringify({ ...DEFAULT_SETTINGS, ...(settings ?? {}) }, null, 2),
   );
-  await settingsJson.deleteAll();
-  await page.keyboard.press("ControlOrMeta+v");
-  await settingsJson.save();
-  await settingsJson.close();
 }
