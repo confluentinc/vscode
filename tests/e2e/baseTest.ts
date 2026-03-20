@@ -170,7 +170,7 @@ export const test = testBase.extend<VSCodeFixtures>({
   page: async ({ electronApp, testTempDir }, use, testInfo) => {
     const page = await electronApp.firstWindow();
 
-    await globalBeforeEach(page, electronApp);
+    await globalBeforeEach(page, testTempDir);
 
     await use(page);
 
@@ -361,9 +361,9 @@ export const test = testBase.extend<VSCodeFixtures>({
  * {@linkcode https://playwright.dev/docs/api/class-test#test-before-each test.beforeEach()}, which
  * did not consistently run before each test.
  */
-async function globalBeforeEach(page: Page, electronApp: ElectronApplication): Promise<void> {
+async function globalBeforeEach(page: Page, testTempDir: string): Promise<void> {
   // make sure settings are set to defaults for each test
-  await configureVSCodeSettings(page, electronApp);
+  configureVSCodeSettings(testTempDir);
 
   // dismiss the "All installed extensions are temporarily disabled" notification that will
   // always appear since we launch with --disable-extensions
