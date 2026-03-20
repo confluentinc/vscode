@@ -63,6 +63,9 @@ interface VSCodeFixtures {
   /** The first window of the launched Electron application (VS Code). */
   page: Page;
 
+  /** Auto fixture to add annotations needed for test results analysis. */
+  annotatePlatform: void;
+
   /** Open the Confluent view container from the primary sidebar, activating the extension if necessary. */
   openExtensionSidebar: void;
 
@@ -173,6 +176,17 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     await globalAfterEach(testTempDir, electronApp, page, testInfo);
   },
+
+  annotatePlatform: [
+    async ({}, use, testInfo) => {
+      testInfo.annotations.push({
+        type: "platform",
+        description: `${process.platform} ${process.arch}`,
+      });
+      await use();
+    },
+    { auto: true },
+  ],
 
   openExtensionSidebar: [
     async ({ page }, use) => {

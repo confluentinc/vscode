@@ -61,10 +61,11 @@ blocks:
           # (see https://docs.semaphoreci.com/reference/pipeline-yaml#matrix-in-jobs)
           matrix: &e2e-matrix
             - env_var: TEST_SUITE_TAG
-              values: "%{{parameters.TEST_SUITE | splitList \"|\"}}"
+              values: '%{{parameters.TEST_SUITE | splitList "|"}}'
       epilogue: &e2e-epilogue
         always:
           commands:
+            - artifact push workflow blob-report/*.zip --destination blob-report/$(basename blob-report/*.zip)
             - make remove-test-env
             - make cache-docker-images
             - make store-test-results-to-semaphore
@@ -194,6 +195,7 @@ blocks:
             - |
               Write-Output "Merging blob reports..."
               if (Test-Path "blob-report") {
+                  artifact push workflow blob-report/*.zip --destination blob-report/$(basename blob-report/*.zip)
                   npx playwright merge-reports --reporter html ./blob-report
                   $VSCODE_VERSION = $Env:VSCODE_VERSION
                   if ([string]::IsNullOrEmpty($Env:TEST_SUITE_TAG) -or $Env:TEST_SUITE_TAG -eq "TEST_SUITE_TAG") {
@@ -215,5 +217,10 @@ after_pipeline:
     jobs:
       - name: Publish Test Results to Semaphore
         commands:
+          - export E2E_KAFKA_REPORTER_TOPIC=vscode-test-results
+          - if [[ "$SEMAPHORE_WORKFLOW_TRIGGERED_BY_SCHEDULE" == "true" ]]; then
+            artifact pull workflow blob-report;
+            npx playwright merge-reports --reporter="./tests/e2e/reporters/kafka-results-reporter.ts" blob-report;
+            fi
           # Publish all agents' test results
           - test-results gen-pipeline-report || echo "Could not publish pipeline test result report due to probably no test results to publish"
