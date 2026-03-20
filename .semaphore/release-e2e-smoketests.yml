@@ -1,5 +1,5 @@
 version: v1.0
-name: availability-tests
+name: "Release E2E Smoketests"
 agent:
   machine:
     type: s1-prod-ubuntu24-04-amd64-1
@@ -18,7 +18,7 @@ global_job_config:
         - make ci-bin-sem-cache-store
 
 blocks:
-  - name: "Linux x64: Availability Smoke Tests"
+  - name: "Linux x64: Release Smoke Tests"
     dependencies: []
     task:
       prologue:
@@ -29,9 +29,13 @@ blocks:
             else
               . vault-setup
             fi
-          - make checkout-latest-release-branch
+          - |
+            RELEASE_TAG=$(make --no-print-directory get-latest-stable-release-tag)
+            make checkout-release-branch RELEASE_TAG=$RELEASE_TAG
+            echo ""
+            echo "Release: $RELEASE_TAG (branch: $(git rev-parse --abbrev-ref HEAD))"
       jobs:
-        - name: "Playwright: Availability Smoke Tests (VS Code stable)"
+        - name: "Playwright: Release Smoke Tests (VS Code stable)"
           commands:
             - make test-playwright-e2e TEST_SUITE=@smoke TEST_EXCLUDE=@local
           env_vars:
