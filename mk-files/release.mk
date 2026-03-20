@@ -34,29 +34,23 @@ get-latest-stable-release-tag:
 	fi; \
 	echo "$$TAG"
 
-# look up and check out the release branch (vX.Y.x) based on the provided release tag (vX.Y.Z) 
-.PHONY: checkout-release-branch
-checkout-release-branch:
+# download the platform-specific .vsix from the latest stable GitHub release
+# Usage: make download-latest-release-vsix
+# Usage: make download-latest-release-vsix RELEASE_TAG=v2.3.0
+# Usage: make download-latest-release-vsix VSIX_PLATFORM=darwin-arm64
+.PHONY: download-latest-release-vsix
+download-latest-release-vsix:
 	@if [ -z "$(RELEASE_TAG)" ]; then \
-		echo "ERROR: RELEASE_TAG is required (e.g., make checkout-release-branch RELEASE_TAG=v2.2.2)" >&2; \
-		exit 1; \
+		TAG=$$($(MAKE) --no-print-directory $(MAKE_ARGS) get-latest-stable-release-tag); \
+	else \
+		TAG="$(RELEASE_TAG)"; \
 	fi; \
-	BRANCH=$$(echo "$(RELEASE_TAG)" | sed -E 's/^(v[0-9]+\.[0-9]+)\.[0-9]+$$/\1.x/'); \
-	if [ "$$BRANCH" = "$(RELEASE_TAG)" ]; then \
-		echo "ERROR: Could not derive release branch from tag '$(RELEASE_TAG)'. Expected vX.Y.Z format." >&2; \
-		exit 1; \
-	fi; \
-	echo "Checking out release branch $$BRANCH for tag $(RELEASE_TAG)..."; \
-	git fetch $(GIT_REMOTE_NAME) "$$BRANCH:$$BRANCH" || { echo "ERROR: Branch $$BRANCH not found on $(GIT_REMOTE_NAME)." >&2; exit 1; }; \
-	git checkout "$$BRANCH"; \
-	echo "Checked out: $$(git rev-parse --abbrev-ref HEAD) at $$(git rev-parse --short HEAD)"
-
-# look up the latest release tag, then check out its associated release branch
-.PHONY: checkout-latest-release-branch
-checkout-latest-release-branch:
-	@TAG=$$($(MAKE) --no-print-directory $(MAKE_ARGS) get-latest-stable-release-tag); \
-	echo "Latest stable release: $$TAG"; \
-	$(MAKE) --no-print-directory $(MAKE_ARGS) checkout-release-branch RELEASE_TAG=$$TAG
+	PLATFORM=$${VSIX_PLATFORM:-linux-x64}; \
+	VSIX_DIR="/tmp/vsix"; \
+	mkdir -p "$$VSIX_DIR"; \
+	echo "Downloading $$PLATFORM .vsix for release $$TAG..."; \
+	gh release download "$$TAG" --pattern "*$$PLATFORM*.vsix" --dir "$$VSIX_DIR" --clobber; \
+	echo "Downloaded: $$(ls $$VSIX_DIR/*.vsix)"
 
 .PHONY: create-gh-release
 create-gh-release:
