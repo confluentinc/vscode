@@ -1,0 +1,60 @@
+version: v1.0
+name: "Release E2E Smoketests"
+agent:
+  machine:
+    type: s1-prod-ubuntu24-04-amd64-1
+
+execution_time_limit:
+  hours: 1
+
+global_job_config:
+  prologue:
+    commands:
+      - checkout
+      - make ci-bin-sem-cache-restore
+  epilogue:
+    always:
+      commands:
+        - make ci-bin-sem-cache-store
+
+blocks:
+  - name: "Linux x64: Release Smoke Tests"
+    dependencies: []
+    task:
+      prologue:
+        commands:
+          - |
+            if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
+              echo "Skipping Vault setup for Semaphore CI"
+            else
+              . vault-setup
+            fi
+          - |
+            RELEASE_TAG=$(make --no-print-directory get-latest-stable-release-tag)
+            make checkout-release-branch RELEASE_TAG=$RELEASE_TAG
+            echo ""
+            echo "Release: $RELEASE_TAG (branch: $(git rev-parse --abbrev-ref HEAD))"
+      jobs:
+        - name: "Playwright: Release Smoke Tests (VS Code stable)"
+          commands:
+            - make test-playwright-e2e TEST_SUITE=@smoke TEST_EXCLUDE=@local
+          env_vars:
+            - name: FORCE_COLOR
+              value: "1"
+            - name: TERM
+              value: "xterm-256color"
+            - name: VSCODE_VERSION
+              value: "stable"
+      epilogue:
+        always:
+          commands:
+            - make remove-test-env
+            - make store-test-results-to-semaphore
+            - make merge-blob-reports
+
+after_pipeline:
+  task:
+    jobs:
+      - name: Publish Test Results to Semaphore
+        commands:
+          - test-results gen-pipeline-report || echo "Could not publish pipeline test result report"
