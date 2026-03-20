@@ -61,7 +61,7 @@ blocks:
           # (see https://docs.semaphoreci.com/reference/pipeline-yaml#matrix-in-jobs)
           matrix: &e2e-matrix
             - env_var: TEST_SUITE_TAG
-              values: "%{{parameters.TEST_SUITE | splitList \"|\"}}"
+              values: '%{{parameters.TEST_SUITE | splitList "|"}}'
       epilogue: &e2e-epilogue
         always:
           commands:
@@ -220,7 +220,7 @@ after_pipeline:
           - export E2E_KAFKA_REPORTER_TOPIC=vscode-test-results
           - if [[ "$SEMAPHORE_WORKFLOW_TRIGGERED_BY_SCHEDULE" == "true" ]]; then
             artifact pull workflow blob-report;
-            yarn playwright merge-reports --reporter="./tests/e2e/reporters/kafka-results-reporter.ts" blob-report;
+            npx playwright merge-reports --reporter="./tests/e2e/reporters/kafka-results-reporter.ts" blob-report;
             fi
           # Publish all agents' test results
           - test-results gen-pipeline-report || echo "Could not publish pipeline test result report due to probably no test results to publish"
