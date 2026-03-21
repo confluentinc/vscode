@@ -3,7 +3,7 @@ name: playwright-triage
 description: >-
   Use when E2E Playwright tests fail, CI reports test failures, the user mentions "triage", "test
   failed", "flaky test", or wants to debug Electron/Playwright test results. Also use when
-  investigating trace.zip files or test screenshots.
+  investigating trace.zip files, test screenshots, or Playwright HTML report archives from CI.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
@@ -11,60 +11,120 @@ allowed-tools: Read, Bash, Glob, Grep
 
 Skill for systematically triaging Playwright E2E test failures in this VS Code extension project.
 
-## Artifact Inventory
+## Artifact Formats
 
-When a Playwright test fails, it generates artifacts in the test's output directory. Each artifact
-serves a different purpose:
+Artifacts come in two distinct formats depending on the source. Identify the format first before
+triaging.
 
-| Artifact            | Format        | How to inspect                                                 | What it tells you                        |
-| ------------------- | ------------- | -------------------------------------------------------------- | ---------------------------------------- |
-| `test-failed-*.png` | PNG           | `Read` (multimodal)                                            | Visual state of VS Code at failure point |
-| `error-context.md`  | Markdown/YAML | `Read`                                                         | Accessibility tree (DOM snapshot)        |
-| `trace.zip`         | ZIP (NDJSON)  | `node .claude/skills/playwright-triage/parse-trace.cjs <path>` | Ordered action sequence with errors      |
-| `attachments/*.log` | Text          | `Read`                                                         | Extension, sidecar, and VS Code logs     |
+### Format A: Raw test-results (local runs)
 
-## Artifact Sources
+Produced by local `npx gulp e2e` runs. Each failed test gets a directory under `test-results/`:
 
-Artifacts can come from:
+```
+test-results/<test-title-slug>/
+  test-failed-1.png       # screenshot at failure
+  error-context.md        # accessibility tree (YAML)
+  trace.zip               # Playwright trace (contains trace.trace NDJSON)
+  attachments/
+    vscode-confluent.log
+    vscode-confluent-sidecar.log
+    vscode-window-logs.zip
+```
 
-- **Local test runs**: `test-results/` in the project root (Playwright's default output directory)
-- **CI downloads**: The user may provide a path to artifacts downloaded from Semaphore or another CI
-  system (e.g. `~/Downloads/artifacts/`, `/tmp/ci-artifacts/`)
-- **Direct paths**: The user may hand you a specific `trace.zip` or screenshot path
+### Format B: Playwright HTML report (CI)
 
-Do not assume `test-results/` is the only location. Always ask or search for the artifact path if
-not provided.
+Produced by Semaphore CI and downloaded via `artifact pull`. Named like:
+`playwright-report-<os>-<arch>-vscode-<version>--<suite>.zip`
+
+**IMPORTANT**: Despite the `.zip` extension, these are gzipped tarballs (Semaphore `artifact push`
+compresses directories with tar+gzip). Always detect the format before extracting:
+
+```bash
+file <path>              # check actual format
+tar xzf <path> -C /tmp/pw-triage   # for gzipped tarballs (most CI artifacts)
+unzip <path> -d /tmp/pw-triage     # for actual zip files (Windows CI only)
+```
+
+The extracted HTML report has this structure:
+
+```
+playwright-report/
+  index.html              # HTML report viewer (not useful for CLI triage)
+  data/
+    <sha>.zip             # either Playwright traces OR VS Code log bundles
+    <sha>.png             # failure screenshots
+    <sha>.markdown        # accessibility tree snapshots
+    <sha>.txt             # extension/sidecar log files
+```
+
+All files in `data/` use content-hash filenames with no test name association. To identify trace
+zips vs log zips:
+
+```bash
+# find trace zips (contain trace.trace)
+for f in <report>/data/*.zip; do
+  if unzip -l "$f" 2>/dev/null | grep -q "trace.trace"; then
+    echo "TRACE: $f"
+  fi
+done
+```
+
+Trace zips (~1.5-3MB) tend to be larger than log zips. Larger traces often indicate failing tests
+(more actions before timeout).
 
 ## Triage Workflow
 
-### 1. Locate artifacts
+### 1. Locate and extract artifacts
 
-If the user hasn't provided a path, search locally:
+**Local runs**: search for `test-results/` in the project root.
 
+**CI artifacts**: the user provides a path. Detect format and extract:
+
+```bash
+file <path>                                    # detect gzip vs zip
+mkdir -p /tmp/pw-triage
+tar xzf <path> -C /tmp/pw-triage 2>/dev/null || unzip <path> -d /tmp/pw-triage
 ```
-Glob: **/test-results/**
+
+Then determine which format you're working with:
+
+```bash
+ls /tmp/pw-triage/                             # look for test-results/ or playwright-report/
 ```
 
-Each failed test creates a directory like `test-results/<test-title-slug>/` containing the artifacts
-listed above.
+For **HTML reports**, identify traces and screenshots:
+
+```bash
+# find trace zips
+for f in /tmp/pw-triage/playwright-report/data/*.zip; do
+  if unzip -l "$f" 2>/dev/null | grep -q "trace.trace"; then echo "TRACE: $(basename $f) ($(stat -f%z "$f" 2>/dev/null || stat -c%s "$f") bytes)"; fi
+done
+
+# list screenshots, accessibility snapshots, and logs
+ls /tmp/pw-triage/playwright-report/data/*.png 2>/dev/null
+ls /tmp/pw-triage/playwright-report/data/*.markdown 2>/dev/null
+ls /tmp/pw-triage/playwright-report/data/*.txt 2>/dev/null
+```
 
 ### 2. Read the failure screenshot
 
 ```
-Read: <path>/test-failed-1.png
+Read: <path>/test-failed-1.png           # raw test-results
+Read: <report>/data/<sha>.png            # HTML report
 ```
 
-The screenshot shows the exact visual state of VS Code when the test failed. Look for:
+Look for:
 
 - **Modal dialogs** blocking the main window (a common failure mode)
 - **Missing UI elements** that should have been visible
 - **Error notifications** or unexpected overlays
 - **Command palette** state (open, closed, blocked)
 
-### 3. Read `error-context.md`
+### 3. Read accessibility tree snapshot
 
 ```
-Read: <path>/error-context.md
+Read: <path>/error-context.md            # raw test-results
+Read: <report>/data/<sha>.markdown       # HTML report
 ```
 
 This is a YAML accessibility tree (DOM snapshot) captured at failure time. Key things to look for:
@@ -77,8 +137,12 @@ This is a YAML accessibility tree (DOM snapshot) captured at failure time. Key t
 
 ### 4. Parse the trace
 
+The `parse-trace.cjs` script works with both raw trace zips and trace zips extracted from the HTML
+report `data/` directory:
+
 ```bash
 node .claude/skills/playwright-triage/parse-trace.cjs <path>/trace.zip
+node .claude/skills/playwright-triage/parse-trace.cjs <report>/data/<sha>.zip
 ```
 
 Or for an already-extracted trace:
@@ -102,17 +166,31 @@ Use this to identify:
 - **Whether the test got stuck in a loop** (repeated identical actions)
 - **Timing gaps** between actions (potential load/render delays)
 
+**Note**: `parse-trace.cjs` only works with zips that contain `trace.trace`. If you get "trace.trace
+not found", the zip contains VS Code logs, not a Playwright trace.
+
 ### 5. Read logs (if needed)
 
-If the above artifacts don't reveal the root cause, check the attached logs:
+If the above artifacts don't reveal the root cause, check the logs:
+
+**Raw test-results**:
 
 ```
 Glob: <path>/attachments/*
 ```
 
-- **`vscode-confluent.log`** - extension output (command execution, errors, sidecar communication)
-- **`vscode-confluent-sidecar.log`** - sidecar process logs (API calls, auth, resource loading)
-- **`vscode-window-logs.zip`** - VS Code internal logs (extension host, renderer, main process)
+**HTML report** (logs are `.txt` files and some `.zip` files in `data/`):
+
+```bash
+# preview log files to identify which is which
+for f in <report>/data/*.txt; do echo "=== $(basename $f) ==="; head -3 "$f"; echo; done
+```
+
+Log types:
+
+- **Extension log** - starts with `[info] [extension] Extension version...`
+- **Sidecar log** - starts with `[WARN] [io.quarkus.config]` or `[INFO] [io.confluent.idesidecar]`
+- **VS Code window logs** - in zip files containing dated directories (e.g. `20260321T052058/`)
 
 ### 6. Correlate findings
 
@@ -122,6 +200,32 @@ Combine evidence from all sources:
 2. **Accessibility tree** shows the DOM structure causing the issue
 3. **Trace** shows the action sequence leading to failure
 4. **Logs** show backend errors or timing issues
+
+## CI Artifact Pipeline Reference
+
+How test artifacts are created and uploaded in CI:
+
+1. **Tests run** via `npx gulp e2e` (see `Gulpfile.js:899-929`)
+2. **Reporters** configured in `tests/e2e/playwright.config.ts:32-47`:
+   - CI uses `blob` reporter (one zip per test in `blob-report/`)
+   - Local uses `html` reporter (generates `playwright-report/` directly)
+3. **Blob reports merged** into HTML report by `mk-files/semaphore.mk:87-93`:
+   - `npx playwright merge-reports --reporter html blob-report`
+   - Result tarred with `tar -zcvf` (this is why the `.zip` is actually a gzipped tarball)
+   - Pushed to Semaphore as
+     `playwright-reports/playwright-report-<platform>-<arch>-vscode-<version>--<suite>.zip`
+4. **Raw test-results** also pushed from `semaphore.yml:105-110` (directory push, also tar+gzip)
+
+Key files for understanding the CI flow:
+
+| File                             | What it does                                      |
+| -------------------------------- | ------------------------------------------------- |
+| `tests/e2e/playwright.config.ts` | Reporter config (blob in CI, html locally)        |
+| `mk-files/semaphore.mk`          | Blob merge, tar+gzip, artifact push               |
+| `.semaphore/playwright-e2e.yml`  | E2E pipeline jobs (Linux/ARM/Windows)             |
+| `.semaphore/semaphore.yml`       | Main pipeline (Linux x64 tests + artifact upload) |
+| `Gulpfile.js`                    | Gulp `e2e` task definition                        |
+| `Makefile`                       | `test-playwright-e2e` target                      |
 
 ## Interactive Debugging
 
