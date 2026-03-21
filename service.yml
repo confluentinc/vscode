@@ -1,6 +1,6 @@
 name: vscode
 lang: node
-lang_version: "18.12.0"
+lang_version: "22"
 git:
   enable: true
   hooks:
