@@ -1,6 +1,7 @@
 import { test as setup } from "@playwright/test";
 import { downloadAndUnzipVSCode } from "@vscode/test-electron";
-import { writeFileSync } from "fs";
+import { execSync } from "child_process";
+import { existsSync, mkdtempSync, writeFileSync } from "fs";
 import { globSync } from "glob";
 import { tmpdir } from "os";
 import path from "path";
@@ -44,13 +45,23 @@ setup("setup VS Code for E2E tests", async () => {
     });
   }
 
-  const extensionPath = path.normalize(path.resolve(__dirname, "..", ".."));
-  const outPath: string = path.normalize(path.resolve(extensionPath, "out"));
-  const vsixFiles: string[] = globSync("*.vsix", { cwd: outPath });
-  const vsixPath = vsixFiles.length > 0 ? path.join(outPath, vsixFiles[0]) : "";
-  if (!vsixPath) {
-    // shouldn't happen during normal `gulp e2e`
-    throw new Error("No VSIX file found in the out/ directory. Run 'npx gulp bundle' first.");
+  // resolve the extension path: either from a pre-built .vsix (E2E_VSIX_PATH) or the local
+  // build output directory (out/)
+  let outPath: string;
+
+  if (process.env.E2E_VSIX_PATH) {
+    // testing a pre-built .vsix artifact (e.g. from a GitHub release)
+    outPath = extractVsix(process.env.E2E_VSIX_PATH);
+  } else {
+    // default: use the locally-built extension in out/
+    const extensionPath = path.normalize(path.resolve(__dirname, "..", ".."));
+    outPath = path.normalize(path.resolve(extensionPath, "out"));
+    const vsixFiles: string[] = globSync("*.vsix", { cwd: outPath });
+    const vsixPath = vsixFiles.length > 0 ? path.join(outPath, vsixFiles[0]) : "";
+    if (!vsixPath) {
+      // shouldn't happen during normal `gulp e2e`
+      throw new Error("No VSIX file found in the out/ directory. Run 'npx gulp bundle' first.");
+    }
   }
 
   // save test setup cache to file for other workers to read
@@ -63,11 +74,33 @@ setup("setup VS Code for E2E tests", async () => {
   if (DEBUG_LOGGING_ENABLED) {
     console.debug("Test setup complete", {
       vscodeVersion,
-      extensionPath,
-      vsixPath,
       vscodeExecutablePath,
       outPath,
       testSetupCacheFile: TEST_SETUP_CACHE_FILE,
     });
   }
 });
+
+/**
+ * Extract a `.vsix` file to a temp directory and return the path to the `extension/` subdirectory
+ * inside it. A `.vsix` is a ZIP archive with the extension contents under `extension/`.
+ */
+function extractVsix(vsixGlob: string): string {
+  const matches = globSync(vsixGlob);
+  if (matches.length === 0) {
+    throw new Error(`No .vsix file found matching "${vsixGlob}".`);
+  }
+  const vsixPath = matches[0];
+  const extractDir = mkdtempSync(path.join(tmpdir(), "vsix-extract-"));
+
+  console.log(`Extracting .vsix from "${vsixPath}" to "${extractDir}"...`);
+  execSync(`unzip -q "${vsixPath}" -d "${extractDir}"`, { stdio: "inherit" });
+
+  const extensionDir = path.join(extractDir, "extension");
+  if (!existsSync(extensionDir)) {
+    throw new Error(`Expected "extension/" subdirectory not found after extracting "${vsixPath}".`);
+  }
+
+  console.log(`Using extracted extension at "${extensionDir}"`);
+  return extensionDir;
+}
