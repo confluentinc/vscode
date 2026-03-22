@@ -334,6 +334,6 @@ export function parseCoordinatorId(related: string | undefined): number | null {
   if (!related) return null;
   const lastSegment = related.split("/").pop();
   if (!lastSegment) return null;
-  const parsed = parseInt(lastSegment, 10);
+  const parsed = Number.parseInt(lastSegment, 10);
   return Number.isNaN(parsed) ? null : parsed;
 }
