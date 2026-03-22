@@ -14,6 +14,7 @@ import type { Schema as ResponseSchema, SubjectsV1Api } from "../../clients/sche
 import { isResponseError } from "../../errors";
 import type { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";
 import { Logger } from "../../logging";
+import { ConsumerGroupState } from "../../models/consumerGroup";
 import type { CCloudKafkaCluster, KafkaCluster } from "../../models/kafkaCluster";
 import { isCCloud } from "../../models/resource";
 import { Schema, SchemaType, Subject, subjectMatchesTopicName } from "../../models/schema";
@@ -314,4 +315,25 @@ export function generateFlinkStatementKey(params: IFlinkStatementSubmitParameter
   hasher.update(params.properties.currentCatalog || ""); // catalog may be empty
   hasher.update(params.statement);
   return hasher.digest("hex");
+}
+
+/** Validate an API state string against the {@link ConsumerGroupState} enum, falling back to `Unknown`. */
+export function toConsumerGroupState(value: string | undefined): ConsumerGroupState {
+  if (!value) {
+    return ConsumerGroupState.Unknown;
+  }
+  // CCLOUD returns uppercase, LOCAL/DIRECT return title case
+  const normalized = value.toUpperCase();
+  const match = Object.values(ConsumerGroupState).find((s) => s === normalized);
+  return match ?? ConsumerGroupState.Unknown;
+}
+
+/** Parse a broker ID from a Kafka REST API relationship URL, returning null if non-numeric.
+ *  e.g. "http://localhost:26636/kafka/v3/clusters/lkc-abc123/brokers/1" → 1 */
+export function parseCoordinatorId(related: string | undefined): number | null {
+  if (!related) return null;
+  const lastSegment = related.split("/").pop();
+  if (!lastSegment) return null;
+  const parsed = parseInt(lastSegment, 10);
+  return Number.isNaN(parsed) ? null : parsed;
 }
