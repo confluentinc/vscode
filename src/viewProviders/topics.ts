@@ -18,7 +18,6 @@ import {
 } from "../emitters";
 import { IconNames } from "../icons";
 import { ResourceLoader } from "../loaders";
-import { TopicFetchError } from "../loaders/utils/loaderUtils";
 import {
   Consumer,
   ConsumerGroup,
@@ -260,18 +259,16 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
       });
       this.topicsContainer.setLoaded(topics);
     } catch (err) {
-      this.logger.error("Error fetching topics for cluster", cluster, err);
       const message = err instanceof Error ? err.message : String(err);
+      this.logger.error("error fetching topics for cluster", { clusterId: cluster.id, err });
       this.topicsContainer.setError(
         new CustomMarkdownString()
           .addWarning(`Failed to load topics for **${cluster.name}**:`)
           .addCodeBlock(message),
       );
-      if (err instanceof TopicFetchError) {
-        void showErrorNotificationWithButtons(
-          `Failed to list topics for cluster "${cluster.name}": ${err.message}`,
-        );
-      }
+      void showErrorNotificationWithButtons(
+        `Failed to load topics for cluster "${cluster.name}": ${message}`,
+      );
     }
 
     this._onDidChangeTreeData.fire(this.topicsContainer);
@@ -299,8 +296,11 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
       });
       this.consumerGroupsContainer.setLoaded(consumerGroups);
     } catch (err) {
-      this.logger.error("Error fetching consumer groups for cluster", cluster, err);
       const message = err instanceof Error ? err.message : String(err);
+      this.logger.error("error fetching consumer groups for cluster", {
+        clusterId: cluster.id,
+        err,
+      });
       this.consumerGroupsContainer.setError(
         new CustomMarkdownString()
           .addWarning(`Failed to load consumer groups for **${cluster.name}**:`)
