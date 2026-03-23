@@ -7,6 +7,7 @@ import { getExtensionContext } from "../context/extension";
 import type { FormConnectionType } from "../directConnections/types";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
+import { Consumer, ConsumerGroup } from "../models/consumerGroup";
 import type { Environment, EnvironmentType } from "../models/environment";
 import { getEnvironmentClass } from "../models/environment";
 import { FlinkAIAgent } from "../models/flinkAiAgent";
@@ -71,6 +72,7 @@ export enum GeneratedKeyResourceType {
   SCHEMA_REGISTRIES = "schemaRegistries",
   TOPICS = "topics",
   SUBJECTS = "subjects",
+  CONSUMER_GROUPS = "consumerGroups",
   FLINK_ARTIFACTS = "flinkArtifacts",
 }
 
@@ -515,6 +517,99 @@ export class ResourceManager {
         });
       }
       return new KafkaTopic({ ...topicObj, children });
+    });
+  }
+
+  /**
+   * Store this (possibly empty) list of consumer groups for a cluster in workspace state.
+   * If it is known that a given cluster has no consumer groups, then should call with empty array.
+   *
+   * Raises an error if the cluster ID of any consumer group does not match the given cluster's ID.
+   */
+  async setConsumerGroupsForCluster(
+    cluster: KafkaClusterType,
+    consumerGroups: ConsumerGroup[],
+  ): Promise<void> {
+    // Ensure that all consumer groups have the correct cluster ID.
+    if (consumerGroups.some((group) => group.clusterId !== cluster.id)) {
+      logger.warn("Cluster ID mismatch in consumer groups", cluster, consumerGroups);
+      throw new Error("Cluster ID mismatch in consumer groups");
+    }
+
+    // Will be a per-connection-id key for storing consumer groups by cluster ID.
+    const key = this.generateWorkspaceStorageKey(
+      cluster.connectionId,
+      GeneratedKeyResourceType.CONSUMER_GROUPS,
+    );
+
+    await this.runWithMutex(key, async () => {
+      // Get the JSON-stringified map from storage
+      const consumerGroupsByClusterString: string | undefined = this.workspaceState.get(key);
+      const consumerGroupsByCluster: Map<string, object[]> = consumerGroupsByClusterString
+        ? stringToMap(consumerGroupsByClusterString)
+        : new Map<string, object[]>();
+
+      // Set the new consumer groups for the cluster
+      consumerGroupsByCluster.set(cluster.id, consumerGroups);
+
+      // Now save the updated cluster consumer groups into the proper key'd storage.
+      await this.workspaceState.update(key, mapToString(consumerGroupsByCluster));
+    });
+  }
+
+  /**
+   * Get consumer groups given a cluster, be it local, ccloud, or direct.
+   *
+   * @returns ConsumerGroup[] (possibly empty) if known, else undefined
+   * indicating nothing at all known about this cluster (and should be deep probed).
+   */
+  async getConsumerGroupsForCluster(
+    cluster: KafkaClusterType,
+  ): Promise<ConsumerGroup[] | undefined> {
+    const key = this.generateWorkspaceStorageKey(
+      cluster.connectionId,
+      GeneratedKeyResourceType.CONSUMER_GROUPS,
+    );
+
+    // Get the JSON-stringified map from storage
+    const consumerGroupsByClusterString: string | undefined = this.workspaceState.get(key);
+    const consumerGroupsByCluster: Map<string, object[]> = consumerGroupsByClusterString
+      ? stringToMap(consumerGroupsByClusterString)
+      : new Map<string, object[]>();
+
+    // Will either be undefined or an array of plain json objects since
+    // just deserialized from storage.
+    const vanillaJSONConsumerGroups: object[] | undefined = consumerGroupsByCluster.get(cluster.id);
+    if (vanillaJSONConsumerGroups === undefined) {
+      return undefined;
+    }
+
+    // Promote each member to be an instance of ConsumerGroup, return.
+    // (Empty list will be returned as is, indicating that we know there are
+    //  no consumer groups in this cluster.)
+    return vanillaJSONConsumerGroups.map((group) => {
+      const cgObj = group as ConsumerGroup;
+      // also rehydrate Consumer members before recreating the ConsumerGroup instance
+      let members: Consumer[] = [];
+      if (cgObj.members && cgObj.members.length > 0) {
+        members = cgObj.members.map((member: Consumer | object) => {
+          if (member instanceof Consumer) {
+            return member;
+          }
+          const memberObj = member as Consumer;
+          return new Consumer({
+            connectionId: memberObj.connectionId,
+            connectionType: memberObj.connectionType,
+            environmentId: memberObj.environmentId,
+            clusterId: memberObj.clusterId,
+            consumerGroupId: memberObj.consumerGroupId,
+            consumerId: memberObj.consumerId,
+            clientId: memberObj.clientId,
+            instanceId: memberObj.instanceId,
+          });
+        });
+      }
+      return new ConsumerGroup({ ...cgObj, members });
     });
   }
 
