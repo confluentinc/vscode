@@ -65,8 +65,7 @@ blocks:
       epilogue: &e2e-epilogue
         always:
           commands:
-            - artifact push workflow blob-report/*.zip --destination blob-report/$(basename
-              blob-report/*.zip)
+            - artifact push workflow blob-report/*.zip --destination blob-report/$(basename blob-report/*.zip)
             - make remove-test-env
             - make cache-docker-images
             - make store-test-results-to-semaphore
