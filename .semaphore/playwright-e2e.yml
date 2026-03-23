@@ -217,14 +217,16 @@ after_pipeline:
     jobs:
       - name: Publish Test Results to Semaphore
         commands:
-          - checkout
-          - make ci-bin-sem-cache-restore
-          - npm ci --prefer-offline --include=dev
           # Publish to dedicated Kafka topic for additional test result visualization/analysis
           - export E2E_KAFKA_REPORTER_TOPIC=vscode-test-results
-          - if [[ "$SEMAPHORE_WORKFLOW_TRIGGERED_BY_SCHEDULE" == "true" ]]; then
-            artifact pull workflow blob-report;
-            npx playwright merge-reports --reporter="./tests/e2e/reporters/kafka-results-reporter.ts" blob-report;
+          - |
+            if [[ "$SEMAPHORE_WORKFLOW_TRIGGERED_BY_SCHEDULE" == "true" ]]; then
+              checkout
+              make ci-bin-sem-cache-restore
+              npm ci --prefer-offline --include=dev
+              . vault-setup
+              artifact pull workflow blob-report
+              npx playwright merge-reports --reporter="./tests/e2e/reporters/kafka-results-reporter.ts" blob-report
             fi
           # Publish all agents' test results
           - test-results gen-pipeline-report || echo "Could not publish pipeline test result report due to probably no test results to publish"
