@@ -46,6 +46,8 @@ ifneq ($(SEMAPHORE_GIT_REF_TYPE),pull-request)
 # Cache packages installed by `npx playwright install`
 	[[ $(os_name) == "Darwin" ]] && $(MAKE) sem-cache-store-entry SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_playwright_cache SEM_CACHE_PATH=$(HOME)/Library/Caches/ms-playwright || true
 	[[ $(os_name) == "Linux" ]] && $(MAKE) sem-cache-store-entry SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_playwright_cache SEM_CACHE_PATH=$(HOME)/.cache/ms-playwright || true
+# Also cache VS Code binaries downloaded by @vscode/test-electron if present
+	[[ -d $(CURDIR)/.vscode-test ]] && $(MAKE) sem-cache-store-entry SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_vscode_test_cache_$${VSCODE_VERSION:-stable} SEM_CACHE_PATH=$(CURDIR)/.vscode-test || true
 endif
 
 # cache restore allows fuzzy matching. When it finds multiple matches, it will select the most recent cache archive.
@@ -75,6 +77,7 @@ ci-bin-sem-cache-restore:
 	@echo "Restoring semaphore caches"
 	cache restore $(PLATFORM)_$(ARCH)_npm_cache
 	cache restore $(PLATFORM)_$(ARCH)_playwright_cache || true
+	cache restore $(PLATFORM)_$(ARCH)_vscode_test_cache_$${VSCODE_VERSION:-stable} || true
 
 # Merge per-job blob reports into one HTML report by test job:
 # - Each job's blob reporter will write a report zip to `blob-report/`, so we'll have multiple files
