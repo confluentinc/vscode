@@ -55,6 +55,16 @@ semaphore:
           required: false
           description: The test name or tag(s) (pipe-separated, e.g. `@ccloud|@direct`) to run. If not specified, will run all E2E tests.
           default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts"
+        - name: PLATFORM
+          required: true
+          options:
+            - "all"
+            - "linux"
+            - "windows"
+          default_value: "all"
+          description: |
+            Which platform(s) to run E2E tests on. 'linux' runs only the Linux block(s);
+            'windows' runs only the Windows block(s); 'all' runs everything.
     - name: scheduled-ccloud-auth-smoketests-prod
       branch: main
       pipeline_file: ".semaphore/ccloud-auth-smoketests.yml"
@@ -110,6 +120,16 @@ semaphore:
           required: true
           description: The test tag(s) (pipe-separated, e.g. `@smoke|@topic-message-viewer`) to run. By default, runs the smoke tests and critical user flow tests.
           default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts"
+        - name: PLATFORM
+          required: true
+          options:
+            - "all"
+            - "linux"
+            - "windows"
+          default_value: "all"
+          description: |
+            Which platform(s) to run E2E tests on. 'linux' runs only the Linux block(s);
+            'windows' runs only the Windows block(s); 'all' runs everything.
   managed_sections:
     - version
     - name
