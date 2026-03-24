@@ -31,6 +31,8 @@ global_job_config:
 blocks:
   - name: "Linux x64: Playwright E2E Tests"
     dependencies: []
+    skip: &e2e-skip-non-linux
+      when: "'${{parameters.PLATFORM}}' = 'windows'"
     task:
       agent:
         machine:
@@ -73,6 +75,7 @@ blocks:
 
   - name: "Linux ARM64: Playwright E2E Tests"
     dependencies: []
+    skip: *e2e-skip-non-linux
     task:
       agent:
         machine:
@@ -83,6 +86,8 @@ blocks:
 
   - name: "Windows x64: Playwright E2E Tests"
     dependencies: []
+    skip:
+      when: "'${{parameters.PLATFORM}}' = 'linux'"
     task:
       agent:
         machine:
