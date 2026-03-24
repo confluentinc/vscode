@@ -62,7 +62,7 @@ semaphore:
             - "linux"
             - "windows"
           default_value: "all"
-          description:
+          description: |
             Which platform(s) to run E2E tests on. 'linux' runs only the Linux block(s);
             'windows' runs only the Windows block(s); 'all' runs everything.
     - name: scheduled-ccloud-auth-smoketests-prod
@@ -127,7 +127,7 @@ semaphore:
             - "linux"
             - "windows"
           default_value: "all"
-          description:
+          description: |
             Which platform(s) to run E2E tests on. 'linux' runs only the Linux block(s);
             'windows' runs only the Windows block(s); 'all' runs everything.
   managed_sections:
