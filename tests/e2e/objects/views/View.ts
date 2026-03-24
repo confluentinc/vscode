@@ -47,6 +47,11 @@ export class View {
     return this.body.locator(".welcome-view-content");
   }
 
+  /** Get the tree view message element shown in the body (e.g. search result counts). */
+  get viewMessage(): Locator {
+    return this.body.locator(".message");
+  }
+
   /** Get all tree items in this view. */
   get treeItems(): Locator {
     return this.body.locator('[role="treeitem"]');
@@ -138,6 +143,9 @@ export class SearchableView extends View {
     const baseLocator = fromLocator ?? this.treeItems;
     const itemLocator = baseLocator.filter({ hasText: label });
     await expect(itemLocator).toBeVisible();
+    // wait for the search result message to render so it doesn't appear later
+    // and intercept pointer events on tree item inline actions (#3186)
+    await expect(this.viewMessage).toBeVisible();
     return itemLocator;
   }
 }
