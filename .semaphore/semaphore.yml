@@ -394,3 +394,6 @@ promotions:
         - name: VSCODE_VERSION
           default_value: "stable"
           description: "VS Code version to test against (stable, insiders, or a specific version)."
+        - name: PLATFORM
+          default_value: "all"
+          description: "Which platform(s) to run: all, linux, or windows."
