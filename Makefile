@@ -22,22 +22,22 @@ install-test-dependencies:
 
 .PHONY: setup-test-env
 setup-test-env:
-	@echo "Pulling automated-test-user credentials from Vault into .env file for testing"
+	@echo "Writing test credentials to .env file for testing"
 	@if [ -z "$(IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH)" ] || [ "$(IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH)" = "confluent.cloud" ]; then \
 			echo "Setting up prod env vars for testing"; \
-			echo "E2E_USERNAME=$(shell vault kv get -field=E2E_USERNAME v1/ci/kv/vscodeextension/testing)" > .env; \
-			echo "E2E_PASSWORD=$(shell vault kv get -field=E2E_PASSWORD v1/ci/kv/vscodeextension/testing)" >> .env; \
-			echo "E2E_SR_API_KEY=$(shell vault kv get -field=E2E_SR_API_KEY v1/ci/kv/vscodeextension/testing)" >> .env; \
-			echo "E2E_SR_API_SECRET=$(shell vault kv get -field=E2E_SR_API_SECRET v1/ci/kv/vscodeextension/testing)" >> .env; \
-			echo "E2E_SR_URL=$(shell vault kv get -field=E2E_SR_URL v1/ci/kv/vscodeextension/testing)" >> .env; \
-			echo "E2E_KAFKA_API_KEY=$(shell vault kv get -field=E2E_KAFKA_API_KEY v1/ci/kv/vscodeextension/testing)" >> .env; \
-			echo "E2E_KAFKA_API_SECRET=$(shell vault kv get -field=E2E_KAFKA_API_SECRET v1/ci/kv/vscodeextension/testing)" >> .env; \
-			echo "E2E_KAFKA_BOOTSTRAP_SERVERS=$(shell vault kv get -field=E2E_KAFKA_BOOTSTRAP_SERVERS v1/ci/kv/vscodeextension/testing)" >> .env; \
-			echo "E2E_KAFKA_CLUSTER_NAME=$(shell vault kv get -field=E2E_KAFKA_CLUSTER_NAME v1/ci/kv/vscodeextension/testing)" >> .env; \
+			echo "E2E_USERNAME=$$E2E_USERNAME" > .env; \
+			echo "E2E_PASSWORD=$$E2E_PASSWORD" >> .env; \
+			echo "E2E_SR_API_KEY=$$E2E_SR_API_KEY" >> .env; \
+			echo "E2E_SR_API_SECRET=$$E2E_SR_API_SECRET" >> .env; \
+			echo "E2E_SR_URL=$$E2E_SR_URL" >> .env; \
+			echo "E2E_KAFKA_API_KEY=$$E2E_KAFKA_API_KEY" >> .env; \
+			echo "E2E_KAFKA_API_SECRET=$$E2E_KAFKA_API_SECRET" >> .env; \
+			echo "E2E_KAFKA_BOOTSTRAP_SERVERS=$$E2E_KAFKA_BOOTSTRAP_SERVERS" >> .env; \
+			echo "E2E_KAFKA_CLUSTER_NAME=$$E2E_KAFKA_CLUSTER_NAME" >> .env; \
 	elif [ "$(IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH)" = "stag.cpdev.cloud" ]; then \
 			echo "Setting up stag env vars for testing"; \
-			echo "E2E_USERNAME_STAG=$(shell vault kv get -field=E2E_USERNAME_STAG v1/ci/kv/vscodeextension/testing)" > .env; \
-			echo "E2E_PASSWORD_STAG=$(shell vault kv get -field=E2E_PASSWORD_STAG v1/ci/kv/vscodeextension/testing)" >> .env; \
+			echo "E2E_USERNAME_STAG=$$E2E_USERNAME_STAG" > .env; \
+			echo "E2E_PASSWORD_STAG=$$E2E_PASSWORD_STAG" >> .env; \
 	fi; \
 	echo "IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH=$(IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH)" >> .env; \
 
