@@ -68,7 +68,9 @@ blocks:
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
               echo "Skipping Vault setup for Semaphore CI"
             else
-              . vault-setup
+              . vault-get-secret vscodeextension/testing
+              . vault-get-secret vscodeextension/telemetry
+              . vault-get-secret vscodeextension/feature-flags
             fi
       jobs: &build-test-jobs
         - name: "Mocha: Unit Tests (VS Code)"
@@ -156,14 +158,14 @@ blocks:
             if ($Env:SEMAPHORE_ORGANIZATION_URL -like "*.semaphoreci.com") {
               Write-Output "Skipping Vault setup for Semaphore CI"
             } else {
-              $Env:VAULT_ADDR = "https://vault.cireops.gcp.internal.confluent.cloud"
-              $token = $(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
+              $Env:VAULT_ADDR = "https://non-prod.vault.internal.confluent.cloud"
+              $token = $(vault write -field=token "auth/semaphore/login" role="vscode" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
               vault login -no-print token=$token
             }
           - |
-            $E2E_USERNAME = $(vault kv get -field=E2E_USERNAME v1/ci/kv/vscodeextension/testing)
+            $E2E_USERNAME = $(vault kv get -field=E2E_USERNAME stag/kv/semaphore/vscodeextension/testing)
             Set-Content -Path .env -Value "E2E_USERNAME=$E2E_USERNAME"
-            $E2E_PASSWORD = $(vault kv get -field=E2E_PASSWORD v1/ci/kv/vscodeextension/testing)
+            $E2E_PASSWORD = $(vault kv get -field=E2E_PASSWORD stag/kv/semaphore/vscodeextension/testing)
             Add-Content -Path .env -Value "E2E_PASSWORD=$E2E_PASSWORD"
       jobs:
         - name: "Mocha: Unit Tests (VS Code)"
@@ -226,7 +228,9 @@ blocks:
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
               echo "Skipping Vault setup for Semaphore CI"
             else
-              . vault-setup
+              . vault-get-secret vscodeextension/testing
+              . vault-get-secret vscodeextension/telemetry
+              . vault-get-secret vscodeextension/feature-flags
             fi
       jobs:
         - name: "Run SonarQube scan with coverage data"
