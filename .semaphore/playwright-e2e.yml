@@ -67,7 +67,7 @@ blocks:
       epilogue: &e2e-epilogue
         always:
           commands:
-            - artifact push workflow blob-report/*.zip --destination blob-report/$(basename blob-report/*.zip)
+            - artifact push workflow blob-report/*.zip --destination blob-report/$(basename blob-report/*.zip) --force
             - make remove-test-env
             - make cache-docker-images
             - make store-test-results-to-semaphore
@@ -200,7 +200,7 @@ blocks:
             - |
               Write-Output "Merging blob reports..."
               if (Test-Path "blob-report") {
-                  artifact push workflow blob-report/*.zip --destination blob-report/$(basename blob-report/*.zip)
+                  artifact push workflow blob-report/*.zip --destination blob-report/$(basename blob-report/*.zip) --force
                   npx playwright merge-reports --reporter html ./blob-report
                   $VSCODE_VERSION = $Env:VSCODE_VERSION
                   if ([string]::IsNullOrEmpty($Env:TEST_SUITE_TAG) -or $Env:TEST_SUITE_TAG -eq "TEST_SUITE_TAG") {
