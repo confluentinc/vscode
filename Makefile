@@ -22,7 +22,6 @@ install-test-dependencies:
 
 .PHONY: setup-test-env
 setup-test-env:
-	@echo "NODE_ENV=$${NODE_ENV:-<unset>}"
 	@echo "Pulling automated-test-user credentials from Vault into .env file for testing"
 	@if [ -z "$(IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH)" ] || [ "$(IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH)" = "confluent.cloud" ]; then \
 			echo "Setting up prod env vars for testing"; \
