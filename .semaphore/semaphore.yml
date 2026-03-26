@@ -70,8 +70,6 @@ blocks:
             else
               . vault-setup --version v3 --role vscode
               . vault-get-secret vscodeextension/testing
-              . vault-get-secret vscodeextension/telemetry
-              . vault-get-secret vscodeextension/feature-flags
             fi
       jobs: &build-test-jobs
         - name: "Mocha: Unit Tests (VS Code)"
@@ -231,8 +229,6 @@ blocks:
             else
               . vault-setup --version v3 --role vscode
               . vault-get-secret vscodeextension/testing
-              . vault-get-secret vscodeextension/telemetry
-              . vault-get-secret vscodeextension/feature-flags
             fi
       jobs:
         - name: "Run SonarQube scan with coverage data"
