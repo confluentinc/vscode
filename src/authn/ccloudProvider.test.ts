@@ -749,11 +749,15 @@ describe("CCloud auth flow", () => {
 });
 
 function getTestUserName(): string | undefined {
-  return CCLOUD_BASE_PATH.includes("stag") ? process.env.E2E_USERNAME_STAG : process.env.E2E_USERNAME;
+  return CCLOUD_BASE_PATH.includes("stag")
+    ? process.env.E2E_USERNAME_STAG
+    : process.env.E2E_USERNAME;
 }
 
 function getTestPassword(): string | undefined {
-  return CCLOUD_BASE_PATH.includes("stag") ? process.env.E2E_PASSWORD_STAG : process.env.E2E_PASSWORD;
+  return CCLOUD_BASE_PATH.includes("stag")
+    ? process.env.E2E_PASSWORD_STAG
+    : process.env.E2E_PASSWORD;
 }
 
 async function testAuthFlow(signInUri: string, testUsername: string, testPassword: string) {
