@@ -19,7 +19,7 @@ global_job_config:
   prologue:
     commands:
       - checkout
-      - . vault-setup
+      - . vault-setup --version v3 --role vscode      
   env_vars:
     - name: NODE_ENV
       value: "production"
