@@ -29,7 +29,7 @@ blocks:
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
               echo "Skipping Vault setup for Semaphore CI"
             else
-              . vault-setup
+              . vault-setup --version v3 --role vscode
             fi
           - make download-latest-release-vsix
       jobs:
