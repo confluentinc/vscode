@@ -4,7 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
 - Direct connections form now supports OAuth authentication for WarpStream connections.
+- 'Copy Name' context action enabled for Flink tables and views.
+
+### Changed
+
 - Columns of compound Flink types (`ROW`s, `MAP`s, `ARRAY`s or `MULTISET`s thereof) are now
   expandable in the Flink Database view list of Tables and Views.
 
