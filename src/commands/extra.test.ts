@@ -29,7 +29,7 @@ describe("commands/extra.ts", () => {
   });
 
   describe("copyResourceName", () => {
-    const testCases: Array<[string, any]> = [
+    const testCases: Array<[string, { name: string }]> = [
       ["FlinkRelation (BASE TABLE)", TEST_FLINK_RELATION],
       ["FlinkRelationColumn", TEST_VARCHAR_COLUMN],
     ];
