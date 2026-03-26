@@ -7,7 +7,7 @@ All notable changes to this extension will be documented in this file.
 ### Added
 
 - Direct connections form now supports OAuth authentication for WarpStream connections.
-- 'Copy Name' context action enabled for Flink tables and views.
+- 'Copy Name' context action enabled for Flink tables, views, and their immediate column members.
 
 ### Changed
 
