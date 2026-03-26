@@ -338,10 +338,17 @@ function getSentryReleaseVersion() {
  * save them as env variables for access when Initiating Sentry or using the Sentry sourcemap rollup plugin
  */
 function setupSentry() {
+  // If env vars already set (e.g., by vault-get-secret in CI), use them directly
+  if (process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_DSN) {
+    const sentryRelease = getSentryReleaseVersion();
+    console.log(`Setting SENTRY_RELEASE to "${sentryRelease}"`);
+    process.env.SENTRY_RELEASE = sentryRelease;
+    return;
+  }
   console.log("Fetching Sentry token from Vault for sourcemaps...");
   const sentryToken = spawnSync(
     "vault",
-    ["kv", "get", "-field", "SENTRY_AUTH_TOKEN", "v1/ci/kv/vscodeextension/telemetry"],
+    ["kv", "get", "-field", "SENTRY_AUTH_TOKEN", "stag/kv/semaphore/vscodeextension/telemetry"],
     { stdio: "pipe", shell: IS_WINDOWS },
   );
   if (sentryToken.error != null) {
@@ -359,7 +366,7 @@ function setupSentry() {
   }
   const sentryDsn = spawnSync(
     "vault",
-    ["kv", "get", "-field", "SENTRY_DSN", "v1/ci/kv/vscodeextension/telemetry"],
+    ["kv", "get", "-field", "SENTRY_DSN", "stag/kv/semaphore/vscodeextension/telemetry"],
     { stdio: "pipe", shell: IS_WINDOWS },
   );
   if (sentryDsn.error != null) {
@@ -375,10 +382,14 @@ function setupSentry() {
 
 /** Get the Segment write key from Vault and save it as an env variable for reference in Segment setup */
 function setupSegment() {
+  // If env var already set (e.g., by vault-get-secret in CI), use it directly
+  if (process.env.SEGMENT_WRITE_KEY) {
+    return;
+  }
   console.log("Fetching Segment key from Vault...");
   const segmentKey = spawnSync(
     "vault",
-    ["kv", "get", "-field", "SEGMENT_WRITE_KEY", "v1/ci/kv/vscodeextension/telemetry"],
+    ["kv", "get", "-field", "SEGMENT_WRITE_KEY", "stag/kv/semaphore/vscodeextension/telemetry"],
     { stdio: "pipe", shell: IS_WINDOWS },
   );
   if (segmentKey.error != null) {
@@ -395,10 +406,15 @@ function setupSegment() {
 
 /** Get the LaunchDarkly client ID from Vault to save as an env variable for reference in LD client setup */
 function setupLaunchDarkly() {
+  // If env var already set (e.g., by vault-get-secret in CI), use it directly
+  if (process.env.LD_CLIENT_ID) {
+    process.env.LAUNCHDARKLY_CLIENT_ID = process.env.LD_CLIENT_ID;
+    return;
+  }
   console.log("Fetching LaunchDarkly client ID from Vault...");
   const ldClientId = spawnSync(
     "vault",
-    ["kv", "get", "-field", "LD_CLIENT_ID", "v1/ci/kv/vscodeextension/featureFlags"],
+    ["kv", "get", "-field", "LD_CLIENT_ID", "stag/kv/semaphore/vscodeextension/feature-flags"],
     { stdio: "pipe", shell: IS_WINDOWS },
   );
   if (ldClientId.error != null) {
