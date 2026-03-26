@@ -34,7 +34,7 @@ async function copyResourceId(item: any) {
 }
 
 /** Copy the object's name to the clipboard. */
-async function copyResourceName(item: any) {
+export async function copyResourceName(item: any) {
   logger.debug("Copying resource name", item);
   if (!item?.name) {
     return;
