@@ -68,6 +68,7 @@ blocks:
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
               echo "Skipping Vault setup for Semaphore CI"
             else
+              . vault-setup --version v3 --role vscode
               . vault-get-secret vscodeextension/testing
               . vault-get-secret vscodeextension/telemetry
               . vault-get-secret vscodeextension/feature-flags
@@ -228,6 +229,7 @@ blocks:
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
               echo "Skipping Vault setup for Semaphore CI"
             else
+              . vault-setup --version v3 --role vscode
               . vault-get-secret vscodeextension/testing
               . vault-get-secret vscodeextension/telemetry
               . vault-get-secret vscodeextension/feature-flags

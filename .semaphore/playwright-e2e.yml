@@ -44,6 +44,7 @@ blocks:
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
               echo "Skipping Vault setup for Semaphore CI"
             else
+              . vault-setup --version v3 --role vscode
               . vault-get-secret vscodeextension/testing
               . vault-get-secret vscodeextension/telemetry
               . vault-get-secret vscodeextension/feature-flags
@@ -231,7 +232,7 @@ after_pipeline:
               checkout
               make ci-bin-sem-cache-restore
               npm ci --prefer-offline --include=dev
-              . vault-setup
+              . vault-setup --version v3 --role vscode
               artifact pull workflow blob-report
               npx playwright merge-reports --reporter="./tests/e2e/reporters/kafka-results-reporter.ts" blob-report
             fi

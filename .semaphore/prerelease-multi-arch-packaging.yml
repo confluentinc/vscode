@@ -18,7 +18,7 @@ global_job_config:
             COMMIT_SHA=$(git rev-parse HEAD)
           fi
           git checkout "$COMMIT_SHA"
-      - . vault-setup
+      - . vault-setup --version v3 --role vscode
 
 blocks:
   - name: "Package VSIX Files"
