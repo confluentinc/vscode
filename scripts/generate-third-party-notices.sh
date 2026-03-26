@@ -23,7 +23,7 @@ main() {
   # Full access token created using rsanjay@confluent.io's FOSSA account (on Jul 17, 2024).
   # Rotate every 80-180 days.
   # https://docs.fossa.com/docs/rotating-fossa-api-key#full-access-token
-  export FOSSA_API_KEY=$(vault kv get -field api_key v1/ci/kv/fossa_full_access)
+  . vault-get-secret --vault-role=default --secret-key=api_key --export-as=FOSSA_API_KEY dtx/fossa-full-access
   fossa analyze --exclude-path mk-files --only-target npm
 
   # This might timeout so retry a few times
