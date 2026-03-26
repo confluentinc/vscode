@@ -19,7 +19,7 @@ blocks:
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
               echo "Skipping Vault setup for Semaphore CI"
             else
-              . vault-setup
+              . vault-setup --version v3 --role vscode
             fi
       jobs:
         - name: "Mocha: CCloud Auth Smoketest (VS Code stable, ${{parameters.CCLOUD_BASE_PATH}})"

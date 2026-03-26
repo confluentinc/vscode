@@ -44,7 +44,10 @@ blocks:
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
               echo "Skipping Vault setup for Semaphore CI"
             else
-              . vault-setup
+              . vault-setup --version v3 --role vscode
+              . vault-get-secret vscodeextension/testing
+              . vault-get-secret vscodeextension/telemetry
+              . vault-get-secret vscodeextension/feature-flags
             fi
       jobs: &e2e-jobs
         - name: "Playwright: E2E Tests (VS Code ${{parameters.VSCODE_VERSION}})"
@@ -120,8 +123,8 @@ blocks:
             if ($Env:SEMAPHORE_ORGANIZATION_URL -like "*.semaphoreci.com") {
               Write-Output "Skipping Vault setup for Semaphore CI"
             } else {
-              $Env:VAULT_ADDR = "https://vault.cireops.gcp.internal.confluent.cloud"
-              $token = $(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
+              $Env:VAULT_ADDR = "https://non-prod.vault.internal.confluent.cloud"
+              $token = $(vault write -field=token "auth/stag/semaphore/login" role="vscode" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
               vault login -no-print token=$token
             }
           # Check if Docker is available for @local tests
@@ -140,23 +143,23 @@ blocks:
             }
           # Windows version of make setup-test-env
           - |
-            $E2E_USERNAME = $(vault kv get -field=E2E_USERNAME v1/ci/kv/vscodeextension/testing)
+            $E2E_USERNAME = $(vault kv get -field=E2E_USERNAME stag/kv/semaphore/vscodeextension/testing)
             Set-Content -Path .env -Value "E2E_USERNAME=$E2E_USERNAME"
-            $E2E_PASSWORD = $(vault kv get -field=E2E_PASSWORD v1/ci/kv/vscodeextension/testing)
+            $E2E_PASSWORD = $(vault kv get -field=E2E_PASSWORD stag/kv/semaphore/vscodeextension/testing)
             Add-Content -Path .env -Value "E2E_PASSWORD=$E2E_PASSWORD"
-            $E2E_KAFKA_API_KEY = $(vault kv get -field=E2E_KAFKA_API_KEY v1/ci/kv/vscodeextension/testing)
+            $E2E_KAFKA_API_KEY = $(vault kv get -field=E2E_KAFKA_API_KEY stag/kv/semaphore/vscodeextension/testing)
             Add-Content -Path .env -Value "E2E_KAFKA_API_KEY=$E2E_KAFKA_API_KEY"
-            $E2E_KAFKA_API_SECRET = $(vault kv get -field=E2E_KAFKA_API_SECRET v1/ci/kv/vscodeextension/testing)
+            $E2E_KAFKA_API_SECRET = $(vault kv get -field=E2E_KAFKA_API_SECRET stag/kv/semaphore/vscodeextension/testing)
             Add-Content -Path .env -Value "E2E_KAFKA_API_SECRET=$E2E_KAFKA_API_SECRET"
-            $E2E_SR_API_KEY = $(vault kv get -field=E2E_SR_API_KEY v1/ci/kv/vscodeextension/testing)
+            $E2E_SR_API_KEY = $(vault kv get -field=E2E_SR_API_KEY stag/kv/semaphore/vscodeextension/testing)
             Add-Content -Path .env -Value "E2E_SR_API_KEY=$E2E_SR_API_KEY"
-            $E2E_SR_API_SECRET = $(vault kv get -field=E2E_SR_API_SECRET v1/ci/kv/vscodeextension/testing)
+            $E2E_SR_API_SECRET = $(vault kv get -field=E2E_SR_API_SECRET stag/kv/semaphore/vscodeextension/testing)
             Add-Content -Path .env -Value "E2E_SR_API_SECRET=$E2E_SR_API_SECRET"
-            $E2E_SR_URL = $(vault kv get -field=E2E_SR_URL v1/ci/kv/vscodeextension/testing)
+            $E2E_SR_URL = $(vault kv get -field=E2E_SR_URL stag/kv/semaphore/vscodeextension/testing)
             Add-Content -Path .env -Value "E2E_SR_URL=$E2E_SR_URL"
-            $E2E_KAFKA_BOOTSTRAP_SERVERS = $(vault kv get -field=E2E_KAFKA_BOOTSTRAP_SERVERS v1/ci/kv/vscodeextension/testing)
+            $E2E_KAFKA_BOOTSTRAP_SERVERS = $(vault kv get -field=E2E_KAFKA_BOOTSTRAP_SERVERS stag/kv/semaphore/vscodeextension/testing)
             Add-Content -Path .env -Value "E2E_KAFKA_BOOTSTRAP_SERVERS=$E2E_KAFKA_BOOTSTRAP_SERVERS"
-            $E2E_KAFKA_CLUSTER_NAME = $(vault kv get -field=E2E_KAFKA_CLUSTER_NAME v1/ci/kv/vscodeextension/testing)
+            $E2E_KAFKA_CLUSTER_NAME = $(vault kv get -field=E2E_KAFKA_CLUSTER_NAME stag/kv/semaphore/vscodeextension/testing)
             Add-Content -Path .env -Value "E2E_KAFKA_CLUSTER_NAME=$E2E_KAFKA_CLUSTER_NAME"
       jobs:
         - name: "Playwright: E2E Tests (VS Code ${{parameters.VSCODE_VERSION}})"
@@ -229,7 +232,7 @@ after_pipeline:
               checkout
               make ci-bin-sem-cache-restore
               npm ci --prefer-offline --include=dev
-              . vault-setup
+              . vault-setup --version v3 --role vscode
               artifact pull workflow blob-report
               npx playwright merge-reports --reporter="./tests/e2e/reporters/kafka-results-reporter.ts" blob-report
             fi

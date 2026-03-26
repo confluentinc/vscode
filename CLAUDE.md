@@ -205,11 +205,13 @@ class MyClass extends DisposableCollection {
 The extension supports three connection types, each with different resource loading strategies:
 
 1. **CCLOUD**: Confluent Cloud via OAuth authentication
+
    - Uses `CCloudResourceLoader` with GraphQL queries to the sidecar
    - Sign-in/sign-out actions manage OAuth tokens
    - Access to Environments, Kafka clusters, Schema registries, Flink resources
 
 2. **LOCAL**: Local Docker-based Kafka and Schema Registry
+
    - Uses `LocalResourceLoader` with Docker engine API
    - Automatically detects local Kafka/SR containers
    - No authentication required
