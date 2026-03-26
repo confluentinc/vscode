@@ -124,7 +124,7 @@ blocks:
               Write-Output "Skipping Vault setup for Semaphore CI"
             } else {
               $Env:VAULT_ADDR = "https://non-prod.vault.internal.confluent.cloud"
-              $token = $(vault write -field=token "auth/semaphore/login" role="vscode" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
+              $token = $(vault write -field=token "auth/stag/semaphore/login" role="vscode" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
               vault login -no-print token=$token
             }
           # Check if Docker is available for @local tests
