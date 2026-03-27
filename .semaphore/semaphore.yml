@@ -189,26 +189,26 @@ blocks:
             # Windows version of store-test-results-to-semaphore
             - |
               Write-Output "Publishing test results to Semaphore..."
-              $TestResultFile = Join-Path -Path $PWD -ChildPath 'TEST-result.xml'
-              if (Test-Path $TestResultFile) {
-                  Write-Output "Publishing Mocha test results from $TestResultFile"
-                  test-results publish "$TestResultFile" --force
+              $TestResultFileName = 'TEST-result.xml'
+              if (Test-Path $TestResultFileName) {
+                  Write-Output "Publishing Mocha test results from $(Resolve-Path $TestResultFileName)"
+                  test-results publish $TestResultFileName --force
               } else {
-                  Write-Output "Mocha test results not found at $TestResultFile"
+                  Write-Output "Mocha test results not found at $(Join-Path -Path $PWD -ChildPath $TestResultFileName)"
               }
-              $TestResultE2EFile = Join-Path -Path $PWD -ChildPath 'TEST-result-e2e.xml'
-              if (Test-Path $TestResultE2EFile) {
-                  Write-Output "Publishing E2E test results from $TestResultE2EFile"
-                  test-results publish "$TestResultE2EFile" --name 'VS Code (stable) Extension Tests: E2E (win32 x64)' --force
+              $TestResultE2EFileName = 'TEST-result-e2e.xml'
+              if (Test-Path $TestResultE2EFileName) {
+                  Write-Output "Publishing E2E test results from $(Resolve-Path $TestResultE2EFileName)"
+                  test-results publish $TestResultE2EFileName --name 'VS Code (stable) Extension Tests: E2E (win32 x64)' --force
               } else {
-                  Write-Output "E2E test results not found at $TestResultE2EFile"
+                  Write-Output "E2E test results not found at $(Join-Path -Path $PWD -ChildPath $TestResultE2EFileName)"
               }
-              $TestResultWebviewFile = Join-Path -Path $PWD -ChildPath 'TEST-result-webview.xml'
-              if (Test-Path $TestResultWebviewFile) {
-                  Write-Output "Publishing Webview test results from $TestResultWebviewFile"
-                  test-results publish "$TestResultWebviewFile" --name 'Webview Tests' --force
+              $TestResultWebviewFileName = 'TEST-result-webview.xml'
+              if (Test-Path $TestResultWebviewFileName) {
+                  Write-Output "Publishing Webview test results from $(Resolve-Path $TestResultWebviewFileName)"
+                  test-results publish $TestResultWebviewFileName --name 'Webview Tests' --force
               } else {
-                  Write-Output "Webview test results not found at $TestResultWebviewFile"
+                  Write-Output "Webview test results not found at $(Join-Path -Path $PWD -ChildPath $TestResultWebviewFileName)"
               }
 
   # --- End Build & Test (multi-platform/-arch) for VS Code (stable) ---
