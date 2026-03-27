@@ -45,12 +45,16 @@ export async function copyResourceName(item: any) {
 
 /** Copy the nested path to the clipboard (for FlinkTypeNode only). */
 export async function copyNestedPath(item: any) {
-  logger.debug("Copying nested path", item);
-  if (!item?.nestedPath) {
+  const value = item?.nestedPath;
+  logger.debug("Copying nested path", item, "nested path:", value);
+
+  if (!value) {
+    logger.debug("No nested path found on item, skipping copy");
     return;
   }
-  await env.clipboard.writeText(item.nestedPath);
-  window.showInformationMessage(`Copied "${item.nestedPath}" to clipboard.`);
+
+  await env.clipboard.writeText(value);
+  window.showInformationMessage(`Copied "${value}" to clipboard.`);
 }
 
 /**

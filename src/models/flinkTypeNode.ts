@@ -105,7 +105,8 @@ export class FlinkTypeNode implements IResourceBase {
   get nestedPath(): string | undefined {
     const parts = this.id.split(".");
 
-    // Don't provide nested path if there are synthetic segments
+    // Don't provide nested path if there are synthetic segments, which would happen for
+    // fields inside multiple levels of ARRAY/MULTISET nesting.
     const hasSyntheticSegment = parts.some((part) => part === "[array]" || part === "[multiset]");
     if (hasSyntheticSegment) {
       return undefined;
@@ -124,7 +125,7 @@ export class FlinkTypeNode implements IResourceBase {
     if (this.parsedType.fieldName) {
       return "ccloud-flink-type-field";
     }
-    // All other type nodes (synthetic, anonymous)
+    // embedded-within-array-or-multiset
     return "ccloud-flink-type-node";
   }
 
@@ -227,7 +228,15 @@ export class FlinkTypeNode implements IResourceBase {
     }
 
     // ARRAY/MULTISET types
-    return this.buildContainerChildNodes(members[0]);
+    const elementType = members[0];
+
+    // Skip intermediate node if element is ROW/MAP (optimization)
+    if (elementType.kind === FlinkTypeKind.ROW || elementType.kind === FlinkTypeKind.MAP) {
+      return this.buildMemberNodes(elementType.members);
+    }
+
+    // Element is nested ARRAY/MULTISET: create intermediate node with descriptive synthetic ID
+    return this.buildNestedContainerNode(elementType);
   }
 
   /**
@@ -243,21 +252,6 @@ export class FlinkTypeNode implements IResourceBase {
         id: childId,
       });
     });
-  }
-
-  /**
-   * Build child nodes for ARRAY/MULTISET container types.
-   * Optimizes by skipping intermediate node when element is ROW/MAP,
-   * or creates synthetic container node for nested ARRAY/MULTISET elements.
-   */
-  private buildContainerChildNodes(elementType: FlinkType): FlinkTypeNode[] {
-    if (elementType.kind === FlinkTypeKind.ROW || elementType.kind === FlinkTypeKind.MAP) {
-      // Element is ROW/MAP: skip directly to its members (existing optimization)
-      return this.buildMemberNodes(elementType.members);
-    }
-
-    // Element is nested ARRAY/MULTISET: create intermediate node with descriptive synthetic ID
-    return this.buildNestedContainerNode(elementType);
   }
 
   /**
