@@ -398,4 +398,8 @@ promotions:
           description: "VS Code version to test against (stable, insiders, or a specific version)."
         - name: PLATFORM
           default_value: "all"
+          options:
+            - "all"
+            - "linux"
+            - "windows"
           description: "Which platform(s) to run: all, linux, or windows."
