@@ -123,14 +123,26 @@ export class FlinkTypeNode implements IResourceBase {
 
   /**
    * Get the context value for this node, used for VS Code when clauses in context menus.
-   * Nodes within synthetic elements get a different context value to prevent invalid actions.
+   * Returns different values based on field name presence and synthetic element ancestry
+   * to control which actions are available in the context menu.
    */
   get contextValue(): string {
-    // Nodes within synthetic elements cannot have valid nested paths copied
-    if (this.isWithinSyntheticElement()) {
+    const hasSyntheticAncestry = this.isWithinSyntheticElement();
+    const hasFieldName = !!this.parsedType.fieldName;
+
+    if (hasFieldName && hasSyntheticAncestry) {
+      // Has name to copy, but nested path is invalid (e.g., interior_int in ARRAY<ARRAY<ROW>>)
+      return "ccloud-flink-type-field-synthetic";
+    }
+    if (hasFieldName && !hasSyntheticAncestry) {
+      // Has name and valid nested path (e.g., street in ROW<address ROW<street VARCHAR>>)
+      return "ccloud-flink-type-field";
+    }
+    if (!hasFieldName && hasSyntheticAncestry) {
+      // Synthetic intermediate node (e.g., [array] node itself)
       return "ccloud-flink-type-node-synthetic";
     }
-    // Regular nodes support copy name and copy nested path actions
+    // Top-level column node or ROW type node without field name
     return "ccloud-flink-type-node";
   }
 

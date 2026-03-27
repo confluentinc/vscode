@@ -598,7 +598,7 @@ describe("FlinkTypeNode", () => {
       });
       const item = node.getTreeItem();
 
-      assert.strictEqual(item.contextValue, "ccloud-flink-type-node");
+      assert.strictEqual(item.contextValue, "ccloud-flink-type-field");
     });
 
     it("sets icon for ROW type", () => {
@@ -1212,7 +1212,7 @@ describe("FlinkTypeNode", () => {
   });
 
   describe("contextValue getter", () => {
-    it("returns 'ccloud-flink-type-node' for top-level column nodes", () => {
+    it("returns 'ccloud-flink-type-node' for top-level column nodes without field name", () => {
       const parsed = parseFlinkType("INT");
       const node = new FlinkTypeNode({
         parsedType: parsed,
@@ -1222,7 +1222,7 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(node.contextValue, "ccloud-flink-type-node");
     });
 
-    it("returns 'ccloud-flink-type-node' for ROW field nodes with field names", () => {
+    it("returns 'ccloud-flink-type-field' for ROW field nodes with field names (not synthetic)", () => {
       const parsed = parseFlinkType("INT");
       parsed.fieldName = "user_id";
       const node = new FlinkTypeNode({
@@ -1230,21 +1230,21 @@ describe("FlinkTypeNode", () => {
         id: "test_table.user_id",
       });
 
-      assert.strictEqual(node.contextValue, "ccloud-flink-type-node");
+      assert.strictEqual(node.contextValue, "ccloud-flink-type-field");
     });
 
-    it("returns 'ccloud-flink-type-node-synthetic' for nodes within [array] synthetic elements", () => {
+    it("returns 'ccloud-flink-type-field-synthetic' for field nodes within [array] synthetic elements", () => {
       const parsed = parseFlinkType("INT");
-      parsed.fieldName = "id";
+      parsed.fieldName = "interior_int";
       const node = new FlinkTypeNode({
         parsedType: parsed,
-        id: "test_table.data.[array].id",
+        id: "test_table.data.[array].[array].interior_int",
       });
 
-      assert.strictEqual(node.contextValue, "ccloud-flink-type-node-synthetic");
+      assert.strictEqual(node.contextValue, "ccloud-flink-type-field-synthetic");
     });
 
-    it("returns 'ccloud-flink-type-node-synthetic' for synthetic array nodes", () => {
+    it("returns 'ccloud-flink-type-node-synthetic' for synthetic array nodes without field name", () => {
       const parsed = parseFlinkType("ARRAY<INT>");
       const node = new FlinkTypeNode({
         parsedType: parsed,
@@ -1252,6 +1252,17 @@ describe("FlinkTypeNode", () => {
       });
 
       assert.strictEqual(node.contextValue, "ccloud-flink-type-node-synthetic");
+    });
+
+    it("returns 'ccloud-flink-type-field' for deeply nested ROW field (no synthetic ancestry)", () => {
+      const parsed = parseFlinkType("VARCHAR");
+      parsed.fieldName = "city";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.address.location.city",
+      });
+
+      assert.strictEqual(node.contextValue, "ccloud-flink-type-field");
     });
   });
 });
