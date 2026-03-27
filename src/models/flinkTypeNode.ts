@@ -89,6 +89,15 @@ export class FlinkTypeNode implements IResourceBase {
   }
 
   /**
+   * Check if this node is within a synthetic element (nested ARRAY/MULTISET container).
+   * Returns true if the node's ID path contains [array] or [multiset] segments.
+   */
+  private isWithinSyntheticElement(): boolean {
+    const parts = this.id.split(".");
+    return parts.some((part) => part === "[array]" || part === "[multiset]");
+  }
+
+  /**
    * Get the nested path for this node, relative to the table/view.
    * Strips the relation name from the full ID path.
    *
@@ -103,29 +112,25 @@ export class FlinkTypeNode implements IResourceBase {
    * Used by 'Copy Nested Path' action.
    */
   get nestedPath(): string | undefined {
-    const parts = this.id.split(".");
-
-    // Don't provide nested path if there are synthetic segments, which would happen for
-    // fields inside multiple levels of ARRAY/MULTISET nesting.
-    const hasSyntheticSegment = parts.some((part) => part === "[array]" || part === "[multiset]");
-    if (hasSyntheticSegment) {
+    if (this.isWithinSyntheticElement()) {
       return undefined;
     }
 
     // Remove first component (relation name)
+    const parts = this.id.split(".");
     return parts.slice(1).join(".");
   }
 
   /**
    * Get the context value for this node, used for VS Code when clauses in context menus.
-   * Nodes with field names get a special context value to enable name-based actions.
+   * Nodes within synthetic elements get a different context value to prevent invalid actions.
    */
   get contextValue(): string {
-    // Nodes with field names get special context value
-    if (this.parsedType.fieldName) {
-      return "ccloud-flink-type-field";
+    // Nodes within synthetic elements cannot have valid nested paths copied
+    if (this.isWithinSyntheticElement()) {
+      return "ccloud-flink-type-node-synthetic";
     }
-    // embedded-within-array-or-multiset
+    // Regular nodes support copy name and copy nested path actions
     return "ccloud-flink-type-node";
   }
 

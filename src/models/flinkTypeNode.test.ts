@@ -598,7 +598,7 @@ describe("FlinkTypeNode", () => {
       });
       const item = node.getTreeItem();
 
-      assert.strictEqual(item.contextValue, "ccloud-flink-type-field");
+      assert.strictEqual(item.contextValue, "ccloud-flink-type-node");
     });
 
     it("sets icon for ROW type", () => {
@@ -1157,19 +1157,62 @@ describe("FlinkTypeNode", () => {
     });
   });
 
-  describe("contextValue getter", () => {
-    it("returns 'ccloud-flink-type-field' for nodes with field names", () => {
+  describe("isWithinSyntheticElement", () => {
+    it("returns false for top-level column nodes", () => {
       const parsed = parseFlinkType("INT");
-      parsed.fieldName = "user_id";
       const node = new FlinkTypeNode({
         parsedType: parsed,
-        id: "test_table.user_id",
+        id: "test_table.column",
       });
 
-      assert.strictEqual(node.contextValue, "ccloud-flink-type-field");
+      assert.strictEqual(node["isWithinSyntheticElement"](), false);
     });
 
-    it("returns 'ccloud-flink-type-node' for nodes without field names", () => {
+    it("returns false for ROW field nodes", () => {
+      const parsed = parseFlinkType("VARCHAR");
+      parsed.fieldName = "street";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.address.street",
+      });
+
+      assert.strictEqual(node["isWithinSyntheticElement"](), false);
+    });
+
+    it("returns true for nodes with [array] synthetic segment", () => {
+      const parsed = parseFlinkType("INT");
+      parsed.fieldName = "id";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.data.[array].id",
+      });
+
+      assert.strictEqual(node["isWithinSyntheticElement"](), true);
+    });
+
+    it("returns true for nodes with [multiset] synthetic segment", () => {
+      const parsed = parseFlinkType("INT");
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.data.[multiset].field",
+      });
+
+      assert.strictEqual(node["isWithinSyntheticElement"](), true);
+    });
+
+    it("returns true for synthetic array node itself", () => {
+      const parsed = parseFlinkType("ARRAY<INT>");
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.data.[array]",
+      });
+
+      assert.strictEqual(node["isWithinSyntheticElement"](), true);
+    });
+  });
+
+  describe("contextValue getter", () => {
+    it("returns 'ccloud-flink-type-node' for top-level column nodes", () => {
       const parsed = parseFlinkType("INT");
       const node = new FlinkTypeNode({
         parsedType: parsed,
@@ -1179,14 +1222,36 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(node.contextValue, "ccloud-flink-type-node");
     });
 
-    it("returns 'ccloud-flink-type-node' for synthetic array nodes", () => {
+    it("returns 'ccloud-flink-type-node' for ROW field nodes with field names", () => {
+      const parsed = parseFlinkType("INT");
+      parsed.fieldName = "user_id";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.user_id",
+      });
+
+      assert.strictEqual(node.contextValue, "ccloud-flink-type-node");
+    });
+
+    it("returns 'ccloud-flink-type-node-synthetic' for nodes within [array] synthetic elements", () => {
+      const parsed = parseFlinkType("INT");
+      parsed.fieldName = "id";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.data.[array].id",
+      });
+
+      assert.strictEqual(node.contextValue, "ccloud-flink-type-node-synthetic");
+    });
+
+    it("returns 'ccloud-flink-type-node-synthetic' for synthetic array nodes", () => {
       const parsed = parseFlinkType("ARRAY<INT>");
       const node = new FlinkTypeNode({
         parsedType: parsed,
         id: "test_table.data.[array]",
       });
 
-      assert.strictEqual(node.contextValue, "ccloud-flink-type-node");
+      assert.strictEqual(node.contextValue, "ccloud-flink-type-node-synthetic");
     });
   });
 });
