@@ -224,18 +224,23 @@ export class FlinkTypeNode implements IResourceBase {
     const { kind, members } = this.parsedType as CompoundFlinkType;
 
     if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
+      // Build and return member nodes directly for ROW/MAP types
       return this.buildMemberNodes(members);
     }
 
-    // ARRAY/MULTISET types
+    // This node must be for ARRAY/MULTISET types. What type is the element?
     const elementType = members[0];
 
-    // Skip intermediate node if element is ROW/MAP (optimization)
+    // Skip intermediate container node if element is ROW/MAP (UI optimization).
+    // This allows users to see and access the fields of the ROW/MAP directly under the ARRAY/MULTISET node,
+    // without an extra synthetic node in between.
     if (elementType.kind === FlinkTypeKind.ROW || elementType.kind === FlinkTypeKind.MAP) {
       return this.buildMemberNodes(elementType.members);
     }
 
     // Element is nested ARRAY/MULTISET: create intermediate node with descriptive synthetic ID
+    // (only end up here if there are multiple levels of nesting, e.g., ARRAY of ARRAY of INT, which
+    // would have a ROW/MAP at the element level)
     return this.buildNestedContainerNode(elementType);
   }
 
