@@ -435,9 +435,16 @@ async function setupContextValues() {
     "ccloud-flink-relation-external-table",
     "ccloud-flink-relation-system-table",
     "ccloud-flink-column",
+    "ccloud-flink-type-field",
     "local-kafka-cluster",
     "direct-kafka-cluster",
     // topics and Flink statements also have names, but their context values vary wildly and must be regex-matched
+  ]);
+
+  // enables the "Copy Nested Path" command; these resources must have the "nestedPath" property
+  const resourcesWithNestedPaths = setContextValue(ContextValues.RESOURCES_WITH_NESTED_PATHS, [
+    "ccloud-flink-type-field",
+    "ccloud-flink-type-node",
   ]);
 
   /**
@@ -469,6 +476,7 @@ async function setupContextValues() {
     viewsWithResources,
     resourcesWithIds,
     resourcesWithNames,
+    resourcesWithNestedPaths,
     resourcesWithURIs,
     diffableResources,
     dockerAvailable,

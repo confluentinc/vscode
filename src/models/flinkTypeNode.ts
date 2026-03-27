@@ -80,6 +80,55 @@ export class FlinkTypeNode implements IResourceBase {
   }
 
   /**
+   * Get the field name for this node (if it has one).
+   * Only defined for ROW/MAP member fields that have explicit field names.
+   * Used by 'Copy Name' action.
+   */
+  get name(): string | undefined {
+    return this.parsedType.fieldName;
+  }
+
+  /**
+   * Get the nested path for this node, relative to the table/view.
+   * Strips the relation name from the full ID path.
+   *
+   * Returns undefined if the path contains synthetic segments ([array], [multiset]),
+   * as such paths don't represent valid SQL field paths.
+   *
+   * Examples:
+   *   - Field "street" in column "address": "address.street"
+   *   - Deep nesting: "address.location.city"
+   *   - Field inside array (data.[array].field): undefined (not a valid direct path)
+   *
+   * Used by 'Copy Nested Path' action.
+   */
+  get nestedPath(): string | undefined {
+    const parts = this.id.split(".");
+
+    // Don't provide nested path if there are synthetic segments
+    const hasSyntheticSegment = parts.some((part) => part === "[array]" || part === "[multiset]");
+    if (hasSyntheticSegment) {
+      return undefined;
+    }
+
+    // Remove first component (relation name)
+    return parts.slice(1).join(".");
+  }
+
+  /**
+   * Get the context value for this node, used for VS Code when clauses in context menus.
+   * Nodes with field names get a special context value to enable name-based actions.
+   */
+  get contextValue(): string {
+    // Nodes with field names get special context value
+    if (this.parsedType.fieldName) {
+      return "ccloud-flink-type-field";
+    }
+    // All other type nodes (synthetic, anonymous)
+    return "ccloud-flink-type-node";
+  }
+
+  /**
    * Determine if this node should be expandable in the tree view.
    * Uses isFlinkTypeExpandable() to check the underlying type structure.
    */
@@ -243,7 +292,7 @@ export class FlinkTypeNode implements IResourceBase {
     item.id = this.id;
     item.description = this.getDescription();
     item.tooltip = this.getTooltip();
-    item.contextValue = "ccloud-flink-type-node";
+    item.contextValue = this.contextValue;
 
     return item;
   }

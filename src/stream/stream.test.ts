@@ -1,4 +1,4 @@
-import { deepEqual, equal, notDeepEqual } from "node:assert/strict";
+import { deepEqual, equal, notDeepEqual } from "assert";
 import { CircularBuffer, SkipList, Stream, ascending, descending } from "./stream";
 
 import type { PartitionConsumeRecord } from "../clients/sidecar";
