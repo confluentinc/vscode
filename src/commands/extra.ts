@@ -43,6 +43,20 @@ export async function copyResourceName(item: any) {
   window.showInformationMessage(`Copied "${item.name}" to clipboard.`);
 }
 
+/** Copy the nested path to the clipboard (for FlinkTypeNode only). */
+export async function copyNestedPath(item: any) {
+  const value = item?.nestedPath;
+  logger.debug("Copying nested path", item, "nested path:", value);
+
+  if (!value) {
+    logger.debug("No nested path found on item, skipping copy");
+    return;
+  }
+
+  await env.clipboard.writeText(value);
+  window.showInformationMessage(`Copied "${value}" to clipboard.`);
+}
+
 /**
  * Copy a SR or Kafka Cluster's URI property to the clipboard.
  * (The command label uses the "URL" terminology since that's more familiar to users, and
@@ -64,6 +78,7 @@ export function registerExtraCommands(): Disposable[] {
     registerCommandWithLogging("confluent.openCCloudApiKeysUrl", openCCloudApiKeysUrl),
     registerCommandWithLogging("confluent.copyResourceId", copyResourceId),
     registerCommandWithLogging("confluent.copyResourceName", copyResourceName),
+    registerCommandWithLogging("confluent.copyNestedPath", copyNestedPath),
     registerCommandWithLogging("confluent.copyResourceUri", copyResourceUri),
   ];
 }

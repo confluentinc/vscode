@@ -352,6 +352,11 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.copyNestedPath",
+        "title": "Copy Nested Path",
+        "category": "Confluent: Resources"
+      },
+      {
         "command": "confluent.copyResourceUri",
         "title": "Copy URL",
         "category": "Confluent: Resources"
@@ -1383,6 +1388,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.copyNestedPath",
+          "when": "false"
+        },
+        {
           "command": "confluent.copyResourceUri",
           "when": "false"
         },
@@ -1949,9 +1958,14 @@
           "group": "2_copy@2"
         },
         {
+          "command": "confluent.copyNestedPath",
+          "when": "view in confluent.viewsWithResources && (viewItem == ccloud-flink-type-field || viewItem == ccloud-flink-type-node)",
+          "group": "2_copy@3"
+        },
+        {
           "command": "confluent.copyResourceUri",
           "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithURIs",
-          "group": "2_copy@3"
+          "group": "2_copy@4"
         },
         {
           "command": "confluent.resources.refreshConnection",
