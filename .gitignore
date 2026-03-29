@@ -104,6 +104,9 @@ yarn-error.log
 tests/baselines/reference/dt
 .failed-tests
 TEST-result*.xml
+TEST-extension.log
+TEST-sidecar.log
+test-results-mocha-*.zip
 .eslintcache
 *v8.log
 /lib/
