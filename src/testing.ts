@@ -1,8 +1,11 @@
+import { copyFileSync, existsSync as fsExistsSync } from "fs";
 import { writeFile } from "fs/promises";
 import { globSync } from "glob";
 import Mocha from "mocha";
 import { join, resolve } from "path";
 import { mochaGlobalSetup } from "../tests/unit/globalSetup";
+import { EXTENSION_OUTPUT_CHANNEL } from "./logging";
+import { getSidecarFormattedLogfilePath } from "./sidecar/logging";
 
 export async function run() {
   // Unix cwd is ___/vscode, but on Windows it's ___/vscode/.vscode-test/<archive>/
@@ -55,5 +58,33 @@ export async function run() {
     const coverageFilePath = join(projectRoot, "coverage.json");
     await writeFile(coverageFilePath, JSON.stringify(coverageData));
   }
+  // copy extension+sidecar log files next to the test results XML for any test failure triage
+  copyLogFilesToProjectRoot(projectRoot);
+
   if (failures > 0) throw new Error(`${failures} tests failed.`);
+}
+
+/** Copy extension and sidecar log files to the project root alongside TEST-result.xml. */
+function copyLogFilesToProjectRoot(projectRoot: string): void {
+  try {
+    const uris = EXTENSION_OUTPUT_CHANNEL.getFileUris();
+    if (uris.length > 0) {
+      const dest = join(projectRoot, "TEST-extension.log");
+      copyFileSync(uris[0].fsPath, dest);
+      console.log(`Copied extension log to "${dest}"`);
+    }
+  } catch (err) {
+    console.warn("Failed to copy extension log:", err);
+  }
+
+  try {
+    const sidecarLog = getSidecarFormattedLogfilePath();
+    if (fsExistsSync(sidecarLog)) {
+      const dest = join(projectRoot, "TEST-sidecar.log");
+      copyFileSync(sidecarLog, dest);
+      console.log(`Copied sidecar log to "${dest}"`);
+    }
+  } catch (err) {
+    console.warn("Failed to copy sidecar log:", err);
+  }
 }
