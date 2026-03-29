@@ -622,6 +622,24 @@ export class ResourceViewProvider
         }
       }
 
+      // Existing direct connections that still have loaders may have been updated
+      // (e.g., renamed). Refresh them to pick up any data changes from the sidecar.
+      // By the time directConnectionsChanged fires after an update, the connection is
+      // guaranteed to be stable, so a deep refresh will get correct data. This corrects
+      // stale in-memory state left by concurrent refreshes during the DISCONNECT->RECONNECT
+      // cycle that the sidecar uses for updates. (See #2682.)
+      const existingUnchangedRows = existingDirectConnections.filter(
+        (row) => !removedDirectLoaders.includes(row),
+      );
+      if (existingUnchangedRows.length > 0) {
+        this.logger.debug("Refreshing existing direct connection rows", {
+          count: existingUnchangedRows.length,
+        });
+        for (const row of existingUnchangedRows) {
+          loadAndStorePromises.push(row.refresh(true));
+        }
+      }
+
       if (loadAndStorePromises.length > 0) {
         this.logger.debug("Waiting for direct connection load/store promises to complete");
         await Promise.all(loadAndStorePromises);
