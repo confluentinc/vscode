@@ -636,7 +636,13 @@ export class ResourceViewProvider
           count: existingUnchangedRows.length,
         });
         for (const row of existingUnchangedRows) {
-          loadAndStorePromises.push(row.refresh(true));
+          loadAndStorePromises.push(
+            row.refresh(true).catch((e) => {
+              logError(e, "refreshing direct connection during reconciliation", {
+                extra: { connectionId: row.connectionId },
+              });
+            }),
+          );
         }
       }
 
