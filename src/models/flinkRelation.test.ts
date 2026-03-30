@@ -498,21 +498,21 @@ describe("flinkRelation.ts", () => {
           assert.strictEqual(level1[0].parsedType.kind, FlinkTypeKind.ARRAY);
           assert.strictEqual(level1[0].id, "test_table.complex_nested.[array]");
 
-          // Level 2: Expand inner ARRAY -> intermediate [multiset] node for MULTISET
+          // Level 2: Expand inner ARRAY -> intermediate [array] node for nested ARRAY level
           const level2 = level1[0].getChildren();
           assert.strictEqual(level2.length, 1);
           assert.strictEqual(level2[0].parsedType.kind, FlinkTypeKind.MULTISET);
-          assert.strictEqual(level2[0].id, "test_table.complex_nested.[array].[multiset]");
+          assert.strictEqual(level2[0].id, "test_table.complex_nested.[array].[array]");
 
           // Level 3: Expand MULTISET -> ROW's field directly (skip ROW node but include [multiset] in IDs)
-          // Field is inside ARRAY -> ARRAY -> MULTISET, so ID has [array].[multiset].[multiset]
+          // Field is inside ARRAY -> ARRAY -> MULTISET, so ID has [array].[array].[multiset]
           const level3 = level2[0].getChildren();
           assert.strictEqual(level3.length, 1);
           assert.strictEqual(level3[0].parsedType.kind, FlinkTypeKind.SCALAR);
           assert.strictEqual(level3[0].parsedType.fieldName, "id");
           assert.strictEqual(
             level3[0].id,
-            "test_table.complex_nested.[array].[multiset].[multiset].id",
+            "test_table.complex_nested.[array].[array].[multiset].id",
           );
           assert.strictEqual(level3[0].isExpandable, false);
 

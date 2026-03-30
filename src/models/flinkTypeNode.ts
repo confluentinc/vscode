@@ -289,9 +289,12 @@ export class FlinkTypeNode implements IResourceBase {
   /**
    * Build an intermediate node for nested ARRAY/MULTISET elements.
    * Uses synthetic [array] or [multiset] label for the ID segment.
+   * The label represents THIS node's container type (what we're descending into),
+   * not the element's type.
    */
   private buildNestedContainerNode(elementType: FlinkType): FlinkTypeNode[] {
-    const containerLabel = elementType.kind === FlinkTypeKind.ARRAY ? "[array]" : "[multiset]";
+    const { kind } = this.parsedType as CompoundFlinkType;
+    const containerLabel = kind === FlinkTypeKind.ARRAY ? "[array]" : "[multiset]";
     const childId = `${this.id}.${containerLabel}`;
 
     return [

@@ -1032,20 +1032,20 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(level1[0].id, "test_table.complex_field.[array]");
       assert.strictEqual(level1[0].isExpandable, true);
 
-      // Level 2: Expand inner ARRAY -> get intermediate [multiset] node for MULTISET
+      // Level 2: Expand inner ARRAY -> get intermediate [array] node for nested ARRAY level
       const level2 = level1[0].getChildren();
       assert.strictEqual(level2.length, 1, "Inner ARRAY should have one child (MULTISET)");
       assert.strictEqual(level2[0].parsedType.kind, FlinkTypeKind.MULTISET);
-      assert.strictEqual(level2[0].id, "test_table.complex_field.[array].[multiset]");
+      assert.strictEqual(level2[0].id, "test_table.complex_field.[array].[array]");
       assert.strictEqual(level2[0].isExpandable, true);
 
       // Level 3: Expand MULTISET -> get ROW fields directly (skip ROW node but include [multiset] in IDs)
-      // Field is inside ARRAY -> ARRAY -> MULTISET, so ID has [array].[multiset].[multiset]
+      // Field is inside ARRAY -> ARRAY -> MULTISET, so ID has [array].[array].[multiset]
       const level3 = level2[0].getChildren();
       assert.strictEqual(level3.length, 1, "MULTISET should have one child (id field from ROW)");
       assert.strictEqual(level3[0].parsedType.kind, FlinkTypeKind.SCALAR);
       assert.strictEqual(level3[0].parsedType.fieldName, "id");
-      assert.strictEqual(level3[0].id, "test_table.complex_field.[array].[multiset].[multiset].id");
+      assert.strictEqual(level3[0].id, "test_table.complex_field.[array].[array].[multiset].id");
       assert.strictEqual(level3[0].isExpandable, false);
 
       // Verify all IDs are unique in the hierarchy
