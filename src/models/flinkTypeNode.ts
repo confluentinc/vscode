@@ -251,8 +251,11 @@ export class FlinkTypeNode implements IResourceBase {
     // Skip intermediate container node if element is ROW/MAP (UI optimization).
     // This allows users to see and access the fields of the ROW/MAP directly under the ARRAY/MULTISET node,
     // without an extra synthetic node in between.
+    // However, we still include the synthetic segment in child IDs to properly mark container ancestry.
     if (elementType.kind === FlinkTypeKind.ROW || elementType.kind === FlinkTypeKind.MAP) {
-      return this.buildMemberNodes(elementType.members);
+      // Determine synthetic label based on THIS node's kind (ARRAY or MULTISET)
+      const syntheticLabel = kind === FlinkTypeKind.ARRAY ? "[array]" : "[multiset]";
+      return this.buildMemberNodes(elementType.members, syntheticLabel);
     }
 
     // Element is nested ARRAY/MULTISET: create intermediate node with descriptive synthetic ID
@@ -264,11 +267,18 @@ export class FlinkTypeNode implements IResourceBase {
   /**
    * Build child nodes for ROW/MAP members.
    * Each member becomes a direct child node with its field name appended to the parent ID.
+   * @param members - The member types to create nodes for
+   * @param syntheticSegment - Optional synthetic segment to insert before field names (e.g., "[array]", "[multiset]")
    */
-  private buildMemberNodes(members: FlinkType[]): FlinkTypeNode[] {
+  private buildMemberNodes(members: FlinkType[], syntheticSegment?: string): FlinkTypeNode[] {
     return members.map((member) => {
       const fieldName = member.fieldName;
-      const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
+      // If syntheticSegment provided, insert it between parent ID and field name
+      const childId = fieldName
+        ? syntheticSegment
+          ? `${this.id}.${syntheticSegment}.${fieldName}`
+          : `${this.id}.${fieldName}`
+        : this.id;
       return new FlinkTypeNode({
         parsedType: member,
         id: childId,

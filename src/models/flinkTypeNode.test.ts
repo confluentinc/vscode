@@ -105,9 +105,9 @@ describe("FlinkTypeNode", () => {
       const children = column.getChildren();
       assert.strictEqual(children.length, 1, "Should have 1 field child (id)");
 
-      // The id should be: table.columnName.fieldName
-      // Column ID is "test_table.artists", add field name "id"
-      assert.strictEqual(children[0].id, "test_table.artists.id");
+      // The id should be: table.columnName.[array].fieldName
+      // Column ID is "test_table.artists", add synthetic segment and field name "id"
+      assert.strictEqual(children[0].id, "test_table.artists.[array].id");
     });
 
     it("uses field name in id structure for MULTISET element nodes", () => {
@@ -120,9 +120,9 @@ describe("FlinkTypeNode", () => {
       const children = column.getChildren();
       assert.strictEqual(children.length, 1, "Should have 1 field child (id)");
 
-      // The id should be: table.columnName.fieldName
-      // Column ID is "test_table.items", add field name "id"
-      assert.strictEqual(children[0].id, "test_table.items.id");
+      // The id should be: table.columnName.[multiset].fieldName
+      // Column ID is "test_table.items", add synthetic segment and field name "id"
+      assert.strictEqual(children[0].id, "test_table.items.[multiset].id");
     });
   });
 
@@ -965,12 +965,13 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(children1[0].id, "test-table.test-col.[array]");
       assert.strictEqual(children1[0].isExpandable, true);
 
-      // When we expand the inner ARRAY, it skips the ROW and returns its field directly
+      // When we expand the inner ARRAY, it skips the ROW but includes [array] in field IDs
+      // (field is inside TWO arrays, so ID has TWO [array] segments)
       const children2 = children1[0].getChildren();
       assert.strictEqual(children2.length, 1);
       assert.strictEqual(children2[0].parsedType.kind, FlinkTypeKind.SCALAR);
       assert.strictEqual(children2[0].parsedType.fieldName, "id");
-      assert.strictEqual(children2[0].id, "test-table.test-col.[array].id");
+      assert.strictEqual(children2[0].id, "test-table.test-col.[array].[array].id");
     });
 
     it("generates unique IDs across complex table structure with multiple array columns", () => {
@@ -997,12 +998,12 @@ describe("FlinkTypeNode", () => {
         `Found duplicate IDs: ${allIds.filter((id, i) => allIds.indexOf(id) !== i).join(", ")}`,
       );
 
-      // Verify the IDs have the correct structure: table.columnName.fieldName
-      assert.strictEqual(col1Children[0].id, "test_table.artists.id");
-      assert.strictEqual(col1Children[1].id, "test_table.artists.name");
+      // Verify the IDs have the correct structure: table.columnName.[array].fieldName
+      assert.strictEqual(col1Children[0].id, "test_table.artists.[array].id");
+      assert.strictEqual(col1Children[1].id, "test_table.artists.[array].name");
 
-      assert.strictEqual(col2Children[0].id, "test_table.metadata.id");
-      assert.strictEqual(col2Children[1].id, "test_table.metadata.name");
+      assert.strictEqual(col2Children[0].id, "test_table.metadata.[array].id");
+      assert.strictEqual(col2Children[1].id, "test_table.metadata.[array].name");
 
       // Verify column1's ids are different from column2's despite same field names
       assert.notStrictEqual(
@@ -1038,12 +1039,13 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(level2[0].id, "test_table.complex_field.[array].[multiset]");
       assert.strictEqual(level2[0].isExpandable, true);
 
-      // Level 3: Expand MULTISET -> get ROW fields directly (skip ROW node, show its members)
+      // Level 3: Expand MULTISET -> get ROW fields directly (skip ROW node but include [multiset] in IDs)
+      // Field is inside ARRAY -> ARRAY -> MULTISET, so ID has [array].[multiset].[multiset]
       const level3 = level2[0].getChildren();
       assert.strictEqual(level3.length, 1, "MULTISET should have one child (id field from ROW)");
       assert.strictEqual(level3[0].parsedType.kind, FlinkTypeKind.SCALAR);
       assert.strictEqual(level3[0].parsedType.fieldName, "id");
-      assert.strictEqual(level3[0].id, "test_table.complex_field.[array].[multiset].id");
+      assert.strictEqual(level3[0].id, "test_table.complex_field.[array].[multiset].[multiset].id");
       assert.strictEqual(level3[0].isExpandable, false);
 
       // Verify all IDs are unique in the hierarchy
@@ -1263,6 +1265,54 @@ describe("FlinkTypeNode", () => {
       });
 
       assert.strictEqual(node.contextValue, "ccloud-flink-type-field");
+    });
+
+    it("returns 'ccloud-flink-type-field-synthetic' for fields within ARRAY<ROW>", () => {
+      const column = new FlinkRelationColumn({
+        ...createTestColumn("ARRAY<ROW<id INT>>"),
+        name: "artists",
+        fullDataType: "ARRAY<ROW<id INT>>",
+      });
+
+      const children = column.getChildren();
+      assert.strictEqual(children.length, 1);
+      assert.strictEqual(children[0].parsedType.fieldName, "id");
+      assert.strictEqual(children[0].contextValue, "ccloud-flink-type-field-synthetic");
+    });
+
+    it("returns 'ccloud-flink-type-field-synthetic' for fields within MULTISET<ROW>", () => {
+      const column = new FlinkRelationColumn({
+        ...createTestColumn("MULTISET<ROW<status VARCHAR>>"),
+        name: "events",
+        fullDataType: "MULTISET<ROW<status VARCHAR>>",
+      });
+
+      const children = column.getChildren();
+      assert.strictEqual(children.length, 1);
+      assert.strictEqual(children[0].parsedType.fieldName, "status");
+      assert.strictEqual(children[0].contextValue, "ccloud-flink-type-field-synthetic");
+    });
+
+    it("returns undefined nestedPath for fields within ARRAY<ROW>", () => {
+      const column = new FlinkRelationColumn({
+        ...createTestColumn("ARRAY<ROW<id INT>>"),
+        name: "artists",
+        fullDataType: "ARRAY<ROW<id INT>>",
+      });
+
+      const children = column.getChildren();
+      assert.strictEqual(children[0].nestedPath, undefined);
+    });
+
+    it("returns undefined nestedPath for fields within MULTISET<ROW>", () => {
+      const column = new FlinkRelationColumn({
+        ...createTestColumn("MULTISET<ROW<field VARCHAR>>"),
+        name: "items",
+        fullDataType: "MULTISET<ROW<field VARCHAR>>",
+      });
+
+      const children = column.getChildren();
+      assert.strictEqual(children[0].nestedPath, undefined);
     });
   });
 });
