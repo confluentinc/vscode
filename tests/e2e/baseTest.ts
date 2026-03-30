@@ -25,7 +25,6 @@ import {
   setupCCloudConnection,
   setupDirectConnection,
   setupLocalConnection,
-  teardownLocalConnection,
 } from "./utils/connections";
 import { produceMessages } from "./utils/producer";
 import { configureVSCodeSettings } from "./utils/settings";
@@ -263,27 +262,10 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     await use(connection);
 
-    // teardown
-    switch (connectionType) {
-      case ConnectionType.Ccloud:
-        // no explicit teardown needed since shutting down the extension+sidecar will invalidate the
-        // CCloud auth session
-        break;
-      case ConnectionType.Direct:
-        // no teardown needed since each test will use its own storage in TMPDIR, so any direct
-        // connections created will be cleaned up automatically, and subsequent tests will use their
-        // own blank-slate storage
-        break;
-      case ConnectionType.Local:
-        // local resources are discovered automatically through the Docker engine API, so we need
-        // to explicitly stop them to ensure the next tests can start them fresh
-        await teardownLocalConnection(connection.page, {
-          schemaRegistry: localConnectionConfig.schemaRegistry,
-        });
-        break;
-      default:
-        throw new Error(`Unsupported connection type: ${connectionType}`);
-    }
+    // no per-test teardown needed for any connection type:
+    // - CCLOUD: shutting down the extension+sidecar invalidates the auth session
+    // - DIRECT: each test uses its own TMPDIR storage, cleaned up automatically
+    // - LOCAL: containers persist between tests and are reused via idempotent setup
   },
 
   // no default value, must be provided by test
