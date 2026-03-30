@@ -101,18 +101,17 @@ blocks:
                 artifact push workflow coverage/lcov-functional.info --force
                 echo "Uploaded Playwright coverage artifacts"
               fi
-            # Bundle Mocha test results + logs into a single triage artifact
+            # Bundle Mocha test results + logs into a single triage artifact;
+            # upload Playwright artifacts if available
             - |
               PLATFORM_ARCH="$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
               TRIAGE_ZIP="test-results-mocha-${PLATFORM_ARCH}.zip"
-              zip -j "${TRIAGE_ZIP}" TEST-result.xml TEST-extension.log TEST-sidecar.log 2>/dev/null
+              zip -j "${TRIAGE_ZIP}" TEST-result.xml TEST-extension.log TEST-sidecar.log 2>/dev/null || true
               if [ -f "${TRIAGE_ZIP}" ]; then
                 artifact push workflow "${TRIAGE_ZIP}" \
                   --destination "test-results-mocha/${TRIAGE_ZIP}" --force
                 echo "Uploaded ${TRIAGE_ZIP}"
               fi
-            # Upload Playwright artifacts, if available
-            - |
               if [ -d test-results ]; then
                 artifact push workflow test-results --destination test-results-${PLATFORM_ARCH} --force
               fi
