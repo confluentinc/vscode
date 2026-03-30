@@ -256,8 +256,8 @@ export class FlinkTypeNode implements IResourceBase {
     }
 
     // Element is nested ARRAY/MULTISET: create intermediate node with descriptive synthetic ID
-    // (only end up here if there are multiple levels of nesting, e.g., ARRAY of ARRAY of INT, which
-    // would have a ROW/MAP at the element level)
+    // (only end up here if there are multiple levels of container nesting, e.g., ARRAY<ARRAY<INT>>,
+    // where the element kind is also ARRAY or MULTISET)
     return this.buildNestedContainerNode(elementType);
   }
 
