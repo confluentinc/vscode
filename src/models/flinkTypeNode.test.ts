@@ -105,9 +105,9 @@ describe("FlinkTypeNode", () => {
       const children = column.getChildren();
       assert.strictEqual(children.length, 1, "Should have 1 field child (id)");
 
-      // The id should be: table.columnName.fieldName
-      // Column ID is "test_table.artists", add field name "id"
-      assert.strictEqual(children[0].id, "test_table.artists.id");
+      // The id should be: table.columnName.[array].fieldName
+      // Column ID is "test_table.artists", add synthetic segment and field name "id"
+      assert.strictEqual(children[0].id, "test_table.artists.[array].id");
     });
 
     it("uses field name in id structure for MULTISET element nodes", () => {
@@ -120,9 +120,9 @@ describe("FlinkTypeNode", () => {
       const children = column.getChildren();
       assert.strictEqual(children.length, 1, "Should have 1 field child (id)");
 
-      // The id should be: table.columnName.fieldName
-      // Column ID is "test_table.items", add field name "id"
-      assert.strictEqual(children[0].id, "test_table.items.id");
+      // The id should be: table.columnName.[multiset].fieldName
+      // Column ID is "test_table.items", add synthetic segment and field name "id"
+      assert.strictEqual(children[0].id, "test_table.items.[multiset].id");
     });
   });
 
@@ -578,7 +578,7 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(item.description, "ROW[]");
     });
 
-    it("sets correct contextValue", () => {
+    it("sets contextValue from getter for node without field name", () => {
       const parsed = parseFlinkType("INT");
       const node = new FlinkTypeNode({
         parsedType: parsed,
@@ -587,6 +587,18 @@ describe("FlinkTypeNode", () => {
       const item = node.getTreeItem();
 
       assert.strictEqual(item.contextValue, "ccloud-flink-type-node");
+    });
+
+    it("sets contextValue from getter for node with field name", () => {
+      const parsed = parseFlinkType("INT");
+      parsed.fieldName = "user_id";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test-table.user_id",
+      });
+      const item = node.getTreeItem();
+
+      assert.strictEqual(item.contextValue, "ccloud-flink-type-field");
     });
 
     it("sets icon for ROW type", () => {
@@ -953,12 +965,13 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(children1[0].id, "test-table.test-col.[array]");
       assert.strictEqual(children1[0].isExpandable, true);
 
-      // When we expand the inner ARRAY, it skips the ROW and returns its field directly
+      // When we expand the inner ARRAY, it skips the ROW but includes [array] in field IDs
+      // (field is inside TWO arrays, so ID has TWO [array] segments)
       const children2 = children1[0].getChildren();
       assert.strictEqual(children2.length, 1);
       assert.strictEqual(children2[0].parsedType.kind, FlinkTypeKind.SCALAR);
       assert.strictEqual(children2[0].parsedType.fieldName, "id");
-      assert.strictEqual(children2[0].id, "test-table.test-col.[array].id");
+      assert.strictEqual(children2[0].id, "test-table.test-col.[array].[array].id");
     });
 
     it("generates unique IDs across complex table structure with multiple array columns", () => {
@@ -985,12 +998,12 @@ describe("FlinkTypeNode", () => {
         `Found duplicate IDs: ${allIds.filter((id, i) => allIds.indexOf(id) !== i).join(", ")}`,
       );
 
-      // Verify the IDs have the correct structure: table.columnName.fieldName
-      assert.strictEqual(col1Children[0].id, "test_table.artists.id");
-      assert.strictEqual(col1Children[1].id, "test_table.artists.name");
+      // Verify the IDs have the correct structure: table.columnName.[array].fieldName
+      assert.strictEqual(col1Children[0].id, "test_table.artists.[array].id");
+      assert.strictEqual(col1Children[1].id, "test_table.artists.[array].name");
 
-      assert.strictEqual(col2Children[0].id, "test_table.metadata.id");
-      assert.strictEqual(col2Children[1].id, "test_table.metadata.name");
+      assert.strictEqual(col2Children[0].id, "test_table.metadata.[array].id");
+      assert.strictEqual(col2Children[1].id, "test_table.metadata.[array].name");
 
       // Verify column1's ids are different from column2's despite same field names
       assert.notStrictEqual(
@@ -1019,19 +1032,20 @@ describe("FlinkTypeNode", () => {
       assert.strictEqual(level1[0].id, "test_table.complex_field.[array]");
       assert.strictEqual(level1[0].isExpandable, true);
 
-      // Level 2: Expand inner ARRAY -> get intermediate [multiset] node for MULTISET
+      // Level 2: Expand inner ARRAY -> get intermediate [array] node for nested ARRAY level
       const level2 = level1[0].getChildren();
       assert.strictEqual(level2.length, 1, "Inner ARRAY should have one child (MULTISET)");
       assert.strictEqual(level2[0].parsedType.kind, FlinkTypeKind.MULTISET);
-      assert.strictEqual(level2[0].id, "test_table.complex_field.[array].[multiset]");
+      assert.strictEqual(level2[0].id, "test_table.complex_field.[array].[array]");
       assert.strictEqual(level2[0].isExpandable, true);
 
-      // Level 3: Expand MULTISET -> get ROW fields directly (skip ROW node, show its members)
+      // Level 3: Expand MULTISET -> get ROW fields directly (skip ROW node but include [multiset] in IDs)
+      // Field is inside ARRAY -> ARRAY -> MULTISET, so ID has [array].[array].[multiset]
       const level3 = level2[0].getChildren();
       assert.strictEqual(level3.length, 1, "MULTISET should have one child (id field from ROW)");
       assert.strictEqual(level3[0].parsedType.kind, FlinkTypeKind.SCALAR);
       assert.strictEqual(level3[0].parsedType.fieldName, "id");
-      assert.strictEqual(level3[0].id, "test_table.complex_field.[array].[multiset].id");
+      assert.strictEqual(level3[0].id, "test_table.complex_field.[array].[array].[multiset].id");
       assert.strictEqual(level3[0].isExpandable, false);
 
       // Verify all IDs are unique in the hierarchy
@@ -1042,6 +1056,263 @@ describe("FlinkTypeNode", () => {
         uniqueIds.size,
         `Found duplicate IDs in hierarchy: ${allIds}`,
       );
+    });
+  });
+
+  describe("name getter", () => {
+    it("returns field name when present", () => {
+      const parsed = parseFlinkType("INT");
+      parsed.fieldName = "user_id";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.user_id",
+      });
+
+      assert.strictEqual(node.name, "user_id");
+    });
+
+    it("returns undefined when field name is not present", () => {
+      const parsed = parseFlinkType("INT");
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.column",
+      });
+
+      assert.strictEqual(node.name, undefined);
+    });
+  });
+
+  describe("nestedPath getter", () => {
+    it("returns simple column name for top-level column node", () => {
+      const parsed = parseFlinkType("INT");
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "users.data",
+      });
+
+      assert.strictEqual(node.nestedPath, "data");
+    });
+
+    it("returns nested field path for ROW field", () => {
+      const parsed = parseFlinkType("VARCHAR(255)");
+      parsed.fieldName = "street";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "users.address.street",
+      });
+
+      assert.strictEqual(node.nestedPath, "address.street");
+    });
+
+    it("returns deeply nested path for multi-level ROW fields", () => {
+      const parsed = parseFlinkType("VARCHAR");
+      parsed.fieldName = "city";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "users.address.location.city",
+      });
+
+      assert.strictEqual(node.nestedPath, "address.location.city");
+    });
+
+    it("returns undefined if path contains [array] synthetic segment", () => {
+      const parsed = parseFlinkType("INT");
+      parsed.fieldName = "field";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "users.data.[array].field",
+      });
+
+      assert.strictEqual(node.nestedPath, undefined);
+    });
+
+    it("returns undefined if path contains [multiset] synthetic segment", () => {
+      const parsed = parseFlinkType("INT");
+      parsed.fieldName = "field";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "users.data.[multiset].field",
+      });
+
+      assert.strictEqual(node.nestedPath, undefined);
+    });
+
+    it("returns undefined if path contains multiple synthetic segments", () => {
+      const parsed = parseFlinkType("INT");
+      parsed.fieldName = "field";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "users.data.[array].[multiset].field",
+      });
+
+      assert.strictEqual(node.nestedPath, undefined);
+    });
+
+    it("returns undefined for synthetic array node itself", () => {
+      const parsed = parseFlinkType("ARRAY<INT>");
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "users.data.[array]",
+      });
+
+      assert.strictEqual(node.nestedPath, undefined);
+    });
+  });
+
+  describe("isWithinSyntheticElement", () => {
+    it("returns false for top-level column nodes", () => {
+      const parsed = parseFlinkType("INT");
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.column",
+      });
+
+      assert.strictEqual(node["isWithinSyntheticElement"](), false);
+    });
+
+    it("returns false for ROW field nodes", () => {
+      const parsed = parseFlinkType("VARCHAR");
+      parsed.fieldName = "street";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.address.street",
+      });
+
+      assert.strictEqual(node["isWithinSyntheticElement"](), false);
+    });
+
+    it("returns true for nodes with [array] synthetic segment", () => {
+      const parsed = parseFlinkType("INT");
+      parsed.fieldName = "id";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.data.[array].id",
+      });
+
+      assert.strictEqual(node["isWithinSyntheticElement"](), true);
+    });
+
+    it("returns true for nodes with [multiset] synthetic segment", () => {
+      const parsed = parseFlinkType("INT");
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.data.[multiset].field",
+      });
+
+      assert.strictEqual(node["isWithinSyntheticElement"](), true);
+    });
+
+    it("returns true for synthetic array node itself", () => {
+      const parsed = parseFlinkType("ARRAY<INT>");
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.data.[array]",
+      });
+
+      assert.strictEqual(node["isWithinSyntheticElement"](), true);
+    });
+  });
+
+  describe("contextValue getter", () => {
+    it("returns 'ccloud-flink-type-node' for top-level column nodes without field name", () => {
+      const parsed = parseFlinkType("INT");
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.column",
+      });
+
+      assert.strictEqual(node.contextValue, "ccloud-flink-type-node");
+    });
+
+    it("returns 'ccloud-flink-type-field' for ROW field nodes with field names (not synthetic)", () => {
+      const parsed = parseFlinkType("INT");
+      parsed.fieldName = "user_id";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.user_id",
+      });
+
+      assert.strictEqual(node.contextValue, "ccloud-flink-type-field");
+    });
+
+    it("returns 'ccloud-flink-type-field-synthetic' for field nodes within [array] synthetic elements", () => {
+      const parsed = parseFlinkType("INT");
+      parsed.fieldName = "interior_int";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.data.[array].[array].interior_int",
+      });
+
+      assert.strictEqual(node.contextValue, "ccloud-flink-type-field-synthetic");
+    });
+
+    it("returns 'ccloud-flink-type-node-synthetic' for synthetic array nodes without field name", () => {
+      const parsed = parseFlinkType("ARRAY<INT>");
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.data.[array]",
+      });
+
+      assert.strictEqual(node.contextValue, "ccloud-flink-type-node-synthetic");
+    });
+
+    it("returns 'ccloud-flink-type-field' for deeply nested ROW field (no synthetic ancestry)", () => {
+      const parsed = parseFlinkType("VARCHAR");
+      parsed.fieldName = "city";
+      const node = new FlinkTypeNode({
+        parsedType: parsed,
+        id: "test_table.address.location.city",
+      });
+
+      assert.strictEqual(node.contextValue, "ccloud-flink-type-field");
+    });
+
+    it("returns 'ccloud-flink-type-field-synthetic' for fields within ARRAY<ROW>", () => {
+      const column = new FlinkRelationColumn({
+        ...createTestColumn("ARRAY<ROW<id INT>>"),
+        name: "artists",
+        fullDataType: "ARRAY<ROW<id INT>>",
+      });
+
+      const children = column.getChildren();
+      assert.strictEqual(children.length, 1);
+      assert.strictEqual(children[0].parsedType.fieldName, "id");
+      assert.strictEqual(children[0].contextValue, "ccloud-flink-type-field-synthetic");
+    });
+
+    it("returns 'ccloud-flink-type-field-synthetic' for fields within MULTISET<ROW>", () => {
+      const column = new FlinkRelationColumn({
+        ...createTestColumn("MULTISET<ROW<status VARCHAR>>"),
+        name: "events",
+        fullDataType: "MULTISET<ROW<status VARCHAR>>",
+      });
+
+      const children = column.getChildren();
+      assert.strictEqual(children.length, 1);
+      assert.strictEqual(children[0].parsedType.fieldName, "status");
+      assert.strictEqual(children[0].contextValue, "ccloud-flink-type-field-synthetic");
+    });
+
+    it("returns undefined nestedPath for fields within ARRAY<ROW>", () => {
+      const column = new FlinkRelationColumn({
+        ...createTestColumn("ARRAY<ROW<id INT>>"),
+        name: "artists",
+        fullDataType: "ARRAY<ROW<id INT>>",
+      });
+
+      const children = column.getChildren();
+      assert.strictEqual(children[0].nestedPath, undefined);
+    });
+
+    it("returns undefined nestedPath for fields within MULTISET<ROW>", () => {
+      const column = new FlinkRelationColumn({
+        ...createTestColumn("MULTISET<ROW<field VARCHAR>>"),
+        name: "items",
+        fullDataType: "MULTISET<ROW<field VARCHAR>>",
+      });
+
+      const children = column.getChildren();
+      assert.strictEqual(children[0].nestedPath, undefined);
     });
   });
 });
