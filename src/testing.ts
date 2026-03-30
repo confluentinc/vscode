@@ -66,15 +66,29 @@ export async function run() {
 
 /** Copy extension and sidecar log files to the project root alongside TEST-result.xml. */
 function copyLogFilesToProjectRoot(projectRoot: string): void {
+  // resolve log file paths before disposing (dispose clears the stream reference)
+  let extensionLogPath: string | undefined;
   try {
     const uris = EXTENSION_OUTPUT_CHANNEL.getFileUris();
     if (uris.length > 0) {
-      const dest = join(projectRoot, "TEST-extension.log");
-      copyFileSync(uris[0].fsPath, dest);
-      console.log(`Copied extension log to "${dest}"`);
+      extensionLogPath = uris[0].fsPath;
     }
-  } catch (err) {
-    console.warn("Failed to copy extension log:", err);
+  } catch {
+    // getFileUris() may throw if WriteableTmpDir was never determined
+    console.warn("Could not determine extension log file path; not copying log file");
+  }
+
+  // flush the rotating file stream so the copy captures all buffered writes
+  EXTENSION_OUTPUT_CHANNEL.dispose();
+
+  if (extensionLogPath) {
+    try {
+      const dest = join(projectRoot, "TEST-extension.log");
+      copyFileSync(extensionLogPath, dest);
+      console.log(`Copied extension log to "${dest}"`);
+    } catch (err) {
+      console.warn("Failed to copy extension log:", err);
+    }
   }
 
   try {
