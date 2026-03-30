@@ -80,6 +80,73 @@ export class FlinkTypeNode implements IResourceBase {
   }
 
   /**
+   * Get the field name for this node (if it has one).
+   * Only defined for ROW/MAP member fields that have explicit field names.
+   * Used by 'Copy Name' action.
+   */
+  get name(): string | undefined {
+    return this.parsedType.fieldName;
+  }
+
+  /**
+   * Check if this node is within a synthetic element (nested ARRAY/MULTISET container).
+   * Returns true if the node's ID path contains [array] or [multiset] segments.
+   */
+  private isWithinSyntheticElement(): boolean {
+    const parts = this.id.split(".");
+    return parts.some((part) => part === "[array]" || part === "[multiset]");
+  }
+
+  /**
+   * Get the nested path for this node, relative to the table/view.
+   * Strips the relation name from the full ID path.
+   *
+   * Returns undefined if the path contains synthetic segments ([array], [multiset]),
+   * as such paths don't represent valid SQL field paths.
+   *
+   * Examples:
+   *   - Field "street" in column "address": "address.street"
+   *   - Deep nesting: "address.location.city"
+   *   - Field inside array (data.[array].field): undefined (not a valid direct path)
+   *
+   * Used by 'Copy Nested Path' action.
+   */
+  get nestedPath(): string | undefined {
+    if (this.isWithinSyntheticElement()) {
+      return undefined;
+    }
+
+    // Remove first component (relation name)
+    const parts = this.id.split(".");
+    return parts.slice(1).join(".");
+  }
+
+  /**
+   * Get the context value for this node, used for VS Code when clauses in context menus.
+   * Returns different values based on field name presence and synthetic element ancestry
+   * to control which actions are available in the context menu.
+   */
+  get contextValue(): string {
+    const hasSyntheticAncestry = this.isWithinSyntheticElement();
+    const hasFieldName = !!this.parsedType.fieldName;
+
+    if (hasFieldName && hasSyntheticAncestry) {
+      // Has name to copy, but nested path is invalid (e.g., interior_int in ARRAY<ARRAY<ROW>>)
+      return "ccloud-flink-type-field-synthetic";
+    }
+    if (hasFieldName && !hasSyntheticAncestry) {
+      // Has name and valid nested path (e.g., street in ROW<address ROW<street VARCHAR>>)
+      return "ccloud-flink-type-field";
+    }
+    if (!hasFieldName && hasSyntheticAncestry) {
+      // Synthetic intermediate node (e.g., [array] node itself)
+      return "ccloud-flink-type-node-synthetic";
+    }
+    // Top-level column node or ROW type node without field name
+    return "ccloud-flink-type-node";
+  }
+
+  /**
    * Determine if this node should be expandable in the tree view.
    * Uses isFlinkTypeExpandable() to check the underlying type structure.
    */
@@ -174,21 +241,47 @@ export class FlinkTypeNode implements IResourceBase {
     const { kind, members } = this.parsedType as CompoundFlinkType;
 
     if (kind === FlinkTypeKind.ROW || kind === FlinkTypeKind.MAP) {
+      // Build and return member nodes directly for ROW/MAP types
       return this.buildMemberNodes(members);
     }
 
-    // ARRAY/MULTISET types
-    return this.buildContainerChildNodes(members[0]);
+    // This node must be for ARRAY/MULTISET types. What type is the element?
+    const elementType = members[0];
+
+    // Skip intermediate container node if element is ROW/MAP (UI optimization).
+    // This allows users to see and access the fields of the ROW/MAP directly under the ARRAY/MULTISET node,
+    // without an extra synthetic node in between.
+    // However, we still include the synthetic segment in child IDs to properly mark container ancestry.
+    if (elementType.kind === FlinkTypeKind.ROW || elementType.kind === FlinkTypeKind.MAP) {
+      // Determine synthetic label based on THIS node's kind (ARRAY or MULTISET)
+      const syntheticLabel = kind === FlinkTypeKind.ARRAY ? "[array]" : "[multiset]";
+      return this.buildMemberNodes(elementType.members, syntheticLabel);
+    }
+
+    // Element is nested ARRAY/MULTISET: create intermediate node with descriptive synthetic ID
+    // (only end up here if there are multiple levels of container nesting, e.g., ARRAY<ARRAY<INT>>,
+    // where the element kind is also ARRAY or MULTISET)
+    return this.buildNestedContainerNode(elementType);
   }
 
   /**
    * Build child nodes for ROW/MAP members.
    * Each member becomes a direct child node with its field name appended to the parent ID.
+   * @param members - The member types to create nodes for
+   * @param syntheticSegment - Optional synthetic segment to insert before field names (e.g., "[array]", "[multiset]")
    */
-  private buildMemberNodes(members: FlinkType[]): FlinkTypeNode[] {
+  private buildMemberNodes(members: FlinkType[], syntheticSegment?: string): FlinkTypeNode[] {
     return members.map((member) => {
       const fieldName = member.fieldName;
-      const childId = fieldName ? `${this.id}.${fieldName}` : this.id;
+      // If syntheticSegment provided, insert it between parent ID and field name
+      let childId: string;
+      if (syntheticSegment && fieldName) {
+        childId = `${this.id}.${syntheticSegment}.${fieldName}`;
+      } else if (fieldName) {
+        childId = `${this.id}.${fieldName}`;
+      } else {
+        childId = this.id;
+      }
       return new FlinkTypeNode({
         parsedType: member,
         id: childId,
@@ -197,26 +290,14 @@ export class FlinkTypeNode implements IResourceBase {
   }
 
   /**
-   * Build child nodes for ARRAY/MULTISET container types.
-   * Optimizes by skipping intermediate node when element is ROW/MAP,
-   * or creates synthetic container node for nested ARRAY/MULTISET elements.
-   */
-  private buildContainerChildNodes(elementType: FlinkType): FlinkTypeNode[] {
-    if (elementType.kind === FlinkTypeKind.ROW || elementType.kind === FlinkTypeKind.MAP) {
-      // Element is ROW/MAP: skip directly to its members (existing optimization)
-      return this.buildMemberNodes(elementType.members);
-    }
-
-    // Element is nested ARRAY/MULTISET: create intermediate node with descriptive synthetic ID
-    return this.buildNestedContainerNode(elementType);
-  }
-
-  /**
    * Build an intermediate node for nested ARRAY/MULTISET elements.
    * Uses synthetic [array] or [multiset] label for the ID segment.
+   * The label represents THIS node's container type (what we're descending into),
+   * not the element's type.
    */
   private buildNestedContainerNode(elementType: FlinkType): FlinkTypeNode[] {
-    const containerLabel = elementType.kind === FlinkTypeKind.ARRAY ? "[array]" : "[multiset]";
+    const { kind } = this.parsedType as CompoundFlinkType;
+    const containerLabel = kind === FlinkTypeKind.ARRAY ? "[array]" : "[multiset]";
     const childId = `${this.id}.${containerLabel}`;
 
     return [
@@ -243,7 +324,7 @@ export class FlinkTypeNode implements IResourceBase {
     item.id = this.id;
     item.description = this.getDescription();
     item.tooltip = this.getTooltip();
-    item.contextValue = "ccloud-flink-type-node";
+    item.contextValue = this.contextValue;
 
     return item;
   }

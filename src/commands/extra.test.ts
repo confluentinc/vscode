@@ -1,11 +1,15 @@
-import * as assert from "node:assert";
+import * as assert from "assert";
 import * as sinon from "sinon";
 import { env, window } from "vscode";
 import {
   TEST_FLINK_RELATION,
   TEST_VARCHAR_COLUMN,
 } from "../../tests/unit/testResources/flinkRelation";
-import { copyResourceName } from "./extra";
+import {
+  TEST_FLINK_TYPE_FIELD_NODE,
+  TEST_FLINK_TYPE_NESTED_ARRAY_NODE,
+} from "../../tests/unit/testResources/flinkTypeNode";
+import { copyNestedPath, copyResourceName } from "./extra";
 
 describe("commands/extra.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -50,6 +54,29 @@ describe("commands/extra.ts", () => {
           `Copied "${expectedName}" to clipboard.`,
         );
       });
+    });
+  });
+
+  describe("copyNestedPath", () => {
+    it(`should copy embedded row field nested path to clipboard`, async () => {
+      // the entire id is "test_relation.address.street", but we expect only the
+      // nested path "address.street" to be copied for use within SELECT queries, etc.
+      await copyNestedPath(TEST_FLINK_TYPE_FIELD_NODE);
+
+      const clipboardValue = await env.clipboard.readText();
+
+      // Verify clipboard was written
+      assert.strictEqual(clipboardValue, "address.street");
+
+      // Verify notification was shown
+      sinon.assert.calledOnceWithExactly(infoMessageStub, `Copied "address.street" to clipboard.`);
+    });
+
+    it("should not copy if nestedPath is undefined", async () => {
+      await copyNestedPath(TEST_FLINK_TYPE_NESTED_ARRAY_NODE);
+
+      // Clipboard should not be modified, notification should not be shown
+      sinon.assert.notCalled(infoMessageStub);
     });
   });
 });
