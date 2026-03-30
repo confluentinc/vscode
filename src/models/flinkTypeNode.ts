@@ -274,11 +274,14 @@ export class FlinkTypeNode implements IResourceBase {
     return members.map((member) => {
       const fieldName = member.fieldName;
       // If syntheticSegment provided, insert it between parent ID and field name
-      const childId = fieldName
-        ? syntheticSegment
-          ? `${this.id}.${syntheticSegment}.${fieldName}`
-          : `${this.id}.${fieldName}`
-        : this.id;
+      let childId: string;
+      if (syntheticSegment && fieldName) {
+        childId = `${this.id}.${syntheticSegment}.${fieldName}`;
+      } else if (fieldName) {
+        childId = `${this.id}.${fieldName}`;
+      } else {
+        childId = this.id;
+      }
       return new FlinkTypeNode({
         parsedType: member,
         id: childId,
