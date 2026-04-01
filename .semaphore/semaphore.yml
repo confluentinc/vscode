@@ -101,13 +101,22 @@ blocks:
                 artifact push workflow coverage/lcov-functional.info --force
                 echo "Uploaded Playwright coverage artifacts"
               fi
-            # Upload Playwright artifacts, if available
+            # Bundle Mocha test results + logs into a single triage artifact;
+            # upload Playwright artifacts if available
             - |
+              PLATFORM_ARCH="$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
+              TRIAGE_ZIP="test-results-mocha-${PLATFORM_ARCH}.zip"
+              zip -j "${TRIAGE_ZIP}" TEST-result.xml TEST-extension.log TEST-sidecar.log 2>/dev/null || true
+              if [ -f "${TRIAGE_ZIP}" ]; then
+                artifact push workflow "${TRIAGE_ZIP}" \
+                  --destination "test-results-mocha/${TRIAGE_ZIP}" --force
+                echo "Uploaded ${TRIAGE_ZIP}"
+              fi
               if [ -d test-results ]; then
-                artifact push workflow test-results --destination test-results-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m) --force
+                artifact push workflow test-results --destination test-results-${PLATFORM_ARCH} --force
               fi
               if [ -d playwright-report ]; then
-                artifact push workflow playwright-report --destination playwright-report-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m) --force
+                artifact push workflow playwright-report --destination playwright-report-${PLATFORM_ARCH} --force
               fi
 
   - name: "Linux ARM64 Stable: Tests"
@@ -209,6 +218,17 @@ blocks:
                   test-results publish $TestResultWebviewFileName --name 'Webview Tests' --force
               } else {
                   Write-Output "Webview test results not found at $(Join-Path -Path $PWD -ChildPath $TestResultWebviewFileName)"
+              }
+            # Bundle Mocha test results + logs into a single triage artifact
+            - |
+              $triageZip = "test-results-mocha-windows-x64.zip"
+              $filesToZip = @("TEST-result.xml", "TEST-extension.log", "TEST-sidecar.log") |
+                  Where-Object { Test-Path $_ }
+              if ($filesToZip.Count -gt 0) {
+                  Compress-Archive -Path $filesToZip -DestinationPath $triageZip -Force
+                  artifact push workflow $triageZip `
+                    --destination "test-results-mocha/$triageZip" --force
+                  Write-Output "Uploaded $triageZip"
               }
 
   # --- End Build & Test (multi-platform/-arch) for VS Code (stable) ---
