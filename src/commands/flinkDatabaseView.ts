@@ -18,29 +18,36 @@ const logger = new Logger("FlinkDatabaseViewCommands");
 export async function queryFlinkRelationCommand(relation: FlinkRelation): Promise<void> {
   if (!relation) {
     logger.error("No relation provided to queryFlinkRelationCommand");
-    return;
+    throw new Error(
+      "Unable to open a Flink SQL query because no relation was provided. Please run this command from a Flink relation in the Databases view.",
+    );
   }
 
   const loader = CCloudResourceLoader.getInstance();
   const environment = await loader.getEnvironment(relation.environmentId);
   if (!environment) {
     logger.error(`Could not find environment ${relation.environmentId}`);
-    return;
+    throw new Error(
+      `Unable to open a Flink SQL query because environment "${relation.environmentId}" could not be found. Refresh your Confluent Cloud connection and try again.`,
+    );
   }
 
   // Get the database (Kafka cluster)
-  const databases = await loader.getKafkaClustersForEnvironmentId(relation.environmentId);
-  const database = databases?.find((c) => c.id === relation.databaseId);
-  if (!database || !database.isFlinkable()) {
+  const database = await loader.getFlinkDatabase(relation.environmentId, relation.databaseId);
+  if (!database) {
     logger.error(`Could not find Flink database ${relation.databaseId}`);
-    return;
+    throw new Error(
+      `Unable to open a Flink SQL query because the selected database "${relation.databaseId}" is not available or is not Flink-enabled. Select a valid Flink database and try again.`,
+    );
   }
 
   // Get first compute pool for this database
   const computePool = database.flinkPools[0];
   if (!computePool) {
     logger.error(`No compute pool found for database ${database.id}`);
-    return;
+    throw new Error(
+      `Unable to open a Flink SQL query because no compute pool is configured for database "${database.name}". Create or select a compute pool for this database in Confluent Cloud, then try again.`,
+    );
   }
 
   // Create templated query
@@ -60,7 +67,7 @@ export async function queryFlinkRelationCommand(relation: FlinkRelation): Promis
 
   // Show document with cursor positioned after the query
   const editor = await vscode.window.showTextDocument(document);
-  const position = new vscode.Position(0, documentTemplate.length);
+  const position = document.positionAt(documentTemplate.length);
   editor.selection = new vscode.Selection(position, position);
 }
 
