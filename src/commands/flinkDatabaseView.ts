@@ -3,12 +3,66 @@ import { registerCommandWithLogging } from ".";
 import { setFlinkDocumentMetadata } from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import type { CCloudEnvironment } from "../models/environment";
 import type { FlinkDatabaseResourceContainer } from "../models/containers/flinkDatabaseResourceContainer";
 import { FlinkDatabaseContainerLabel } from "../models/containers/flinkDatabaseResourceContainer";
+import type { CCloudEnvironment } from "../models/environment";
+import type { FlinkRelation } from "../models/flinkRelation";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 
 const logger = new Logger("FlinkDatabaseViewCommands");
+
+/**
+ * Open a new FlinkSQL document with a templated query for the selected relation.
+ * Sets the document metadata to the relation's environment, database, and first compute pool.
+ */
+export async function queryFlinkRelationCommand(relation: FlinkRelation): Promise<void> {
+  if (!relation) {
+    logger.error("No relation provided to queryFlinkRelationCommand");
+    return;
+  }
+
+  const loader = CCloudResourceLoader.getInstance();
+  const environment = await loader.getEnvironment(relation.environmentId);
+  if (!environment) {
+    logger.error(`Could not find environment ${relation.environmentId}`);
+    return;
+  }
+
+  // Get the database (Kafka cluster)
+  const databases = await loader.getKafkaClustersForEnvironmentId(relation.environmentId);
+  const database = databases?.find((c) => c.id === relation.databaseId);
+  if (!database || !database.isFlinkable()) {
+    logger.error(`Could not find Flink database ${relation.databaseId}`);
+    return;
+  }
+
+  // Get first compute pool for this database
+  const computePool = database.flinkPools[0];
+  if (!computePool) {
+    logger.error(`No compute pool found for database ${database.id}`);
+    return;
+  }
+
+  // Create templated query
+  const documentTemplate = `SELECT * FROM \`${relation.name}\` LIMIT 10;\n`;
+
+  const document = await vscode.workspace.openTextDocument({
+    language: "flinksql",
+    content: documentTemplate,
+  });
+
+  // Set document metadata
+  await setFlinkDocumentMetadata(document.uri, {
+    catalog: environment as CCloudEnvironment,
+    database: database,
+    computePool: computePool,
+  });
+
+  // Show document with cursor positioned after the query
+  const editor = await vscode.window.showTextDocument(document);
+  const position = new vscode.Position(0, documentTemplate.length);
+  editor.selection = new vscode.Selection(position, position);
+}
 
 export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {
   return [
@@ -22,6 +76,8 @@ export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {
       "confluent.flinkdatabase.refreshResourceContainer",
       refreshResourceContainerCommand,
     ),
+    // query relation with Flink
+    registerCommandWithLogging("confluent.flinkdatabase.queryRelation", queryFlinkRelationCommand),
   ];
 }
 

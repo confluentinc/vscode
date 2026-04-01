@@ -461,6 +461,12 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.flinkdatabase.queryRelation",
+        "title": "Query with Flink",
+        "category": "Confluent: Flink Database",
+        "icon": "$(play)"
+      },
+      {
         "command": "confluent.flinkdatabase.refresh",
         "icon": "$(sync)",
         "title": "Refresh",
@@ -1464,6 +1470,10 @@
           "when": "true"
         },
         {
+          "command": "confluent.flinkdatabase.queryRelation",
+          "when": "false"
+        },
+        {
           "command": "confluent.flinkdatabase.refresh",
           "when": "true"
         },
@@ -2041,6 +2051,11 @@
           "command": "confluent.flinkdatabase.refreshResourceContainer",
           "when": "view == confluent-flink-database && viewItem =~ /flink-database.*container/",
           "group": "inline@5"
+        },
+        {
+          "command": "confluent.flinkdatabase.queryRelation",
+          "when": "view == confluent-flink-database && viewItem =~ /ccloud-flink-relation-(base-table|view)/",
+          "group": "4_flink@1"
         },
         {
           "command": "confluent.copyOrganizationId",
