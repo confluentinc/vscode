@@ -7,6 +7,7 @@ import * as statementUtils from "../flinkSql/statementUtils";
 
 import {
   createRelationFromFlinkDatabaseViewCommand,
+  queryFlinkRelationCommand,
   refreshResourceContainerCommand,
   registerFlinkDatabaseViewCommands,
 } from "./flinkDatabaseView";
@@ -45,7 +46,7 @@ describe("commands/flinkDatabaseView.ts", () => {
     it("should register the expected commands", () => {
       registerFlinkDatabaseViewCommands();
 
-      assert.strictEqual(registerCommandWithLoggingStub.callCount, 2);
+      assert.strictEqual(registerCommandWithLoggingStub.callCount, 3);
 
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub,
@@ -56,6 +57,11 @@ describe("commands/flinkDatabaseView.ts", () => {
         registerCommandWithLoggingStub,
         "confluent.flinkdatabase.refreshResourceContainer",
         refreshResourceContainerCommand,
+      );
+      sinon.assert.calledWithExactly(
+        registerCommandWithLoggingStub,
+        "confluent.flinkdatabase.queryRelation",
+        queryFlinkRelationCommand,
       );
     });
   });
