@@ -435,6 +435,8 @@ async function setupContextValues() {
     "ccloud-flink-relation-external-table",
     "ccloud-flink-relation-system-table",
     "ccloud-flink-column",
+    "ccloud-flink-type-field",
+    "ccloud-flink-type-field-synthetic",
     "local-kafka-cluster",
     "direct-kafka-cluster",
     // topics and Flink statements also have names, but their context values vary wildly and must be regex-matched

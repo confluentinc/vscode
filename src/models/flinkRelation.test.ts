@@ -471,13 +471,13 @@ describe("flinkRelation.ts", () => {
           assert.strictEqual(children[0].parsedType.kind, "ARRAY");
           assert.strictEqual(children[0].id, "test_table.nested_people.[array]");
 
-          // Expanding the intermediate ARRAY node skips the ROW and returns its field directly
-          // (applies the ARRAY<ROW> optimization to nested containers)
+          // Expanding the intermediate ARRAY node skips the ROW but includes [array] in field IDs
+          // (field is inside TWO arrays, so ID has TWO [array] segments)
           const innerChildren = children[0].getChildren();
           assert.strictEqual(innerChildren.length, 1);
           assert.strictEqual(innerChildren[0].parsedType.kind, "SCALAR");
           assert.strictEqual(innerChildren[0].parsedType.fieldName, "id");
-          assert.strictEqual(innerChildren[0].id, "test_table.nested_people.[array].id");
+          assert.strictEqual(innerChildren[0].id, "test_table.nested_people.[array].[array].id");
         });
 
         it("handles deeply nested ARRAY<ARRAY<MULTISET<ROW>>> with proper ID generation", () => {
@@ -498,18 +498,22 @@ describe("flinkRelation.ts", () => {
           assert.strictEqual(level1[0].parsedType.kind, FlinkTypeKind.ARRAY);
           assert.strictEqual(level1[0].id, "test_table.complex_nested.[array]");
 
-          // Level 2: Expand inner ARRAY -> intermediate [multiset] node for MULTISET
+          // Level 2: Expand inner ARRAY -> intermediate [array] node for nested ARRAY level
           const level2 = level1[0].getChildren();
           assert.strictEqual(level2.length, 1);
           assert.strictEqual(level2[0].parsedType.kind, FlinkTypeKind.MULTISET);
-          assert.strictEqual(level2[0].id, "test_table.complex_nested.[array].[multiset]");
+          assert.strictEqual(level2[0].id, "test_table.complex_nested.[array].[array]");
 
-          // Level 3: Expand MULTISET -> ROW's field directly (skip ROW node)
+          // Level 3: Expand MULTISET -> ROW's field directly (skip ROW node but include [multiset] in IDs)
+          // Field is inside ARRAY -> ARRAY -> MULTISET, so ID has [array].[array].[multiset]
           const level3 = level2[0].getChildren();
           assert.strictEqual(level3.length, 1);
           assert.strictEqual(level3[0].parsedType.kind, FlinkTypeKind.SCALAR);
           assert.strictEqual(level3[0].parsedType.fieldName, "id");
-          assert.strictEqual(level3[0].id, "test_table.complex_nested.[array].[multiset].id");
+          assert.strictEqual(
+            level3[0].id,
+            "test_table.complex_nested.[array].[array].[multiset].id",
+          );
           assert.strictEqual(level3[0].isExpandable, false);
 
           // Verify the complete ID chain is unique
@@ -582,20 +586,20 @@ describe("flinkRelation.ts", () => {
             "IDs from different columns should be completely different due to column ID prefix",
           );
 
-          // Verify IDs have expected structure: relationName.columnName.fieldName
+          // Verify IDs have expected structure: relationName.columnName.[array].fieldName
           for (const id of ids1) {
             assert.match(
               id,
-              /^users_table\.metadata\.(id|name)$/,
-              `Column 1 ID should be: users_table.metadata.(id|name): ${id}`,
+              /^users_table\.metadata\.\[array\]\.(id|name)$/,
+              `Column 1 ID should be: users_table.metadata.[array].(id|name): ${id}`,
             );
           }
 
           for (const id of ids2) {
             assert.match(
               id,
-              /^orders_table\.metadata\.(id|name)$/,
-              `Column 2 ID should be: orders_table.metadata.(id|name): ${id}`,
+              /^orders_table\.metadata\.\[array\]\.(id|name)$/,
+              `Column 2 ID should be: orders_table.metadata.[array].(id|name): ${id}`,
             );
           }
         });
@@ -669,13 +673,13 @@ describe("flinkRelation.ts", () => {
 
           assert.strictEqual(children.length, 2, "Should have 2 field children from MULTISET<ROW>");
 
-          // Verify IDs use field names
+          // Verify IDs use field names with [multiset] synthetic segment
           const ids = children.map((child) => child.id);
           for (const id of ids) {
             assert.match(
               id,
-              /^test_table\.items\.(id|value)$/,
-              `MULTISET ID should be: test_table.items.(id|value): ${id}`,
+              /^test_table\.items\.\[multiset\]\.(id|value)$/,
+              `MULTISET ID should be: test_table.items.[multiset].(id|value): ${id}`,
             );
           }
 
