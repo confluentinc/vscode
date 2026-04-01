@@ -1056,6 +1056,31 @@ describe("viewProviders/resources.ts", () => {
         // And repainted toplevel.
         sinon.assert.calledOnce(providerRepaintStub);
       });
+
+      it("Refreshes existing DirectConnectionRows that were not added or removed", async () => {
+        // Simulate an existing DirectConnectionRow already in the provider's connections map
+        const existingId = "test-existing-direct-connection-row" as ConnectionId;
+        const existingLoader = new DirectResourceLoader(existingId);
+        const existingRow = new DirectConnectionRow(existingLoader);
+        provider["connections"].set(existingId, existingRow);
+
+        const rowRefreshStub = sandbox.stub(existingRow, "refresh").resolves();
+
+        // directLoaders() returns the same loader (no new, no removed)
+        resourceLoadersDirectLoadersStub.returns([existingLoader]);
+
+        await provider["reconcileDirectConnections"]();
+
+        // should have refreshed the existing row with a deep refresh
+        sinon.assert.calledOnce(rowRefreshStub);
+        sinon.assert.calledWithExactly(rowRefreshStub, true);
+
+        // should NOT have called loadAndStoreConnection (no new connections)
+        sinon.assert.notCalled(providerLoadAndStoreConnectionStub);
+
+        // should have repainted
+        sinon.assert.calledOnce(providerRepaintStub);
+      });
     });
 
     describe("repaint()", () => {
