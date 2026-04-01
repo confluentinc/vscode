@@ -7,6 +7,7 @@ import * as statementUtils from "../flinkSql/statementUtils";
 
 import {
   createRelationFromFlinkDatabaseViewCommand,
+  queryFlinkRelationCommand,
   refreshResourceContainerCommand,
   registerFlinkDatabaseViewCommands,
 } from "./flinkDatabaseView";
@@ -16,6 +17,8 @@ import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoader
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+  TEST_FLINK_RELATION,
+  TEST_FLINK_VIEW,
 } from "../../tests/unit/testResources";
 import type { CCloudResourceLoader } from "../loaders";
 import {
@@ -45,7 +48,7 @@ describe("commands/flinkDatabaseView.ts", () => {
     it("should register the expected commands", () => {
       registerFlinkDatabaseViewCommands();
 
-      assert.strictEqual(registerCommandWithLoggingStub.callCount, 2);
+      assert.strictEqual(registerCommandWithLoggingStub.callCount, 3);
 
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub,
@@ -56,6 +59,11 @@ describe("commands/flinkDatabaseView.ts", () => {
         registerCommandWithLoggingStub,
         "confluent.flinkdatabase.refreshResourceContainer",
         refreshResourceContainerCommand,
+      );
+      sinon.assert.calledWithExactly(
+        registerCommandWithLoggingStub,
+        "confluent.flinkdatabase.queryRelation",
+        queryFlinkRelationCommand,
       );
     });
   });
@@ -360,6 +368,185 @@ describe("commands/flinkDatabaseView.ts", () => {
         mockEditor.selection.start.line,
       );
       assert.strictEqual(mockEditor.selection.start.character, 0);
+    });
+  });
+
+  describe("queryFlinkRelationCommand", () => {
+    let stubbedCloudResourceLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+    let openTextDocumentStub: sinon.SinonStub;
+    let showTextDocumentStub: sinon.SinonStub;
+    let setFlinkDocumentMetadataStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      stubbedCloudResourceLoader = getStubbedCCloudResourceLoader(sandbox);
+      openTextDocumentStub = sandbox.stub(workspace, "openTextDocument");
+      showTextDocumentStub = sandbox.stub(window, "showTextDocument");
+      setFlinkDocumentMetadataStub = sandbox
+        .stub(statementUtils, "setFlinkDocumentMetadata")
+        .resolves();
+    });
+
+    describe("error handling", () => {
+      it("should throw error when no relation is provided", async () => {
+        await assert.rejects(
+          async () => await queryFlinkRelationCommand(undefined as any),
+          /no relation was provided/,
+        );
+
+        sinon.assert.notCalled(stubbedCloudResourceLoader.getEnvironment);
+        sinon.assert.notCalled(stubbedCloudResourceLoader.getFlinkDatabase);
+        sinon.assert.notCalled(openTextDocumentStub);
+        sinon.assert.notCalled(showTextDocumentStub);
+      });
+
+      it("should throw error when environment is not found", async () => {
+        stubbedCloudResourceLoader.getEnvironment.resolves(undefined);
+
+        await assert.rejects(
+          async () => await queryFlinkRelationCommand(TEST_FLINK_RELATION),
+          /environment.*could not be found/,
+        );
+
+        sinon.assert.calledOnceWithExactly(
+          stubbedCloudResourceLoader.getEnvironment,
+          TEST_FLINK_RELATION.environmentId,
+        );
+        sinon.assert.notCalled(stubbedCloudResourceLoader.getFlinkDatabase);
+        sinon.assert.notCalled(openTextDocumentStub);
+        sinon.assert.notCalled(showTextDocumentStub);
+      });
+
+      it("should throw error when Flink database is not found", async () => {
+        stubbedCloudResourceLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
+        stubbedCloudResourceLoader.getFlinkDatabase.resolves(undefined);
+
+        await assert.rejects(
+          async () => await queryFlinkRelationCommand(TEST_FLINK_RELATION),
+          /database.*is not available/,
+        );
+
+        sinon.assert.calledOnceWithExactly(
+          stubbedCloudResourceLoader.getEnvironment,
+          TEST_FLINK_RELATION.environmentId,
+        );
+        sinon.assert.calledOnceWithExactly(
+          stubbedCloudResourceLoader.getFlinkDatabase,
+          TEST_FLINK_RELATION.environmentId,
+          TEST_FLINK_RELATION.databaseId,
+        );
+        sinon.assert.notCalled(openTextDocumentStub);
+        sinon.assert.notCalled(showTextDocumentStub);
+      });
+
+      it("should throw error when no compute pool is available", async () => {
+        stubbedCloudResourceLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
+        const databaseWithoutPools = {
+          ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          flinkPools: [],
+        } as any;
+        stubbedCloudResourceLoader.getFlinkDatabase.resolves(databaseWithoutPools);
+
+        await assert.rejects(
+          async () => await queryFlinkRelationCommand(TEST_FLINK_RELATION),
+          /no compute pool is configured/,
+        );
+
+        sinon.assert.calledOnceWithExactly(
+          stubbedCloudResourceLoader.getEnvironment,
+          TEST_FLINK_RELATION.environmentId,
+        );
+        sinon.assert.calledOnceWithExactly(
+          stubbedCloudResourceLoader.getFlinkDatabase,
+          TEST_FLINK_RELATION.environmentId,
+          TEST_FLINK_RELATION.databaseId,
+        );
+        sinon.assert.notCalled(openTextDocumentStub);
+        sinon.assert.notCalled(showTextDocumentStub);
+      });
+    });
+
+    describe("success cases", () => {
+      let mockDocument: any;
+      let mockEditor: any;
+
+      beforeEach(() => {
+        const newDocumentUri = Uri.parse("untitled://Untitled-1");
+        mockDocument = {
+          uri: newDocumentUri,
+          positionAt: (offset: number) => ({ line: 0, character: offset }),
+        };
+        mockEditor = { selection: undefined };
+
+        stubbedCloudResourceLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
+        stubbedCloudResourceLoader.getFlinkDatabase.resolves(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+        openTextDocumentStub.resolves(mockDocument);
+        showTextDocumentStub.resolves(mockEditor);
+      });
+
+      it("should open FlinkSQL document with correct query template for base table", async () => {
+        await queryFlinkRelationCommand(TEST_FLINK_RELATION);
+
+        // Verify environment lookup
+        sinon.assert.calledOnceWithExactly(
+          stubbedCloudResourceLoader.getEnvironment,
+          TEST_FLINK_RELATION.environmentId,
+        );
+
+        // Verify database lookup
+        sinon.assert.calledOnceWithExactly(
+          stubbedCloudResourceLoader.getFlinkDatabase,
+          TEST_FLINK_RELATION.environmentId,
+          TEST_FLINK_RELATION.databaseId,
+        );
+
+        // Verify document creation with correct template
+        sinon.assert.calledOnceWithExactly(openTextDocumentStub, {
+          language: "flinksql",
+          content: "SELECT * FROM `test_relation` LIMIT 10;\n",
+        });
+
+        // Verify document metadata
+        sinon.assert.calledOnceWithExactly(setFlinkDocumentMetadataStub, mockDocument.uri, {
+          catalog: TEST_CCLOUD_ENVIRONMENT,
+          database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          computePool: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.flinkPools[0],
+        });
+
+        // Verify document is shown
+        sinon.assert.calledOnceWithExactly(showTextDocumentStub, mockDocument);
+
+        // Verify cursor is positioned at end of content
+        assert.ok(mockEditor.selection);
+        assert.strictEqual(mockEditor.selection.start.line, 0);
+        assert.strictEqual(
+          mockEditor.selection.start.character,
+          "SELECT * FROM `test_relation` LIMIT 10;\n".length,
+        );
+      });
+
+      it("should open FlinkSQL document with correct query template for view", async () => {
+        await queryFlinkRelationCommand(TEST_FLINK_VIEW);
+
+        // Verify document creation uses view name
+        sinon.assert.calledOnceWithExactly(openTextDocumentStub, {
+          language: "flinksql",
+          content: "SELECT * FROM `test_view` LIMIT 10;\n",
+        });
+
+        // Verify all other steps are the same
+        sinon.assert.calledOnce(stubbedCloudResourceLoader.getEnvironment);
+        sinon.assert.calledOnce(stubbedCloudResourceLoader.getFlinkDatabase);
+        sinon.assert.calledOnce(setFlinkDocumentMetadataStub);
+        sinon.assert.calledOnce(showTextDocumentStub);
+      });
+
+      it("should escape table name with backticks in query template", async () => {
+        await queryFlinkRelationCommand(TEST_FLINK_RELATION);
+
+        const callArgs = openTextDocumentStub.getCall(0).args[0];
+        assert.ok(callArgs.content.includes("`test_relation`"));
+        assert.ok(callArgs.content.startsWith("SELECT * FROM `"));
+      });
     });
   });
 });
