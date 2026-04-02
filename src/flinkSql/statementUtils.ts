@@ -11,8 +11,10 @@ import {
 import { uriMetadataSet } from "../emitters";
 import { isResponseErrorWithStatus } from "../errors";
 import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
+import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
 import { Logger } from "../logging";
-import type { CCloudEnvironment } from "../models/environment";
+import { CCloudEnvironment } from "../models/environment";
+import type { EnvironmentId } from "../models/resource";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
 import { restFlinkStatementToModel, TERMINAL_PHASES } from "../models/flinkStatement";
@@ -24,6 +26,7 @@ import type { UriMetadata } from "../storage/types";
 import { raceWithTimeout } from "../utils/timing";
 import { WebviewPanelCache } from "../webview-cache";
 import flinkStatementResults from "../webview/flink-statement-results.html";
+import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import { parseResults } from "./flinkStatementResults";
 import { extractPageToken } from "./utils";
 
@@ -321,6 +324,152 @@ export async function parseAllFlinkStatementResults<RT>(
  */
 export function isFromFlinkWorkspace(metadata: UriMetadata | undefined): boolean {
   return metadata?.[UriMetadataKeys.FLINK_FROM_WORKSPACE] === true;
+}
+
+/**
+ * Validates and retrieves resources needed for a Flink query.
+ * Throws detailed, user-facing errors if any resource is missing or invalid.
+ *
+ * @param params - Resource identifiers
+ * @returns Validated resources (environment, database, compute pool)
+ * @throws Error with user-friendly message if validation fails
+ */
+export async function validateFlinkQueryResources(params: {
+  environmentId: EnvironmentId;
+  databaseId: string;
+}): Promise<{
+  environment: CCloudEnvironment;
+  database: CCloudFlinkDbKafkaCluster;
+  computePool: CCloudFlinkComputePool;
+}> {
+  const loader = CCloudResourceLoader.getInstance();
+
+  // Validate environment
+  const environment = await loader.getEnvironment(params.environmentId);
+  if (!environment) {
+    throw new Error(
+      `Unable to open a Flink SQL query because environment "${params.environmentId}" ` +
+        "could not be found. Refresh your Confluent Cloud connection and try again.",
+    );
+  }
+
+  // getEnvironment can return Environment | undefined, but we need CCloudEnvironment
+  // CCloudResourceLoader.getEnvironment always returns CCloudEnvironment when found
+  if (!(environment instanceof CCloudEnvironment)) {
+    throw new Error(
+      `Unable to open a Flink SQL query because environment "${params.environmentId}" ` +
+        "is not a Confluent Cloud environment.",
+    );
+  }
+
+  // Validate database
+  const database = await loader.getFlinkDatabase(params.environmentId, params.databaseId);
+  if (!database) {
+    throw new Error(
+      `Unable to open a Flink SQL query because the selected database "${params.databaseId}" ` +
+        "is not available or is not Flink-enabled. Select a valid Flink database and try again.",
+    );
+  }
+
+  // Validate compute pool
+  const computePool = database.flinkPools[0];
+  if (!computePool) {
+    throw new Error(
+      `Unable to open a Flink SQL query because no compute pool is configured for database ` +
+        `"${database.name}". Create or select a compute pool for this database in Confluent Cloud, then try again.`,
+    );
+  }
+
+  return { environment, database, computePool };
+}
+
+/**
+ * Builds a fully-qualified SELECT query for a Flink-queryable entity.
+ * Generates identical queries whether invoked from Topics view or Flink Database view,
+ * since Kafka topics and Flink relations are the same underlying entity.
+ *
+ * @param environment - The Confluent Cloud environment (Flink catalog)
+ * @param database - The Kafka cluster (Flink database)
+ * @param entityName - The topic or relation name
+ * @param options - Optional query customization
+ * @returns A formatted Flink SQL SELECT query with comment header
+ */
+export function buildFlinkSelectQuery(
+  environment: CCloudEnvironment,
+  database: CCloudFlinkDbKafkaCluster,
+  entityName: string,
+  options?: { limit?: number },
+): string {
+  const limit = options?.limit ?? 10;
+  const fqn = `\`${environment.name}\`.\`${database.name}\`.\`${entityName}\``;
+
+  return `-- Query "${entityName}" with Flink SQL
+-- Replace this with your actual Flink SQL query
+
+SELECT *
+FROM ${fqn}
+LIMIT ${limit};
+`;
+}
+
+/**
+ * Opens a new Flink SQL document with a SELECT query for the specified entity.
+ * Calls buildFlinkSelectQuery() to generate the query, creates a new untitled document,
+ * sets Flink execution metadata (catalog, database, compute pool), displays the document,
+ * and positions the cursor appropriately.
+ *
+ * @param params - Query document parameters
+ * @returns The opened text editor
+ */
+export async function openFlinkQueryDocument(params: {
+  /** The topic or relation name to query */
+  entityName: string;
+  /** Environment/catalog for the query */
+  environment: CCloudEnvironment;
+  /** Database/Kafka cluster for the query */
+  database: CCloudFlinkDbKafkaCluster;
+  /** Compute pool to execute the query */
+  computePool: CCloudFlinkComputePool;
+  /** Whether to position cursor at end of document (default: false) */
+  positionCursorAtEnd?: boolean;
+  /** Row limit for the query (default: 10) */
+  limit?: number;
+}): Promise<vscode.TextEditor> {
+  const {
+    entityName,
+    environment,
+    database,
+    computePool,
+    positionCursorAtEnd = false,
+    limit,
+  } = params;
+
+  // Generate the query text
+  const queryText = buildFlinkSelectQuery(environment, database, entityName, { limit });
+
+  // Create document with FlinkSQL language
+  const document = await vscode.workspace.openTextDocument({
+    language: FLINK_SQL_LANGUAGE_ID,
+    content: queryText,
+  });
+
+  // Set Flink metadata using existing helper
+  await setFlinkDocumentMetadata(document.uri, {
+    catalog: environment,
+    database,
+    computePool,
+  });
+
+  // Show document
+  const editor = await vscode.window.showTextDocument(document, { preview: false });
+
+  // Position cursor
+  if (positionCursorAtEnd) {
+    const position = document.positionAt(queryText.length);
+    editor.selection = new vscode.Selection(position, position);
+  }
+
+  return editor;
 }
 
 /**

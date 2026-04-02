@@ -1,7 +1,9 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import * as vscode from "vscode";
 import { Uri } from "vscode";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
@@ -20,8 +22,11 @@ import type {
 import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "../clients/flinkSql";
 import { uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
+import type { CCloudResourceLoader } from "../loaders";
 import * as flinkStatementModels from "../models/flinkStatement";
 import { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import type { EnvironmentId } from "../models/resource";
 import type * as sidecar from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
@@ -29,15 +34,18 @@ import { localTimezoneOffset } from "../utils/timezone";
 import { Operation } from "./flinkStatementResults";
 import type { IFlinkStatementSubmitParameters } from "./statementUtils";
 import {
+  buildFlinkSelectQuery,
   determineFlinkStatementName,
   FlinkStatementWebviewPanelCache,
   isFromFlinkWorkspace,
   MAX_WAIT_TIME_MS,
+  openFlinkQueryDocument,
   parseAllFlinkStatementResults,
   REFRESH_STATEMENT_MAX_WAIT_MS,
   refreshFlinkStatement,
   setFlinkDocumentMetadata,
   submitFlinkStatement,
+  validateFlinkQueryResources,
   waitForResultsFetchable,
   waitForStatementCompletion,
 } from "./statementUtils";
@@ -499,6 +507,306 @@ describe("flinkSql/statementUtils.ts", function () {
 
     it("should return false when metadata is undefined", function () {
       assert.strictEqual(isFromFlinkWorkspace(undefined), false);
+    });
+  });
+
+  describe("validateFlinkQueryResources()", function () {
+    let stubbedCCloudResourceLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+
+    beforeEach(() => {
+      stubbedCCloudResourceLoader = getStubbedCCloudResourceLoader(sandbox);
+    });
+
+    it("should return all resources when validation succeeds", async function () {
+      stubbedCCloudResourceLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
+      stubbedCCloudResourceLoader.getFlinkDatabase.resolves(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+
+      const result = await validateFlinkQueryResources({
+        environmentId: "env-123" as EnvironmentId,
+        databaseId: "lkc-456",
+      });
+
+      assert.strictEqual(result.environment, TEST_CCLOUD_ENVIRONMENT);
+      assert.strictEqual(result.database, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+      assert.strictEqual(result.computePool, TEST_CCLOUD_FLINK_COMPUTE_POOL);
+
+      sinon.assert.calledOnceWithExactly(
+        stubbedCCloudResourceLoader.getEnvironment,
+        "env-123" as EnvironmentId,
+      );
+      sinon.assert.calledOnceWithExactly(
+        stubbedCCloudResourceLoader.getFlinkDatabase,
+        "env-123" as EnvironmentId,
+        "lkc-456",
+      );
+    });
+
+    it("should throw error when environment is not found", async function () {
+      stubbedCCloudResourceLoader.getEnvironment.resolves(undefined);
+
+      await assert.rejects(
+        async () =>
+          await validateFlinkQueryResources({
+            environmentId: "env-missing" as EnvironmentId,
+            databaseId: "lkc-456",
+          }),
+        /environment "env-missing" could not be found/,
+      );
+
+      sinon.assert.calledOnceWithExactly(
+        stubbedCCloudResourceLoader.getEnvironment,
+        "env-missing" as EnvironmentId,
+      );
+      sinon.assert.notCalled(stubbedCCloudResourceLoader.getFlinkDatabase);
+    });
+
+    it("should throw error when database is not found", async function () {
+      stubbedCCloudResourceLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
+      stubbedCCloudResourceLoader.getFlinkDatabase.resolves(undefined);
+
+      await assert.rejects(
+        async () =>
+          await validateFlinkQueryResources({
+            environmentId: "env-123" as EnvironmentId,
+            databaseId: "lkc-missing",
+          }),
+        /database "lkc-missing" is not available or is not Flink-enabled/,
+      );
+
+      sinon.assert.calledOnceWithExactly(
+        stubbedCCloudResourceLoader.getEnvironment,
+        "env-123" as EnvironmentId,
+      );
+      sinon.assert.calledOnceWithExactly(
+        stubbedCCloudResourceLoader.getFlinkDatabase,
+        "env-123" as EnvironmentId,
+        "lkc-missing",
+      );
+    });
+
+    it("should throw error when no compute pool is available", async function () {
+      stubbedCCloudResourceLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
+      const databaseWithoutPools = {
+        ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        flinkPools: [],
+      } as unknown as CCloudFlinkDbKafkaCluster;
+      stubbedCCloudResourceLoader.getFlinkDatabase.resolves(databaseWithoutPools);
+
+      await assert.rejects(
+        async () =>
+          await validateFlinkQueryResources({
+            environmentId: "env-123" as EnvironmentId,
+            databaseId: "lkc-no-pools",
+          }),
+        /no compute pool is configured for database/,
+      );
+
+      sinon.assert.calledOnceWithExactly(
+        stubbedCCloudResourceLoader.getEnvironment,
+        "env-123" as EnvironmentId,
+      );
+      sinon.assert.calledOnceWithExactly(
+        stubbedCCloudResourceLoader.getFlinkDatabase,
+        "env-123" as EnvironmentId,
+        "lkc-no-pools",
+      );
+    });
+  });
+
+  describe("buildFlinkSelectQuery()", function () {
+    it("should build fully-qualified query with default limit", function () {
+      const query = buildFlinkSelectQuery(
+        TEST_CCLOUD_ENVIRONMENT,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        "pageviews",
+      );
+
+      const expected = `-- Query "pageviews" with Flink SQL
+-- Replace this with your actual Flink SQL query
+
+SELECT *
+FROM \`${TEST_CCLOUD_ENVIRONMENT.name}\`.\`${TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name}\`.\`pageviews\`
+LIMIT 10;
+`;
+      assert.strictEqual(query, expected);
+    });
+
+    it("should build query with custom limit", function () {
+      const query = buildFlinkSelectQuery(
+        TEST_CCLOUD_ENVIRONMENT,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        "orders",
+        { limit: 50 },
+      );
+
+      assert.ok(query.includes("LIMIT 50;"));
+    });
+
+    it("should escape entity names with backticks", function () {
+      const query = buildFlinkSelectQuery(
+        TEST_CCLOUD_ENVIRONMENT,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        "table-with-dashes",
+      );
+
+      assert.ok(query.includes("`table-with-dashes`"));
+    });
+
+    it("should include entity name in comment", function () {
+      const query = buildFlinkSelectQuery(
+        TEST_CCLOUD_ENVIRONMENT,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        "my_topic",
+      );
+
+      assert.ok(query.includes('-- Query "my_topic" with Flink SQL'));
+    });
+  });
+
+  describe("openFlinkQueryDocument()", function () {
+    let openTextDocumentStub: sinon.SinonStub;
+    let showTextDocumentStub: sinon.SinonStub;
+    let setFlinkDocumentMetadataStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      openTextDocumentStub = sandbox.stub(vscode.workspace, "openTextDocument");
+      showTextDocumentStub = sandbox.stub(vscode.window, "showTextDocument");
+      setFlinkDocumentMetadataStub = sandbox
+        .stub(getResourceManager(), "setUriMetadata")
+        .resolves();
+      // Stub uriMetadataSet.fire to prevent side effects from listeners
+      sandbox.stub(uriMetadataSet, "fire");
+    });
+
+    it("should create document with FlinkSQL language and fully-qualified query", async function () {
+      const mockDocument = { uri: Uri.parse("untitled:Untitled-1"), positionAt: () => ({}) };
+      const mockEditor = { selection: undefined };
+      openTextDocumentStub.resolves(mockDocument);
+      showTextDocumentStub.resolves(mockEditor);
+
+      await openFlinkQueryDocument({
+        entityName: "test_table",
+        environment: TEST_CCLOUD_ENVIRONMENT,
+        database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      });
+
+      // Verify our specific call (may be additional calls from listeners)
+      const ourCall = openTextDocumentStub
+        .getCalls()
+        .find((call) => call.args[0]?.language === "flinksql");
+      assert.ok(ourCall, "Expected openTextDocument to be called with language: 'flinksql'");
+
+      const callArgs = ourCall.args[0];
+      assert.strictEqual(callArgs.language, "flinksql");
+      assert.ok(callArgs.content.includes('-- Query "test_table" with Flink SQL'));
+      assert.ok(
+        callArgs.content.includes(
+          `\`${TEST_CCLOUD_ENVIRONMENT.name}\`.\`${TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name}\`.\`test_table\``,
+        ),
+      );
+      assert.ok(callArgs.content.includes("LIMIT 10;"));
+    });
+
+    it("should create query with custom limit when provided", async function () {
+      const mockDocument = { uri: Uri.parse("untitled:Untitled-1"), positionAt: () => ({}) };
+      const mockEditor = { selection: undefined };
+      openTextDocumentStub.resolves(mockDocument);
+      showTextDocumentStub.resolves(mockEditor);
+
+      await openFlinkQueryDocument({
+        entityName: "orders",
+        environment: TEST_CCLOUD_ENVIRONMENT,
+        database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+        limit: 50,
+      });
+
+      const callArgs = openTextDocumentStub.getCall(0).args[0];
+      assert.ok(callArgs.content.includes("LIMIT 50;"));
+    });
+
+    it("should set Flink document metadata", async function () {
+      const mockDocument = { uri: Uri.parse("untitled:Untitled-1"), positionAt: () => ({}) };
+      const mockEditor = { selection: undefined };
+      openTextDocumentStub.resolves(mockDocument);
+      showTextDocumentStub.resolves(mockEditor);
+
+      await openFlinkQueryDocument({
+        entityName: "test_table",
+        environment: TEST_CCLOUD_ENVIRONMENT,
+        database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      });
+
+      sinon.assert.calledOnceWithExactly(setFlinkDocumentMetadataStub, mockDocument.uri, {
+        [UriMetadataKeys.FLINK_CATALOG_ID]: TEST_CCLOUD_ENVIRONMENT.id,
+        [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT.name,
+        [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id,
+        [UriMetadataKeys.FLINK_DATABASE_NAME]: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name,
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+      });
+    });
+
+    it("should show document with preview false", async function () {
+      const mockDocument = { uri: Uri.parse("untitled:Untitled-1"), positionAt: () => ({}) };
+      const mockEditor = { selection: undefined };
+      openTextDocumentStub.resolves(mockDocument);
+      showTextDocumentStub.resolves(mockEditor);
+
+      await openFlinkQueryDocument({
+        entityName: "test_table",
+        environment: TEST_CCLOUD_ENVIRONMENT,
+        database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      });
+
+      sinon.assert.calledOnceWithExactly(showTextDocumentStub, mockDocument, { preview: false });
+    });
+
+    it("should position cursor at end when positionCursorAtEnd is true", async function () {
+      const endPosition = new vscode.Position(1, 20);
+      const mockDocument = {
+        uri: Uri.parse("untitled:Untitled-1"),
+        positionAt: sandbox.stub().returns(endPosition),
+      };
+      const mockEditor: Partial<vscode.TextEditor> = { selection: undefined };
+      openTextDocumentStub.resolves(mockDocument);
+      showTextDocumentStub.resolves(mockEditor);
+
+      await openFlinkQueryDocument({
+        entityName: "test_table",
+        environment: TEST_CCLOUD_ENVIRONMENT,
+        database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+        positionCursorAtEnd: true,
+      });
+
+      sinon.assert.calledOnce(mockDocument.positionAt);
+      assert.ok(mockEditor.selection);
+      assert.strictEqual(mockEditor.selection.start.line, 1);
+      assert.strictEqual(mockEditor.selection.start.character, 20);
+    });
+
+    it("should not reposition cursor when positionCursorAtEnd is false", async function () {
+      const mockDocument = {
+        uri: Uri.parse("untitled:Untitled-1"),
+        positionAt: sandbox.stub(),
+      };
+      const mockEditor = { selection: undefined };
+      openTextDocumentStub.resolves(mockDocument);
+      showTextDocumentStub.resolves(mockEditor);
+
+      await openFlinkQueryDocument({
+        entityName: "test_table",
+        environment: TEST_CCLOUD_ENVIRONMENT,
+        database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+        positionCursorAtEnd: false,
+      });
+
+      sinon.assert.notCalled(mockDocument.positionAt);
+      assert.strictEqual(mockEditor.selection, undefined);
     });
   });
 });
