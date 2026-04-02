@@ -331,17 +331,13 @@ export function isFromFlinkWorkspace(metadata: UriMetadata | undefined): boolean
  * Throws detailed, user-facing errors if any resource is missing or invalid.
  *
  * @param params - Resource identifiers
- * @param logger - Logger instance for error logging
  * @returns Validated resources (environment, database, compute pool)
  * @throws Error with user-friendly message if validation fails
  */
-export async function validateFlinkQueryResources(
-  params: {
-    environmentId: EnvironmentId;
-    databaseId: string;
-  },
-  logger: Logger,
-): Promise<{
+export async function validateFlinkQueryResources(params: {
+  environmentId: EnvironmentId;
+  databaseId: string;
+}): Promise<{
   environment: CCloudEnvironment;
   database: CCloudFlinkDbKafkaCluster;
   computePool: CCloudFlinkComputePool;
@@ -351,7 +347,6 @@ export async function validateFlinkQueryResources(
   // Validate environment
   const environment = await loader.getEnvironment(params.environmentId);
   if (!environment) {
-    logger.error(`Could not find environment ${params.environmentId}`);
     throw new Error(
       `Unable to open a Flink SQL query because environment "${params.environmentId}" ` +
         "could not be found. Refresh your Confluent Cloud connection and try again.",
@@ -361,7 +356,6 @@ export async function validateFlinkQueryResources(
   // getEnvironment can return Environment | undefined, but we need CCloudEnvironment
   // CCloudResourceLoader.getEnvironment always returns CCloudEnvironment when found
   if (!(environment instanceof CCloudEnvironment)) {
-    logger.error(`Environment ${params.environmentId} is not a CCloud environment`);
     throw new Error(
       `Unable to open a Flink SQL query because environment "${params.environmentId}" ` +
         "is not a Confluent Cloud environment.",
@@ -371,7 +365,6 @@ export async function validateFlinkQueryResources(
   // Validate database
   const database = await loader.getFlinkDatabase(params.environmentId, params.databaseId);
   if (!database) {
-    logger.error(`Could not find Flink database ${params.databaseId}`);
     throw new Error(
       `Unable to open a Flink SQL query because the selected database "${params.databaseId}" ` +
         "is not available or is not Flink-enabled. Select a valid Flink database and try again.",
@@ -381,7 +374,6 @@ export async function validateFlinkQueryResources(
   // Validate compute pool
   const computePool = database.flinkPools[0];
   if (!computePool) {
-    logger.error(`No compute pool found for database ${database.id}`);
     throw new Error(
       `Unable to open a Flink SQL query because no compute pool is configured for database ` +
         `"${database.name}". Create or select a compute pool for this database in Confluent Cloud, then try again.`,

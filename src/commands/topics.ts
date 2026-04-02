@@ -485,13 +485,10 @@ export async function queryTopicWithFlink(topic: KafkaTopic) {
     return;
   }
 
-  const { environment, database, computePool } = await validateFlinkQueryResources(
-    {
-      environmentId: topic.environmentId,
-      databaseId: topic.clusterId,
-    },
-    logger,
-  );
+  const { environment, database, computePool } = await validateFlinkQueryResources({
+    environmentId: topic.environmentId,
+    databaseId: topic.clusterId,
+  });
 
   await openFlinkQueryDocument({
     entityName: topic.name,

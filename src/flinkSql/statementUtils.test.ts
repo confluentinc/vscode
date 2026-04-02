@@ -23,9 +23,9 @@ import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "../clients/flinkSq
 import { uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
 import type { CCloudResourceLoader } from "../loaders";
-import { Logger } from "../logging";
 import * as flinkStatementModels from "../models/flinkStatement";
 import { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import type { EnvironmentId } from "../models/resource";
 import type * as sidecar from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
@@ -512,25 +512,19 @@ describe("flinkSql/statementUtils.ts", function () {
 
   describe("validateFlinkQueryResources()", function () {
     let stubbedCCloudResourceLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
-    let testLogger: Logger;
 
     beforeEach(() => {
       stubbedCCloudResourceLoader = getStubbedCCloudResourceLoader(sandbox);
-      testLogger = new Logger("test");
-      sandbox.stub(testLogger, "error");
     });
 
     it("should return all resources when validation succeeds", async function () {
       stubbedCCloudResourceLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
       stubbedCCloudResourceLoader.getFlinkDatabase.resolves(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
 
-      const result = await validateFlinkQueryResources(
-        {
-          environmentId: "env-123" as EnvironmentId,
-          databaseId: "lkc-456",
-        },
-        testLogger,
-      );
+      const result = await validateFlinkQueryResources({
+        environmentId: "env-123" as EnvironmentId,
+        databaseId: "lkc-456",
+      });
 
       assert.strictEqual(result.environment, TEST_CCLOUD_ENVIRONMENT);
       assert.strictEqual(result.database, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
@@ -552,13 +546,10 @@ describe("flinkSql/statementUtils.ts", function () {
 
       await assert.rejects(
         async () =>
-          await validateFlinkQueryResources(
-            {
-              environmentId: "env-missing" as EnvironmentId,
-              databaseId: "lkc-456",
-            },
-            testLogger,
-          ),
+          await validateFlinkQueryResources({
+            environmentId: "env-missing" as EnvironmentId,
+            databaseId: "lkc-456",
+          }),
         /environment "env-missing" could not be found/,
       );
 
@@ -575,13 +566,10 @@ describe("flinkSql/statementUtils.ts", function () {
 
       await assert.rejects(
         async () =>
-          await validateFlinkQueryResources(
-            {
-              environmentId: "env-123" as EnvironmentId,
-              databaseId: "lkc-missing",
-            },
-            testLogger,
-          ),
+          await validateFlinkQueryResources({
+            environmentId: "env-123" as EnvironmentId,
+            databaseId: "lkc-missing",
+          }),
         /database "lkc-missing" is not available or is not Flink-enabled/,
       );
 
@@ -601,18 +589,15 @@ describe("flinkSql/statementUtils.ts", function () {
       const databaseWithoutPools = {
         ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
         flinkPools: [],
-      } as any;
+      } as unknown as CCloudFlinkDbKafkaCluster;
       stubbedCCloudResourceLoader.getFlinkDatabase.resolves(databaseWithoutPools);
 
       await assert.rejects(
         async () =>
-          await validateFlinkQueryResources(
-            {
-              environmentId: "env-123" as EnvironmentId,
-              databaseId: "lkc-no-pools",
-            },
-            testLogger,
-          ),
+          await validateFlinkQueryResources({
+            environmentId: "env-123" as EnvironmentId,
+            databaseId: "lkc-no-pools",
+          }),
         /no compute pool is configured for database/,
       );
 
@@ -709,7 +694,7 @@ LIMIT 10;
       // Verify our specific call (may be additional calls from listeners)
       const ourCall = openTextDocumentStub
         .getCalls()
-        .find((call: any) => call.args[0]?.language === "flinksql");
+        .find((call) => call.args[0]?.language === "flinksql");
       assert.ok(ourCall, "Expected openTextDocument to be called with language: 'flinksql'");
 
       const callArgs = ourCall.args[0];
@@ -785,7 +770,7 @@ LIMIT 10;
         uri: Uri.parse("untitled:Untitled-1"),
         positionAt: sandbox.stub().returns(endPosition),
       };
-      const mockEditor: any = { selection: undefined };
+      const mockEditor: Partial<vscode.TextEditor> = { selection: undefined };
       openTextDocumentStub.resolves(mockDocument);
       showTextDocumentStub.resolves(mockEditor);
 

@@ -27,13 +27,10 @@ export async function queryFlinkRelationCommand(relation: FlinkRelation): Promis
     );
   }
 
-  const { environment, database, computePool } = await validateFlinkQueryResources(
-    {
-      environmentId: relation.environmentId,
-      databaseId: relation.databaseId,
-    },
-    logger,
-  );
+  const { environment, database, computePool } = await validateFlinkQueryResources({
+    environmentId: relation.environmentId,
+    databaseId: relation.databaseId,
+  });
 
   await openFlinkQueryDocument({
     entityName: relation.name,

@@ -933,7 +933,7 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
       });
     openFlinkQueryDocumentStub = sandbox
       .stub(statementUtils, "openFlinkQueryDocument")
-      .resolves({} as any);
+      .resolves({} as vscode.TextEditor);
   });
 
   afterEach(function () {
@@ -948,15 +948,11 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
 
     await queryTopicWithFlink(flinkableTopic);
 
-    // Verify validation was called (with logger as second arg)
-    sinon.assert.calledOnceWithExactly(
-      validateFlinkQueryResourcesStub,
-      {
-        environmentId: flinkableTopic.environmentId,
-        databaseId: flinkableTopic.clusterId,
-      },
-      sinon.match.any,
-    );
+    // Verify validation was called
+    sinon.assert.calledOnceWithExactly(validateFlinkQueryResourcesStub, {
+      environmentId: flinkableTopic.environmentId,
+      databaseId: flinkableTopic.clusterId,
+    });
 
     // Verify openFlinkQueryDocument was called with correct parameters
     sinon.assert.calledOnceWithExactly(openFlinkQueryDocumentStub, {
@@ -982,7 +978,7 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
   });
 
   it("should return early if topic is null", async function () {
-    await queryTopicWithFlink(null as any);
+    await queryTopicWithFlink(null as unknown as KafkaTopic);
 
     sinon.assert.notCalled(validateFlinkQueryResourcesStub);
     sinon.assert.notCalled(openFlinkQueryDocumentStub);
@@ -991,7 +987,7 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
   it("should return early if topic is not a KafkaTopic instance", async function () {
     const notATopic = { name: "fake-topic" };
 
-    await queryTopicWithFlink(notATopic as any);
+    await queryTopicWithFlink(notATopic as unknown as KafkaTopic);
 
     sinon.assert.notCalled(validateFlinkQueryResourcesStub);
     sinon.assert.notCalled(openFlinkQueryDocumentStub);

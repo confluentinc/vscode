@@ -12,7 +12,7 @@ import {
   registerFlinkDatabaseViewCommands,
 } from "./flinkDatabaseView";
 
-import { Uri, window, workspace } from "vscode";
+import { type TextEditor, Uri, window, workspace } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -26,6 +26,7 @@ import {
   FlinkDatabaseContainerLabel,
   FlinkDatabaseResourceContainer,
 } from "../models/containers/flinkDatabaseResourceContainer";
+import type { FlinkRelation } from "../models/flinkRelation";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 
 describe("commands/flinkDatabaseView.ts", () => {
@@ -386,13 +387,13 @@ describe("commands/flinkDatabaseView.ts", () => {
         });
       openFlinkQueryDocumentStub = sandbox
         .stub(statementUtils, "openFlinkQueryDocument")
-        .resolves({} as any);
+        .resolves({} as TextEditor);
     });
 
     describe("error handling", () => {
       it("should throw error when no relation is provided", async () => {
         await assert.rejects(
-          async () => await queryFlinkRelationCommand(undefined as any),
+          async () => await queryFlinkRelationCommand(undefined as unknown as FlinkRelation),
           /no relation was provided/,
         );
 
@@ -409,14 +410,10 @@ describe("commands/flinkDatabaseView.ts", () => {
           validationError,
         );
 
-        sinon.assert.calledOnceWithExactly(
-          validateFlinkQueryResourcesStub,
-          {
-            environmentId: TEST_FLINK_RELATION.environmentId,
-            databaseId: TEST_FLINK_RELATION.databaseId,
-          },
-          sinon.match.any,
-        );
+        sinon.assert.calledOnceWithExactly(validateFlinkQueryResourcesStub, {
+          environmentId: TEST_FLINK_RELATION.environmentId,
+          databaseId: TEST_FLINK_RELATION.databaseId,
+        });
         sinon.assert.notCalled(openFlinkQueryDocumentStub);
       });
     });
@@ -425,15 +422,11 @@ describe("commands/flinkDatabaseView.ts", () => {
       it("should call validateFlinkQueryResources and openFlinkQueryDocument for base table", async () => {
         await queryFlinkRelationCommand(TEST_FLINK_RELATION);
 
-        // Verify validation was called with correct parameters (with logger as second arg)
-        sinon.assert.calledOnceWithExactly(
-          validateFlinkQueryResourcesStub,
-          {
-            environmentId: TEST_FLINK_RELATION.environmentId,
-            databaseId: TEST_FLINK_RELATION.databaseId,
-          },
-          sinon.match.any,
-        );
+        // Verify validation was called with correct parameters
+        sinon.assert.calledOnceWithExactly(validateFlinkQueryResourcesStub, {
+          environmentId: TEST_FLINK_RELATION.environmentId,
+          databaseId: TEST_FLINK_RELATION.databaseId,
+        });
 
         // Verify openFlinkQueryDocument called with correct parameters
         sinon.assert.calledOnceWithExactly(openFlinkQueryDocumentStub, {
@@ -448,15 +441,11 @@ describe("commands/flinkDatabaseView.ts", () => {
       it("should call validateFlinkQueryResources and openFlinkQueryDocument for view", async () => {
         await queryFlinkRelationCommand(TEST_FLINK_VIEW);
 
-        // Verify validation was called (with logger as second arg)
-        sinon.assert.calledOnceWithExactly(
-          validateFlinkQueryResourcesStub,
-          {
-            environmentId: TEST_FLINK_VIEW.environmentId,
-            databaseId: TEST_FLINK_VIEW.databaseId,
-          },
-          sinon.match.any,
-        );
+        // Verify validation was called
+        sinon.assert.calledOnceWithExactly(validateFlinkQueryResourcesStub, {
+          environmentId: TEST_FLINK_VIEW.environmentId,
+          databaseId: TEST_FLINK_VIEW.databaseId,
+        });
 
         // Verify openFlinkQueryDocument called with view name
         sinon.assert.calledOnceWithExactly(openFlinkQueryDocumentStub, {
