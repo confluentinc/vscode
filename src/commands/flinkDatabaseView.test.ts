@@ -3,6 +3,7 @@ import * as sinon from "sinon";
 
 import * as indexModule from ".";
 
+import * as queryResourceValidation from "../flinkSql/queryResourceValidation";
 import * as statementUtils from "../flinkSql/statementUtils";
 
 import {
@@ -379,7 +380,7 @@ describe("commands/flinkDatabaseView.ts", () => {
 
     beforeEach(() => {
       validateFlinkQueryResourcesStub = sandbox
-        .stub(statementUtils, "validateFlinkQueryResources")
+        .stub(queryResourceValidation, "validateFlinkQueryResources")
         .resolves({
           environment: TEST_CCLOUD_ENVIRONMENT,
           database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,

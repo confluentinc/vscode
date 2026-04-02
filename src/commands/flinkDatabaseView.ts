@@ -1,10 +1,7 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import {
-  openFlinkQueryDocument,
-  setFlinkDocumentMetadata,
-  validateFlinkQueryResources,
-} from "../flinkSql/statementUtils";
+import { validateFlinkQueryResources } from "../flinkSql/queryResourceValidation";
+import { openFlinkQueryDocument, setFlinkDocumentMetadata } from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import type { FlinkDatabaseResourceContainer } from "../models/containers/flinkDatabaseResourceContainer";

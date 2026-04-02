@@ -20,6 +20,7 @@ import { JSON_DIAGNOSTIC_COLLECTION } from "../diagnostics/constants";
 import type { ProduceMessage } from "../diagnostics/produceMessage";
 import { PRODUCE_MESSAGE_SCHEMA, SubjectNameStrategy } from "../diagnostics/produceMessage";
 import * as jsonParsing from "../documentParsing/json";
+import * as queryResourceValidation from "../flinkSql/queryResourceValidation";
 import * as statementUtils from "../flinkSql/statementUtils";
 import { CCloudEnvironment } from "../models/environment";
 import { KafkaTopic } from "../models/topic";
@@ -925,7 +926,7 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
     sandbox = sinon.createSandbox();
 
     validateFlinkQueryResourcesStub = sandbox
-      .stub(statementUtils, "validateFlinkQueryResources")
+      .stub(queryResourceValidation, "validateFlinkQueryResources")
       .resolves({
         environment: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK,
         database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,

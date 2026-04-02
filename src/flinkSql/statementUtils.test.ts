@@ -31,7 +31,9 @@ import type * as sidecar from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { localTimezoneOffset } from "../utils/timezone";
+import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import { Operation } from "./flinkStatementResults";
+import { validateFlinkQueryResources } from "./queryResourceValidation";
 import type { IFlinkStatementSubmitParameters } from "./statementUtils";
 import {
   buildFlinkSelectQuery,
@@ -45,7 +47,6 @@ import {
   refreshFlinkStatement,
   setFlinkDocumentMetadata,
   submitFlinkStatement,
-  validateFlinkQueryResources,
   waitForResultsFetchable,
   waitForStatementCompletion,
 } from "./statementUtils";
@@ -694,11 +695,14 @@ LIMIT 10;
       // Verify our specific call (may be additional calls from listeners)
       const ourCall = openTextDocumentStub
         .getCalls()
-        .find((call) => call.args[0]?.language === "flinksql");
-      assert.ok(ourCall, "Expected openTextDocument to be called with language: 'flinksql'");
+        .find((call) => call.args[0]?.language === FLINK_SQL_LANGUAGE_ID);
+      assert.ok(
+        ourCall,
+        `Expected openTextDocument to be called with language: '${FLINK_SQL_LANGUAGE_ID}'`,
+      );
 
       const callArgs = ourCall.args[0];
-      assert.strictEqual(callArgs.language, "flinksql");
+      assert.strictEqual(callArgs.language, FLINK_SQL_LANGUAGE_ID);
       assert.ok(callArgs.content.includes('-- Query "test_table" with Flink SQL'));
       assert.ok(
         callArgs.content.includes(
