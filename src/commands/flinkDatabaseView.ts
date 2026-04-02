@@ -1,14 +1,48 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { setFlinkDocumentMetadata } from "../flinkSql/statementUtils";
+import {
+  openFlinkQueryDocument,
+  setFlinkDocumentMetadata,
+  validateFlinkQueryResources,
+} from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import type { CCloudEnvironment } from "../models/environment";
 import type { FlinkDatabaseResourceContainer } from "../models/containers/flinkDatabaseResourceContainer";
 import { FlinkDatabaseContainerLabel } from "../models/containers/flinkDatabaseResourceContainer";
+import type { CCloudEnvironment } from "../models/environment";
+import type { FlinkRelation } from "../models/flinkRelation";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 
 const logger = new Logger("FlinkDatabaseViewCommands");
+
+/**
+ * Open a new FlinkSQL document with a templated query for the selected relation.
+ * Sets the document metadata to the relation's environment, database, and first compute pool.
+ */
+export async function queryFlinkRelationCommand(relation: FlinkRelation): Promise<void> {
+  if (!relation) {
+    logger.error("No relation provided to queryFlinkRelationCommand");
+    throw new Error(
+      "Unable to open a Flink SQL query because no relation was provided. Please run this command from a Flink relation in the Databases view.",
+    );
+  }
+
+  const { environment, database, computePool } = await validateFlinkQueryResources(
+    {
+      environmentId: relation.environmentId,
+      databaseId: relation.databaseId,
+    },
+    logger,
+  );
+
+  await openFlinkQueryDocument({
+    entityName: relation.name,
+    environment,
+    database,
+    computePool,
+    positionCursorAtEnd: true,
+  });
+}
 
 export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {
   return [
@@ -22,6 +56,8 @@ export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {
       "confluent.flinkdatabase.refreshResourceContainer",
       refreshResourceContainerCommand,
     ),
+    // query relation with Flink
+    registerCommandWithLogging("confluent.flinkdatabase.queryRelation", queryFlinkRelationCommand),
   ];
 }
 

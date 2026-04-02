@@ -1,12 +1,10 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
-import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-  TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_DIRECT_KAFKA_TOPIC,
   TEST_LOCAL_KAFKA_TOPIC,
@@ -22,8 +20,7 @@ import { JSON_DIAGNOSTIC_COLLECTION } from "../diagnostics/constants";
 import type { ProduceMessage } from "../diagnostics/produceMessage";
 import { PRODUCE_MESSAGE_SCHEMA, SubjectNameStrategy } from "../diagnostics/produceMessage";
 import * as jsonParsing from "../documentParsing/json";
-import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
-import type { CCloudResourceLoader } from "../loaders";
+import * as statementUtils from "../flinkSql/statementUtils";
 import { CCloudEnvironment } from "../models/environment";
 import { KafkaTopic } from "../models/topic";
 import * as schemaQuickPicks from "../quickpicks/schemas";
@@ -31,8 +28,6 @@ import * as uriQuickpicks from "../quickpicks/uris";
 import * as schemaSubjectUtils from "../quickpicks/utils/schemaSubjects";
 import * as schemaUtils from "../quickpicks/utils/schemas";
 import type { SidecarHandle } from "../sidecar";
-import { UriMetadataKeys } from "../storage/constants";
-import { ResourceManager } from "../storage/resourceManager";
 import * as fileUtils from "../utils/file";
 import type { ExecutionResult } from "../utils/workerPool";
 import type { ProduceResult } from "./topics";
@@ -918,11 +913,8 @@ describe("commands/topics.ts produceMessage()", function () {
 
 describe("commands/topics.ts queryTopicWithFlink()", function () {
   let sandbox: sinon.SinonSandbox;
-  let openTextDocumentStub: sinon.SinonStub;
-  let showTextDocumentStub: sinon.SinonStub;
-  let ccloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
-  let setUriMetadataStub: sinon.SinonStub;
-  let stubResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
+  let validateFlinkQueryResourcesStub: sinon.SinonStub;
+  let openFlinkQueryDocumentStub: sinon.SinonStub;
 
   const TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK = new CCloudEnvironment({
     ...TEST_CCLOUD_ENVIRONMENT,
@@ -932,53 +924,23 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
   beforeEach(function () {
     sandbox = sinon.createSandbox();
 
-    openTextDocumentStub = sandbox.stub(vscode.workspace, "openTextDocument");
-    showTextDocumentStub = sandbox.stub(vscode.window, "showTextDocument");
-    ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
-
-    stubResourceManager = sandbox.createStubInstance(ResourceManager);
-    sandbox.stub(ResourceManager, "getInstance").returns(stubResourceManager);
-    setUriMetadataStub = stubResourceManager.setUriMetadata;
+    validateFlinkQueryResourcesStub = sandbox
+      .stub(statementUtils, "validateFlinkQueryResources")
+      .resolves({
+        environment: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK,
+        database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      });
+    openFlinkQueryDocumentStub = sandbox
+      .stub(statementUtils, "openFlinkQueryDocument")
+      .resolves({} as any);
   });
 
   afterEach(function () {
     sandbox.restore();
   });
 
-  it("should create a new document with Flink SQL language and correct placeholder query for CCloud topic", async function () {
-    ccloudLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK);
-    ccloudLoader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
-
-    const mockDocument = { uri: vscode.Uri.file("test.flink.sql") };
-    openTextDocumentStub.resolves(mockDocument);
-    showTextDocumentStub.resolves({ document: mockDocument });
-
-    await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
-
-    sinon.assert.calledOnce(openTextDocumentStub);
-    const expectedQuery = `-- Query topic "${TEST_CCLOUD_KAFKA_TOPIC.name}" with Flink SQL
--- Replace this with your actual Flink SQL query
-
-SELECT *
-FROM \`${TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK.name}\`.\`${TEST_CCLOUD_KAFKA_CLUSTER.name}\`.\`${TEST_CCLOUD_KAFKA_TOPIC.name}\`
-LIMIT 10;`;
-    sinon.assert.calledWithExactly(openTextDocumentStub, {
-      language: FLINK_SQL_LANGUAGE_ID,
-      content: expectedQuery,
-    });
-
-    sinon.assert.calledOnce(showTextDocumentStub);
-    sinon.assert.calledWithExactly(showTextDocumentStub, mockDocument, { preview: false });
-  });
-
-  it("should set URI metadata correctly with compute pool ID and database ID", async function () {
-    ccloudLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK);
-    ccloudLoader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER]);
-
-    const mockDocument = { uri: vscode.Uri.file("test.flink.sql") };
-    openTextDocumentStub.resolves(mockDocument);
-    showTextDocumentStub.resolves({ document: mockDocument });
-
+  it("should call validateFlinkQueryResources and openFlinkQueryDocument for CCloud topic", async function () {
     const flinkableTopic = new KafkaTopic({
       ...TEST_CCLOUD_KAFKA_TOPIC,
       clusterId: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id,
@@ -986,45 +948,44 @@ LIMIT 10;`;
 
     await queryTopicWithFlink(flinkableTopic);
 
-    // verify document was opened
-    sinon.assert.calledOnce(openTextDocumentStub);
-    sinon.assert.calledOnce(showTextDocumentStub);
+    // Verify validation was called (with logger as second arg)
+    sinon.assert.calledOnceWithExactly(
+      validateFlinkQueryResourcesStub,
+      {
+        environmentId: flinkableTopic.environmentId,
+        databaseId: flinkableTopic.clusterId,
+      },
+      sinon.match.any,
+    );
 
-    // Verify that the URI metadata was set correctly
-    sinon.assert.calledOnce(setUriMetadataStub);
-    sinon.assert.calledWith(setUriMetadataStub, mockDocument.uri, {
-      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
-      [UriMetadataKeys.FLINK_CATALOG_ID]: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK.id,
-      [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK.name,
-      [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id,
-      [UriMetadataKeys.FLINK_DATABASE_NAME]: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name,
+    // Verify openFlinkQueryDocument was called with correct parameters
+    sinon.assert.calledOnceWithExactly(openFlinkQueryDocumentStub, {
+      entityName: flinkableTopic.name,
+      environment: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK,
+      database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+      computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      positionCursorAtEnd: false,
     });
   });
 
-  it("should NOT set metadata if kafka cluster had no related Flink compute pools", async function () {
-    ccloudLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK);
-    ccloudLoader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
+  it("should throw error when validateFlinkQueryResources throws", async function () {
+    const validationError = new Error("No compute pool available");
+    validateFlinkQueryResourcesStub.rejects(validationError);
 
-    const mockDocument = { uri: vscode.Uri.file("test.flink.sql") };
-    openTextDocumentStub.resolves(mockDocument);
-    showTextDocumentStub.resolves({ document: mockDocument });
+    await assert.rejects(
+      async () => await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC),
+      validationError,
+    );
 
-    await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
-
-    // document was opened, but with defaults for codelensing since no compute pool was found
-    sinon.assert.calledOnce(openTextDocumentStub);
-    sinon.assert.calledOnce(showTextDocumentStub);
-
-    sinon.assert.notCalled(setUriMetadataStub);
+    sinon.assert.calledOnce(validateFlinkQueryResourcesStub);
+    sinon.assert.notCalled(openFlinkQueryDocumentStub);
   });
 
-  it("should return early if topic is null or not a KafkaTopic instance", async function () {
+  it("should return early if topic is null", async function () {
     await queryTopicWithFlink(null as any);
 
-    sinon.assert.notCalled(openTextDocumentStub);
-    sinon.assert.notCalled(showTextDocumentStub);
-    sinon.assert.notCalled(ccloudLoader.getEnvironment);
-    sinon.assert.notCalled(ccloudLoader.getKafkaClustersForEnvironmentId);
+    sinon.assert.notCalled(validateFlinkQueryResourcesStub);
+    sinon.assert.notCalled(openFlinkQueryDocumentStub);
   });
 
   it("should return early if topic is not a KafkaTopic instance", async function () {
@@ -1032,66 +993,21 @@ LIMIT 10;`;
 
     await queryTopicWithFlink(notATopic as any);
 
-    sinon.assert.notCalled(openTextDocumentStub);
-    sinon.assert.notCalled(showTextDocumentStub);
-    sinon.assert.notCalled(ccloudLoader.getEnvironment);
-    sinon.assert.notCalled(ccloudLoader.getKafkaClustersForEnvironmentId);
+    sinon.assert.notCalled(validateFlinkQueryResourcesStub);
+    sinon.assert.notCalled(openFlinkQueryDocumentStub);
   });
 
-  it("should return early if environment is missing", async function () {
-    ccloudLoader.getEnvironment.resolves(undefined);
-    ccloudLoader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
-
-    await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
-
-    sinon.assert.calledOnce(ccloudLoader.getEnvironment);
-    sinon.assert.notCalled(openTextDocumentStub);
-    sinon.assert.notCalled(showTextDocumentStub);
-  });
-
-  it("should return early if cluster is missing", async function () {
-    ccloudLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
-    ccloudLoader.getKafkaClustersForEnvironmentId.resolves([]);
-
-    await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
-
-    sinon.assert.calledOnce(ccloudLoader.getEnvironment);
-    sinon.assert.calledOnce(ccloudLoader.getKafkaClustersForEnvironmentId);
-    sinon.assert.notCalled(openTextDocumentStub);
-    sinon.assert.notCalled(showTextDocumentStub);
-  });
-
-  it("should return early if topic is a local", async function () {
+  it("should return early if topic is a local topic", async function () {
     await queryTopicWithFlink(TEST_LOCAL_KAFKA_TOPIC);
 
-    sinon.assert.notCalled(openTextDocumentStub);
-    sinon.assert.notCalled(showTextDocumentStub);
-    sinon.assert.notCalled(ccloudLoader.getEnvironment);
-    sinon.assert.notCalled(ccloudLoader.getKafkaClustersForEnvironmentId);
+    sinon.assert.notCalled(validateFlinkQueryResourcesStub);
+    sinon.assert.notCalled(openFlinkQueryDocumentStub);
   });
 
   it("should return early if topic is a direct connection topic", async function () {
     await queryTopicWithFlink(TEST_DIRECT_KAFKA_TOPIC);
 
-    sinon.assert.notCalled(openTextDocumentStub);
-    sinon.assert.notCalled(showTextDocumentStub);
-    sinon.assert.notCalled(ccloudLoader.getEnvironment);
-    sinon.assert.notCalled(ccloudLoader.getKafkaClustersForEnvironmentId);
-  });
-
-  it("should not set metadata when no compute pool is available", async function () {
-    ccloudLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT); // Using regular environment with no Flink compute pools
-    ccloudLoader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
-
-    const mockDocument = { uri: vscode.Uri.file("test.flink.sql") };
-    openTextDocumentStub.resolves(mockDocument);
-    showTextDocumentStub.resolves({ document: mockDocument });
-
-    await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
-
-    // Should still create the document
-    sinon.assert.calledOnce(openTextDocumentStub);
-    // But should not set the metadata since there's no compute pool
-    sinon.assert.notCalled(setUriMetadataStub);
+    sinon.assert.notCalled(validateFlinkQueryResourcesStub);
+    sinon.assert.notCalled(openFlinkQueryDocumentStub);
   });
 });

@@ -7,6 +7,7 @@ import * as statementUtils from "../flinkSql/statementUtils";
 
 import {
   createRelationFromFlinkDatabaseViewCommand,
+  queryFlinkRelationCommand,
   refreshResourceContainerCommand,
   registerFlinkDatabaseViewCommands,
 } from "./flinkDatabaseView";
@@ -16,7 +17,10 @@ import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoader
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+  TEST_FLINK_RELATION,
+  TEST_FLINK_VIEW,
 } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import type { CCloudResourceLoader } from "../loaders";
 import {
   FlinkDatabaseContainerLabel,
@@ -45,7 +49,7 @@ describe("commands/flinkDatabaseView.ts", () => {
     it("should register the expected commands", () => {
       registerFlinkDatabaseViewCommands();
 
-      assert.strictEqual(registerCommandWithLoggingStub.callCount, 2);
+      assert.strictEqual(registerCommandWithLoggingStub.callCount, 3);
 
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub,
@@ -56,6 +60,11 @@ describe("commands/flinkDatabaseView.ts", () => {
         registerCommandWithLoggingStub,
         "confluent.flinkdatabase.refreshResourceContainer",
         refreshResourceContainerCommand,
+      );
+      sinon.assert.calledWithExactly(
+        registerCommandWithLoggingStub,
+        "confluent.flinkdatabase.queryRelation",
+        queryFlinkRelationCommand,
       );
     });
   });
@@ -360,6 +369,104 @@ describe("commands/flinkDatabaseView.ts", () => {
         mockEditor.selection.start.line,
       );
       assert.strictEqual(mockEditor.selection.start.character, 0);
+    });
+  });
+
+  describe("queryFlinkRelationCommand", () => {
+    let validateFlinkQueryResourcesStub: sinon.SinonStub;
+    let openFlinkQueryDocumentStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      validateFlinkQueryResourcesStub = sandbox
+        .stub(statementUtils, "validateFlinkQueryResources")
+        .resolves({
+          environment: TEST_CCLOUD_ENVIRONMENT,
+          database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+        });
+      openFlinkQueryDocumentStub = sandbox
+        .stub(statementUtils, "openFlinkQueryDocument")
+        .resolves({} as any);
+    });
+
+    describe("error handling", () => {
+      it("should throw error when no relation is provided", async () => {
+        await assert.rejects(
+          async () => await queryFlinkRelationCommand(undefined as any),
+          /no relation was provided/,
+        );
+
+        sinon.assert.notCalled(validateFlinkQueryResourcesStub);
+        sinon.assert.notCalled(openFlinkQueryDocumentStub);
+      });
+
+      it("should throw error when validateFlinkQueryResources throws", async () => {
+        const validationError = new Error("Validation failed");
+        validateFlinkQueryResourcesStub.rejects(validationError);
+
+        await assert.rejects(
+          async () => await queryFlinkRelationCommand(TEST_FLINK_RELATION),
+          validationError,
+        );
+
+        sinon.assert.calledOnceWithExactly(
+          validateFlinkQueryResourcesStub,
+          {
+            environmentId: TEST_FLINK_RELATION.environmentId,
+            databaseId: TEST_FLINK_RELATION.databaseId,
+          },
+          sinon.match.any,
+        );
+        sinon.assert.notCalled(openFlinkQueryDocumentStub);
+      });
+    });
+
+    describe("success cases", () => {
+      it("should call validateFlinkQueryResources and openFlinkQueryDocument for base table", async () => {
+        await queryFlinkRelationCommand(TEST_FLINK_RELATION);
+
+        // Verify validation was called with correct parameters (with logger as second arg)
+        sinon.assert.calledOnceWithExactly(
+          validateFlinkQueryResourcesStub,
+          {
+            environmentId: TEST_FLINK_RELATION.environmentId,
+            databaseId: TEST_FLINK_RELATION.databaseId,
+          },
+          sinon.match.any,
+        );
+
+        // Verify openFlinkQueryDocument called with correct parameters
+        sinon.assert.calledOnceWithExactly(openFlinkQueryDocumentStub, {
+          entityName: TEST_FLINK_RELATION.name,
+          environment: TEST_CCLOUD_ENVIRONMENT,
+          database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+          positionCursorAtEnd: true,
+        });
+      });
+
+      it("should call validateFlinkQueryResources and openFlinkQueryDocument for view", async () => {
+        await queryFlinkRelationCommand(TEST_FLINK_VIEW);
+
+        // Verify validation was called (with logger as second arg)
+        sinon.assert.calledOnceWithExactly(
+          validateFlinkQueryResourcesStub,
+          {
+            environmentId: TEST_FLINK_VIEW.environmentId,
+            databaseId: TEST_FLINK_VIEW.databaseId,
+          },
+          sinon.match.any,
+        );
+
+        // Verify openFlinkQueryDocument called with view name
+        sinon.assert.calledOnceWithExactly(openFlinkQueryDocumentStub, {
+          entityName: TEST_FLINK_VIEW.name,
+          environment: TEST_CCLOUD_ENVIRONMENT,
+          database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+          positionCursorAtEnd: true,
+        });
+      });
     });
   });
 });
