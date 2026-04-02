@@ -1,6 +1,10 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { setFlinkDocumentMetadata } from "../flinkSql/statementUtils";
+import {
+  openFlinkQueryDocument,
+  setFlinkDocumentMetadata,
+  validateFlinkQueryResources,
+} from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import type { FlinkDatabaseResourceContainer } from "../models/containers/flinkDatabaseResourceContainer";
@@ -23,52 +27,21 @@ export async function queryFlinkRelationCommand(relation: FlinkRelation): Promis
     );
   }
 
-  const loader = CCloudResourceLoader.getInstance();
-  const environment = await loader.getEnvironment(relation.environmentId);
-  if (!environment) {
-    logger.error(`Could not find environment ${relation.environmentId}`);
-    throw new Error(
-      `Unable to open a Flink SQL query because environment "${relation.environmentId}" could not be found. Refresh your Confluent Cloud connection and try again.`,
-    );
-  }
+  const { environment, database, computePool } = await validateFlinkQueryResources(
+    {
+      environmentId: relation.environmentId,
+      databaseId: relation.databaseId,
+    },
+    logger,
+  );
 
-  // Get the database (Kafka cluster)
-  const database = await loader.getFlinkDatabase(relation.environmentId, relation.databaseId);
-  if (!database) {
-    logger.error(`Could not find Flink database ${relation.databaseId}`);
-    throw new Error(
-      `Unable to open a Flink SQL query because the selected database "${relation.databaseId}" is not available or is not Flink-enabled. Select a valid Flink database and try again.`,
-    );
-  }
-
-  // Get first compute pool for this database
-  const computePool = database.flinkPools[0];
-  if (!computePool) {
-    logger.error(`No compute pool found for database ${database.id}`);
-    throw new Error(
-      `Unable to open a Flink SQL query because no compute pool is configured for database "${database.name}". Create or select a compute pool for this database in Confluent Cloud, then try again.`,
-    );
-  }
-
-  // Create templated query
-  const documentTemplate = `SELECT * FROM \`${relation.name}\` LIMIT 10;\n`;
-
-  const document = await vscode.workspace.openTextDocument({
-    language: "flinksql",
-    content: documentTemplate,
+  await openFlinkQueryDocument({
+    entityName: relation.name,
+    environment,
+    database,
+    computePool,
+    positionCursorAtEnd: true,
   });
-
-  // Set document metadata
-  await setFlinkDocumentMetadata(document.uri, {
-    catalog: environment as CCloudEnvironment,
-    database: database,
-    computePool: computePool,
-  });
-
-  // Show document with cursor positioned after the query
-  const editor = await vscode.window.showTextDocument(document);
-  const position = document.positionAt(documentTemplate.length);
-  editor.selection = new vscode.Selection(position, position);
 }
 
 export function registerFlinkDatabaseViewCommands(): vscode.Disposable[] {

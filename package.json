@@ -462,7 +462,7 @@
       },
       {
         "command": "confluent.flinkdatabase.queryRelation",
-        "title": "Query With Flink",
+        "title": "Query with Flink SQL",
         "category": "Confluent: Flink Database View",
         "icon": "$(play)"
       },

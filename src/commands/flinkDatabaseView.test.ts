@@ -20,6 +20,7 @@ import {
   TEST_FLINK_RELATION,
   TEST_FLINK_VIEW,
 } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import type { CCloudResourceLoader } from "../loaders";
 import {
   FlinkDatabaseContainerLabel,
@@ -372,18 +373,20 @@ describe("commands/flinkDatabaseView.ts", () => {
   });
 
   describe("queryFlinkRelationCommand", () => {
-    let stubbedCloudResourceLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
-    let openTextDocumentStub: sinon.SinonStub;
-    let showTextDocumentStub: sinon.SinonStub;
-    let setFlinkDocumentMetadataStub: sinon.SinonStub;
+    let validateFlinkQueryResourcesStub: sinon.SinonStub;
+    let openFlinkQueryDocumentStub: sinon.SinonStub;
 
     beforeEach(() => {
-      stubbedCloudResourceLoader = getStubbedCCloudResourceLoader(sandbox);
-      openTextDocumentStub = sandbox.stub(workspace, "openTextDocument");
-      showTextDocumentStub = sandbox.stub(window, "showTextDocument");
-      setFlinkDocumentMetadataStub = sandbox
-        .stub(statementUtils, "setFlinkDocumentMetadata")
-        .resolves();
+      validateFlinkQueryResourcesStub = sandbox
+        .stub(statementUtils, "validateFlinkQueryResources")
+        .resolves({
+          environment: TEST_CCLOUD_ENVIRONMENT,
+          database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+        });
+      openFlinkQueryDocumentStub = sandbox
+        .stub(statementUtils, "openFlinkQueryDocument")
+        .resolves({} as any);
     });
 
     describe("error handling", () => {
@@ -393,159 +396,76 @@ describe("commands/flinkDatabaseView.ts", () => {
           /no relation was provided/,
         );
 
-        sinon.assert.notCalled(stubbedCloudResourceLoader.getEnvironment);
-        sinon.assert.notCalled(stubbedCloudResourceLoader.getFlinkDatabase);
-        sinon.assert.notCalled(openTextDocumentStub);
-        sinon.assert.notCalled(showTextDocumentStub);
+        sinon.assert.notCalled(validateFlinkQueryResourcesStub);
+        sinon.assert.notCalled(openFlinkQueryDocumentStub);
       });
 
-      it("should throw error when environment is not found", async () => {
-        stubbedCloudResourceLoader.getEnvironment.resolves(undefined);
+      it("should throw error when validateFlinkQueryResources throws", async () => {
+        const validationError = new Error("Validation failed");
+        validateFlinkQueryResourcesStub.rejects(validationError);
 
         await assert.rejects(
           async () => await queryFlinkRelationCommand(TEST_FLINK_RELATION),
-          /environment.*could not be found/,
+          validationError,
         );
 
         sinon.assert.calledOnceWithExactly(
-          stubbedCloudResourceLoader.getEnvironment,
-          TEST_FLINK_RELATION.environmentId,
+          validateFlinkQueryResourcesStub,
+          {
+            environmentId: TEST_FLINK_RELATION.environmentId,
+            databaseId: TEST_FLINK_RELATION.databaseId,
+          },
+          sinon.match.any,
         );
-        sinon.assert.notCalled(stubbedCloudResourceLoader.getFlinkDatabase);
-        sinon.assert.notCalled(openTextDocumentStub);
-        sinon.assert.notCalled(showTextDocumentStub);
-      });
-
-      it("should throw error when Flink database is not found", async () => {
-        stubbedCloudResourceLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
-        stubbedCloudResourceLoader.getFlinkDatabase.resolves(undefined);
-
-        await assert.rejects(
-          async () => await queryFlinkRelationCommand(TEST_FLINK_RELATION),
-          /database.*is not available/,
-        );
-
-        sinon.assert.calledOnceWithExactly(
-          stubbedCloudResourceLoader.getEnvironment,
-          TEST_FLINK_RELATION.environmentId,
-        );
-        sinon.assert.calledOnceWithExactly(
-          stubbedCloudResourceLoader.getFlinkDatabase,
-          TEST_FLINK_RELATION.environmentId,
-          TEST_FLINK_RELATION.databaseId,
-        );
-        sinon.assert.notCalled(openTextDocumentStub);
-        sinon.assert.notCalled(showTextDocumentStub);
-      });
-
-      it("should throw error when no compute pool is available", async () => {
-        stubbedCloudResourceLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
-        const databaseWithoutPools = {
-          ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-          flinkPools: [],
-        } as any;
-        stubbedCloudResourceLoader.getFlinkDatabase.resolves(databaseWithoutPools);
-
-        await assert.rejects(
-          async () => await queryFlinkRelationCommand(TEST_FLINK_RELATION),
-          /no compute pool is configured/,
-        );
-
-        sinon.assert.calledOnceWithExactly(
-          stubbedCloudResourceLoader.getEnvironment,
-          TEST_FLINK_RELATION.environmentId,
-        );
-        sinon.assert.calledOnceWithExactly(
-          stubbedCloudResourceLoader.getFlinkDatabase,
-          TEST_FLINK_RELATION.environmentId,
-          TEST_FLINK_RELATION.databaseId,
-        );
-        sinon.assert.notCalled(openTextDocumentStub);
-        sinon.assert.notCalled(showTextDocumentStub);
+        sinon.assert.notCalled(openFlinkQueryDocumentStub);
       });
     });
 
     describe("success cases", () => {
-      let mockDocument: any;
-      let mockEditor: any;
-
-      beforeEach(() => {
-        const newDocumentUri = Uri.parse("untitled://Untitled-1");
-        mockDocument = {
-          uri: newDocumentUri,
-          positionAt: (offset: number) => ({ line: 0, character: offset }),
-        };
-        mockEditor = { selection: undefined };
-
-        stubbedCloudResourceLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
-        stubbedCloudResourceLoader.getFlinkDatabase.resolves(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
-        openTextDocumentStub.resolves(mockDocument);
-        showTextDocumentStub.resolves(mockEditor);
-      });
-
-      it("should open FlinkSQL document with correct query template for base table", async () => {
+      it("should call validateFlinkQueryResources and openFlinkQueryDocument for base table", async () => {
         await queryFlinkRelationCommand(TEST_FLINK_RELATION);
 
-        // Verify environment lookup
+        // Verify validation was called with correct parameters (with logger as second arg)
         sinon.assert.calledOnceWithExactly(
-          stubbedCloudResourceLoader.getEnvironment,
-          TEST_FLINK_RELATION.environmentId,
+          validateFlinkQueryResourcesStub,
+          {
+            environmentId: TEST_FLINK_RELATION.environmentId,
+            databaseId: TEST_FLINK_RELATION.databaseId,
+          },
+          sinon.match.any,
         );
 
-        // Verify database lookup
-        sinon.assert.calledOnceWithExactly(
-          stubbedCloudResourceLoader.getFlinkDatabase,
-          TEST_FLINK_RELATION.environmentId,
-          TEST_FLINK_RELATION.databaseId,
-        );
-
-        // Verify document creation with correct template
-        sinon.assert.calledOnceWithExactly(openTextDocumentStub, {
-          language: "flinksql",
-          content: "SELECT * FROM `test_relation` LIMIT 10;\n",
-        });
-
-        // Verify document metadata
-        sinon.assert.calledOnceWithExactly(setFlinkDocumentMetadataStub, mockDocument.uri, {
-          catalog: TEST_CCLOUD_ENVIRONMENT,
+        // Verify openFlinkQueryDocument called with correct parameters
+        sinon.assert.calledOnceWithExactly(openFlinkQueryDocumentStub, {
+          entityName: TEST_FLINK_RELATION.name,
+          environment: TEST_CCLOUD_ENVIRONMENT,
           database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-          computePool: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.flinkPools[0],
+          computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+          positionCursorAtEnd: true,
         });
-
-        // Verify document is shown
-        sinon.assert.calledOnceWithExactly(showTextDocumentStub, mockDocument);
-
-        // Verify cursor is positioned at end of content
-        assert.ok(mockEditor.selection);
-        assert.strictEqual(mockEditor.selection.start.line, 0);
-        assert.strictEqual(
-          mockEditor.selection.start.character,
-          "SELECT * FROM `test_relation` LIMIT 10;\n".length,
-        );
       });
 
-      it("should open FlinkSQL document with correct query template for view", async () => {
+      it("should call validateFlinkQueryResources and openFlinkQueryDocument for view", async () => {
         await queryFlinkRelationCommand(TEST_FLINK_VIEW);
 
-        // Verify document creation uses view name
-        sinon.assert.calledOnceWithExactly(openTextDocumentStub, {
-          language: "flinksql",
-          content: "SELECT * FROM `test_view` LIMIT 10;\n",
+        // Verify validation was called (with logger as second arg)
+        sinon.assert.calledOnceWithExactly(
+          validateFlinkQueryResourcesStub,
+          {
+            environmentId: TEST_FLINK_VIEW.environmentId,
+            databaseId: TEST_FLINK_VIEW.databaseId,
+          },
+          sinon.match.any,
+        );
+
+        // Verify openFlinkQueryDocument called with view name
+        sinon.assert.calledOnceWithExactly(openFlinkQueryDocumentStub, {
+          entityName: TEST_FLINK_VIEW.name,
+          environment: TEST_CCLOUD_ENVIRONMENT,
+          database: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+          positionCursorAtEnd: true,
         });
-
-        // Verify all other steps are the same
-        sinon.assert.calledOnce(stubbedCloudResourceLoader.getEnvironment);
-        sinon.assert.calledOnce(stubbedCloudResourceLoader.getFlinkDatabase);
-        sinon.assert.calledOnce(setFlinkDocumentMetadataStub);
-        sinon.assert.calledOnce(showTextDocumentStub);
-      });
-
-      it("should escape table name with backticks in query template", async () => {
-        await queryFlinkRelationCommand(TEST_FLINK_RELATION);
-
-        const callArgs = openTextDocumentStub.getCall(0).args[0];
-        assert.ok(callArgs.content.includes("`test_relation`"));
-        assert.ok(callArgs.content.startsWith("SELECT * FROM `"));
       });
     });
   });
