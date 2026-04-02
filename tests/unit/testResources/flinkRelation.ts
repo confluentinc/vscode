@@ -46,3 +46,20 @@ export const TEST_FLINK_RELATION = new FlinkRelation({
   watermarkExpression: null,
   watermarkColumnIsHidden: false,
 });
+
+export const TEST_FLINK_VIEW = new FlinkRelation({
+  environmentId: TEST_CCLOUD_ENVIRONMENT_ID,
+  provider: TEST_CCLOUD_PROVIDER,
+  region: TEST_CCLOUD_REGION,
+  databaseId: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id,
+  name: "test_view",
+  comment: "A test view",
+  columns: [TEST_VARCHAR_COLUMN, TEST_INT_COLUMN],
+  type: FlinkRelationType.View,
+  distributionBucketCount: 0,
+  isDistributed: false,
+  isWatermarked: false,
+  watermarkColumnName: null,
+  watermarkExpression: null,
+  watermarkColumnIsHidden: false,
+});

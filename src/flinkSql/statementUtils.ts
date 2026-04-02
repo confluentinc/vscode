@@ -24,6 +24,7 @@ import type { UriMetadata } from "../storage/types";
 import { raceWithTimeout } from "../utils/timing";
 import { WebviewPanelCache } from "../webview-cache";
 import flinkStatementResults from "../webview/flink-statement-results.html";
+import { FLINK_SQL_LANGUAGE_ID } from "./constants";
 import { parseResults } from "./flinkStatementResults";
 import { extractPageToken } from "./utils";
 
@@ -321,6 +322,95 @@ export async function parseAllFlinkStatementResults<RT>(
  */
 export function isFromFlinkWorkspace(metadata: UriMetadata | undefined): boolean {
   return metadata?.[UriMetadataKeys.FLINK_FROM_WORKSPACE] === true;
+}
+
+/**
+ * Builds a fully-qualified SELECT query for a Flink-queryable entity.
+ * Generates identical queries whether invoked from Topics view or Flink Database view,
+ * since Kafka topics and Flink relations are the same underlying entity.
+ *
+ * @param environment - The Confluent Cloud environment (Flink catalog)
+ * @param database - The Kafka cluster (Flink database)
+ * @param entityName - The topic or relation name
+ * @param options - Optional query customization
+ * @returns A formatted Flink SQL SELECT query with comment header
+ */
+export function buildFlinkSelectQuery(
+  environment: CCloudEnvironment,
+  database: CCloudFlinkDbKafkaCluster,
+  entityName: string,
+  options?: { limit?: number },
+): string {
+  const limit = options?.limit ?? 10;
+  const fqn = `\`${environment.name}\`.\`${database.name}\`.\`${entityName}\``;
+
+  return `-- Query "${entityName}" with Flink SQL
+-- Replace this with your actual Flink SQL query
+
+SELECT *
+FROM ${fqn}
+LIMIT ${limit};
+`;
+}
+
+/**
+ * Opens a new Flink SQL document with a SELECT query for the specified entity.
+ * Calls buildFlinkSelectQuery() to generate the query, creates a new untitled document,
+ * sets Flink execution metadata (catalog, database, compute pool), displays the document,
+ * and positions the cursor appropriately.
+ *
+ * @param params - Query document parameters
+ * @returns The opened text editor
+ */
+export async function openFlinkQueryDocument(params: {
+  /** The topic or relation name to query */
+  entityName: string;
+  /** Environment/catalog for the query */
+  environment: CCloudEnvironment;
+  /** Database/Kafka cluster for the query */
+  database: CCloudFlinkDbKafkaCluster;
+  /** Compute pool to execute the query */
+  computePool: CCloudFlinkComputePool;
+  /** Whether to position cursor at end of document (default: false) */
+  positionCursorAtEnd?: boolean;
+  /** Row limit for the query (default: 10) */
+  limit?: number;
+}): Promise<vscode.TextEditor> {
+  const {
+    entityName,
+    environment,
+    database,
+    computePool,
+    positionCursorAtEnd = false,
+    limit,
+  } = params;
+
+  // Generate the query text
+  const queryText = buildFlinkSelectQuery(environment, database, entityName, { limit });
+
+  // Create document with FlinkSQL language
+  const document = await vscode.workspace.openTextDocument({
+    language: FLINK_SQL_LANGUAGE_ID,
+    content: queryText,
+  });
+
+  // Set Flink metadata using existing helper
+  await setFlinkDocumentMetadata(document.uri, {
+    catalog: environment,
+    database,
+    computePool,
+  });
+
+  // Show document
+  const editor = await vscode.window.showTextDocument(document, { preview: false });
+
+  // Position cursor
+  if (positionCursorAtEnd) {
+    const position = document.positionAt(queryText.length);
+    editor.selection = new vscode.Selection(position, position);
+  }
+
+  return editor;
 }
 
 /**
