@@ -20,10 +20,10 @@ import { validateDocument } from "../diagnostics/validateDocument";
 import { getRangeForDocument } from "../documentParsing/json";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
 import { isResponseError, logError } from "../errors";
-import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
-import { CCloudResourceLoader } from "../loaders";
+import { validateFlinkQueryResources } from "../flinkSql/queryResourceValidation";
+import { openFlinkQueryDocument } from "../flinkSql/statementUtils";
 import { Logger } from "../logging";
-import type { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import type { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud } from "../models/resource";
 import type { Schema } from "../models/schema";
 import { KafkaTopic } from "../models/topic";
@@ -37,8 +37,6 @@ import { uriQuickpick } from "../quickpicks/uris";
 import { promptForSchema } from "../quickpicks/utils/schemas";
 import { getSubjectNameStrategy } from "../quickpicks/utils/schemaSubjects";
 import { getSidecar } from "../sidecar";
-import { UriMetadataKeys } from "../storage/constants";
-import { ResourceManager } from "../storage/resourceManager";
 import { logUsage, UserEvent } from "../telemetry/events";
 import type { LoadedDocumentContent } from "../utils/file";
 import { getEditorOrFileContents } from "../utils/file";
@@ -488,44 +486,18 @@ export async function queryTopicWithFlink(topic: KafkaTopic) {
     return;
   }
 
-  // Get the environment and cluster for the topic to generate a fully qualified table name
-  const loader = CCloudResourceLoader.getInstance();
-  const topicEnvironment = await loader.getEnvironment(topic.environmentId);
-  const clusters: CCloudKafkaCluster[] = await loader.getKafkaClustersForEnvironmentId(
-    topic.environmentId,
-  );
-  const cluster: CCloudKafkaCluster | undefined = clusters.find((c) => c.id === topic.clusterId);
-
-  if (!topicEnvironment || !cluster) {
-    return;
-  }
-  const fullyQualifiedTopicName = `\`${topicEnvironment?.name}\`.\`${cluster.name}\`.\`${topic.name}\``;
-  const placeholderQuery = `-- Query topic "${topic.name}" with Flink SQL
--- Replace this with your actual Flink SQL query
-
-SELECT *
-FROM ${fullyQualifiedTopicName}
-LIMIT 10;`;
-
-  const document = await vscode.workspace.openTextDocument({
-    language: FLINK_SQL_LANGUAGE_ID,
-    content: placeholderQuery,
+  const { environment, database, computePool } = await validateFlinkQueryResources({
+    environmentId: topic.environmentId,
+    databaseId: topic.clusterId,
   });
 
-  const editor = await vscode.window.showTextDocument(document, { preview: false });
-
-  // Grab the first compute pool in the same region/provider as the topic cluster
-  if (cluster.isFlinkable()) {
-    const docUri = editor.document.uri;
-    const rm = ResourceManager.getInstance();
-    await rm.setUriMetadata(docUri, {
-      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: cluster.flinkPools[0].id,
-      [UriMetadataKeys.FLINK_CATALOG_ID]: topicEnvironment.id,
-      [UriMetadataKeys.FLINK_CATALOG_NAME]: topicEnvironment.name,
-      [UriMetadataKeys.FLINK_DATABASE_ID]: cluster.id,
-      [UriMetadataKeys.FLINK_DATABASE_NAME]: cluster.name,
-    });
-  }
+  await openFlinkQueryDocument({
+    entityName: topic.name,
+    environment,
+    database,
+    computePool,
+    positionCursorAtEnd: false,
+  });
 }
 
 /**

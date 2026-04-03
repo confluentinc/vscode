@@ -10,6 +10,8 @@ All notable changes to this extension will be documented in this file.
 - 'Copy Name' context action enabled for Flink tables, views, their column members, and nested ROW
   fields.
 - 'Copy Nested Path' context action for nested Flink ROW fields to copy table-relative field paths.
+- 'Query With Flink SQL' context action for Flink tables or views, opens up a simple FlinkSQL
+  document.
 
 ### Changed
 
