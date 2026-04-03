@@ -1,7 +1,24 @@
-import type { CodeLensProvider, Command, Disposable, Event, TextDocument } from "vscode";
-import { CodeLens, EventEmitter, Position, Range } from "vscode";
+import type {
+  CodeLensProvider,
+  Command,
+  Disposable,
+  Event,
+  TextDocument,
+  TextDocumentChangeEvent,
+  TextEditor,
+  TextEditorDecorationType,
+  TextEditorSelectionChangeEvent,
+  Uri,
+} from "vscode";
+import { CodeLens, EventEmitter, Position, Range, window, workspace } from "vscode";
+import {
+  getBlockAtLine,
+  parseFlinkSqlDocument,
+  type ExecutableBlock,
+} from "../documentParsing/flinkSql";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
+import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
@@ -20,6 +37,11 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
   private _onDidChangeCodeLenses: EventEmitter<void> = new EventEmitter<void>();
   readonly onDidChangeCodeLenses: Event<void> = this._onDidChangeCodeLenses.event;
 
+  /** Decoration type for visually separating executable blocks */
+  private blockDecorationType: TextEditorDecorationType;
+  // cache of parsed blocks per document URI
+  private readonly documentBlocksCache = new Map<string, ExecutableBlock[]>();
+
   private static instance: FlinkSqlCodelensProvider | null = null;
   static getInstance(): FlinkSqlCodelensProvider {
     if (!FlinkSqlCodelensProvider.instance) {
@@ -31,6 +53,19 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
   private constructor() {
     super();
 
+    // subtle background coloring for the statement block, to help the user visualize what will be
+    // sent when they click the "Submit Statement" codelens
+    this.blockDecorationType = window.createTextEditorDecorationType({
+      isWholeLine: true,
+      light: {
+        backgroundColor: "rgba(0, 0, 0, 0.05)",
+      },
+      dark: {
+        backgroundColor: "rgba(255, 255, 255, 0.05)",
+      },
+    });
+    this.disposables.push(this.blockDecorationType);
+
     this.disposables.push(...this.setEventListeners());
   }
 
@@ -38,6 +73,15 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
     return [
       ccloudConnected.event(this.ccloudConnectedHandler.bind(this)),
       uriMetadataSet.event(this.uriMetadataSetHandler.bind(this)),
+      window.onDidChangeTextEditorSelection(this.selectionChangeHandler.bind(this)),
+      window.onDidChangeActiveTextEditor(this.activeEditorChangeHandler.bind(this)),
+      workspace.onDidChangeTextDocument((event: TextDocumentChangeEvent) => {
+        if (event.document.languageId === FLINK_SQL_LANGUAGE_ID) {
+          // invalidate the cached parsed blocks for this document
+          const uriKey = event.document.uri.toString();
+          this.documentBlocksCache.delete(uriKey);
+        }
+      }),
     ];
   }
 
@@ -59,16 +103,54 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
     this._onDidChangeCodeLenses.fire();
   }
 
+  /** Handle text editor selection changes to update block decorations based on cursor position. */
+  private selectionChangeHandler(event: TextEditorSelectionChangeEvent): void {
+    const editor = event.textEditor;
+    if (editor.document.languageId !== FLINK_SQL_LANGUAGE_ID) {
+      return;
+    }
+    void this.updateBlockDecorations(editor);
+  }
+
+  /** Handle active editor changes to update block decorations. */
+  private activeEditorChangeHandler(editor: TextEditor | undefined): void {
+    if (!editor || editor.document.languageId !== FLINK_SQL_LANGUAGE_ID) {
+      return;
+    }
+    void this.updateBlockDecorations(editor);
+  }
+
+  /** Update decorations to highlight the executable block containing the cursor. */
+  private async updateBlockDecorations(editor: TextEditor): Promise<void> {
+    const document = editor.document;
+    const cursorLine = editor.selection.active.line;
+
+    // look up existing blocks from the cache, or re-parse and cache
+    const uriKey = document.uri.toString();
+    let blocks = this.documentBlocksCache.get(uriKey);
+    if (!blocks) {
+      blocks = await parseFlinkSqlDocument(document.uri);
+      this.documentBlocksCache.set(uriKey, blocks);
+    }
+
+    const currentBlock: ExecutableBlock | undefined = getBlockAtLine(blocks, cursorLine);
+    if (currentBlock) {
+      editor.setDecorations(this.blockDecorationType, [currentBlock.range]);
+    } else {
+      editor.setDecorations(this.blockDecorationType, []);
+    }
+  }
+
   async provideCodeLenses(document: TextDocument): Promise<CodeLens[]> {
     const codeLenses: CodeLens[] = [];
 
-    // show codelenses at the top of the file
-    const range = new Range(new Position(0, 0), new Position(0, 0));
+    // fallback range at the top of the file for when parsing fails or no CCloud auth
+    const topRange = new Range(new Position(0, 0), new Position(0, 0));
 
     if (!hasCCloudAuthSession()) {
       // show single codelens to sign in to CCloud since we need to be able to list CCloud resources
       // in the other codelenses (via quickpicks) below
-      const signInLens = new CodeLens(range, {
+      const signInLens = new CodeLens(topRange, {
         title: "Sign in to Confluent Cloud",
         command: "confluent.connections.ccloud.signIn",
         tooltip: "Sign in to Confluent Cloud",
@@ -88,15 +170,83 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
       await getComputePoolFromMetadata(uriMetadata);
     const { catalog, database } = await getCatalogDatabaseFromMetadata(uriMetadata, computePool);
 
-    // codelens for selecting a compute pool, which we'll use to derive the rest of the properties
-    // needed for various Flink operations (env ID, provider/region, etc)
+    // parse the document to find executable blocks
+    const uriKey = document.uri.toString();
+    let blocks = this.documentBlocksCache.get(uriKey);
+    if (!blocks) {
+      blocks = await parseFlinkSqlDocument(document.uri);
+      this.documentBlocksCache.set(uriKey, blocks);
+    }
+
+    // show codelenses at the top of the document as fallback
+    if (blocks.length === 0) {
+      logger.debug("No executable blocks found, showing fallback codelenses at line 0");
+      return this.createCodeLensesForRange(
+        topRange,
+        document.uri,
+        computePool,
+        catalog,
+        database,
+        undefined,
+      );
+    }
+
+    // create codelenses for each executable block
+    for (const block of blocks) {
+      const blockCodeLenses = this.createCodeLensesForRange(
+        block.range,
+        document.uri,
+        computePool,
+        catalog,
+        database,
+        block,
+      );
+      codeLenses.push(...blockCodeLenses);
+    }
+
+    return codeLenses;
+  }
+
+  /**
+   * Create codelenses for a given range in the document.
+   * @param range The range to create codelenses for (either a block range or line 0)
+   * @param documentUri The URI of the document
+   * @param computePool The compute pool, if available
+   * @param catalog The catalog, if available
+   * @param database The database, if available
+   * @param block The executable block, if available (undefined for fallback/line 0 codelenses)
+   * @returns Array of CodeLens objects for the given range
+   */
+  private createCodeLensesForRange(
+    range: Range,
+    documentUri: Uri,
+    computePool: CCloudFlinkComputePool | undefined,
+    catalog: CCloudEnvironment | undefined,
+    database: CCloudKafkaCluster | undefined,
+    block: ExecutableBlock | undefined,
+  ): CodeLens[] {
+    if (!hasCCloudAuthSession()) {
+      // show single codelens to sign in to CCloud since we need to be able to list CCloud resources
+      // in the other codelenses (via quickpicks) below
+      const signInLens = new CodeLens(range, {
+        title: "Sign in to Confluent Cloud",
+        command: "confluent.connections.ccloud.signIn",
+        tooltip: "Sign in to Confluent Cloud",
+        arguments: [],
+      } as Command);
+      return [signInLens];
+    }
+
+    const codeLenses: CodeLens[] = [];
+
+    // codelens for selecting a compute pool
     const selectComputePoolCommand: Command = {
       title: computePool ? computePool.name : "Set Compute Pool",
       command: "confluent.document.flinksql.setCCloudComputePool",
       tooltip: computePool
         ? `Compute Pool: ${computePool.name}`
         : "Set CCloud Compute Pool for Flink Statement",
-      arguments: [document.uri, database],
+      arguments: [documentUri, database],
     };
     const computePoolLens = new CodeLens(range, selectComputePoolCommand);
 
@@ -108,7 +258,7 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
         catalog && database
           ? `Catalog: ${catalog.name}, Database: ${database.name} (${database.provider} ${database.region})`
           : "Set Catalog & Database for Flink Statement",
-      arguments: [document.uri, computePool],
+      arguments: [documentUri, computePool],
     };
     const databaseLens = new CodeLens(range, selectDatabaseCommand);
 
@@ -117,7 +267,7 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
       title: "Clear Settings",
       command: "confluent.document.flinksql.resetCCloudMetadata",
       tooltip: "Clear Selected CCloud Resources for Flink Statement",
-      arguments: [document.uri],
+      arguments: [documentUri],
     };
     const resetLens = new CodeLens(range, resetCommand);
 
@@ -126,7 +276,7 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
         title: "▶️ Submit Statement",
         command: "confluent.statements.create",
         tooltip: "Submit Flink Statement to CCloud",
-        arguments: [document.uri, computePool, database],
+        arguments: [documentUri, computePool, database, block],
       };
       const submitLens = new CodeLens(range, submitCommand);
       // show the "Submit Statement" | <current pool> | <current catalog+db> codelenses

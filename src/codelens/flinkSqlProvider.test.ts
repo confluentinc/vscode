@@ -10,6 +10,9 @@ import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfig
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
+import type { ExecutableBlock } from "../documentParsing/flinkSql";
+import * as flinkSqlParser from "../documentParsing/flinkSql";
+import { StatementType } from "../documentParsing/flinkSql";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
@@ -63,6 +66,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
   describe("FlinkSqlCodelensProvider", () => {
     let provider: FlinkSqlCodelensProvider;
     let resourceManagerStub: sinon.SinonStubbedInstance<ResourceManager>;
+    let parseFlinkSqlDocumentStub: sinon.SinonStub;
 
     // NOTE: setting up fake TextDocuments is tricky since we can't create them directly, so we're
     // only populating the fields needed for the test and associated codebase logic, then using the
@@ -73,6 +77,11 @@ describe("codelens/flinkSqlProvider.ts", () => {
       // reset any stored metadata
       await getResourceManager().deleteAllUriMetadata();
       resourceManagerStub = getStubbedResourceManager(sandbox);
+
+      // Stub the parser to return empty array by default (fallback behavior)
+      parseFlinkSqlDocumentStub = sandbox
+        .stub(flinkSqlParser, "parseFlinkSqlDocument")
+        .resolves([]);
 
       provider = FlinkSqlCodelensProvider.getInstance();
     });
@@ -103,7 +112,8 @@ describe("codelens/flinkSqlProvider.ts", () => {
 
       it("setEventListeners() should return the expected number of listeners", () => {
         const listeners = provider["setEventListeners"]();
-        assert.strictEqual(listeners.length, handlerEmitterPairs.length);
+        // We now have 5 listeners: 2 for emitters + 3 for VS Code events (selection, active editor, document changes)
+        assert.strictEqual(listeners.length, 5);
       });
 
       handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
@@ -300,7 +310,12 @@ describe("codelens/flinkSqlProvider.ts", () => {
 
       assert.strictEqual(submitLens.command?.command, "confluent.statements.create");
       assert.strictEqual(submitLens.command?.title, "▶️ Submit Statement");
-      assert.deepStrictEqual(submitLens.command?.arguments, [fakeDocument.uri, pool, database]);
+      // When parser returns empty array (fallback), submit command should have 4 args with undefined block
+      assert.strictEqual(submitLens.command?.arguments?.length, 4);
+      assert.deepStrictEqual(submitLens.command?.arguments?.[0], fakeDocument.uri);
+      assert.deepStrictEqual(submitLens.command?.arguments?.[1], pool);
+      assert.deepStrictEqual(submitLens.command?.arguments?.[2], database);
+      assert.strictEqual(submitLens.command?.arguments?.[3], undefined); // block is undefined in fallback
 
       assert.strictEqual(dbLens.command?.command, "confluent.document.flinksql.setCCloudDatabase");
       assert.strictEqual(
@@ -322,6 +337,167 @@ describe("codelens/flinkSqlProvider.ts", () => {
       );
       assert.strictEqual(resetLens.command?.title, "Clear Settings");
       assert.deepStrictEqual(resetLens.command?.arguments, [fakeDocument.uri]);
+    });
+
+    it("should create codelenses for each parsed executable block", async () => {
+      const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+      const database: CCloudKafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+
+      // Create two executable blocks
+      const block1: ExecutableBlock = {
+        statements: [
+          {
+            text: "SELECT * FROM table1;",
+            range: new Range(0, 0, 0, 22),
+            type: StatementType.EXECUTABLE,
+          },
+        ],
+        range: new Range(0, 0, 0, 22),
+        text: "SELECT * FROM table1;",
+        hasConfigStatements: false,
+        index: 0,
+      };
+
+      const block2: ExecutableBlock = {
+        statements: [
+          {
+            text: "INSERT INTO table2 SELECT * FROM table1;",
+            range: new Range(2, 0, 2, 40),
+            type: StatementType.EXECUTABLE,
+          },
+        ],
+        range: new Range(2, 0, 2, 40),
+        text: "INSERT INTO table2 SELECT * FROM table1;",
+        hasConfigStatements: false,
+        index: 1,
+      };
+
+      // Stub parser to return two blocks
+      parseFlinkSqlDocumentStub.resolves([block1, block2]);
+
+      // simulate stored compute pool + database metadata
+      resourceManagerStub.getUriMetadata.resolves({
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
+        [UriMetadataKeys.FLINK_CATALOG_ID]: TEST_CCLOUD_ENVIRONMENT.id,
+        [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT.name,
+        [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
+        [UriMetadataKeys.FLINK_DATABASE_NAME]: database.name,
+      });
+      ccloudLoaderStub.getEnvironments.resolves([testEnvWithPoolAndCluster]);
+
+      const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
+
+      // Should have 4 codelenses per block (Submit, Set Pool, Set DB, Clear) = 8 total
+      assert.strictEqual(codeLenses.length, 8);
+
+      // Verify first block's codelenses (at line 0)
+      const block1Lenses = codeLenses.slice(0, 4);
+      assert.strictEqual(block1Lenses[0].command?.command, "confluent.statements.create");
+      assert.strictEqual(block1Lenses[0].command?.title, "▶️ Submit Statement");
+      assert.strictEqual(block1Lenses[0].command?.arguments?.length, 4);
+      assert.deepStrictEqual(block1Lenses[0].command?.arguments?.[3], block1); // 4th arg is the block
+
+      // Verify second block's codelenses (at line 2)
+      const block2Lenses = codeLenses.slice(4, 8);
+      assert.strictEqual(block2Lenses[0].command?.command, "confluent.statements.create");
+      assert.strictEqual(block2Lenses[0].command?.title, "▶️ Submit Statement");
+      assert.strictEqual(block2Lenses[0].command?.arguments?.length, 4);
+      assert.deepStrictEqual(block2Lenses[0].command?.arguments?.[3], block2); // 4th arg is the block
+    });
+
+    it("should create codelenses for blocks with SET/USE statements", async () => {
+      const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+      const database: CCloudKafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+
+      // Create a block with SET + USE + SELECT
+      const blockWithConfig: ExecutableBlock = {
+        statements: [
+          {
+            text: "SET 'key' = 'value';",
+            range: new Range(0, 0, 0, 20),
+            type: StatementType.SET,
+          },
+          {
+            text: "USE CATALOG my_catalog;",
+            range: new Range(1, 0, 1, 23),
+            type: StatementType.USE,
+          },
+          {
+            text: "SELECT * FROM table1;",
+            range: new Range(2, 0, 2, 21),
+            type: StatementType.EXECUTABLE,
+          },
+        ],
+        range: new Range(0, 0, 2, 21),
+        text: "SET 'key' = 'value';\nUSE CATALOG my_catalog;\nSELECT * FROM table1;",
+        hasConfigStatements: true,
+        index: 0,
+      };
+
+      // Stub parser to return one block with config statements
+      parseFlinkSqlDocumentStub.resolves([blockWithConfig]);
+
+      // simulate stored compute pool + database metadata
+      resourceManagerStub.getUriMetadata.resolves({
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
+        [UriMetadataKeys.FLINK_CATALOG_ID]: TEST_CCLOUD_ENVIRONMENT.id,
+        [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT.name,
+        [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
+        [UriMetadataKeys.FLINK_DATABASE_NAME]: database.name,
+      });
+      ccloudLoaderStub.getEnvironments.resolves([testEnvWithPoolAndCluster]);
+
+      const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
+
+      // Should have 4 codelenses (Submit, Set Pool, Set DB, Clear)
+      assert.strictEqual(codeLenses.length, 4);
+
+      // Verify submit command receives the full block (including SET/USE)
+      const submitLens = codeLenses[0];
+      assert.strictEqual(submitLens.command?.command, "confluent.statements.create");
+      assert.strictEqual(submitLens.command?.arguments?.length, 4);
+      const passedBlock = submitLens.command?.arguments?.[3] as ExecutableBlock;
+      assert.ok(passedBlock);
+      assert.strictEqual(passedBlock.hasConfigStatements, true);
+      assert.strictEqual(passedBlock.statements.length, 3);
+      assert.ok(passedBlock.text.includes("SET 'key' = 'value'"));
+      assert.ok(passedBlock.text.includes("USE CATALOG my_catalog"));
+      assert.ok(passedBlock.text.includes("SELECT * FROM table1"));
+    });
+
+    it("should show fallback codelenses at line 0 when parser returns empty array", async () => {
+      const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+      const database: CCloudKafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+
+      // Parser already stubbed to return empty array in beforeEach
+      parseFlinkSqlDocumentStub.resolves([]);
+
+      // simulate stored compute pool + database metadata
+      resourceManagerStub.getUriMetadata.resolves({
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
+        [UriMetadataKeys.FLINK_CATALOG_ID]: TEST_CCLOUD_ENVIRONMENT.id,
+        [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT.name,
+        [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
+        [UriMetadataKeys.FLINK_DATABASE_NAME]: database.name,
+      });
+      ccloudLoaderStub.getEnvironments.resolves([testEnvWithPoolAndCluster]);
+
+      const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
+
+      // Should have 4 codelenses at line 0 (fallback behavior)
+      assert.strictEqual(codeLenses.length, 4);
+
+      // All codelenses should be at line 0
+      const expectedRange = new Range(new Position(0, 0), new Position(0, 0));
+      for (const lens of codeLenses) {
+        assert.deepStrictEqual(lens.range, expectedRange);
+      }
+
+      // Submit command should have 4th argument as undefined (fallback, no block)
+      const submitLens = codeLenses[0];
+      assert.strictEqual(submitLens.command?.command, "confluent.statements.create");
+      assert.strictEqual(submitLens.command?.arguments?.length, 4);
+      assert.strictEqual(submitLens.command?.arguments?.[3], undefined); // block is undefined in fallback
     });
   });
 
