@@ -30,6 +30,8 @@ test.describe(() => {
       const resourcesView = new ResourcesView(page);
       const ccloudItem = new CCloudConnectionItem(page, resourcesView.confluentCloudItem);
       await expect(ccloudItem.locator).not.toContainText(NOT_CONNECTED_TEXT);
+      // also make sure we have at least one environment listed
+      await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
     },
   );
 });

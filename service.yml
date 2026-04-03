@@ -130,6 +130,11 @@ semaphore:
           description: |
             Which platform(s) to run E2E tests on. 'linux' runs only the Linux block(s);
             'windows' runs only the Windows block(s); 'all' runs everything.
+    - name: scheduled-release-e2e-smoketests
+      branch: main
+      pipeline_file: ".semaphore/release-e2e-smoketests.yml"
+      scheduled: true
+      at: "*/15 * * * *"
   managed_sections:
     - version
     - name
