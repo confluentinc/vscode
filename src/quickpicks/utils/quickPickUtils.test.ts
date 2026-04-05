@@ -59,6 +59,7 @@ describe("createEnhancedQuickPick", () => {
       description: undefined,
       detail: undefined,
       keepScrollPosition: false,
+      prompt: undefined,
     } as vscode.QuickPick<any>;
 
     // Stub the createQuickPick method to return our mock
