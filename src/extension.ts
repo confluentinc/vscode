@@ -83,6 +83,7 @@ import { setFlinkWorkspaceListener } from "./flinkSql/flinkWorkspace";
 import { IconNames } from "./icons";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
+import { registerMcpServerProviders } from "./mcp/serverProvider";
 import { FlinkStatementResultsPanelProvider } from "./panelProviders/flinkStatementResults";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { createLocalConnection, getLocalConnection } from "./sidecar/connections/local";
@@ -345,6 +346,8 @@ async function _activateExtension(
   const feedbackListener: vscode.Disposable = chatParticipant.onDidReceiveFeedback(handleFeedback);
   chatParticipant.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
   context.subscriptions.push(chatParticipant, feedbackListener, ...registerChatTools());
+
+  context.subscriptions.push(registerMcpServerProviders());
 
   // track the status bar for CCloud notices (fetched from the Statuspage Status API)
   enableCCloudStatusPolling();
