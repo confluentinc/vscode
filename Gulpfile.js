@@ -141,7 +141,14 @@ export function build(done) {
       }),
     ],
     onLog: handleBuildLog,
-    external: ["vscode", "electron"],
+    external: [
+      "vscode",
+      "electron",
+      // the MCP server is spawned as a separate stdio child process and must not be bundled into
+      // the extension; require.resolve finds it in node_modules at runtime
+      "@confluentinc/mcp-confluent/dist/index.js",
+      "@confluentinc/mcp-confluent/package.json",
+    ],
     context: "globalThis",
   };
   /** @type {import("rollup").OutputOptions} */
