@@ -17,8 +17,9 @@ const DEFAULT_EDITOR_SETTINGS = {
   // avoid letting VS Code incorrectly set the language of .proto files as C# so they appear
   // correctly (as "plaintext") in the URI quickpick
   "workbench.editor.languageDetection": false,
-  // we also have to disable a lot of auto-formatting so the .insertContent() method properly
-  // adds the schema/produce-message content as it exists in the fixture files
+  // disable auto-formatting behaviors that can interfere with editor content in tests (these
+  // were critical when insertContent used pressSequentially; less so now with clipboard paste,
+  // but still good defaults for any direct editor interaction)
   "editor.autoClosingBrackets": "never",
   "editor.autoClosingQuotes": "never",
   "editor.autoIndent": "none",
