@@ -133,6 +133,8 @@ export const test = testBase.extend<VSCodeFixtures>({
     }
 
     const context = electronApp.context();
+    // grant clipboard access for writing content into editors and reading copied values
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     // always start tracing manually, but decide later whether to save it based on test result
     await context.tracing.start({
       screenshots: true,
@@ -290,7 +292,7 @@ export const test = testBase.extend<VSCodeFixtures>({
   topicConfig: [undefined, { option: true }],
 
   topic: async (
-    { electronApp, page, connectionType, connectionItem, topicConfig, directConnectionConfig },
+    { page, connectionType, connectionItem, topicConfig, directConnectionConfig },
     use,
   ) => {
     if (!connectionType) {
@@ -332,8 +334,6 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     // produce messages to the topic if specified
     if (topicConfig.produce) {
-      // grant clipboard access to read the copied bootstrap servers for LOCAL connections
-      await electronApp.context().grantPermissions(["clipboard-read"]);
       await produceMessages(
         page,
         connectionType,
