@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
+import { writeToClipboard } from "../../utils/clipboard";
 import { executeVSCodeCommand } from "../../utils/commands";
 import { Quickpick } from "../quickInputs/Quickpick";
 
@@ -62,15 +63,15 @@ export class TextDocument {
   }
 
   /**
-   * Insert content at the current cursor position.
+   * Insert content at the current cursor position by writing to the clipboard and pasting.
    *
-   * NOTE: You may need to use `configureVSCodeSettings()` during test setup to disable
-   * auto-formatting for more reliable test results if the defaults are not suitable.
+   * Uses clipboard paste instead of typing character-by-character to avoid VS Code's per-keystroke
+   * auto-indent and auto-formatting behavior, which can corrupt content (especially on Windows).
    */
   async insertContent(content: string): Promise<void> {
     await this.locator.click();
-    // we can't use `.fill()` here since it doesn't work nicely with the monaco editor elements
-    await this.editorContent.pressSequentially(content);
+    await writeToClipboard(this.page, content);
+    await this.editorContent.press("ControlOrMeta+v");
   }
 
   /** Replace all content in the document with new content. */
