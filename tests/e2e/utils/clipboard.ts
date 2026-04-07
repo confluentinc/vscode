@@ -7,7 +7,7 @@ import { NotificationArea } from "../objects/notifications/NotificationArea";
  * Writes text to the system clipboard.
  *
  * NOTE: The `"clipboard-write"` permission should be granted to the Electron app context
- * beforehand (see {@linkcode baseTest} fixture setup), though most Electron versions allow
+ * beforehand (see `tests/e2e/baseTest.ts` fixture setup), though most Electron versions allow
  * clipboard writes from active pages by default.
  */
 export async function writeToClipboard(page: Page, content: string): Promise<void> {
@@ -23,7 +23,7 @@ export async function writeToClipboard(page: Page, content: string): Promise<voi
  * string/regex to appear and be dismissed before actually reading from the clipboard.
  *
  * NOTE: This requires the `"clipboard-read"` permission to have been granted to the Electron
- * app context beforehand (see {@linkcode baseTest} fixture setup).
+ * app context beforehand (see `tests/e2e/baseTest.ts` fixture setup).
  *
  * @param page The Playwright Page instance.
  * @param notificationText The string or RegExp to match in an info notification that appears, if
