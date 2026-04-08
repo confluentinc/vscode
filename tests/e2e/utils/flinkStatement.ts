@@ -27,8 +27,6 @@ export async function submitFlinkStatement(
   const computePoolLocator = resourcesView.ccloudFlinkComputePools.first();
   await computePoolLocator.click();
 
-  // Grant clipboard permission for reading the copied compute pool name
-  await electronApp.context().grantPermissions(["clipboard-read"]);
   const computePoolItem = new FlinkComputePoolItem(page, computePoolLocator);
   const computePoolName = await computePoolItem.copyName();
 
