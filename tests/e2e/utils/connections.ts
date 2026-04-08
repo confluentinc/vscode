@@ -135,9 +135,26 @@ export async function setupCCloudConnection(
   );
   await uriInputBox.confirm();
 
-  // Make sure the "Confluent Cloud" item in the Resources view is expanded and doesn't show the
-  // "(No connection)" description
+  // Wait for the CCloud connection to load resources. If the sidecar's GraphQL query hits a 429
+  // rate limit (common when multiple CI jobs share the same test org), the extension shows a
+  // warning notification and returns no environments, so the tree item never expands. Detect this
+  // early instead of waiting for the full test timeout.
   await expect(ccloudItem.locator).toBeVisible();
+
+  // check for a 429 rate-limit warning before waiting for the connection status text to update
+  const notificationArea = new NotificationArea(page);
+  const rateLimitWarning = notificationArea.warningNotifications.filter({
+    hasText: /Exceeded rate limit/,
+  });
+  try {
+    await expect(rateLimitWarning).not.toHaveCount(0, { timeout: 5_000 });
+    // use testInfo.skip so Playwright doesn't retry the test, which would just make things worse by
+    // causing more 429s across retries
+    testInfo.skip(true, "CCloud sign-in hit rate limiting (HTTP 429).");
+  } catch {
+    // no rate-limit warning seen yet
+  }
+
   await expect(ccloudItem.locator).not.toContainText(NOT_CONNECTED_TEXT);
   await expect(ccloudItem.locator).toHaveAttribute("aria-expanded", "true");
   return ccloudItem;
