@@ -25,6 +25,7 @@ import type {
 } from "../../clients/schemaRegistryRest";
 import { SubjectsV1Api } from "../../clients/schemaRegistryRest";
 import type { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";
+import { ConsumerGroupState } from "../../models/consumerGroup";
 import type { Schema } from "../../models/schema";
 import { SchemaType, Subject } from "../../models/schema";
 import type * as sidecar from "../../sidecar";
@@ -399,6 +400,14 @@ describe("loaderUtils.ts", () => {
 
       assert.strictEqual(result.length, 0);
     });
+
+    it("should propagate API errors from listKafkaConsumerGroups", async () => {
+      stubbedClient.listKafkaConsumerGroups.rejects(new Error("Connection refused"));
+
+      await assert.rejects(loaderUtils.fetchConsumerGroups(TEST_LOCAL_KAFKA_CLUSTER), {
+        message: "Connection refused",
+      });
+    });
   });
 
   describe("fetchConsumerGroupMembers()", () => {
@@ -474,6 +483,75 @@ describe("loaderUtils.ts", () => {
         cluster_id: TEST_LOCAL_KAFKA_CLUSTER.id,
         consumer_group_id: testGroupId,
       });
+    });
+
+    it("should propagate API errors from listKafkaConsumers", async () => {
+      stubbedClient.listKafkaConsumers.rejects(new Error("Connection refused"));
+
+      await assert.rejects(
+        loaderUtils.fetchConsumerGroupMembers(TEST_LOCAL_KAFKA_CLUSTER, testGroupId),
+        { message: "Connection refused" },
+      );
+    });
+  });
+
+  describe("toConsumerGroupState()", () => {
+    it("should return the matching enum value for each valid state", () => {
+      for (const state of Object.values(ConsumerGroupState)) {
+        assert.strictEqual(loaderUtils.toConsumerGroupState(state), state);
+      }
+    });
+
+    it("should match case-insensitively", () => {
+      assert.strictEqual(loaderUtils.toConsumerGroupState("stable"), ConsumerGroupState.Stable);
+      assert.strictEqual(loaderUtils.toConsumerGroupState("Stable"), ConsumerGroupState.Stable);
+      assert.strictEqual(loaderUtils.toConsumerGroupState("dead"), ConsumerGroupState.Dead);
+    });
+
+    const unknownInputs: [string, string | undefined][] = [
+      ["an unrecognized state string", "SOME_NEW_STATE"],
+      ["undefined", undefined],
+      ["an empty string", ""],
+    ];
+
+    for (const [label, input] of unknownInputs) {
+      it(`should return Unknown for ${label}`, () => {
+        assert.strictEqual(loaderUtils.toConsumerGroupState(input), ConsumerGroupState.Unknown);
+      });
+    }
+  });
+
+  describe("parseCoordinatorId()", () => {
+    it("should parse broker ID from a full Kafka REST URL", () => {
+      const url = "http://localhost:26636/kafka/v3/clusters/lkc-abc123/brokers/2";
+      assert.strictEqual(loaderUtils.parseCoordinatorId(url), 2);
+    });
+
+    it("should parse broker ID from a CCloud-style URL", () => {
+      const url =
+        "https://pkc-abc123.us-east-1.aws.confluent.cloud/kafka/v3/clusters/lkc-5vmjd8/brokers/0";
+      assert.strictEqual(loaderUtils.parseCoordinatorId(url), 0);
+    });
+
+    it("should parse a plain numeric string", () => {
+      assert.strictEqual(loaderUtils.parseCoordinatorId("7"), 7);
+    });
+
+    it("should return null for undefined", () => {
+      assert.strictEqual(loaderUtils.parseCoordinatorId(undefined), null);
+    });
+
+    it("should return null for empty string", () => {
+      assert.strictEqual(loaderUtils.parseCoordinatorId(""), null);
+    });
+
+    it("should return null when the last segment is non-numeric", () => {
+      assert.strictEqual(
+        loaderUtils.parseCoordinatorId(
+          "http://localhost/kafka/v3/clusters/lkc-abc123/brokers/notanumber",
+        ),
+        null,
+      );
     });
   });
 
