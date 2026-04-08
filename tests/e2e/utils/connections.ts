@@ -140,21 +140,23 @@ export async function setupCCloudConnection(
   // warning notification and returns no environments, so the tree item never expands. Detect this
   // early instead of waiting for the full test timeout.
   await expect(ccloudItem.locator).toBeVisible();
+
+  // check for a 429 rate-limit warning before waiting for the connection status text to update
   const notificationArea = new NotificationArea(page);
   const rateLimitWarning = notificationArea.warningNotifications.filter({
     hasText: /Exceeded rate limit/,
   });
-  await expect(async () => {
-    // fail fast if a rate-limit warning appeared (use testInfo.skip so Playwright does NOT retry
-    // the test, which would just amplify the rate limiting with more rapid sign-in attempts)
-    const warningCount = await rateLimitWarning.count();
-    if (warningCount > 0) {
-      testInfo.skip(true, "CCloud sign-in hit rate limiting (HTTP 429).");
-    }
-    // otherwise keep waiting for the connection to expand
-    await expect(ccloudItem.locator).not.toContainText(NOT_CONNECTED_TEXT);
-    await expect(ccloudItem.locator).toHaveAttribute("aria-expanded", "true");
-  }).toPass();
+  try {
+    await expect(rateLimitWarning).not.toHaveCount(0, { timeout: 5_000 });
+    // use testInfo.skip so Playwright doesn't retry the test, which would just make things worse by
+    // causing more 429s across retries
+    testInfo.skip(true, "CCloud sign-in hit rate limiting (HTTP 429).");
+  } catch {
+    // no rate-limit warning seen yet
+  }
+
+  await expect(ccloudItem.locator).not.toContainText(NOT_CONNECTED_TEXT);
+  await expect(ccloudItem.locator).toHaveAttribute("aria-expanded", "true");
   return ccloudItem;
 }
 
