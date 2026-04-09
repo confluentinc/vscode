@@ -252,7 +252,9 @@ export async function setupLocalConnection(
 
     if (options.schemaRegistry) {
       try {
-        await expect(resourcesView.localSchemaRegistries).not.toHaveCount(0);
+        // use a short check here to see if local SR is already running; the longer timeout is only
+        // used when starting fresh within setupLocalSchemaRegistry()
+        await expect(resourcesView.localSchemaRegistries).not.toHaveCount(0, { timeout: 3000 });
       } catch {
         // start the SR container if it isn't running
         return await setupLocalSchemaRegistry(page);
