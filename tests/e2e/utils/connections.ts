@@ -142,17 +142,22 @@ export async function setupCCloudConnection(
   await expect(ccloudItem.locator).toBeVisible();
 
   // check for a 429 rate-limit warning before waiting for the connection status text to update
+  let rateLimited = false;
   const notificationArea = new NotificationArea(page);
   const rateLimitWarning = notificationArea.warningNotifications.filter({
     hasText: /Exceeded rate limit/,
   });
   try {
     await expect(rateLimitWarning).not.toHaveCount(0, { timeout: 5_000 });
-    // use testInfo.skip so Playwright doesn't retry the test, which would just make things worse by
-    // causing more 429s across retries
-    testInfo.skip(true, "CCloud sign-in hit rate limiting (HTTP 429).");
+    // can't call testInfo.skip in here since it will be swallowed by the try/catch, so just flag it
+    rateLimited = true;
   } catch {
-    // no rate-limit warning seen yet
+    // no rate-limit warning seen after 5 seconds
+  }
+  if (rateLimited) {
+    // use testInfo.skip so Playwright doesn't retry the test, which would just make things worse
+    // by causing more 429s across retries
+    testInfo.skip(true, "CCloud sign-in hit rate limiting (HTTP 429).");
   }
 
   await expect(ccloudItem.locator).not.toContainText(NOT_CONNECTED_TEXT);
