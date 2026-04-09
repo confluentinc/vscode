@@ -193,8 +193,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       await executeVSCodeCommand(page, "workbench.action.files.openFolder");
 
       // make sure the explorer view is visible before we activate the extension
-      const explorerView = new FileExplorer(page);
-      await explorerView.ensureVisible();
+      await executeVSCodeCommand(page, "workbench.view.explorer");
 
       // Wait for extension to reactivate so we can use the upload action
       await openConfluentSidebar(page);

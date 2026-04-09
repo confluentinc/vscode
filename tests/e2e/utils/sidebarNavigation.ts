@@ -1,8 +1,8 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { ActivityBarItem } from "../objects/ActivityBarItem";
 import { ViewContainer } from "../objects/ViewContainer";
 import { ResourcesView } from "../objects/views/ResourcesView";
+import { executeVSCodeCommand } from "./commands";
 
 /**
  * Clicks on the "Confluent" icon in the
@@ -17,14 +17,15 @@ export async function openConfluentSidebar(page: Page): Promise<void> {
   await page.waitForLoadState("domcontentloaded");
 
   // check if the view container is already visible in the primary sidebar first
-  // and if not, click the activity bar item to show it
+  // and if not, use the VS Code focus command to show it
   const viewContainer = new ViewContainer(page, "confluent");
   try {
     await expect(viewContainer.locator).toBeVisible({ timeout: 2000 });
   } catch {
-    const activityBarItem = new ActivityBarItem(page, "Confluent");
-    await expect(activityBarItem.locator).toBeVisible();
-    await activityBarItem.locator.click();
+    // use the VS Code command rather than clicking the activity bar tab directly,
+    // because the tab click toggles the sidebar: if the Confluent tab is already
+    // active (but hasn't rendered yet), clicking it closes the sidebar instead of opening it
+    await executeVSCodeCommand(page, "confluent-resources.focus");
     await expect(viewContainer.locator).toBeVisible();
   }
 
