@@ -5,13 +5,12 @@ import { ResourcesView } from "../objects/views/ResourcesView";
 import { executeVSCodeCommand } from "./commands";
 
 /**
- * Clicks on the "Confluent" icon in the
- * {@link https://code.visualstudio.com/api/ux-guidelines/activity-bar activity bar} to open the
- * primary sidebar with the main Confluent
+ * Opens the primary sidebar with the main Confluent
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container},
  * which activates the extension if it isn't already activated.
  *
- * For most tests, this should be done first unless another explicit extension activation event is performed.
+ * For most tests, this should be done first unless another explicit extension activation event is
+ * performed.
  */
 export async function openConfluentSidebar(page: Page): Promise<void> {
   await page.waitForLoadState("domcontentloaded");
