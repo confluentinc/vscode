@@ -282,6 +282,10 @@ export class SubjectTreeItem extends vscode.TreeItem {
     }
     propertyParts.push("schema-subject");
     this.contextValue = propertyParts.join("-");
+
+    this.accessibilityInformation = {
+      label: `Schema Subject: ${subject.name}`,
+    };
   }
 }
 
