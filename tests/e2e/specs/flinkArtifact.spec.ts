@@ -192,6 +192,11 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
       });
       await executeVSCodeCommand(page, "workbench.action.files.openFolder");
 
+      // wait for the window to finish transitioning to the new workspace before
+      // trying to open the command palette again
+      await page.locator(".monaco-workbench").waitFor();
+      await page.waitForLoadState("domcontentloaded");
+
       // make sure the explorer view is visible before we activate the extension
       await executeVSCodeCommand(page, "workbench.view.explorer");
 
