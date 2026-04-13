@@ -47,8 +47,10 @@ export class TopicsView extends SearchableView {
   /** Click the "Refresh" nav action in the view title area. */
   async clickRefresh(): Promise<void> {
     await this.clickNavAction("Refresh");
-    // wait for any loading to complete before returning
+    // wait for view-level loading, then confirm the topics container is ready
     await expect(this.progressIndicator).toBeHidden();
+    await this.waitForContainerLoaded(this.topicsContainer);
+    // TODO: wait for the consumer groups container here once we incorporate them into tests
   }
 
   /** Get the "Topics" container at the root level of the tree. */
@@ -63,6 +65,8 @@ export class TopicsView extends SearchableView {
 
   /** Get a topic item by its label/name. */
   async getTopicItem(topicName: string): Promise<TopicItem> {
+    // ensure the topics container has finished loading before searching
+    await this.waitForContainerLoaded(this.topicsContainer);
     const item = await this.getItemByLabel(topicName, this.topics);
     return new TopicItem(this.page, item);
   }
@@ -133,6 +137,7 @@ export class TopicsView extends SearchableView {
     await expect(this.header).toHaveAttribute("aria-expanded", "true");
     await expect(this.body).toBeVisible();
     await expect(this.progressIndicator).toBeHidden();
+    await this.waitForContainerLoaded(this.topicsContainer);
   }
 
   /**
@@ -167,9 +172,9 @@ export class TopicsView extends SearchableView {
     await replicationInput.input.fill(replicationFactor.toString());
     await replicationInput.confirm();
 
-    // progress indicator may be visible while the view reloads, but should not be visible when done
-    // before returning
+    // wait for view-level loading, then confirm the topics container is ready
     await expect(this.progressIndicator).toBeHidden();
+    await this.waitForContainerLoaded(this.topicsContainer);
   }
 
   /**
@@ -185,8 +190,8 @@ export class TopicsView extends SearchableView {
     await deletionConfirmationBox.input.fill(topicName);
     await deletionConfirmationBox.confirm();
 
-    // progress indicator may be visible while the view reloads, but should not be visible when done
-    // before returning
+    // wait for view-level loading, then confirm the topics container is ready
     await expect(this.progressIndicator).toBeHidden();
+    await this.waitForContainerLoaded(this.topicsContainer);
   }
 }
