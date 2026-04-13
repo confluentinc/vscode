@@ -16,7 +16,6 @@ import { LocalConnectionItem } from "../objects/views/viewItems/LocalConnectionI
 import type { DirectConnectionForm } from "../objects/webviews/DirectConnectionFormWebview";
 import type { DirectConnectionOptions, LocalConnectionOptions } from "../types/connection";
 import { executeVSCodeCommand } from "./commands";
-import { openConfluentSidebar } from "./sidebarNavigation";
 
 export const CCLOUD_SIGNIN_URL_PATH = join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
 export const NOT_CONNECTED_TEXT = "(No connection)";
@@ -244,18 +243,32 @@ export async function setupLocalConnection(
   const resourcesView = new ResourcesView(page);
   await expect(resourcesView.localItem).toBeVisible();
 
-  // TEMPORARY: until we can isolate test containers from real containers, we'll have to enforce
-  // no currently running containers and fail sooner rather than waiting for the default timeout
-  await expect(
-    resourcesView.localItem,
-    "Local resources must be stopped before running @local tests.",
-  ).not.toHaveAttribute("aria-expanded", { timeout: 1000 });
+  const localItem = new LocalConnectionItem(page, resourcesView.localItem);
+  const isExpanded = await resourcesView.localItem.getAttribute("aria-expanded");
 
-  let localItem: LocalConnectionItem = await setupLocalKafka(page);
-  if (options.schemaRegistry) {
-    localItem = await setupLocalSchemaRegistry(page);
+  if (isExpanded === "true") {
+    // container(s) already running - at least local Kafka should be available
+    await expect(resourcesView.localKafkaClusters).not.toHaveCount(0);
+
+    if (options.schemaRegistry) {
+      try {
+        // use a short check here to see if local SR is already running; the longer timeout is only
+        // used when starting fresh within setupLocalSchemaRegistry()
+        await expect(resourcesView.localSchemaRegistries).not.toHaveCount(0, { timeout: 3000 });
+      } catch {
+        // start the SR container if it isn't running
+        return await setupLocalSchemaRegistry(page);
+      }
+    }
+    return localItem;
   }
-  return localItem;
+
+  // not running, start fresh
+  let result: LocalConnectionItem = await setupLocalKafka(page);
+  if (options.schemaRegistry) {
+    result = await setupLocalSchemaRegistry(page);
+  }
+  return result;
 }
 
 export async function setupLocalKafka(page: Page) {
@@ -309,29 +322,4 @@ export async function setupLocalSchemaRegistry(page: Page) {
   await expect(resourcesView.localKafkaClusters).not.toHaveCount(0);
   await expect(resourcesView.localSchemaRegistries).not.toHaveCount(0, { timeout: 60_000 });
   return localItem;
-}
-
-/** Stops local resources (Kafka and optionally Schema Registry) through the Resources view. */
-export async function teardownLocalConnection(page: Page, options: LocalConnectionOptions) {
-  // Always make sure the sidebar is open and we're in the Resources view before we try to interact
-  // with the local connection item. This isn't necessary for the `setupLocalConnection()` function
-  // since it's always called at the start of a test after the `openExtensionSidebar` fixture, but
-  // it's needed here since tests may switch windows/views.
-  await openConfluentSidebar(page);
-
-  const resourcesView = new ResourcesView(page);
-  const localItem = new LocalConnectionItem(page, resourcesView.localItem.first());
-  await expect(localItem.locator).toHaveAttribute("aria-expanded", "true");
-  await localItem.clickStopResources();
-
-  if (options.schemaRegistry) {
-    // we only see the quickpick if both local Kafka and SR are running
-    const containerQuickpick = new Quickpick(page);
-    await containerQuickpick.selectItemByText("Schema Registry");
-    await containerQuickpick.selectItemByText("Kafka");
-    await containerQuickpick.confirm();
-  }
-
-  // once the resources are stopped, the local connection shouldn't be expandable
-  await expect(resourcesView.localItem).not.toHaveAttribute("aria-expanded");
 }
