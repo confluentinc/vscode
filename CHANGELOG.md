@@ -17,6 +17,8 @@ All notable changes to this extension will be documented in this file.
 
 - Columns of compound Flink types (`ROW`s, `MAP`s, `ARRAY`s or `MULTISET`s thereof) are now
   expandable in the Flink Database view list of Tables and Views.
+- Flink Statements viewer supports new warnings structure with a new interface for viewing warnings,
+  info, and errors from running Flink statements.
 
 ## 2.2.2
 
