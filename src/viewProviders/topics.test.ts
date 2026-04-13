@@ -15,9 +15,24 @@ import {
   TEST_LOCAL_ENVIRONMENT_ID,
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
+import {
+  createConsumerGroup,
+  TEST_CCLOUD_CONSUMER,
+  TEST_CCLOUD_CONSUMER_GROUP,
+} from "../../tests/unit/testResources/consumerGroup";
 import type { EventChangeType, SubjectChangeEvent } from "../emitters";
 import type { CCloudResourceLoader } from "../loaders";
 import { TopicFetchError } from "../loaders/utils/loaderUtils";
+import { ConnectionType } from "../clients/sidecar";
+import { CCLOUD_CONNECTION_ID } from "../constants";
+import {
+  Consumer,
+  type ConsumerGroup,
+  ConsumerGroupTreeItem,
+  ConsumerTreeItem,
+} from "../models/consumerGroup";
+import type { CustomMarkdownString } from "../models/main";
+import { KafkaClusterResourceContainer } from "../models/containers/kafkaClusterResourceContainer";
 import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { TopicViewProvider } from "./topics";
@@ -48,6 +63,7 @@ describe("viewProviders/topics.ts", () => {
 
       stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
       stubbedLoader.getTopicsForCluster.resolves([]);
+      stubbedLoader.getConsumerGroupsForCluster.resolves([]);
     });
 
     afterEach(() => {
@@ -64,7 +80,8 @@ describe("viewProviders/topics.ts", () => {
       it("no-arg refresh() when focused on a cluster should call onDidChangeTreeData.fire()", async () => {
         provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
         await provider.refresh();
-        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        // twice for topics (loading start/end) + twice for consumer groups (loading start/end)
+        assert.strictEqual(onDidChangeTreeDataFireStub.callCount, 4);
       });
 
       it("no-arg refresh() when no cluster is set should call onDidChangeTreeData.fire() once to clear (disconnect scenario)", async () => {
@@ -104,7 +121,41 @@ describe("viewProviders/topics.ts", () => {
       it("onlyIfMatching a kafka cluster when the cluster matches should call onDidChangeTreeData.fire()", async () => {
         provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
         await provider.refresh(false, TEST_CCLOUD_KAFKA_CLUSTER);
-        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        // twice for topics (loading start/end) + twice for consumer groups (loading start/end)
+        sinon.assert.callCount(onDidChangeTreeDataFireStub, 4);
+      });
+
+      it("refresh() reuses existing container instances so targeted fires match VS Code's references", async () => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+        await provider.refresh();
+
+        const topicsContainerAfterFirst = provider["topicsContainer"];
+        const consumerGroupsContainerAfterFirst = provider["consumerGroupsContainer"];
+
+        // second refresh on the same cluster should reuse the same container instances
+        onDidChangeTreeDataFireStub.resetHistory();
+        await provider.refresh(true);
+
+        assert.strictEqual(
+          provider["topicsContainer"],
+          topicsContainerAfterFirst,
+          "topicsContainer should be the same instance after refresh",
+        );
+        assert.strictEqual(
+          provider["consumerGroupsContainer"],
+          consumerGroupsContainerAfterFirst,
+          "consumerGroupsContainer should be the same instance after refresh",
+        );
+        // targeted fires should reference the same container instances
+        const firedElements = onDidChangeTreeDataFireStub.args.map((args: unknown[]) => args[0]);
+        assert.ok(
+          firedElements.includes(topicsContainerAfterFirst),
+          "should fire with the reused topicsContainer",
+        );
+        assert.ok(
+          firedElements.includes(consumerGroupsContainerAfterFirst),
+          "should fire with the reused consumerGroupsContainer",
+        );
       });
 
       it("onlyIfMatching a contained Kafka topic when the cluster doesn't match should do nothing", async () => {
@@ -116,13 +167,23 @@ describe("viewProviders/topics.ts", () => {
       it("onlyIfMatching a contained Kafka topic when the cluster matches should call onDidChangeTreeData.fire()", async () => {
         provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
         await provider.refresh(false, TEST_CCLOUD_KAFKA_TOPIC);
-        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        // twice for topics (loading start/end) + twice for consumer groups (loading start/end)
+        sinon.assert.callCount(onDidChangeTreeDataFireStub, 4);
       });
     });
 
     describe("refreshTopics()", () => {
+      let onDidChangeTreeDataFireStub: sinon.SinonStub;
+
       beforeEach(() => {
         provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+        // set up the container like refresh() does
+        provider["topicsContainer"] = new KafkaClusterResourceContainer<KafkaTopic>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Topics",
+        );
+        onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
       });
 
       it("should populate topicsInTreeView from loader results", async () => {
@@ -135,6 +196,14 @@ describe("viewProviders/topics.ts", () => {
           provider["topicsInTreeView"].get(TEST_CCLOUD_KAFKA_TOPIC.name),
           TEST_CCLOUD_KAFKA_TOPIC,
         );
+      });
+
+      it("should set container children from loader results", async () => {
+        stubbedLoader.getTopicsForCluster.resolves([TEST_CCLOUD_KAFKA_TOPIC]);
+
+        await provider.refreshTopics(TEST_CCLOUD_KAFKA_CLUSTER, false);
+
+        assert.deepStrictEqual(provider["topicsContainer"]!.children, [TEST_CCLOUD_KAFKA_TOPIC]);
       });
 
       it("should populate subjectsInTreeView and subjectToTopicMap when topics have associated Subjects", async () => {
@@ -150,14 +219,144 @@ describe("viewProviders/topics.ts", () => {
         );
       });
 
-      it("should call showErrorMessage when loader raises a TopicFetchError", async () => {
+      it("should set hasError on the container when loader raises a TopicFetchError", async () => {
         const showErrorMessageStub = sandbox.stub(window, "showErrorMessage");
         stubbedLoader.getTopicsForCluster.rejects(new TopicFetchError("Test error"));
 
         await provider.refreshTopics(TEST_CCLOUD_KAFKA_CLUSTER, false);
 
-        assert.strictEqual(provider["topicsInTreeView"].size, 0);
+        assert.strictEqual(provider["topicsContainer"]!.hasError, true);
+        assert.deepStrictEqual(provider["topicsContainer"]!.children, []);
+        assert.ok(
+          (provider["topicsContainer"]!.tooltip as CustomMarkdownString).value.includes(
+            "Test error",
+          ),
+          "tooltip should include the error message",
+        );
         sinon.assert.calledOnce(showErrorMessageStub);
+      });
+
+      it("should fire tree data change events for loading start and end", async () => {
+        stubbedLoader.getTopicsForCluster.resolves([]);
+
+        await provider.refreshTopics(TEST_CCLOUD_KAFKA_CLUSTER, false);
+
+        // fired twice: once for loading start, once for loading end
+        assert.strictEqual(onDidChangeTreeDataFireStub.callCount, 2);
+      });
+
+      it("should return early if topicsContainer is null", async () => {
+        provider["topicsContainer"] = null;
+
+        await provider.refreshTopics(TEST_CCLOUD_KAFKA_CLUSTER, false);
+
+        sinon.assert.notCalled(stubbedLoader.getTopicsForCluster);
+        sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+      });
+
+      it("should clear stale topic entries before repopulating", async () => {
+        // pre-populate a stale entry that won't be returned by the loader
+        const staleTopic = new KafkaTopic({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "stale-topic" });
+        provider["topicsInTreeView"].set(staleTopic.name, staleTopic);
+        stubbedLoader.getTopicsForCluster.resolves([TEST_CCLOUD_KAFKA_TOPIC]);
+
+        await provider.refreshTopics(TEST_CCLOUD_KAFKA_CLUSTER, false);
+
+        assert.strictEqual(provider["topicsInTreeView"].has("stale-topic"), false);
+        assert.strictEqual(provider["topicsInTreeView"].has(TEST_CCLOUD_KAFKA_TOPIC.name), true);
+        assert.strictEqual(provider["topicsInTreeView"].size, 1);
+      });
+    });
+
+    describe("refreshConsumerGroups()", () => {
+      let onDidChangeTreeDataFireStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+        // set up the container like refresh() does
+        provider["consumerGroupsContainer"] = new KafkaClusterResourceContainer<ConsumerGroup>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Consumer Groups",
+        );
+        onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
+      });
+
+      it("should populate consumerGroupsInTreeView from loader results", async () => {
+        stubbedLoader.getConsumerGroupsForCluster.resolves([TEST_CCLOUD_CONSUMER_GROUP]);
+
+        await provider.refreshConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER, false);
+
+        assert.strictEqual(provider["consumerGroupsInTreeView"].size, 1);
+        assert.deepStrictEqual(
+          provider["consumerGroupsInTreeView"].get(TEST_CCLOUD_CONSUMER_GROUP.consumerGroupId),
+          TEST_CCLOUD_CONSUMER_GROUP,
+        );
+      });
+
+      it("should set container children from loader results", async () => {
+        stubbedLoader.getConsumerGroupsForCluster.resolves([TEST_CCLOUD_CONSUMER_GROUP]);
+
+        await provider.refreshConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER, false);
+
+        assert.deepStrictEqual(provider["consumerGroupsContainer"]!.children, [
+          TEST_CCLOUD_CONSUMER_GROUP,
+        ]);
+      });
+
+      it("should set hasError on the container when loader throws", async () => {
+        stubbedLoader.getConsumerGroupsForCluster.rejects(new Error("API error"));
+
+        await provider.refreshConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER, false);
+
+        assert.strictEqual(provider["consumerGroupsContainer"]!.hasError, true);
+        assert.deepStrictEqual(provider["consumerGroupsContainer"]!.children, []);
+        assert.ok(
+          (provider["consumerGroupsContainer"]!.tooltip as CustomMarkdownString).value.includes(
+            "API error",
+          ),
+          "tooltip should include the error message",
+        );
+      });
+
+      it("should fire tree data change events for loading start and end", async () => {
+        stubbedLoader.getConsumerGroupsForCluster.resolves([]);
+
+        await provider.refreshConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER, false);
+
+        // fired twice: once for loading start, once for loading end
+        assert.strictEqual(onDidChangeTreeDataFireStub.callCount, 2);
+      });
+
+      it("should return early if consumerGroupsContainer is null", async () => {
+        provider["consumerGroupsContainer"] = null;
+
+        await provider.refreshConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER, false);
+
+        sinon.assert.notCalled(stubbedLoader.getConsumerGroupsForCluster);
+        sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+      });
+
+      it("should clear stale consumer group entries before repopulating", async () => {
+        // pre-populate a stale entry that won't be returned by the loader
+        const staleGroup = createConsumerGroup({
+          connectionId: CCLOUD_CONNECTION_ID,
+          connectionType: ConnectionType.Ccloud,
+          environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+          clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+          consumerGroupId: "stale-group",
+        });
+        provider["consumerGroupsInTreeView"].set(staleGroup.consumerGroupId, staleGroup);
+        stubbedLoader.getConsumerGroupsForCluster.resolves([TEST_CCLOUD_CONSUMER_GROUP]);
+
+        await provider.refreshConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER, false);
+
+        assert.strictEqual(provider["consumerGroupsInTreeView"].has("stale-group"), false);
+        assert.strictEqual(
+          provider["consumerGroupsInTreeView"].has(TEST_CCLOUD_CONSUMER_GROUP.consumerGroupId),
+          true,
+        );
+        assert.strictEqual(provider["consumerGroupsInTreeView"].size, 1);
       });
     });
 
@@ -175,6 +374,26 @@ describe("viewProviders/topics.ts", () => {
       it("getTreeItem() should return a SubjectTreeItem when given a Subject", () => {
         const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
         assert.ok(treeItem instanceof SubjectTreeItem);
+      });
+
+      it("should return a ConsumerGroupTreeItem for a ConsumerGroup instance", () => {
+        const treeItem = provider.getTreeItem(TEST_CCLOUD_CONSUMER_GROUP);
+        assert.ok(treeItem instanceof ConsumerGroupTreeItem);
+      });
+
+      it("should return a ConsumerTreeItem for a Consumer instance", () => {
+        const treeItem = provider.getTreeItem(TEST_CCLOUD_CONSUMER);
+        assert.ok(treeItem instanceof ConsumerTreeItem);
+      });
+
+      it("should return the container itself for a KafkaClusterResourceContainer", () => {
+        const container = new KafkaClusterResourceContainer<KafkaTopic>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Topics",
+        );
+        const treeItem = provider.getTreeItem(container);
+        assert.strictEqual(treeItem, container);
       });
     });
 
@@ -209,13 +428,26 @@ describe("viewProviders/topics.ts", () => {
         assert.strictEqual(children.length, 0);
       });
 
-      it("should return topics from topicsInTreeView at the root level", () => {
-        provider["topicsInTreeView"].set(TEST_CCLOUD_KAFKA_TOPIC.name, TEST_CCLOUD_KAFKA_TOPIC);
+      it("should return both containers at the root level when both are set", () => {
+        provider["topicsContainer"] = new KafkaClusterResourceContainer<KafkaTopic>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Topics",
+        );
+        provider["consumerGroupsContainer"] = new KafkaClusterResourceContainer<ConsumerGroup>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Consumer Groups",
+        );
 
         const children = provider.getChildren();
 
-        assert.strictEqual(children.length, 1);
-        assert.deepStrictEqual(children[0], TEST_CCLOUD_KAFKA_TOPIC);
+        assert.strictEqual(children.length, 2);
+        // consumer groups container should be first, topics second
+        assert.ok(children[0] instanceof KafkaClusterResourceContainer);
+        assert.strictEqual(children[0].label, "Consumer Groups");
+        assert.ok(children[1] instanceof KafkaClusterResourceContainer);
+        assert.strictEqual(children[1].label, "Topics");
       });
 
       it("should return subjects from topic.children when expanding a topic", () => {
@@ -256,13 +488,45 @@ describe("viewProviders/topics.ts", () => {
 
         assert.strictEqual(children.length, 0);
       });
+
+      it("should return members when expanding a ConsumerGroup in the cache", () => {
+        provider["consumerGroupsInTreeView"].set(
+          TEST_CCLOUD_CONSUMER_GROUP.consumerGroupId,
+          TEST_CCLOUD_CONSUMER_GROUP,
+        );
+
+        const children = provider.getChildren(TEST_CCLOUD_CONSUMER_GROUP);
+
+        assert.strictEqual(children.length, TEST_CCLOUD_CONSUMER_GROUP.members.length);
+        assert.ok(children[0] instanceof Consumer);
+      });
+
+      it("should return an empty array when expanding a ConsumerGroup not in the cache", () => {
+        const otherGroup = createConsumerGroup({
+          connectionId: CCLOUD_CONNECTION_ID,
+          connectionType: ConnectionType.Ccloud,
+          environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+          clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+          consumerGroupId: "not-in-cache",
+        });
+
+        const children = provider.getChildren(otherGroup);
+
+        assert.strictEqual(children.length, 0);
+      });
     });
 
     describe("getParent()", () => {
-      it("should return undefined for a KafkaTopic (root-level item)", () => {
+      it("should return the topics container for a KafkaTopic", () => {
+        provider["topicsContainer"] = new KafkaClusterResourceContainer<KafkaTopic>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Topics",
+        );
+
         const parent = provider.getParent(TEST_CCLOUD_KAFKA_TOPIC);
 
-        assert.strictEqual(parent, undefined);
+        assert.strictEqual(parent, provider["topicsContainer"]);
       });
 
       it("should return the parent topic for a Subject", () => {
@@ -295,6 +559,41 @@ describe("viewProviders/topics.ts", () => {
 
       it("should return undefined for a Schema whose subject is not in the cache", () => {
         const parent = provider.getParent(TEST_CCLOUD_SCHEMA);
+
+        assert.strictEqual(parent, undefined);
+      });
+
+      it("should return the consumer groups container for a ConsumerGroup", () => {
+        provider["consumerGroupsContainer"] = new KafkaClusterResourceContainer<ConsumerGroup>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Consumer Groups",
+        );
+
+        const parent = provider.getParent(TEST_CCLOUD_CONSUMER_GROUP);
+
+        assert.strictEqual(parent, provider["consumerGroupsContainer"]);
+      });
+
+      it("should return the parent ConsumerGroup for a Consumer", () => {
+        provider["consumerGroupsInTreeView"].set(
+          TEST_CCLOUD_CONSUMER_GROUP.consumerGroupId,
+          TEST_CCLOUD_CONSUMER_GROUP,
+        );
+
+        const parent = provider.getParent(TEST_CCLOUD_CONSUMER);
+
+        assert.strictEqual(parent, TEST_CCLOUD_CONSUMER_GROUP);
+      });
+
+      it("should return undefined for a KafkaClusterResourceContainer", () => {
+        const container = new KafkaClusterResourceContainer<KafkaTopic>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Topics",
+        );
+
+        const parent = provider.getParent(container);
 
         assert.strictEqual(parent, undefined);
       });
@@ -387,6 +686,81 @@ describe("viewProviders/topics.ts", () => {
         await provider.reveal(TEST_CCLOUD_SCHEMA);
 
         sinon.assert.notCalled(treeViewRevealStub);
+      });
+
+      it("should reveal a KafkaClusterResourceContainer (topics container)", async () => {
+        // set up the container so reveal can match against it
+        provider["topicsContainer"] = new KafkaClusterResourceContainer<KafkaTopic>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Topics",
+        );
+        // pass a different instance with the same id to verify lookup by id
+        const lookupContainer = new KafkaClusterResourceContainer<KafkaTopic>(
+          CCLOUD_CONNECTION_ID,
+          ConnectionType.Ccloud,
+          "Topics",
+        );
+
+        await provider.reveal(lookupContainer, { select: true });
+
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, provider["topicsContainer"], {
+          select: true,
+        });
+      });
+
+      it("should reveal a ConsumerGroup from the cache", async () => {
+        provider["consumerGroupsInTreeView"].set(
+          TEST_CCLOUD_CONSUMER_GROUP.consumerGroupId,
+          TEST_CCLOUD_CONSUMER_GROUP,
+        );
+
+        await provider.reveal(TEST_CCLOUD_CONSUMER_GROUP, { select: true });
+
+        sinon.assert.calledOnceWithExactly(treeViewRevealStub, TEST_CCLOUD_CONSUMER_GROUP, {
+          select: true,
+        });
+      });
+
+      it("should reveal a Consumer within its parent ConsumerGroup", async () => {
+        provider["consumerGroupsInTreeView"].set(
+          TEST_CCLOUD_CONSUMER_GROUP.consumerGroupId,
+          TEST_CCLOUD_CONSUMER_GROUP,
+        );
+
+        await provider.reveal(TEST_CCLOUD_CONSUMER, { focus: true });
+
+        sinon.assert.calledOnce(treeViewRevealStub);
+        const revealedItem = treeViewRevealStub.firstCall.args[0];
+        assert.ok(revealedItem instanceof Consumer);
+        assert.strictEqual(revealedItem.consumerId, TEST_CCLOUD_CONSUMER.consumerId);
+      });
+
+      it("should not reveal a ConsumerGroup when not in the cache", async () => {
+        await provider.reveal(TEST_CCLOUD_CONSUMER_GROUP);
+
+        sinon.assert.notCalled(treeViewRevealStub);
+      });
+
+      it("should reveal a KafkaClusterResourceContainer (consumer groups container)", async () => {
+        provider["consumerGroupsContainer"] = new KafkaClusterResourceContainer<ConsumerGroup>(
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
+          TEST_CCLOUD_KAFKA_CLUSTER.connectionType,
+          "Consumer Groups",
+        );
+        const lookupContainer = new KafkaClusterResourceContainer<ConsumerGroup>(
+          CCLOUD_CONNECTION_ID,
+          ConnectionType.Ccloud,
+          "Consumer Groups",
+        );
+
+        await provider.reveal(lookupContainer, { focus: true });
+
+        sinon.assert.calledOnceWithExactly(
+          treeViewRevealStub,
+          provider["consumerGroupsContainer"],
+          { focus: true },
+        );
       });
     });
 
