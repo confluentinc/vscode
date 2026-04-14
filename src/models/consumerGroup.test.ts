@@ -16,16 +16,18 @@ import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources/kafkaC
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
-import { ConsumerGroupState, ConsumerGroupTreeItem, ConsumerTreeItem } from "./consumerGroup";
+import {
+  ConsumerGroup,
+  ConsumerGroupState,
+  ConsumerGroupTreeItem,
+  ConsumerTreeItem,
+} from "./consumerGroup";
 
 describe("models/consumerGroup.ts", () => {
   describe("ConsumerGroup", () => {
     describe("id", () => {
-      it("should return clusterId-consumerGroupId", () => {
-        assert.strictEqual(
-          TEST_CCLOUD_CONSUMER_GROUP.id,
-          `${TEST_CCLOUD_CONSUMER_GROUP.clusterId}-${TEST_CCLOUD_CONSUMER_GROUP_ID}`,
-        );
+      it("should return consumerGroupId", () => {
+        assert.strictEqual(TEST_CCLOUD_CONSUMER_GROUP.id, TEST_CCLOUD_CONSUMER_GROUP_ID);
       });
     });
 
@@ -111,12 +113,8 @@ describe("models/consumerGroup.ts", () => {
 
   describe("Consumer", () => {
     describe("id", () => {
-      it("should return clusterId-consumerGroupId-consumerId", () => {
-        const consumer = TEST_CCLOUD_CONSUMER;
-        assert.strictEqual(
-          consumer.id,
-          `${consumer.clusterId}-${consumer.consumerGroupId}-${consumer.consumerId}`,
-        );
+      it("should return consumerId", () => {
+        assert.strictEqual(TEST_CCLOUD_CONSUMER.id, TEST_CCLOUD_CONSUMER.consumerId);
       });
     });
 
@@ -179,10 +177,11 @@ describe("models/consumerGroup.ts", () => {
       assert.strictEqual(treeItem.label, TEST_CCLOUD_CONSUMER_GROUP.consumerGroupId);
     });
 
-    it("should set id from the resource", () => {
+    it("should set id as clusterId-consumerGroupId", () => {
       const treeItem = new ConsumerGroupTreeItem(TEST_CCLOUD_CONSUMER_GROUP);
+      const group = TEST_CCLOUD_CONSUMER_GROUP;
 
-      assert.strictEqual(treeItem.id, TEST_CCLOUD_CONSUMER_GROUP.id);
+      assert.strictEqual(treeItem.id, `${group.clusterId}-${group.consumerGroupId}`);
     });
 
     it("should include connection type and state in contextValue", () => {
@@ -315,6 +314,39 @@ describe("models/consumerGroup.ts", () => {
 
         assert.ok(text.includes("currently rebalancing"));
       });
+
+      it("should show 'Yes' for simple consumer groups", () => {
+        const group = createConsumerGroup({
+          connectionId: CCLOUD_CONNECTION_ID,
+          connectionType: ConnectionType.Ccloud,
+          environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+          clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+          isSimple: true,
+        });
+        const item = new ConsumerGroupTreeItem(group);
+        const tooltip = (item.tooltip as MarkdownString).value;
+
+        assert.ok(tooltip.includes("Yes"));
+      });
+
+      it("should omit coordinator when coordinatorId is null", () => {
+        const group = new ConsumerGroup({
+          connectionId: CCLOUD_CONNECTION_ID,
+          connectionType: ConnectionType.Ccloud,
+          environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+          clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+          consumerGroupId: "test-group",
+          state: ConsumerGroupState.Stable,
+          isSimple: false,
+          partitionAssignor: "range",
+          coordinatorId: null,
+          members: [],
+        });
+        const item = new ConsumerGroupTreeItem(group);
+        const tooltip = (item.tooltip as MarkdownString).value;
+
+        assert.ok(!tooltip.includes("Coordinator Broker"));
+      });
     });
   });
 
@@ -340,9 +372,14 @@ describe("models/consumerGroup.ts", () => {
       assert.strictEqual(treeItem.label, consumer.consumerId);
     });
 
-    it("should set id from the resource", () => {
+    it("should set id as clusterId-consumerGroupId-clientId-consumerId", () => {
       const treeItem = new ConsumerTreeItem(TEST_CCLOUD_CONSUMER);
-      assert.strictEqual(treeItem.id, TEST_CCLOUD_CONSUMER.id);
+      const consumer = TEST_CCLOUD_CONSUMER;
+
+      assert.strictEqual(
+        treeItem.id,
+        `${consumer.clusterId}-${consumer.consumerGroupId}-${consumer.clientId}-${consumer.consumerId}`,
+      );
     });
 
     it("should include connection type in contextValue", () => {
