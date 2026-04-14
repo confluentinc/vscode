@@ -372,13 +372,13 @@ describe("models/consumerGroup.ts", () => {
       assert.strictEqual(treeItem.label, consumer.consumerId);
     });
 
-    it("should set id as clusterId-clientId-consumerId", () => {
+    it("should set id as clusterId-consumerGroupId-clientId-consumerId", () => {
       const treeItem = new ConsumerTreeItem(TEST_CCLOUD_CONSUMER);
       const consumer = TEST_CCLOUD_CONSUMER;
 
       assert.strictEqual(
         treeItem.id,
-        `${consumer.clusterId}-${consumer.clientId}-${consumer.consumerId}`,
+        `${consumer.clusterId}-${consumer.consumerGroupId}-${consumer.clientId}-${consumer.consumerId}`,
       );
     });
 
