@@ -65,7 +65,7 @@ describe("commands/topicsView.ts", () => {
     });
 
     it("should bail early if no container is provided", async () => {
-      await refreshResourceContainerCommand(undefined as any);
+      await refreshResourceContainerCommand(undefined);
 
       sinon.assert.notCalled(refreshTopicsStub);
       sinon.assert.notCalled(refreshConsumerGroupsStub);
@@ -122,7 +122,7 @@ describe("commands/topicsView.ts", () => {
       const container = new KafkaClusterResourceContainer(
         TEST_CCLOUD_KAFKA_CLUSTER.connectionId,
         ConnectionType.Ccloud,
-        "Unknown Label" as any,
+        "Unknown Label" as unknown as KafkaClusterContainerLabel,
         [],
       );
 

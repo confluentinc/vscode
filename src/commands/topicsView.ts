@@ -15,7 +15,7 @@ const logger = new Logger("commands.topicsView");
  * @param container The {@link KafkaClusterResourceContainer} tree item that was clicked.
  */
 export async function refreshResourceContainerCommand(
-  container: KafkaClusterResourceContainer<ISearchable>,
+  container?: KafkaClusterResourceContainer<ISearchable>,
 ): Promise<void> {
   if (!container) {
     logger.error("No container provided to refreshResourceContainerCommand");
