@@ -6,6 +6,8 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
+- Consumer groups and their members are now visible in the Topics view under a collapsible "Consumer
+  Groups" container
 - Direct connections form now supports OAuth authentication for WarpStream connections.
 - 'Copy Name' context action enabled for Flink tables, views, their column members, and nested ROW
   fields.

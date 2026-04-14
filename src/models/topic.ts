@@ -134,6 +134,10 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
 
     const missingAuthz: KafkaTopicOperation[] = this.checkMissingAuthorizedOperations(resource);
     this.tooltip = createKafkaTopicTooltip(this.resource, missingAuthz);
+
+    this.accessibilityInformation = {
+      label: `Kafka Topic: ${resource.name}`,
+    };
   }
 
   checkMissingAuthorizedOperations(resource: KafkaTopic): KafkaTopicOperation[] {
