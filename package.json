@@ -337,12 +337,6 @@
         "category": "Confluent: Connections"
       },
       {
-        "command": "confluent.topics.refreshResourceContainer",
-        "icon": "$(sync)",
-        "title": "Refresh Group",
-        "category": "Confluent: Topics View"
-      },
-      {
         "command": "confluent.copyNestedPath",
         "title": "Copy Nested Path",
         "category": "Confluent: Resources"
@@ -851,6 +845,12 @@
         "icon": "$(sync)",
         "title": "Refresh",
         "category": "Confluent: Topics"
+      },
+      {
+        "command": "confluent.topics.refreshResourceContainer",
+        "icon": "$(sync)",
+        "title": "Refresh Group",
+        "category": "Confluent: Topics View"
       },
       {
         "command": "confluent.topics.refreshResourceContainer",
@@ -1394,10 +1394,6 @@
           "when": "true"
         },
         {
-          "command": "confluent.topics.refreshResourceContainer",
-          "when": "false"
-        },
-        {
           "command": "confluent.copyNestedPath",
           "when": "false"
         },
@@ -1756,6 +1752,10 @@
         {
           "command": "confluent.topics.refresh",
           "when": "true"
+        },
+        {
+          "command": "confluent.topics.refreshResourceContainer",
+          "when": "false"
         },
         {
           "command": "confluent.topics.refreshResourceContainer",
