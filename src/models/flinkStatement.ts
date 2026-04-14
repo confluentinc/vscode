@@ -9,7 +9,7 @@ import type {
 } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, UTM_SOURCE_VSCODE } from "../constants";
-import type { StatementWarning } from "../flinkSql/warningParser";
+import type { SqlV1StatementWarning } from "../clients/flinkSql";
 import { extractWarnings } from "../flinkSql/warningParser";
 import { IconNames } from "../icons";
 import type { IdItem } from "./main";
@@ -272,7 +272,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
    * Get warnings for this statement.
    * Prefers structured API warnings, falls back to parsing legacy [Warning] format from detail.
    */
-  get warnings(): StatementWarning[] {
+  get warnings(): SqlV1StatementWarning[] {
     const statusWarnings = this.status.warnings;
     return extractWarnings(statusWarnings, this.detail);
   }

@@ -19,7 +19,7 @@ import type { ViewMode } from "./flinkStatementResultColumns";
 import type { StatementResultsRow } from "./flinkStatementResults";
 import { parseResults } from "./flinkStatementResults";
 import { extractPageToken } from "./utils";
-import type { StatementWarning } from "./warningParser";
+import type { SqlV1StatementWarning } from "../clients/flinkSql";
 
 const logger = new Logger("flink-statement-results");
 
@@ -86,7 +86,7 @@ export type PostFunction = {
     failed: boolean;
     areResultsViewable: boolean;
     isForeground: boolean;
-    warnings: StatementWarning[];
+    warnings: SqlV1StatementWarning[];
   }>;
   (type: "StopStatement", body: { timestamp?: number }): Promise<null>;
   (type: "ViewStatementSource", body: { timestamp?: number }): Promise<null>;

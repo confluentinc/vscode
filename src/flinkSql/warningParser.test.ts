@@ -1,10 +1,6 @@
 import assert from "assert";
-import {
-  extractWarnings,
-  parseLegacyWarnings,
-  stripWarningsFromDetail,
-  type StatementWarning,
-} from "./warningParser";
+import type { SqlV1StatementWarning } from "../clients/flinkSql";
+import { extractWarnings, parseLegacyWarnings, stripWarningsFromDetail } from "./warningParser";
 
 describe("flinkSql/warningParser", () => {
   describe("parseLegacyWarnings", () => {
@@ -32,8 +28,8 @@ describe("flinkSql/warningParser", () => {
       assert.strictEqual(result[0].severity, "MODERATE");
       assert.strictEqual(result[0].reason, "");
       assert.strictEqual(result[0].message, "The primary key does not match the upsert key.");
-      // created_at is null for legacy warnings (no timestamp available)
-      assert.strictEqual(result[0].created_at, null);
+      // no timestamp available for legacy warnings, defaults to epoch sentinel
+      assert.strictEqual(result[0].created_at.getTime(), 0);
     });
 
     it("should parse multiple legacy warnings", () => {
@@ -84,7 +80,7 @@ describe("flinkSql/warningParser", () => {
     });
 
     it("should prefer structured warnings when available", () => {
-      const apiWarnings: StatementWarning[] = [
+      const apiWarnings: SqlV1StatementWarning[] = [
         {
           severity: "CRITICAL",
           created_at: new Date("2025-11-14T16:01:00Z"),

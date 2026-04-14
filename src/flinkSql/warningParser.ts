@@ -3,29 +3,23 @@
  * Handles both new structured API warnings and legacy [Warning] format in detail strings.
  */
 
+import type { SqlV1StatementWarning } from "../clients/flinkSql";
+
 /** Regex matching `[Warning] message` blocks in legacy detail strings. */
 const LEGACY_WARNING_PATTERN = /\[Warning\]\s*([\s\S]*?)(?=\s*\[Warning\]|$)/gi;
-
-/** API warning shape from the new structured warnings field */
-export interface StatementWarning {
-  readonly severity: string;
-  readonly created_at: Date | null;
-  readonly reason: string;
-  readonly message: string;
-}
 
 /**
  * Parse legacy [Warning] format from detail string.
  * Legacy format: "[Warning] message. [Warning] another message."
  * @param detail The detail string that may contain legacy warnings
- * @returns Array of parsed StatementWarning objects
+ * @returns Array of warnings coerced to match SqlV1StatementWarning object type
  */
-export function parseLegacyWarnings(detail: string | undefined): StatementWarning[] {
+export function parseLegacyWarnings(detail: string | undefined): SqlV1StatementWarning[] {
   if (!detail) {
     return [];
   }
 
-  const warnings: StatementWarning[] = [];
+  const warnings: SqlV1StatementWarning[] = [];
   LEGACY_WARNING_PATTERN.lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -34,7 +28,7 @@ export function parseLegacyWarnings(detail: string | undefined): StatementWarnin
     if (message) {
       warnings.push({
         severity: "MODERATE",
-        created_at: null, // No timestamp in legacy format
+        created_at: new Date(0), // No timestamp in legacy format - default to epoch sentinel
         reason: "", // No reason in legacy format
         message,
       });
@@ -48,12 +42,12 @@ export function parseLegacyWarnings(detail: string | undefined): StatementWarnin
  * Extract warnings from API response, preferring structured warnings over legacy parsing.
  * @param warnings The structured warnings array from the API (may be undefined)
  * @param detail The detail string that may contain legacy warnings
- * @returns Array of parsed StatementWarning objects
+ * @returns Array of parsed SqlV1StatementWarning objects
  */
 export function extractWarnings(
-  warnings: StatementWarning[] | undefined,
+  warnings: SqlV1StatementWarning[] | undefined,
   detail: string | undefined,
-): StatementWarning[] {
+): SqlV1StatementWarning[] {
   // Prefer structured warnings if available
   if (warnings && warnings.length > 0) {
     return warnings;

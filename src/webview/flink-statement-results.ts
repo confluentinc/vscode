@@ -7,7 +7,8 @@ import type {
   ResultCount,
   StreamState,
 } from "../flinkSql/flinkStatementResultsManager";
-import { stripWarningsFromDetail, type StatementWarning } from "../flinkSql/warningParser";
+import type { SqlV1StatementWarning } from "../clients/flinkSql";
+import { stripWarningsFromDetail } from "../flinkSql/warningParser";
 import { ViewModel } from "./bindings/view-model";
 import type { WebviewStorage } from "./comms/comms";
 import { createWebviewStorage, sendWebviewMessage } from "./comms/comms";
@@ -56,7 +57,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     failed: boolean;
     areResultsViewable: boolean;
     isForeground: boolean;
-    warnings: StatementWarning[];
+    warnings: SqlV1StatementWarning[];
   }>;
   readonly waitingForResults: Signal<boolean>;
   readonly emptyFilterResult: Signal<boolean>;
@@ -202,7 +203,10 @@ export class FlinkStatementResultsViewModel extends ViewModel {
           severity: w.severity,
           message: w.message,
           reason: w.reason,
-          createdAt: w.created_at ? w.created_at.toLocaleString() : undefined,
+          createdAt:
+            new Date(w.created_at).getTime() > 0
+              ? new Date(w.created_at).toLocaleString()
+              : undefined,
         });
       }
 
