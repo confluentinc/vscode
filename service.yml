@@ -130,6 +130,16 @@ semaphore:
           description: |
             Which platform(s) to run E2E tests on. 'linux' runs only the Linux block(s);
             'windows' runs only the Windows block(s); 'all' runs everything.
+    - name: scheduled-npm-audit
+      branch: main
+      pipeline_file: .semaphore/npm-audit.yml
+      scheduled: true
+      at: '0 6 * * 1' # Every Monday at 06:00 UTC
+      parameters:
+        - name: TARGET_BRANCH
+          required: false
+          default_value: 'main'
+          description: 'The branch to audit and base the PR against. Defaults to main; override for release branches like v1.2.x.'
   managed_sections:
     - version
     - name
