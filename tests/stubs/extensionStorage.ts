@@ -90,6 +90,7 @@ export interface StubbedSecretStorage extends SecretStorage {
   get: SinonStub;
   store: SinonStub;
   delete: SinonStub;
+  keys: SinonStub;
   onDidChange: SinonStub;
 }
 
@@ -107,6 +108,7 @@ export function getStubbedSecretStorage(sandbox: SinonSandbox): StubbedSecretSto
     get: sandbox.stub().resolves(),
     store: sandbox.stub().resolves(),
     delete: sandbox.stub().resolves(),
+    keys: sandbox.stub().resolves([]),
     onDidChange: sandbox.stub(),
   };
   // can't stub ExtensionContext.secrets directly, so we stub our helper function
