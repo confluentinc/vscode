@@ -16,7 +16,7 @@ import { LocalConnectionItem } from "../objects/views/viewItems/LocalConnectionI
 import type { DirectConnectionForm } from "../objects/webviews/DirectConnectionFormWebview";
 import type { DirectConnectionOptions, LocalConnectionOptions } from "../types/connection";
 import { executeVSCodeCommand } from "./commands";
-import { openConfluentSidebar } from "./sidebarNavigation";
+import { openConfluentSidebar } from "./workspace";
 
 export const CCLOUD_SIGNIN_URL_PATH = join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
 export const NOT_CONNECTED_TEXT = "(No connection)";
