@@ -17,6 +17,8 @@ export async function prepareTestWorkspace(page: Page): Promise<void> {
   // electronApp fixture uses at initial launch
   await page.waitForLoadState("domcontentloaded");
   await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
+  // any locator-based interactions below this point will naturally wait for the Electron DOM to be
+  // ready/visible/etc, so we don't need additional waits for that here
 
   // dismiss the "All installed extensions are temporarily disabled" toast that always appears
   // under --disable-extensions; tolerate it being absent on subsequent reloads
