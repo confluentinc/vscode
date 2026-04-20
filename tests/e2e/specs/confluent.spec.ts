@@ -5,7 +5,7 @@ import { ResourcesView } from "../objects/views/ResourcesView";
 import { CCloudConnectionItem } from "../objects/views/viewItems/CCloudConnectionItem";
 import { Tag } from "../tags";
 import { NOT_CONNECTED_TEXT, setupCCloudConnection } from "../utils/connections";
-import { openConfluentSidebar } from "../utils/sidebarNavigation";
+import { openConfluentSidebar } from "../utils/workspace";
 
 test.describe(() => {
   test("should activate the extension", { tag: [Tag.Smoke] }, async ({ page }) => {
