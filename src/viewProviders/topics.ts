@@ -199,6 +199,17 @@ export class TopicViewProvider extends ParentedBaseViewProvider<
     }
 
     const cluster: KafkaCluster = this.kafkaCluster;
+    // Drop containers carrying a different cluster's connectionId so they get rebuilt below;
+    // otherwise a CCloud→local switch leaves stale connection metadata and the tree never refreshes.
+    if (this.topicsContainer && this.topicsContainer.connectionId !== cluster.connectionId) {
+      this.topicsContainer = null;
+    }
+    if (
+      this.consumerGroupsContainer &&
+      this.consumerGroupsContainer.connectionId !== cluster.connectionId
+    ) {
+      this.consumerGroupsContainer = null;
+    }
     await this.withProgress("Loading topics and consumer groups...", async () => {
       // reuse existing containers so VS Code can match targeted tree-data-change fires
       // against the same object references it already tracks; only create when absent
