@@ -4,7 +4,13 @@ description:
   Use when the user asks about Playwright APIs, selectors, assertions, or patterns for E2E or
   functional tests. Triggers on questions like "how to click a button in Playwright", "Playwright
   locator", "page.waitFor", "expect toBeVisible", "Playwright test fixtures", or E2E test patterns.
-allowed-tools: Read, Bash, Glob, Grep, WebFetch, WebSearch
+allowed-tools:
+  - Read
+  - Bash
+  - Glob
+  - Grep
+  - WebFetch
+  - WebSearch
 ---
 
 # Playwright Documentation Lookup
