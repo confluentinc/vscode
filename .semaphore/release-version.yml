@@ -65,12 +65,31 @@ blocks:
               fi
             - echo "$RELEASE_NAME" > RELEASE_NAME.txt
             - artifact push workflow RELEASE_NAME.txt --force
+            # skip the rebuild when the existing tag already points at COMMIT_SHA and the release
+            # has all five expected VSIX assets attached
+            - |
+              git fetch --tags --quiet origin || true
+              CURRENT_SHA=$(git rev-parse --verify "$COMMIT_SHA" 2>/dev/null || true)
+              EXISTING_SHA=$(git rev-parse --verify "refs/tags/$RELEASE_NAME^{commit}" 2>/dev/null || true)
+              ASSET_COUNT=$(gh release view "$RELEASE_NAME" --json assets -q '[.assets[] | select(.name | endswith(".vsix"))] | length' 2>/dev/null || echo 0)
+              if [ -n "$EXISTING_SHA" ] && [ "$EXISTING_SHA" = "$CURRENT_SHA" ] && [ "$ASSET_COUNT" -ge 5 ]; then
+                echo "Release $RELEASE_NAME already points to $CURRENT_SHA with $ASSET_COUNT VSIX assets; skipping rebuild."
+                touch SKIP_RELEASE.txt
+                artifact push workflow SKIP_RELEASE.txt --force
+              else
+                echo "Proceeding: existing_sha='$EXISTING_SHA' current_sha='$CURRENT_SHA' assets=$ASSET_COUNT"
+              fi
   - name: "Delete GitHub Release and Tag"
     dependencies: ["Parameter Verification"]
     task:
       jobs:
         - name: "Delete GitHub Release and Tag"
           commands:
+            - |
+              if artifact pull workflow SKIP_RELEASE.txt 2>/dev/null; then
+                echo "Release already current for this commit; skipping."
+                exit 0
+              fi
             - artifact pull workflow RELEASE_NAME.txt
             - RELEASE_NAME=$(cat RELEASE_NAME.txt)
             # Delete the existing GitHub Release and tag if they exist
@@ -83,6 +102,11 @@ blocks:
       jobs:
         - name: "Create GitHub Release and Tag"
           commands:
+            - |
+              if artifact pull workflow SKIP_RELEASE.txt 2>/dev/null; then
+                echo "Release already current for this commit; skipping."
+                exit 0
+              fi
             - artifact pull workflow RELEASE_NAME.txt
             - RELEASE_NAME=$(cat RELEASE_NAME.txt)
             # Try to determine previous release tag for generating release notes
@@ -119,9 +143,6 @@ blocks:
   - name: "Package VSIX Files"
     dependencies: ["Create GitHub Release and Tag"]
     task:
-      prologue:
-        commands:
-          - make install-dependencies
       jobs:
         - name: "Package VSIX Files"
           matrix:
@@ -133,6 +154,14 @@ blocks:
                 - linux-arm64
                 - win32-x64
           commands:
+            # short-circuit before installing deps when the prior run is still current.
+            # install-dependencies moved out of the block prologue so the guard can avoid it.
+            - |
+              if artifact pull workflow SKIP_RELEASE.txt 2>/dev/null; then
+                echo "Release already current for this commit; skipping."
+                exit 0
+              fi
+            - make install-dependencies
             - |
               case "$TARGET" in
                 darwin-x64)  export SIDECAR_OS_ARCH=macos-amd64 ;;
@@ -153,6 +182,11 @@ blocks:
       jobs:
         - name: "Upload VSIX Files to GitHub Release"
           commands:
+            - |
+              if artifact pull workflow SKIP_RELEASE.txt 2>/dev/null; then
+                echo "Release already current for this commit; skipping."
+                exit 0
+              fi
             - artifact pull workflow RELEASE_NAME.txt
             - RELEASE_NAME=$(cat RELEASE_NAME.txt)
             - artifact pull workflow packaged-vsix-files/
