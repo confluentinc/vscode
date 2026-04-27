@@ -4,7 +4,11 @@ description:
   Use when the user asks about Mocha test runner APIs and patterns for unit tests. Triggers on
   questions like "Mocha hooks", "before/after setup", "describe/it structure", "async tests in
   Mocha", "test timeouts", ".only/.skip", "how to run a specific test", or test organization.
-allowed-tools: Read, Bash, WebFetch, WebSearch
+allowed-tools:
+  - Read
+  - Bash
+  - WebFetch
+  - WebSearch
 ---
 
 # Mocha Documentation Lookup

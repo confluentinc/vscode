@@ -4,7 +4,11 @@ description:
   Use when the user asks about Sinon stubbing, spying, mocking, or test double APIs for unit tests.
   Triggers on questions like "how do I stub this", "Sinon fake timers", "spy vs stub", "sandbox
   usage", "assert.calledWith", "stub.resolves", "sinon.match", or test double patterns.
-allowed-tools: Read, Bash, WebFetch, WebSearch
+allowed-tools:
+  - Read
+  - Bash
+  - WebFetch
+  - WebSearch
 ---
 
 # Sinon.JS Documentation Lookup

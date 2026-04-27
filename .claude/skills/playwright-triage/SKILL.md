@@ -4,7 +4,11 @@ description: >-
   Use when E2E Playwright tests fail, CI reports test failures, the user mentions "triage", "test
   failed", "flaky test", or wants to debug Electron/Playwright test results. Also use when
   investigating trace.zip files, test screenshots, or Playwright HTML report archives from CI.
-allowed-tools: Read, Bash, Glob, Grep
+allowed-tools:
+  - Read
+  - Bash
+  - Glob
+  - Grep
 ---
 
 # Playwright E2E Test Failure Triage
