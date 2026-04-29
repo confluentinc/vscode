@@ -87,25 +87,13 @@ semaphore:
           required: true
     - name: scheduled-prerelease-version
       branch: main
-      pipeline_file: ".semaphore/release-version.yml"
+      # precheck to avoid re-running `release-version` when no changes have landed on `main` since
+      # the last run
+      # NOTE: no parameters are used here because they wouldn't survive the promotion boundary to
+      # `release-version`; use `release-version` directly instead to override default parameters
+      pipeline_file: ".semaphore/release-version-precheck.yml"
       scheduled: true
       at: "10 4 * * *" # Every day at 04:10 UTC
-      parameters:
-        - name: IS_PRERELEASE
-          required: true
-          default_value: "true"
-        - name: TARGET_BRANCH
-          required: true
-          default_value: "main"
-        - name: RELEASE_NAME
-          required: false
-          description: If not provided, will use version from .versions/next.txt with -pre suffix
-        - name: COMMIT_SHA
-          required: false
-          description: If not provided, will use latest commit from TARGET_BRANCH
-        - name: PREVIOUS_RELEASE_TAG
-          required: false
-          description: If not provided, will auto-discover latest non-prerelease tag
     - name: scheduled-run-playwright-e2e-tests
       branch: main
       pipeline_file: ".semaphore/playwright-e2e.yml"
