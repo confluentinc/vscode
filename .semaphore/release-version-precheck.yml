@@ -34,6 +34,10 @@ global_job_config:
   env_vars:
     - name: NODE_ENV
       value: "production"
+    - name: IS_PRERELEASE
+      value: "true"
+    - name: TARGET_BRANCH
+      value: "main"
 
 blocks:
   - name: "Verify Parameters and Existing Release"
@@ -83,6 +87,29 @@ blocks:
 promotions:
   - name: "Run release-version pipeline"
     pipeline_file: release-version.yml
+    # promotions don't inherit env vars from the parent pipeline, so any param release-version.yml
+    # needs from the scheduled task must be re-declared here with explicit defaults
+    # (optional params can stay unset since release-version.yml handles their defaults)
+    parameters:
+      env_vars:
+        - name: IS_PRERELEASE
+          required: true
+          default_value: "true"
+          description: scheduled prereleases are always true
+        - name: TARGET_BRANCH
+          required: true
+          default_value: "main"
+          description: branch to (pre)release from
+        - name: RELEASE_NAME
+          required: false
+          description:
+            if not provided, release-version computes from .versions/next.txt with -pre suffix
+        - name: COMMIT_SHA
+          required: false
+          description: if not provided, release-version uses latest commit from TARGET_BRANCH
+        - name: PREVIOUS_RELEASE_TAG
+          required: false
+          description: if not provided, release-version auto-discovers latest non-prerelease tag
     auto_promote:
       # the precheck halts the workflow before this promotion fires when:
       #   - intentional skip:    result=failed, result_reason=test (exit 1 on no-op)
