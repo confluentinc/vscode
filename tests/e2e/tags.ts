@@ -27,7 +27,7 @@ export enum Tag {
   DirectConnectionCRUD = "@direct-connection-crud",
   /** Tests that upload and delete Flink artifacts. */
   FlinkArtifacts = "@flink-artifacts",
-  /** Tests that create and delete Flink UDFs from artifacts. */
+  /** Tests that create and delete Flink UDFs. */
   FlinkUDFs = "@flink-udfs",
 
   // Resource-/fixture-specific tags
