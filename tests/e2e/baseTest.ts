@@ -399,15 +399,21 @@ export const test = testBase.extend<VSCodeFixtures>({
       await artifactsView.loadArtifacts(entrypoint);
     }
 
-    const artifactName = await artifactsView.uploadFlinkArtifact(electronApp, jarPath);
-    await artifactsView.waitForUploadSuccess();
-
-    await use(artifactName);
-
-    await openConfluentSidebar(page);
-    await artifactsView.ensureExpanded();
-    // deleteFlinkArtifact searches internally; expanding here could be hidden by a prior search
-    await artifactsView.deleteFlinkArtifact(artifactName);
+    // track the artifact name across try/finally so cleanup runs even if a
+    // post-upload setup step throws before use()
+    let artifactName: string | undefined;
+    try {
+      artifactName = await artifactsView.uploadFlinkArtifact(electronApp, jarPath);
+      await artifactsView.waitForUploadSuccess();
+      await use(artifactName);
+    } finally {
+      if (artifactName) {
+        await openConfluentSidebar(page);
+        await artifactsView.ensureExpanded();
+        // deleteFlinkArtifact searches internally; expanding here could be hidden by a prior search
+        await artifactsView.deleteFlinkArtifact(artifactName);
+      }
+    }
   },
 });
 
