@@ -406,8 +406,7 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     await openConfluentSidebar(page);
     await artifactsView.ensureExpanded();
-    // deleteFlinkArtifact searches to isolate the artifact, so no need to manually expand
-    // the Artifacts container here (and a prior search from the test body could hide it)
+    // deleteFlinkArtifact searches internally; expanding here could be hidden by a prior search
     await artifactsView.deleteFlinkArtifact(artifactName);
   },
 });
