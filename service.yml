@@ -54,7 +54,7 @@ semaphore:
         - name: TEST_SUITE
           required: false
           description: The test name or tag(s) (pipe-separated, e.g. `@ccloud|@direct`) to run. If not specified, will run all E2E tests.
-          default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts"
+          default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts|@flink-udfs"
         - name: PLATFORM
           required: true
           options:
@@ -119,7 +119,7 @@ semaphore:
         - name: TEST_SUITE
           required: true
           description: The test tag(s) (pipe-separated, e.g. `@smoke|@topic-message-viewer`) to run. By default, runs the smoke tests and critical user flow tests.
-          default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts"
+          default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts|@flink-udfs"
         - name: PLATFORM
           required: true
           options:
