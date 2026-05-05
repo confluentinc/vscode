@@ -1,5 +1,6 @@
 import { expect } from "@playwright/test";
 import { test } from "../baseTest";
+import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { FlinkDatabaseView } from "../objects/views/FlinkDatabaseView";
 import { Tag } from "../tags";
@@ -48,13 +49,12 @@ test.describe("Flink UDFs", { tag: [Tag.CCloud, Tag.FlinkUDFs] }, () => {
 
         await flinkDatabaseView.openUdfRegistrationDocument(artifact);
 
-        const editorContent = page.locator(".monaco-editor .view-lines");
-        await expect(editorContent).toBeVisible();
-
-        const editorText = await editorContent.textContent();
-        expect(editorText).toMatch(/CREATE\s+FUNCTION/);
-        expect(editorText).toMatch(/USING\s+JAR/);
-        expect(editorText).toContain("confluent-artifact://");
+        // the registration command opens a fresh untitled doc with snippets
+        const registrationDoc = new TextDocument(page, "Untitled-1");
+        await expect(registrationDoc.locator).toBeVisible();
+        await expect(registrationDoc.editorContent).toContainText(/CREATE\s+FUNCTION/);
+        await expect(registrationDoc.editorContent).toContainText(/USING\s+JAR/);
+        await expect(registrationDoc.editorContent).toContainText("confluent-artifact://");
         // not testing the statement submission behavior here since those are covered by the
         // @flink-statements tests, and the document is just a template with snippet placeholders
       });
