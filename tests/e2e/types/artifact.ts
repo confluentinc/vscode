@@ -4,10 +4,10 @@ import type { SelectFlinkDatabase } from "../objects/views/FlinkDatabaseView";
 export interface ArtifactConfig {
   /** Path to the JAR file. Defaults to the `udfs-simple.jar` fixture. */
   jarPath?: string;
-  /** Entrypoint for uploading. Defaults to FromDatabaseViewButton. */
+  /** Entrypoint for uploading. Defaults to {@linkcode SelectFlinkDatabase.FromDatabaseViewButton}. */
   entrypoint?: SelectFlinkDatabase;
-  /** Cloud provider. Defaults to "AWS". */
+  /** Cloud provider; if both `provider` and `region` are set, the upload skips the entrypoint flow. */
   provider?: string;
-  /** Cloud region. Defaults to "us-east-2". */
+  /** Cloud region; if both `provider` and `region` are set, the upload skips the entrypoint flow. */
   region?: string;
 }
