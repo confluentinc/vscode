@@ -255,7 +255,9 @@ export class FlinkDatabaseView extends SearchableView {
 
   /** Delete a Flink UDF via its tree-item context menu. */
   async deleteFlinkUdf(functionName: string): Promise<void> {
-    const udfLocator = await this.getItemByLabel(functionName);
+    // scope to UDF tree items so the search result can't match a same-named item from a
+    // different container (e.g. an artifact reusing the suffix)
+    const udfLocator = await this.getItemByLabel(functionName, this.udfs);
     const udfItem = new ViewItem(this.page, udfLocator);
     await udfItem.locator.scrollIntoViewIfNeeded();
     await expect(udfItem.locator).toBeVisible();
@@ -347,7 +349,9 @@ export class FlinkDatabaseView extends SearchableView {
    * @param artifactName - The name of the artifact to delete
    */
   async deleteFlinkArtifact(artifactName: string): Promise<void> {
-    const artifactLocator = await this.getItemByLabel(artifactName);
+    // scope to artifact tree items so the search result can't match a same-named item from a
+    // different container (e.g. a UDF reusing the suffix)
+    const artifactLocator = await this.getItemByLabel(artifactName, this.artifacts);
     const artifactItem = new ViewItem(this.page, artifactLocator);
     await artifactItem.locator.scrollIntoViewIfNeeded();
     await expect(artifactItem.locator).toBeVisible();
