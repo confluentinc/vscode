@@ -2,6 +2,7 @@ import * as assert from "assert";
 import sinon from "sinon";
 import type { Progress } from "vscode";
 import { CancellationTokenSource } from "vscode";
+import * as errors from "../errors";
 import { executeInWorkerPool, extract, isErrorResult, isSuccessResult } from "./workerPool";
 
 describe("utils/workerPool.ts executeInWorkerPool()", () => {
@@ -42,6 +43,52 @@ describe("utils/workerPool.ts executeInWorkerPool()", () => {
     assert.strictEqual(isSuccessResult(results[0]), true);
     assert.strictEqual(isErrorResult(results[1]), true);
     assert.strictEqual(isSuccessResult(results[2]), true);
+  });
+
+  it("should call logError on per-task failure when suppressErrorTelemetry is unset (default)", async () => {
+    const logErrorStub = sandbox.stub(errors, "logError");
+    const items = [1];
+    const callable = async () => {
+      throw new Error("default-telemetry");
+    };
+
+    await executeInWorkerPool(callable, items, {
+      maxWorkers: 2,
+      taskName: "default-test",
+    });
+
+    sinon.assert.calledOnce(logErrorStub);
+    sinon.assert.calledWith(
+      logErrorStub,
+      sinon.match.instanceOf(Error),
+      "workerPool",
+      sinon.match({ extra: sinon.match({ taskName: "default-test" }) }),
+    );
+  });
+
+  it("should call logError without sentryContext when suppressErrorTelemetry is true", async () => {
+    const logErrorStub = sandbox.stub(errors, "logError");
+    const items = [1];
+    const callable = async () => {
+      throw new Error("suppressed-telemetry");
+    };
+
+    const results = await executeInWorkerPool(callable, items, {
+      maxWorkers: 2,
+      taskName: "suppressed-test",
+      suppressErrorTelemetry: true,
+    });
+
+    // logError still fires for local logging, but with an undefined sentryContext
+    sinon.assert.calledOnceWithExactly(
+      logErrorStub,
+      sinon.match.instanceOf(Error),
+      "workerPool",
+      undefined,
+    );
+    // suppression is Sentry-only: the ErrorResult is still returned to the caller
+    assert.strictEqual(isErrorResult(results[0]), true);
+    assert.strictEqual(results[0].error?.message, "suppressed-telemetry");
   });
 
   it("should respect cancellation token by exiting early", async () => {
