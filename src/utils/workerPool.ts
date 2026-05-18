@@ -40,6 +40,12 @@ export function isErrorResult(result: ExecutionResult<unknown> | undefined): res
 interface WorkerPoolOptions {
   maxWorkers: number;
   taskName?: string;
+  /**
+   * If true, errors are still passed to {@linkcode logError} but not captured by Sentry.
+   * `ErrorResult` entries and `errorCount` are unchanged. Use when per-item errors are
+   * expected and would otherwise create per-call telemetry noise.
+   */
+  suppressErrorTelemetry?: boolean;
 }
 
 /**
@@ -109,14 +115,18 @@ export async function executeInWorkerPool<T, R>(
         results[taskIndex] = { result };
       } catch (error) {
         errorCount++;
-        logError(error, "workerPool", {
-          extra: {
-            taskName: String(options.taskName),
-            errorCount: errorCount.toString(),
-            resultCount: resultCount.toString(),
-            totalCount: totalCount.toString(),
-          },
-        });
+        // omit the sentryContext when suppressed so logError() still writes locally
+        const sentryContext = options.suppressErrorTelemetry
+          ? undefined
+          : {
+              extra: {
+                taskName: String(options.taskName),
+                errorCount: errorCount.toString(),
+                resultCount: resultCount.toString(),
+                totalCount: totalCount.toString(),
+              },
+            };
+        logError(error, "workerPool", sentryContext);
         if (error instanceof Error) {
           results[taskIndex] = { error };
         } else {
