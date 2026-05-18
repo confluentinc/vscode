@@ -291,7 +291,10 @@ export abstract class CachingResourceLoader<
     const memberResults = await executeInWorkerPool(
       (data: ConsumerGroupData) => fetchConsumerGroupMembers(cluster, data.consumer_group_id),
       responseConsumerGroups,
-      { maxWorkers: 5, taskName: "fetchConsumerGroupMembers" },
+      // 404s here are expected (e.g. groups deleted between list + member fetch); the user
+      // sees the group missing from the tree, and the error still lands in the output channel
+      // via logError, no need to send them to Sentry
+      { maxWorkers: 5, taskName: "fetchConsumerGroupMembers", suppressErrorTelemetry: true },
     );
 
     // Convert API responses to ConsumerGroup models.
