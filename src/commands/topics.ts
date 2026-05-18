@@ -371,7 +371,10 @@ async function produceMessages(
   const results: ExecutionResult<ProduceResult>[] = await executeInWorkerPool(
     (content) => produceMessage(content, topic, schemaOptions),
     contents,
-    { maxWorkers: 20, taskName: "produceMessage" },
+    // per-message failures are surfaced via the failure-count notification below (with
+    // schema-validation diagnostics where applicable) and via logError to the output channel;
+    // no need to send them to Sentry
+    { maxWorkers: 20, taskName: "produceMessage", suppressErrorTelemetry: true },
     progress,
     token,
   );
