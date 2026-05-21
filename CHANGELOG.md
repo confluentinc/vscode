@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 2.3.1
+
+(Minor telemetry fix, no user-facing changes.)
+
 ## 2.3.0
 
 ### Added
