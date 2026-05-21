@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 2.3.1
+
 ### Fixed
 
 - Increased the maximum length of Kafka cluster usernames in direct connections to support longer
