@@ -6,7 +6,10 @@ All notable changes to this extension will be documented in this file.
 
 ## 2.3.1
 
-(Minor telemetry fix, no user-facing changes.)
+### Fixed
+
+- Increased the maximum length of Kafka cluster usernames in direct connections to support longer
+  identifiers. ([#3306](https://github.com/confluentinc/vscode/issues/3306))
 
 ## 2.3.0
 
