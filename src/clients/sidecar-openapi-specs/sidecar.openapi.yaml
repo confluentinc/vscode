@@ -11,7 +11,7 @@ components:
       properties:
         api_key:
           description: The API key to use when connecting to the external service.
-          maxLength: 96
+          maxLength: 256
           minLength: 1
           type: string
         api_secret:
@@ -51,7 +51,7 @@ components:
       properties:
         username:
           description: The username to use when connecting to the external service.
-          maxLength: 96
+          maxLength: 256
           minLength: 1
           type: string
         password:
@@ -1436,7 +1436,7 @@ tags:
   description: Check the health of the application
 info:
   title: Confluent ide-sidecar API
-  version: 0.269.0
+  version: 0.271.0
   description: "API for the Confluent ide-sidecar, part of Confluent for VS Code"
   termsOfService: Your terms here
   contact:
