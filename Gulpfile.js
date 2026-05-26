@@ -57,6 +57,15 @@ export function clean(done) {
 
 pack.description = "Create .vsix file for the extension. Make sure to pre-build assets.";
 export function pack(done) {
+  // install runtime dependencies (e.g., the bundled MCP server) in the output directory so they're
+  // included in the .vsix; the Rollup bundle itself doesn't need these (they're marked external)
+  const npmResult = spawnSync("npm", ["install", "--production"], {
+    stdio: "inherit",
+    cwd: DESTINATION,
+    shell: IS_WINDOWS,
+  });
+  if (npmResult.error) throw npmResult.error;
+
   var vsceCommandArgs = ["vsce", "package"];
   // Check if TARGET is set, if so, add it to the command
   if (process.env.TARGET) {
@@ -141,7 +150,13 @@ export function build(done) {
       }),
     ],
     onLog: handleBuildLog,
-    external: ["vscode", "electron"],
+    external: [
+      "vscode",
+      "electron",
+      // the MCP server is spawned as a separate stdio child process and must not be bundled into
+      // the extension; require.resolve finds it in node_modules at runtime
+      /^@confluentinc\/mcp-confluent/,
+    ],
     context: "globalThis",
   };
   /** @type {import("rollup").OutputOptions} */
@@ -446,10 +461,15 @@ function pkgjson() {
           pkg.version += process.env.CI ? "" : `+${Math.random().toString(16).slice(2, 8)}`;
           // no package.type: the bundle is CommonJS module
           delete pkg.type;
-          // no dev only manifests: scripts, dependencies
+          // no dev-only manifests
           delete pkg.scripts;
-          delete pkg.dependencies;
           delete pkg.devDependencies;
+          // preserve only runtime dependencies that must ship outside the Rollup bundle
+          // (spawned as separate child processes, not imported into the extension host)
+          const runtimeDeps = ["@confluentinc/mcp-confluent"];
+          pkg.dependencies = Object.fromEntries(
+            Object.entries(pkg.dependencies || {}).filter(([k]) => runtimeDeps.includes(k)),
+          );
           // the target folder is flat so the entry point is known to be in the root
           pkg.main = "extension.js";
           return JSON.stringify(pkg, null, 2);
