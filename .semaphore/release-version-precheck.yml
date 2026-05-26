@@ -1,0 +1,108 @@
+version: v1.0
+name: release-version-precheck
+agent:
+  machine:
+    type: s1-prod-ubuntu24-04-amd64-1
+
+auto_cancel:
+  running:
+    when: "branch != 'main'"
+
+execution_time_limit:
+  hours: 1
+
+queue:
+  - when: "branch != 'main'"
+    processing: parallel
+
+global_job_config:
+  prologue:
+    commands:
+      # the scheduled task pins us to main's HEAD via `branch: main`, so we don't
+      # need the TARGET_BRANCH/COMMIT_SHA fetch+checkout dance from release-version.yml
+      - checkout
+      - . vault-setup --version v3 --role vscode
+  env_vars:
+    - name: NODE_ENV
+      value: "production"
+    - name: IS_PRERELEASE
+      value: "true"
+
+blocks:
+  - name: "Verify Parameters and Existing Release"
+    dependencies: []
+    task:
+      jobs:
+        - name: "Verify Parameters and Existing Release"
+          commands:
+            # fail early if the package.json version includes a micro-version when IS_PRERELEASE is false
+            - |
+              PKG_VERSION=$(jq -r '.version' package.json)
+              echo "package.json version: $PKG_VERSION"
+              if [ "$IS_PRERELEASE" != "true" ] && echo "$PKG_VERSION" | grep -q '-'; then
+                echo "ERROR: package.json version contains a micro-version or prerelease segment ($PKG_VERSION) but IS_PRERELEASE is false. Aborting."
+                exit 1
+              fi
+            # ensure RELEASE_NAME is set and adjust for prereleases, if necessary
+            - |
+              if [ -n "$RELEASE_NAME" ] && [ "$RELEASE_NAME" != "RELEASE_NAME" ]; then
+                echo "Using provided RELEASE_NAME: $RELEASE_NAME"
+              else
+                VERSION=$(cat .versions/next.txt)
+                RELEASE_NAME="v$VERSION"
+              fi
+              if [ "$IS_PRERELEASE" = "true" ]; then
+                if [[ "$RELEASE_NAME" != *"-pre"* ]]; then
+                  RELEASE_NAME="${RELEASE_NAME}-pre"
+                fi
+              fi
+              echo "RELEASE_NAME=$RELEASE_NAME"
+            # halt the workflow when the tag at this name already points at COMMIT_SHA
+            # and the release has all five expected VSIX assets attached. exit 1
+            # produces result=failed,result_reason=test which the auto_promote below
+            # explicitly does not match (see comment on the promotion)
+            - |
+              git fetch --tags --quiet origin || true
+              CURRENT_SHA=$(git rev-parse HEAD)
+              EXISTING_SHA=$(git rev-parse --verify "refs/tags/$RELEASE_NAME^{commit}" 2>/dev/null || true)
+              ASSET_COUNT=$(gh release view "$RELEASE_NAME" --json assets -q '[.assets[] | select(.name | endswith(".vsix"))] | length' 2>/dev/null || echo 0)
+              if [ -n "$EXISTING_SHA" ] && [ "$EXISTING_SHA" = "$CURRENT_SHA" ] && [ "$ASSET_COUNT" -ge 5 ]; then
+                echo "Release $RELEASE_NAME already points to $CURRENT_SHA with $ASSET_COUNT VSIX assets; no rebuild needed."
+                echo "Halting the workflow before auto_promote (intentional exit 1)."
+                exit 1
+              fi
+              echo "Rebuild needed: existing_sha='$EXISTING_SHA' current_sha='$CURRENT_SHA' assets=$ASSET_COUNT. Auto-promoting to release-version.yml."
+
+promotions:
+  - name: "Run release-version pipeline"
+    pipeline_file: release-version.yml
+    # promotions don't inherit env vars from the parent pipeline, so any param release-version.yml
+    # needs from the scheduled task must be re-declared here with explicit defaults
+    # (optional params can stay unset since release-version.yml handles their defaults)
+    parameters:
+      env_vars:
+        - name: IS_PRERELEASE
+          required: true
+          default_value: "true"
+          description: scheduled prereleases are always true
+        - name: TARGET_BRANCH
+          required: true
+          default_value: "main"
+          description: branch to (pre)release from
+        - name: RELEASE_NAME
+          required: false
+          description:
+            if not provided, release-version computes from .versions/next.txt with -pre suffix
+        - name: COMMIT_SHA
+          required: false
+          description: if not provided, release-version uses latest commit from TARGET_BRANCH
+        - name: PREVIOUS_RELEASE_TAG
+          required: false
+          description: if not provided, release-version auto-discovers latest non-prerelease tag
+    auto_promote:
+      # the precheck halts the workflow before this promotion fires when:
+      #   - intentional skip:    result=failed, result_reason=test (exit 1 on no-op)
+      #   - YAML / config error: result=failed, result_reason=malformed
+      #   - infrastructure hang: result=failed, result_reason=stuck
+      # only a clean pass (no result_reason) auto-promotes to release-version.yml
+      when: "result = 'passed'"
