@@ -56,7 +56,9 @@ export abstract class BaseMcpServerProvider
 
     for (const { id, label, env } of envMaps) {
       if (Object.keys(env).length === 0) continue;
-      definitions.push(buildServerDefinition(id, label, env, version));
+      const def = buildServerDefinition(id, label, env, version);
+      if (!def) continue;
+      definitions.push(def);
       logger.info(`MCP server definition created: "${label}" (${id})`);
     }
 
@@ -108,8 +110,13 @@ export abstract class BaseMcpServerProvider
  * Note: `import.meta.resolve` would be the preferred ESM approach, but the esbuild bundler strips
  * `import.meta.resolve` in the bundled output, making it `undefined` at runtime.
  */
-function getMcpServerEntryPath(): string {
-  return require.resolve("@confluentinc/mcp-confluent/dist/index.js");
+function getMcpServerEntryPath(): string | undefined {
+  try {
+    return require.resolve("@confluentinc/mcp-confluent/dist/index.js");
+  } catch {
+    logger.warn("@confluentinc/mcp-confluent not found; MCP tools will be unavailable");
+    return undefined;
+  }
 }
 
 /** Read the bundled MCP server version from its package.json. */
@@ -136,8 +143,10 @@ function buildServerDefinition(
   label: string,
   env: Record<string, string>,
   version: string,
-): McpStdioServerDefinitionType {
+): McpStdioServerDefinitionType | undefined {
   const serverScript = getMcpServerEntryPath();
+  if (!serverScript) return undefined;
+
   return new McpStdioServerDefinition(
     label,
     "node",
