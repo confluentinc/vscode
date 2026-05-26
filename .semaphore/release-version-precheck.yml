@@ -18,26 +18,15 @@ queue:
 global_job_config:
   prologue:
     commands:
+      # the scheduled task pins us to main's HEAD via `branch: main`, so we don't
+      # need the TARGET_BRANCH/COMMIT_SHA fetch+checkout dance from release-version.yml
       - checkout
-      - |
-        if [ -n "$TARGET_BRANCH" ]; then
-          git fetch origin "$TARGET_BRANCH:$TARGET_BRANCH"
-          git checkout "$TARGET_BRANCH"
-        else
-          git fetch --all
-        fi
-        if [ -z "$COMMIT_SHA" ]; then
-          COMMIT_SHA=$(git rev-parse HEAD)
-        fi
-        git checkout "$COMMIT_SHA"
       - . vault-setup --version v3 --role vscode
   env_vars:
     - name: NODE_ENV
       value: "production"
     - name: IS_PRERELEASE
       value: "true"
-    - name: TARGET_BRANCH
-      value: "main"
 
 blocks:
   - name: "Verify Parameters and Existing Release"
@@ -74,7 +63,7 @@ blocks:
             # explicitly does not match (see comment on the promotion)
             - |
               git fetch --tags --quiet origin || true
-              CURRENT_SHA=$(git rev-parse --verify "$COMMIT_SHA" 2>/dev/null || true)
+              CURRENT_SHA=$(git rev-parse HEAD)
               EXISTING_SHA=$(git rev-parse --verify "refs/tags/$RELEASE_NAME^{commit}" 2>/dev/null || true)
               ASSET_COUNT=$(gh release view "$RELEASE_NAME" --json assets -q '[.assets[] | select(.name | endswith(".vsix"))] | length' 2>/dev/null || echo 0)
               if [ -n "$EXISTING_SHA" ] && [ "$EXISTING_SHA" = "$CURRENT_SHA" ] && [ "$ASSET_COUNT" -ge 5 ]; then
