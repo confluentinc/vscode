@@ -20,7 +20,7 @@
   },
   "icon": "resources/confluent_logo-mark-meadow.png",
   "engines": {
-    "vscode": "^1.96.2"
+    "vscode": "^1.101.0"
   },
   "categories": [
     "Programming Languages",
@@ -51,6 +51,16 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "confluent-mcp-direct",
+        "label": "Confluent MCP Server (Direct)"
+      },
+      {
+        "id": "confluent-mcp-local",
+        "label": "Confluent MCP Server (Local)"
+      }
+    ],
     "authentication": [
       {
         "id": "confluent-cloud-auth-provider",
@@ -2671,7 +2681,7 @@
     "@types/sanitize-html": "^2.13.0",
     "@types/sinon": "^17.0.3",
     "@types/tail": "^2.2.3",
-    "@types/vscode": "^1.96.0",
+    "@types/vscode": "^1.110.0",
     "@types/ws": "^8.5.13",
     "@types/yauzl": "^2.10.3",
     "@types/yazl": "^3.3.0",
@@ -2704,6 +2714,7 @@
     "yazl": "^2.5.1"
   },
   "dependencies": {
+    "@confluentinc/mcp-confluent": "^1.2.1",
     "@segment/analytics-node": "^2.1.2",
     "@sentry/node": "^9.3.0",
     "@sentry/profiling-node": "^9.3.0",
