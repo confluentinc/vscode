@@ -9,29 +9,27 @@ import { executeVSCodeCommand } from "./commands";
 /**
  * Prepare a freshly-loaded VS Code workspace/window before any test interactions.
  *
- * NOTE: This should be safe to call at fixture startup (before any test has touched the window) and
- * after any workspace/window reload.
+ * NOTE: Safe to call at fixture startup and after a reload that re-applies `--disable-extensions`
+ * (e.g. `workbench.action.files.openFolder`), since the dismissal step blocks until the
+ * "disabled extensions" notification re-emits. Calling it after a reload that drops that flag
+ * would block until the expect timeout and then fail, since the notification never appears.
  */
 export async function prepareTestWorkspace(page: Page): Promise<void> {
-  // wait for the (new) VS Code window DOM + workbench shell to be ready; same waits the
-  // electronApp fixture uses at initial launch
+  // wait for the (new) VS Code window DOM + workbench shell to be ready
   await page.waitForLoadState("domcontentloaded");
   await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
   // any locator-based interactions below this point will naturally wait for the Electron DOM to be
   // ready/visible/etc, so we don't need additional waits for that here
 
-  // dismiss the "All installed extensions are temporarily disabled" toast that always appears
-  // under --disable-extensions; tolerate it being absent on subsequent reloads
-  try {
-    const notificationArea = new NotificationArea(page);
-    const infoNotifications = notificationArea.infoNotifications.filter({
-      hasText: "All installed extensions are temporarily disabled",
-    });
-    await expect(infoNotifications).not.toHaveCount(0, { timeout: 2000 });
-    await new Notification(page, infoNotifications.first()).dismiss();
-  } catch {
-    // toast wasn't present or couldn't be dismissed
-  }
+  // explicitly dismiss the "All installed extensions are temporarily disabled" notification that
+  // always appears under --disable-extensions since it won't automatically disappear and will get
+  // in the way of some test assertions
+  const notificationArea = new NotificationArea(page);
+  const disabledExtensionsNotification = notificationArea.infoNotifications.filter({
+    hasText: "All installed extensions are temporarily disabled",
+  });
+  await expect(disabledExtensionsNotification).not.toHaveCount(0);
+  await new Notification(page, disabledExtensionsNotification.first()).dismiss();
 
   // collapse the secondary sidebar if it's expanded since it isn't used for anything
   try {
