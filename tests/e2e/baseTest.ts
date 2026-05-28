@@ -6,7 +6,6 @@ import { createWriteStream, existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
 import { DEBUG_LOGGING_ENABLED } from "./constants";
-import { Notification } from "./objects/notifications/Notification";
 import { NotificationArea } from "./objects/notifications/NotificationArea";
 import { Quickpick } from "./objects/quickInputs/Quickpick";
 import {
@@ -28,8 +27,8 @@ import {
 } from "./utils/connections";
 import { produceMessages } from "./utils/producer";
 import { configureVSCodeSettings } from "./utils/settings";
-import { openConfluentSidebar } from "./utils/sidebarNavigation";
 import { randomHexString } from "./utils/strings";
+import { openConfluentSidebar, prepareTestWorkspace } from "./utils/workspace";
 
 // NOTE: we can't import these two directly from 'global.setup.ts'
 // cached test setup file path that's shared across worker processes
@@ -347,25 +346,8 @@ async function globalBeforeEach(page: Page, testTempDir: string): Promise<void> 
   // make sure settings are set to defaults for each test
   configureVSCodeSettings(testTempDir);
 
-  // dismiss the "All installed extensions are temporarily disabled" notification that will
-  // always appear since we launch with --disable-extensions
-  const notificationArea = new NotificationArea(page);
-  const infoNotifications = notificationArea.infoNotifications.filter({
-    hasText: "All installed extensions are temporarily disabled",
-  });
-  await expect(infoNotifications).not.toHaveCount(0);
-  const notification = new Notification(page, infoNotifications.first());
-  await notification.dismiss();
-
-  // collapse the secondary sidebar if it's expanded since it isn't used for anything
-  try {
-    await expect(page.locator(`[id="workbench.parts.auxiliarybar"]`)).toBeVisible({
-      timeout: 1000,
-    });
-    await executeVSCodeCommand(page, "View: Toggle Secondary Side Bar Visibility");
-  } catch {
-    console.warn("Error locating/toggling secondary sidebar");
-  }
+  // dismiss the disabled-extensions notification and collapse the secondary sidebar
+  await prepareTestWorkspace(page);
 }
 
 async function globalAfterEach(
