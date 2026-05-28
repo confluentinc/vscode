@@ -147,11 +147,11 @@ test.describe("Direct Connection CRUD Lifecycle", { tag: [Tag.DirectConnectionCR
           ]);
           await connectionItem.clickExportConnectionDetails();
           const notificationArea = new NotificationArea(page);
-          const exportToast = notificationArea.infoNotifications.filter({
+          const exportNotification = notificationArea.infoNotifications.filter({
             hasText: "Connection file saved at",
           });
-          await expect(exportToast).toHaveCount(1);
-          const notification = new Notification(page, exportToast.first());
+          await expect(exportNotification).toHaveCount(1);
+          const notification = new Notification(page, exportNotification.first());
           await expect(notification.message).toContainText("Connection file saved at");
           // inspect exported file contents
           await notification.clickActionButton("Open File");
@@ -327,11 +327,11 @@ test.describe("Direct Connection CRUD Lifecycle", { tag: [Tag.DirectConnectionCR
           ]);
           await connectionItem.clickExportConnectionDetails();
           const notificationArea = new NotificationArea(page);
-          const exportToast = notificationArea.infoNotifications.filter({
+          const exportNotification = notificationArea.infoNotifications.filter({
             hasText: "Connection file saved at",
           });
-          await expect(exportToast).toHaveCount(1);
-          const notification = new Notification(page, exportToast.first());
+          await expect(exportNotification).toHaveCount(1);
+          const notification = new Notification(page, exportNotification.first());
           await expect(notification.message).toContainText("Connection file saved at");
           // inspect exported file contents
           await notification.clickActionButton("Open File");

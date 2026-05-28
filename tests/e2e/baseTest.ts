@@ -346,7 +346,7 @@ async function globalBeforeEach(page: Page, testTempDir: string): Promise<void> 
   // make sure settings are set to defaults for each test
   configureVSCodeSettings(testTempDir);
 
-  // dismiss the disabled-extensions toast and collapse the secondary sidebar
+  // dismiss the disabled-extensions notification and collapse the secondary sidebar
   await prepareTestWorkspace(page);
 }
 
