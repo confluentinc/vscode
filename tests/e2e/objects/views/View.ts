@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { InputBox } from "../quickInputs/InputBox";
+import { ViewItem } from "./viewItems/ViewItem";
 
 /**
  * Object representing a
@@ -87,6 +88,20 @@ export class View {
       await this.header.click();
     }
     await expect(this.header).toHaveAttribute("aria-expanded", "true");
+  }
+
+  /**
+   * Wait for a {@link ResourceContainer} tree item to finish loading. Asserts that the loading
+   * spinner icon (`codicon-loading`) is no longer present on the container, indicating that
+   * {@linkcode ResourceContainer.setLoaded} has been called and the container's children are
+   * populated.
+   *
+   * Use this after waiting for {@link progressIndicator} when you need to confirm a specific
+   * container's data is ready (not just that the view-level progress bar cleared).
+   */
+  async waitForContainerLoaded(containerLocator: Locator): Promise<void> {
+    const containerItem = new ViewItem(this.page, containerLocator);
+    await expect(containerItem.icon).not.toHaveClass(/codicon-loading/);
   }
 }
 
