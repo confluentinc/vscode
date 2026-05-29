@@ -18,8 +18,8 @@ queue:
 global_job_config:
   prologue:
     commands:
-      # the scheduled task pins us to main's HEAD via `branch: main`, so we don't
-      # need the TARGET_BRANCH/COMMIT_SHA fetch+checkout dance from release-version.yml
+      # checkout just sets up the repo + origin remote; the job resolves origin/main itself (not the
+      # triggering ref), so we skip release-version.yml's TARGET_BRANCH/COMMIT_SHA checkout dance
       - checkout
       - . vault-setup --version v3 --role vscode
   env_vars:
@@ -38,7 +38,8 @@ blocks:
             # 2) build RELEASE_NAME from main's .versions/next.txt the same way release-version.yml does, then
             # 3) skip the rebuild when that tag already points at main's HEAD with all 5 platform VSIX assets
             - |
-              git fetch --tags --force --quiet origin main || true
+              set -e
+              git fetch --tags --force --quiet origin main
               TARGET_SHA=$(git rev-parse FETCH_HEAD)
               VERSION=$(git show FETCH_HEAD:.versions/next.txt)
               RELEASE_NAME="v$VERSION-pre"
