@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { InputBox } from "../quickInputs/InputBox";
+import { ViewItem } from "./viewItems/ViewItem";
 
 /**
  * Object representing a
@@ -87,6 +88,23 @@ export class View {
       await this.header.click();
     }
     await expect(this.header).toHaveAttribute("aria-expanded", "true");
+  }
+
+  /**
+   * Wait for a {@link ResourceContainer} tree item to finish loading: first that the loading
+   * spinner (`codicon-loading`) has cleared, then that the container did not settle into an error
+   * state (`codicon-warning`, set by {@linkcode ResourceContainer.setError}). A settled, non-error
+   * container has had {@linkcode ResourceContainer.setLoaded} called and its children populated.
+   *
+   * Use after waiting for {@linkcode progressIndicator} when a specific container's data must be
+   * ready, not just the view-level progress bar cleared.
+   */
+  async waitForContainerLoaded(containerLocator: Locator): Promise<void> {
+    const containerItem = new ViewItem(this.page, containerLocator);
+    await expect(containerItem.icon).not.toHaveClass(/codicon-loading/);
+    // a settled container is loaded or errored; assert against the error icon so a failed load fails
+    // here, not later as a confusing "no items match" search miss
+    await expect(containerItem.icon).not.toHaveClass(/codicon-warning/);
   }
 }
 

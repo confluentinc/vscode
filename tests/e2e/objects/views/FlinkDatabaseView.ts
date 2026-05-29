@@ -180,9 +180,7 @@ export class FlinkDatabaseView extends SearchableView {
   /** Get a database resource item by its label/name, optionally within a given container. */
   async getDatabaseResourceByLabel(label: string, container?: Locator) {
     if (container) {
-      // wait for container to be in a non-loading state before searching resources by checking its icon
-      const containerItem = new ViewItem(this.page, container.first());
-      await expect(containerItem.icon).not.toHaveClass(/codicon-loading/);
+      await this.waitForContainerLoaded(container.first());
     }
     return await this.getItemByLabel(label);
   }
