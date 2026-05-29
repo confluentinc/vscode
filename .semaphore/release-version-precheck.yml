@@ -33,23 +33,24 @@ blocks:
       jobs:
         - name: "Check for Existing Release"
           commands:
-            # no parameters for this task, so we need to build RELEASE_NAME from .versions/next.txt
-            # (release-version.yml does the same for IS_PRERELEASE=true), then check if we should
-            # skip the rebuild when that tag already points at HEAD with all 5 platform VSIX assets
+            # this task takes no parameters, so we need to handle a few things:
+            # 1) evaluate origin/main here (not the triggering ref, whose HEAD never matches the tag pinned to main).
+            # 2) build RELEASE_NAME from main's .versions/next.txt the same way release-version.yml does, then
+            # 3) skip the rebuild when that tag already points at main's HEAD with all 5 platform VSIX assets
             - |
-              VERSION=$(cat .versions/next.txt)
+              git fetch --tags --force --quiet origin main || true
+              TARGET_SHA=$(git rev-parse FETCH_HEAD)
+              VERSION=$(git show FETCH_HEAD:.versions/next.txt)
               RELEASE_NAME="v$VERSION-pre"
-              echo "RELEASE_NAME=$RELEASE_NAME"
-              git fetch --tags --quiet origin || true
-              CURRENT_SHA=$(git rev-parse HEAD)
+              echo "RELEASE_NAME=$RELEASE_NAME TARGET_SHA=$TARGET_SHA"
               EXISTING_SHA=$(git rev-parse --verify "refs/tags/$RELEASE_NAME^{commit}" 2>/dev/null || true)
               ASSET_COUNT=$(gh release view "$RELEASE_NAME" --json assets -q '[.assets[] | select(.name | endswith(".vsix"))] | length' 2>/dev/null || echo 0)
-              if [ -n "$EXISTING_SHA" ] && [ "$EXISTING_SHA" = "$CURRENT_SHA" ] && [ "$ASSET_COUNT" -ge 5 ]; then
-                echo "Release $RELEASE_NAME already points to $CURRENT_SHA with $ASSET_COUNT VSIX assets; no rebuild needed."
+              if [ -n "$EXISTING_SHA" ] && [ "$EXISTING_SHA" = "$TARGET_SHA" ] && [ "$ASSET_COUNT" -ge 5 ]; then
+                echo "Release $RELEASE_NAME already points to $TARGET_SHA with $ASSET_COUNT VSIX assets; no rebuild needed."
                 echo "Halting the workflow before auto_promote (intentional exit 1)."
                 exit 1
               fi
-              echo "Rebuild needed: existing_sha='$EXISTING_SHA' current_sha='$CURRENT_SHA' assets=$ASSET_COUNT. Auto-promoting to release-version.yml."
+              echo "Rebuild needed: existing_sha='$EXISTING_SHA' target_sha='$TARGET_SHA' assets=$ASSET_COUNT. Auto-promoting to release-version.yml."
 
 promotions:
   - name: "Run release-version pipeline"
