@@ -91,17 +91,20 @@ export class View {
   }
 
   /**
-   * Wait for a {@link ResourceContainer} tree item to finish loading. Asserts that the loading
-   * spinner icon (`codicon-loading`) is no longer present on the container, indicating that
-   * {@linkcode ResourceContainer.setLoaded} has been called and the container's children are
-   * populated.
+   * Wait for a {@link ResourceContainer} tree item to finish loading: first that the loading
+   * spinner (`codicon-loading`) has cleared, then that the container did not settle into an error
+   * state (`codicon-warning`, set by {@linkcode ResourceContainer.setError}). A settled, non-error
+   * container has had {@linkcode ResourceContainer.setLoaded} called and its children populated.
    *
-   * Use this after waiting for {@link progressIndicator} when you need to confirm a specific
-   * container's data is ready (not just that the view-level progress bar cleared).
+   * Use after waiting for {@linkcode progressIndicator} when a specific container's data must be
+   * ready, not just the view-level progress bar cleared.
    */
   async waitForContainerLoaded(containerLocator: Locator): Promise<void> {
     const containerItem = new ViewItem(this.page, containerLocator);
     await expect(containerItem.icon).not.toHaveClass(/codicon-loading/);
+    // a settled container is loaded or errored; assert against the error icon so a failed load fails
+    // here, not later as a confusing "no items match" search miss
+    await expect(containerItem.icon).not.toHaveClass(/codicon-warning/);
   }
 }
 
