@@ -14,8 +14,8 @@ import { Tag } from "../tags";
 import { ConnectionType } from "../types/connection";
 import { executeVSCodeCommand } from "../utils/commands";
 import { createInvalidJarFile, createLargeFile } from "../utils/flinkDatabase";
-import { openConfluentSidebar } from "../utils/sidebarNavigation";
 import { randomHexString } from "../utils/strings";
+import { openConfluentSidebar, prepareTestWorkspace } from "../utils/workspace";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -194,8 +194,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
       // wait for the window to finish transitioning to the new workspace before
       // trying to open the command palette again
-      await page.locator(".monaco-workbench").waitFor();
-      await page.waitForLoadState("domcontentloaded");
+      await prepareTestWorkspace(page);
 
       // make sure the explorer view is visible before we activate the extension
       await executeVSCodeCommand(page, "workbench.view.explorer");
