@@ -33,17 +33,13 @@ blocks:
       jobs:
         - name: "Check for Existing Release"
           commands:
-            # the scheduled task passes no parameters, so derive the prerelease name deterministically
-            # from .versions/next.txt (matching what release-version.yml computes for IS_PRERELEASE=true)
+            # no parameters for this task, so we need to build RELEASE_NAME from .versions/next.txt
+            # (release-version.yml does the same for IS_PRERELEASE=true), then check if we should
+            # skip the rebuild when that tag already points at HEAD with all 5 platform VSIX assets
             - |
               VERSION=$(cat .versions/next.txt)
               RELEASE_NAME="v$VERSION-pre"
               echo "RELEASE_NAME=$RELEASE_NAME"
-            # halt the workflow when the tag at this name already points at the current HEAD
-            # and the release has all five expected VSIX assets attached. exit 1
-            # produces result=failed,result_reason=test which the auto_promote below
-            # explicitly does not match (see comment on the promotion)
-            - |
               git fetch --tags --quiet origin || true
               CURRENT_SHA=$(git rev-parse HEAD)
               EXISTING_SHA=$(git rev-parse --verify "refs/tags/$RELEASE_NAME^{commit}" 2>/dev/null || true)
