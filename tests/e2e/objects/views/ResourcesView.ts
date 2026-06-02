@@ -337,10 +337,10 @@ export class ResourcesView extends SearchableView {
    * Throws with the list of visible resource names if the label is unset OR if it matches
    * anything other than exactly one item.
    *
-   * The exact-match assertion guards against Playwright's `hasText` doing substring matching:
-   * if the label is a substring of more than one visible item, a naive `.first()` would
-   * silently pick whichever the renderer lists first - the same cross-env leak the configured
-   * resource name exists to prevent.
+   * String labels are matched exactly (`hasText` is a substring match, so a stale/prefix name
+   * like `env` would silently select `env-2`); regex labels are matched as-is. A renamed resource
+   * therefore resolves to 0 items and throws, rather than leaking into whichever env the renderer
+   * happens to list first - the cross-env leak the configured resource name exists to prevent.
    */
   private async resolveCcloudLocator(
     locator: Locator,
@@ -357,7 +357,10 @@ export class ResourcesView extends SearchableView {
           `[${visible.map((t) => t.trim()).join(", ")}]`,
       );
     }
-    const filtered = locator.filter({ hasText: resolved });
+    const filtered =
+      typeof resolved === "string"
+        ? locator.filter({ has: this.page.getByText(resolved, { exact: true }) })
+        : locator.filter({ hasText: resolved });
     const count = await filtered.count();
     if (count !== 1) {
       const visible = await locator.allTextContents();
