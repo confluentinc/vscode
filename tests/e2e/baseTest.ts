@@ -27,7 +27,7 @@ import {
 } from "./utils/connections";
 import { produceMessages } from "./utils/producer";
 import { configureVSCodeSettings } from "./utils/settings";
-import { randomHexString } from "./utils/strings";
+import { e2eResourceName } from "./utils/uniqueName";
 import { openConfluentSidebar, prepareTestWorkspace } from "./utils/workspace";
 
 // NOTE: we can't import these two directly from 'global.setup.ts'
@@ -290,7 +290,7 @@ export const test = testBase.extend<VSCodeFixtures>({
     // ensure connection has resources available to work with
     await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
 
-    const topicName = `${topicConfig.name}-${randomHexString(6)}`;
+    const topicName = e2eResourceName(topicConfig.name);
 
     // set default replication factor (if it wasn't provided) based on connection type
     const replicationFactor =
