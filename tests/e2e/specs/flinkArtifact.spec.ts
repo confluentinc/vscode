@@ -7,7 +7,6 @@ import { fileURLToPath } from "url";
 import { test } from "../baseTest";
 import { FileExplorer } from "../objects/FileExplorer";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
-import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDatabaseView";
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
 import { Tag } from "../tags";
@@ -274,7 +273,7 @@ async function completeArtifactUploadFlow(
 async function completeArtifactUploadFlowForJAR(
   page: Page,
   artifactPath: string,
-  artifactsView: FlinkDatabaseView,
+  databaseView: FlinkDatabaseView,
   provider: string,
   region: string,
 ): Promise<string> {
@@ -290,20 +289,14 @@ async function completeArtifactUploadFlowForJAR(
   const fileItem = new ViewItem(page, jarFile);
   await fileItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
 
-  await artifactsView.uploadFlinkArtifactFromJAR(artifactName, `${provider}/${region}`);
+  await databaseView.uploadFlinkArtifactFromJAR(artifactName, `${provider}/${region}`);
 
   // Switch back to the Confluent extension sidebar from the file explorer
   await openConfluentSidebar(page);
 
-  await artifactsView.clickSelectKafkaClusterAsFlinkDatabase();
-  const kafkaClusterQuickpick = new Quickpick(page);
-  await expect(kafkaClusterQuickpick.locator).toBeVisible();
-  await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
-  const matchingCluster = kafkaClusterQuickpick.items
-    .filter({ hasText: `${provider}/${region}` })
-    .first();
-  await expect(matchingCluster).toBeVisible();
-  await matchingCluster.click();
+  // set the view's Flink database by the configured cluster name rather than a provider/region
+  // + `.first()` match that could land on another env's cluster
+  await databaseView.selectKafkaClusterByProviderRegion(provider, region);
 
   return artifactName;
 }

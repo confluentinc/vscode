@@ -2,6 +2,13 @@ import type { ElectronApplication, Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { stubDialog } from "electron-playwright-helpers";
 import path from "path";
+import {
+  CCLOUD_ENVIRONMENT_NAME,
+  CCLOUD_FLINK_COMPUTE_POOLS,
+  CCLOUD_KAFKA_CLUSTER_NAME,
+  CCLOUD_KAFKA_CLUSTERS,
+  findCCloudResource,
+} from "../../test-resources";
 import { ConnectionType } from "../../types/connection";
 import { e2eResourceName } from "../../utils/uniqueName";
 import { NotificationArea } from "../notifications/NotificationArea";
@@ -45,12 +52,12 @@ export class FlinkDatabaseView extends SearchableView {
    * Load the Flink Artifacts view by selecting a Kafka cluster as the Flink database,
    * using the specified entrypoint.
    * @param entrypoint - The method to select the Kafka cluster
-   * @param clusterLabel - Optional label or regex to identify the Kafka cluster in the quickpick
+   * @param clusterLabel - Optional cluster name to identify the Kafka cluster in the quickpick
    * @returns The provider/region string if using ComputePoolFromResourcesView, undefined otherwise
    */
   async loadArtifacts(
     entrypoint: SelectFlinkDatabase,
-    clusterLabel?: string | RegExp,
+    clusterLabel?: string,
   ): Promise<string | undefined> {
     switch (entrypoint) {
       case SelectFlinkDatabase.DatabaseFromResourcesView:
@@ -70,19 +77,21 @@ export class FlinkDatabaseView extends SearchableView {
 
   /**
    * Load artifacts by selecting a Kafka cluster from the Resources view.
-   * @param clusterLabel - Optional label or regex to identify the Kafka cluster
+   * @param clusterLabel - Optional cluster name to identify the Kafka cluster
    */
-  private async selectFlinkDBFromResourcesView(clusterLabel?: string | RegExp): Promise<void> {
+  private async selectFlinkDBFromResourcesView(clusterLabel?: string): Promise<void> {
     const resourcesView = new ResourcesView(this.page);
     await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
 
     const flinkableClusters = resourcesView.ccloudFlinkableKafkaClusters;
     await expect(flinkableClusters).not.toHaveCount(0);
 
-    const clusterLocator = clusterLabel
-      ? flinkableClusters.filter({ hasText: clusterLabel }).first()
-      : flinkableClusters.first();
-    const clusterItem = new KafkaClusterItem(this.page, clusterLocator);
+    // default to the configured cluster name for CCloud and require an exact single match, so a
+    // substring can't pick another env's flinkable cluster
+    const label = clusterLabel ?? CCLOUD_KAFKA_CLUSTER_NAME;
+    const matchingClusters = flinkableClusters.filter({ hasText: label });
+    await expect(matchingClusters).toHaveCount(1);
+    const clusterItem = new KafkaClusterItem(this.page, matchingClusters.first());
     await clusterItem.selectAsFlinkDatabase();
   }
 
@@ -91,37 +100,31 @@ export class FlinkDatabaseView extends SearchableView {
    */
   async clickUploadFromComputePool(provider: string, region: string): Promise<void> {
     const resourcesView = new ResourcesView(this.page);
-    await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
-
-    const computePools = resourcesView.ccloudFlinkComputePools;
-    await expect(computePools).not.toHaveCount(0);
-
-    const poolDescription = `${provider}/${region}`;
-
-    const computePoolLocator = poolDescription
-      ? computePools.filter({ hasText: poolDescription }).first()
-      : computePools.first();
+    // select the pool by its unique configured name via the shared, exact-match helper, so we
+    // can't grab another env's pool
+    const poolName = findCCloudResource(CCLOUD_FLINK_COMPUTE_POOLS, provider, region).name;
+    const computePoolLocator = await resourcesView.getFlinkComputePool(
+      ConnectionType.Ccloud,
+      poolName,
+    );
     const computePoolItem = new FlinkComputePoolItem(this.page, computePoolLocator);
     await computePoolItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
   }
 
   /**
-   * Click the "Select Kafka Cluster as Flink Database" nav action in the view title area,
-   * which will show a quickpick with a list of Kafka cluster items,
-   * the first item in that list is clicked.
-   * @param clusterLabel - Optional label or regex to identify the Kafka cluster
+   * Click the "Select Kafka Cluster as Flink Database" nav action in the view title area and pick
+   * a Kafka cluster from the resulting quickpick. Defaults to the configured cluster name for
+   * CCloud so a `.first()` match can't land on another env's cluster.
+   * @param clusterLabel - Optional cluster name to identify the Kafka cluster
    */
-  private async clickClusterItemFromSelectedDB(clusterLabel?: string | RegExp): Promise<void> {
+  private async clickClusterItemFromSelectedDB(clusterLabel?: string): Promise<void> {
     await this.clickSelectKafkaClusterAsFlinkDatabase();
 
     const kafkaClusterQuickpick = new Quickpick(this.page);
     await expect(kafkaClusterQuickpick.locator).toBeVisible();
-    await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
 
-    const clusterItem = clusterLabel
-      ? kafkaClusterQuickpick.items.filter({ hasText: clusterLabel }).first()
-      : kafkaClusterQuickpick.items.first();
-    await clusterItem.click();
+    const label = clusterLabel ?? CCLOUD_KAFKA_CLUSTER_NAME;
+    await kafkaClusterQuickpick.selectItemByText(label, { exact: true });
   }
 
   /**
@@ -156,25 +159,23 @@ export class FlinkDatabaseView extends SearchableView {
   }
 
   /**
-   * Select a Kafka cluster as Flink database by matching the provider/region.
-   * Opens the cluster selection quickpick and selects the first cluster that matches
-   * the specified provider/region format (e.g., "AWS/us-east-2").
+   * Select a Kafka cluster as the Flink database, pinned to the uniquely-named cluster configured
+   * for the given `provider`/`region` in {@linkcode CCLOUD_KAFKA_CLUSTERS}, so we can't pick
+   * another env's cluster.
    * @param provider - The cloud provider (e.g., "AWS", "AZURE", "GCP")
-   * @param region - The region (e.g., "us-east-2", "us-west-2")
+   * @param region - The region (e.g., "us-east-2", "eastus")
    */
   async selectKafkaClusterByProviderRegion(provider: string, region: string): Promise<void> {
     await this.clickSelectKafkaClusterAsFlinkDatabase();
 
     const kafkaClusterQuickpick = new Quickpick(this.page);
     await expect(kafkaClusterQuickpick.locator).toBeVisible();
-    await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
 
-    const providerRegionPattern = `${provider}/${region}`;
-    const matchingCluster = kafkaClusterQuickpick.items
-      .filter({ hasText: providerRegionPattern })
-      .first();
-    await expect(matchingCluster).toBeVisible();
-    await matchingCluster.click();
+    // select by the configured cluster's unique name: the quickpick lists clusters from every
+    // visible env, and names differ across envs, so matching by name can't grab another env's
+    // cluster the way a provider/region + `.first()` match would
+    const clusterName = findCCloudResource(CCLOUD_KAFKA_CLUSTERS, provider, region).name;
+    await kafkaClusterQuickpick.selectItemByText(clusterName, { exact: true });
   }
 
   /** Get a database resource item by its label/name, optionally within a given container. */
@@ -309,14 +310,14 @@ export class FlinkDatabaseView extends SearchableView {
     const quickpick = new Quickpick(this.page);
     await expect(quickpick.locator).toBeVisible();
 
-    // Step 1: Select Environment
+    // Step 1: Select Environment - pin to the configured env instead of `.first()`, which could
+    // upload the artifact to another env (e.g. mcp-test-env) than the one the test later views
     const environmentItem = quickpick.items.filter({ hasText: "1. Select Environment" }).first();
     await expect(environmentItem).toBeVisible();
     await environmentItem.click();
 
     await expect(quickpick.locator).toBeVisible();
-    await expect(quickpick.items).not.toHaveCount(0);
-    await quickpick.items.first().click();
+    await quickpick.selectItemByText(CCLOUD_ENVIRONMENT_NAME, { exact: true });
 
     // Step 2: Select Cloud Provider & Region
     await expect(quickpick.locator).toBeVisible();
