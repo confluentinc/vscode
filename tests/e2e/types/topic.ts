@@ -11,7 +11,7 @@ export interface TopicConfig {
   name: string;
   numPartitions?: number;
   replicationFactor?: number;
-  clusterLabel?: string | RegExp;
+  clusterLabel?: string;
   /** Options for producing messages to the topic after creation. */
   produce?: ProducerOptions;
 }
