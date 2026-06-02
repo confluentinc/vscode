@@ -2,6 +2,12 @@ import type { KafkaJS } from "@confluentinc/kafka-javascript";
 
 /** Configuration options for creating a topic. */
 export interface TopicConfig {
+  /**
+   * The slug portion of the topic name. The {@linkcode topic} fixture in `baseTest.ts` wraps
+   * this in `e2eResourceName()`, which adds the `e2e-vscode-` prefix and a random suffix. Pass a
+   * meaningful, low-cardinality slug like `produce-message-avro` so a leftover topic is easy to
+   * trace back to the originating test.
+   */
   name: string;
   numPartitions?: number;
   replicationFactor?: number;
