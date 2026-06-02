@@ -299,17 +299,15 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     const numPartitions = topicConfig.numPartitions ?? 1;
 
-    // if we need to produce messages, we likely have an API key/secret we need to match to a
-    // specific CCloud cluster, so we can't use the first one that shows up in the resources view
-    // (LOCAL/DIRECT connections don't have multiple clusters, so we can just skip this)
-    let clusterLabel: string | RegExp | undefined;
-    if (topicConfig.produce && connectionType === ConnectionType.Ccloud) {
-      clusterLabel = topicConfig.clusterLabel ?? process.env.E2E_KAFKA_CLUSTER_NAME!;
-    }
-
-    // setup: create the topic
+    // setup: create the topic. For CCloud, `getKafkaCluster` (via loadTopics) pins the cluster
+    // to the name configured in test-resources.ts when no explicit `clusterLabel` is passed, so
+    // topic-create/produce never lands on whichever cluster happens to render first.
     const topicsView = new TopicsView(page);
-    await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView, clusterLabel);
+    await topicsView.loadTopics(
+      connectionType,
+      SelectKafkaCluster.FromResourcesView,
+      topicConfig.clusterLabel,
+    );
     await topicsView.createTopic(topicName, numPartitions, replicationFactor);
     await topicsView.getTopicItem(topicName); // verify topic shows up in the view
 
@@ -330,7 +328,11 @@ export const test = testBase.extend<VSCodeFixtures>({
     // (explicitly make sure the sidebar is open and we reload the topics view in the event a test
     // navigated away to a new window or sidebar)
     await openConfluentSidebar(page);
-    await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView, clusterLabel);
+    await topicsView.loadTopics(
+      connectionType,
+      SelectKafkaCluster.FromResourcesView,
+      topicConfig.clusterLabel,
+    );
     await topicsView.deleteTopic(topicName);
   },
 });
