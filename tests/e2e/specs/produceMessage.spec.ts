@@ -67,7 +67,7 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
             // create with the `topic` fixture
             test.use({
               connectionType,
-              topicConfig: { name: `e2e-produce-message-${schemaSuffix}` },
+              topicConfig: { name: `produce-message-${schemaSuffix}` },
             });
 
             test.beforeEach(async ({ page, connectionItem, topic: topicName }) => {
