@@ -1,5 +1,10 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
+import {
+  CCLOUD_ENVIRONMENT_NAME,
+  CCLOUD_FLINK_COMPUTE_POOL_NAME,
+  CCLOUD_KAFKA_CLUSTER_NAME,
+} from "../../test-resources";
 import { ConnectionType } from "../../types/connection";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { DirectConnectionForm } from "../webviews/DirectConnectionFormWebview";
@@ -243,18 +248,20 @@ export class ResourcesView extends SearchableView {
 
   /**
    * Locate a connection environment item in the view for a given {@link ConnectionType connection type}.
-   * If there are multiple environments for the connection type, you can optionally provide a
-   * `label` string or regex to filter the results.
    *
-   * This requires the connection to be fully set up beforehand (e.g. CCloud authentication,
-   * direct connection form completion, etc.) so that the environment item is present.
+   * For {@linkcode ConnectionType.Ccloud}, you MUST either pass a `label` or rely on the
+   * configured {@linkcode CCLOUD_ENVIRONMENT_NAME}; otherwise the call throws. The test user can
+   * typically see multiple CCloud envs (other teams' environments may be visible in the same
+   * org), so falling back to `.first()` here would non-deterministically leak test-created
+   * topics/statements into an unrelated env. Local and Direct connections are each treated as a
+   * single environment, so the label is optional.
    *
-   * NOTE: CCloud connections may have multiple environments, but the local connection and direct
-   * connections are each treated as individual "environments" in the Resources view.
+   * Requires the connection to be fully set up beforehand (e.g. CCloud authentication,
+   * direct connection form completion) so the environment item is present.
    *
-   * @param connectionType The type of connection (CCloud or Direct)
-   * @param label Optional string or regex to filter the located environments
-   * @returns A Locator for the environment item
+   * @param connectionType The type of connection (CCloud, Direct, or Local).
+   * @param label Optional string or regex to filter the located environments. Required for CCloud.
+   * @returns A Locator for the environment item.
    */
   async getEnvironment(connectionType: ConnectionType, label?: string | RegExp): Promise<Locator> {
     let environment: Locator;
@@ -277,9 +284,12 @@ export class ResourcesView extends SearchableView {
           await this.clickRefresh();
           await expect(this.ccloudEnvironments).not.toHaveCount(0);
         }
-        environment = label
-          ? this.ccloudEnvironments.filter({ hasText: label }).first()
-          : this.ccloudEnvironments.first();
+        environment = await this.resolveCcloudLocator(
+          this.ccloudEnvironments,
+          label,
+          CCLOUD_ENVIRONMENT_NAME,
+          "environment",
+        );
         break;
       }
       case ConnectionType.Direct: {
@@ -306,7 +316,8 @@ export class ResourcesView extends SearchableView {
    * Expand a connection's environment in the Resources view.
    *
    * NOTE: CCloud connections may have multiple environments, but the local connection and direct
-   * connections are each treated as individual "environments" in the Resources view.
+   * connections are each treated as individual "environments" in the Resources view. See
+   * {@linkcode getEnvironment} for the CCloud label/env-var requirement.
    */
   async expandConnectionEnvironment(
     connectionType: ConnectionType,
@@ -321,16 +332,104 @@ export class ResourcesView extends SearchableView {
   }
 
   /**
+   * Resolves a tree locator to the single visible CCloud resource (env / cluster / compute
+   * pool) identified by `provided` (or the configured `fallback` from `test-resources.ts`).
+   * Throws with the list of visible resource names if the label is unset OR if it matches
+   * anything other than exactly one item.
+   *
+   * The exact-match assertion guards against Playwright's `hasText` doing substring matching:
+   * if the label is a substring of more than one visible item, a naive `.first()` would
+   * silently pick whichever the renderer lists first - the same cross-env leak the configured
+   * resource name exists to prevent.
+   */
+  private async resolveCcloudLocator(
+    locator: Locator,
+    provided: string | RegExp | undefined,
+    fallback: string,
+    kind: string,
+  ): Promise<Locator> {
+    const resolved = provided ?? fallback;
+    if (!resolved) {
+      const visible = await locator.allTextContents();
+      throw new Error(
+        `[E2E] CCloud ${kind} selection requires an explicit label argument or a configured ` +
+          `name in tests/e2e/test-resources.ts; visible ${kind}s: ` +
+          `[${visible.map((t) => t.trim()).join(", ")}]`,
+      );
+    }
+    const filtered = locator.filter({ hasText: resolved });
+    const count = await filtered.count();
+    if (count !== 1) {
+      const visible = await locator.allTextContents();
+      throw new Error(
+        `[E2E] CCloud ${kind} label ${JSON.stringify(String(resolved))} matched ${count} ` +
+          `items (expected exactly 1); visible ${kind}s: ` +
+          `[${visible.map((t) => t.trim()).join(", ")}]. Set a more specific name in ` +
+          `tests/e2e/test-resources.ts so it uniquely identifies one ${kind}.`,
+      );
+    }
+    return filtered.first();
+  }
+
+  /**
+   * Locate a Flink compute pool item in the view for a given {@link ConnectionType connection type}.
+   *
+   * Flink is only available for CCloud connections today, so only that case is implemented; Local
+   * and Direct throw. For {@linkcode ConnectionType.Ccloud}, you MUST either pass `poolHasText` or
+   * rely on the configured {@linkcode CCLOUD_FLINK_COMPUTE_POOL_NAME}; otherwise the call throws
+   * (the test user typically sees multiple pools, so `.first()` would non-deterministically pick one).
+   *
+   * Requires the connection to be fully set up beforehand (e.g. CCloud authentication) so the
+   * compute pool item is present.
+   *
+   * @param connectionType The type of connection (only CCloud is supported today).
+   * @param poolHasText Optional pool name or regex; required for CCloud.
+   * @returns A Locator for the Flink compute pool item.
+   */
+  async getFlinkComputePool(
+    connectionType: ConnectionType,
+    poolHasText?: string | RegExp,
+  ): Promise<Locator> {
+    // whatever connection we're using needs to be expanded so any compute pools are visible
+    await this.expandConnectionEnvironment(connectionType);
+
+    let computePool: Locator;
+
+    switch (connectionType) {
+      case ConnectionType.Ccloud: {
+        await expect(this.ccloudFlinkComputePools).not.toHaveCount(0);
+        computePool = await this.resolveCcloudLocator(
+          this.ccloudFlinkComputePools,
+          poolHasText,
+          CCLOUD_FLINK_COMPUTE_POOL_NAME,
+          "Flink compute pool",
+        );
+        break;
+      }
+      default:
+        throw new Error(
+          `Flink compute pools are not available for connection type: ${connectionType}`,
+        );
+    }
+
+    await expect(computePool).toBeVisible();
+    return computePool;
+  }
+
+  /**
    * Locate a Kafka cluster item in the view for a given {@link ConnectionType connection type}.
-   * If there are multiple clusters for the connection type, you can optionally provide a
-   * `clusterHasText` string or regex to filter the results.
    *
-   * NOTE: This requires the connection to be fully set up beforehand (e.g. CCloud authentication,
-   * direct connection form completion, etc.) so that the cluster item is present.
+   * For {@linkcode ConnectionType.Ccloud}, you MUST either pass `clusterHasText` or rely on the
+   * configured {@linkcode CCLOUD_KAFKA_CLUSTER_NAME}; otherwise the call throws (the test user
+   * typically sees multiple clusters, so `.first()` would non-deterministically pick one).
+   * Local and Direct connections are inherently single-cluster, so the label is optional there.
    *
-   * @param connectionType The type of connection (CCloud or Direct)
-   * @param clusterHasText Optional string or regex to filter the located clusters
-   * @returns A Locator for the Kafka cluster item
+   * Requires the connection to be fully set up beforehand (e.g. CCloud authentication,
+   * direct connection form completion) so the cluster item is present.
+   *
+   * @param connectionType The type of connection (CCloud, Direct, or Local).
+   * @param clusterHasText Optional cluster name or regex; required for CCloud.
+   * @returns A Locator for the Kafka cluster item.
    */
   async getKafkaCluster(
     connectionType: ConnectionType,
@@ -360,9 +459,20 @@ export class ResourcesView extends SearchableView {
 
     await expect(kafkaClusters).not.toHaveCount(0);
 
-    const kafkaCluster: Locator = clusterHasText
-      ? kafkaClusters.filter({ hasText: clusterHasText }).first()
-      : kafkaClusters.first();
+    let kafkaCluster: Locator;
+    if (connectionType === ConnectionType.Ccloud) {
+      kafkaCluster = await this.resolveCcloudLocator(
+        kafkaClusters,
+        clusterHasText,
+        CCLOUD_KAFKA_CLUSTER_NAME,
+        "Kafka cluster",
+      );
+    } else {
+      // local and direct connections only ever expose a single Kafka cluster
+      kafkaCluster = clusterHasText
+        ? kafkaClusters.filter({ hasText: clusterHasText }).first()
+        : kafkaClusters.first();
+    }
     await expect(kafkaCluster).toBeVisible();
     return kafkaCluster;
   }
