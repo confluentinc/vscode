@@ -162,7 +162,7 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
           connectionType,
           // only used by the "apply ___ template from Kafka topic" test in order to set up a topic
           // before the test runs, but this doesn't hurt to set up for the other tests
-          topicConfig: { name: `e2e-project-scaffold-${templateName}` },
+          topicConfig: { name: `project-scaffold-${templateName}` },
         });
 
         test.beforeEach(async ({ connectionItem }) => {
