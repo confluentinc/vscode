@@ -9,7 +9,7 @@ import { SchemasView, SchemaType, SelectSchemaRegistry } from "../objects/views/
 import type { SubjectItem } from "../objects/views/viewItems/SubjectItem";
 import { Tag } from "../tags";
 import { ConnectionType } from "../types/connection";
-import { randomHexString } from "../utils/strings";
+import { e2eResourceName } from "../utils/uniqueName";
 
 /**
  * E2E test suite for testing the whole schema management flow in the extension.
@@ -73,7 +73,7 @@ test.describe("Schema Management", { tag: [Tag.EvolveSchema] }, () => {
 
       for (const [schemaType, fileExtension] of schemaTypes) {
         test.describe(`${schemaType} schema`, () => {
-          const subjectNamePrefix = `e2e-evolve-schema-${schemaType.toLowerCase()}-${randomHexString(6)}`;
+          const subjectNamePrefix = e2eResourceName(`evolve-schema-${schemaType.toLowerCase()}`);
           const schemaFile = `schemas/customer.${fileExtension}`;
 
           test("should create a new subject and upload the first schema version", async ({

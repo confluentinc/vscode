@@ -14,7 +14,7 @@ import { Tag } from "../tags";
 import { ConnectionType } from "../types/connection";
 import { executeVSCodeCommand } from "../utils/commands";
 import { createInvalidJarFile, createLargeFile } from "../utils/flinkDatabase";
-import { randomHexString } from "../utils/strings";
+import { e2eResourceName } from "../utils/uniqueName";
 import { openConfluentSidebar, prepareTestWorkspace } from "../utils/workspace";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -278,10 +278,9 @@ async function completeArtifactUploadFlowForJAR(
   provider: string,
   region: string,
 ): Promise<string> {
-  // Use the artifact file name (without extension) as the artifact name
-  const baseFileName = path.basename(artifactPath, ".jar");
-  // Add random suffix to avoid conflicts during development
-  const artifactName = `${baseFileName}-${randomHexString(6)}`;
+  // Use the artifact file name (without extension) as the slug; e2eResourceName adds the
+  // shared `e2e-vscode-` prefix and a random suffix.
+  const artifactName = e2eResourceName(path.basename(artifactPath, ".jar"));
 
   const fileExplorer = new FileExplorer(page);
   await fileExplorer.ensureVisible();

@@ -3,7 +3,7 @@ import { expect } from "@playwright/test";
 import { stubDialog } from "electron-playwright-helpers";
 import path from "path";
 import { ConnectionType } from "../../types/connection";
-import { randomHexString } from "../../utils/strings";
+import { e2eResourceName } from "../../utils/uniqueName";
 import { NotificationArea } from "../notifications/NotificationArea";
 import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
@@ -243,9 +243,8 @@ export class FlinkDatabaseView extends SearchableView {
     await expect(artifactItem).toBeVisible();
     await artifactItem.click();
 
-    const baseFileName = path.basename(filePath, ".jar");
-    // Although this resource may be cleaned up, we append a random string to avoid name conflicts during development
-    const fullArtifactName = `${baseFileName}-${randomHexString(6)}`;
+    // e2eResourceName adds the shared `e2e-vscode-` prefix and a random suffix.
+    const fullArtifactName = e2eResourceName(path.basename(filePath, ".jar"));
 
     const inputBox = new InputBox(this.page);
     await expect(inputBox.locator).toBeVisible();
