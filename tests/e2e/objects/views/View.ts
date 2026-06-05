@@ -153,17 +153,25 @@ export class SearchableView extends View {
     await expect(inputBox.locator).toBeHidden();
   }
 
-  /** Get a tree item by its label/name by {@link search searching}, optionally filtering by a specific locator. */
+  /**
+   * Find a tree item by its label/name via {@link search searching}, re-running the search until
+   * the item appears. Views refresh asynchronously (event- or poll-driven), so the item may be
+   * absent on the first search; the retry absorbs that. Searching also narrows the virtualized tree
+   * so the item is rendered without scrolling. Waits for the search-result message to settle before
+   * returning so it doesn't later intercept pointer events on the item's actions.
+   *
+   * @param label The tree item label (or substring) to find.
+   * @param fromLocator Base locator to filter; defaults to all tree items in the view.
+   * @returns A Locator for the single matching tree item.
+   */
   async getItemByLabel(label: string, fromLocator?: Locator): Promise<Locator> {
-    await this.search(label);
-
-    // filter all tree items in this view unless a specific locator is provided
-    const baseLocator = fromLocator ?? this.treeItems;
-    const itemLocator = baseLocator.filter({ hasText: label });
+    const itemLocator = (fromLocator ?? this.treeItems).filter({ hasText: label });
+    await expect(async () => {
+      await this.search(label);
+      await expect(itemLocator).toHaveCount(1, { timeout: 2_000 });
+    }).toPass({ timeout: 30_000, intervals: [1_000, 2_000, 5_000] });
     await expect(itemLocator).toBeVisible();
-    // wait for the search result message to render so it doesn't appear later
-    // and intercept pointer events on tree item inline actions (#3186)
     await expect(this.viewMessage).toBeVisible();
-    return itemLocator;
+    return itemLocator.first();
   }
 }
