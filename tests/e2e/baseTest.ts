@@ -108,6 +108,10 @@ export const test = testBase.extend<VSCodeFixtures>({
   electronApp: async ({ testTempDir }, use, testInfo) => {
     const testConfigs = getTestSetupCache();
 
+    // write user settings before launch so editor defaults apply from the first frame rather than
+    // via VS Code's post-launch settings reload (unreliable on Windows)
+    configureVSCodeSettings(testTempDir);
+
     // launch VS Code with Electron using args pattern from vscode-test
     const electronApp = await electron.launch({
       executablePath: testConfigs.vscodeExecutablePath,
@@ -170,7 +174,7 @@ export const test = testBase.extend<VSCodeFixtures>({
   page: async ({ electronApp, testTempDir }, use, testInfo) => {
     const page = await electronApp.firstWindow();
 
-    await globalBeforeEach(page, testTempDir);
+    await globalBeforeEach(page);
 
     await use(page);
 
@@ -344,10 +348,7 @@ export const test = testBase.extend<VSCodeFixtures>({
  * {@linkcode https://playwright.dev/docs/api/class-test#test-before-each test.beforeEach()}, which
  * did not consistently run before each test.
  */
-async function globalBeforeEach(page: Page, testTempDir: string): Promise<void> {
-  // make sure settings are set to defaults for each test
-  configureVSCodeSettings(testTempDir);
-
+async function globalBeforeEach(page: Page): Promise<void> {
   // dismiss the disabled-extensions notification and collapse the secondary sidebar
   await prepareTestWorkspace(page);
 }
