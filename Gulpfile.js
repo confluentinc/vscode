@@ -602,12 +602,33 @@ function stylesheet(options = {}) {
 
 check.description = "Run TypeScript compiler to check for any type errors.";
 export function check(done) {
-  // Before running type checking, make sure to generate declarations for GraphQL schemas
-  const precheck = spawnSync("npx", ["gql.tada", "generate-output"], {
-    stdio: "ignore",
-    shell: IS_WINDOWS,
-  });
+  // Before running type checking, make sure to generate declarations for GraphQL schemas.
+  // Invoke gql.tada's CLI directly via node rather than `npx gql.tada`: the published bin
+  // name contains a dot, so on Windows `cmd` treats ".tada" as the file extension, runs the
+  // extension-less shim instead of `gql.tada.cmd`, falls back to ShellExecuteExW, and hangs
+  // forever on a modal "no .tada association" error dialog on headless CI runners.
+  // (gql.tada also ships a no-dot `gql-tada` alias, but invoking node directly avoids
+  // npx/cmd/shell entirely and is the most robust fix.) See confluentinc/vscode#3408.
+  const gqlTadaPkg = JSON.parse(
+    readFileSync(resolve("node_modules", "gql.tada", "package.json"), "utf8"),
+  );
+  const gqlTadaBin =
+    typeof gqlTadaPkg.bin === "string" ? gqlTadaPkg.bin : gqlTadaPkg.bin?.["gql.tada"];
+  if (!gqlTadaBin) {
+    throw new Error(
+      `Could not resolve the gql.tada CLI from its package.json "bin" field: ${JSON.stringify(gqlTadaPkg.bin)}`,
+    );
+  }
+  const precheck = spawnSync(
+    process.execPath,
+    [resolve("node_modules", "gql.tada", gqlTadaBin), "generate-output"],
+    // stdout is noisy on success; keep stderr so a codegen failure is visible (not silent).
+    { stdio: ["ignore", "ignore", "inherit"] },
+  );
   if (precheck.error) throw precheck.error;
+  if (precheck.status !== 0) {
+    throw new Error(`gql.tada generate-output failed (exit code ${precheck.status})`);
+  }
 
   // Entry points are the extension.ts and webview script files, but also include test files
   // so we can catch any type errors in them as well.
