@@ -136,7 +136,7 @@ blocks:
     task:
       agent:
         machine:
-          type: s1-prod-windows
+          type: s1-windows-2025-amd64-4
       prologue:
         commands:
           - make ci-bin-sem-cache-restore
