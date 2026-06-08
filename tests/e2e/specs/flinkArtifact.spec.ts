@@ -7,14 +7,13 @@ import { fileURLToPath } from "url";
 import { test } from "../baseTest";
 import { FileExplorer } from "../objects/FileExplorer";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
-import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { FlinkDatabaseView, SelectFlinkDatabase } from "../objects/views/FlinkDatabaseView";
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
 import { Tag } from "../tags";
 import { ConnectionType } from "../types/connection";
 import { executeVSCodeCommand } from "../utils/commands";
 import { createInvalidJarFile, createLargeFile } from "../utils/flinkDatabase";
-import { randomHexString } from "../utils/strings";
+import { e2eResourceName } from "../utils/uniqueName";
 import { openConfluentSidebar, prepareTestWorkspace } from "../utils/workspace";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -274,14 +273,13 @@ async function completeArtifactUploadFlow(
 async function completeArtifactUploadFlowForJAR(
   page: Page,
   artifactPath: string,
-  artifactsView: FlinkDatabaseView,
+  databaseView: FlinkDatabaseView,
   provider: string,
   region: string,
 ): Promise<string> {
-  // Use the artifact file name (without extension) as the artifact name
-  const baseFileName = path.basename(artifactPath, ".jar");
-  // Add random suffix to avoid conflicts during development
-  const artifactName = `${baseFileName}-${randomHexString(6)}`;
+  // Use the artifact file name (without extension) as the slug; e2eResourceName adds the
+  // shared `e2e-vscode-` prefix and a random suffix.
+  const artifactName = e2eResourceName(path.basename(artifactPath, ".jar"));
 
   const fileExplorer = new FileExplorer(page);
   await fileExplorer.ensureVisible();
@@ -291,20 +289,14 @@ async function completeArtifactUploadFlowForJAR(
   const fileItem = new ViewItem(page, jarFile);
   await fileItem.rightClickContextMenuAction("Upload Flink Artifact to Confluent Cloud");
 
-  await artifactsView.uploadFlinkArtifactFromJAR(artifactName, `${provider}/${region}`);
+  await databaseView.uploadFlinkArtifactFromJAR(artifactName, `${provider}/${region}`);
 
   // Switch back to the Confluent extension sidebar from the file explorer
   await openConfluentSidebar(page);
 
-  await artifactsView.clickSelectKafkaClusterAsFlinkDatabase();
-  const kafkaClusterQuickpick = new Quickpick(page);
-  await expect(kafkaClusterQuickpick.locator).toBeVisible();
-  await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
-  const matchingCluster = kafkaClusterQuickpick.items
-    .filter({ hasText: `${provider}/${region}` })
-    .first();
-  await expect(matchingCluster).toBeVisible();
-  await matchingCluster.click();
+  // set the view's Flink database by the configured cluster name rather than a provider/region
+  // + `.first()` match that could land on another env's cluster
+  await databaseView.selectKafkaClusterByProviderRegion(provider, region);
 
   return artifactName;
 }

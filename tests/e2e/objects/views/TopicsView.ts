@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import type { ConnectionType } from "../../types/connection";
+import { CCLOUD_KAFKA_CLUSTER_NAME } from "../../test-resources";
+import { ConnectionType } from "../../types/connection";
 import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
@@ -104,19 +105,23 @@ export class TopicsView extends SearchableView {
    * Once a connection is established, load topics into the view using the specified
    * {@link SelectKafkaCluster entrypoint}.
    *
-   * If using the {@link SelectKafkaCluster.FromTopicsViewButton "Select Kafka Cluster" nav action}
-   * entrypoint, you can optionally provide a `clusterLabel` to select a specific cluster from the
-   * quickpick list. If not provided, the first cluster in the list will be selected.
+   * For CCloud, the cluster defaults to the name configured in `test-resources.ts` when no
+   * `clusterLabel` is passed, so neither entrypoint lands on whichever cluster renders first.
+   * Local and Direct connections are single-cluster, so the label is optional and the first
+   * cluster is used.
    */
   async loadTopics(
     connectionType: ConnectionType,
     entrypoint: SelectKafkaCluster,
-    clusterLabel?: string | RegExp,
+    clusterLabel?: string,
   ): Promise<void> {
+    const effectiveLabel =
+      clusterLabel ??
+      (connectionType === ConnectionType.Ccloud ? CCLOUD_KAFKA_CLUSTER_NAME : undefined);
     switch (entrypoint) {
       case SelectKafkaCluster.FromResourcesView: {
         const resourcesView = new ResourcesView(this.page);
-        const cluster = await resourcesView.getKafkaCluster(connectionType, clusterLabel);
+        const cluster = await resourcesView.getKafkaCluster(connectionType, effectiveLabel);
         await cluster.click();
         break;
       }
@@ -124,11 +129,14 @@ export class TopicsView extends SearchableView {
         await this.clickSelectKafkaCluster();
         const kafkaClusterQuickpick = new Quickpick(this.page);
         await expect(kafkaClusterQuickpick.locator).toBeVisible();
-        await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
-        const clusterItem = clusterLabel
-          ? kafkaClusterQuickpick.items.filter({ hasText: clusterLabel }).first()
-          : kafkaClusterQuickpick.items.first();
-        await clusterItem.click();
+        if (effectiveLabel) {
+          // CCloud: pin to the configured cluster name with an exact single-match guard
+          await kafkaClusterQuickpick.selectItemByText(effectiveLabel, { exact: true });
+        } else {
+          // local/direct expose a single cluster, so the first item is unambiguous
+          await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
+          await kafkaClusterQuickpick.items.first().click();
+        }
         break;
       }
       default:

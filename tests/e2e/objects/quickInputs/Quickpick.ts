@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 
 /**
  * Object representing a VS Code {@link https://code.visualstudio.com/api/ux-guidelines/quick-picks quickpick}.
@@ -41,10 +42,21 @@ export class Quickpick {
     return this.locator.locator(".monaco-list-row");
   }
 
-  /** Selects the first quickpick item with the given text */
-  async selectItemByText(text: string): Promise<void> {
+  /**
+   * Select a quickpick item by text, typing into the filter input to narrow the list first. With
+   * `exact`, matches an item whose label is exactly `text` (not a substring) and asserts exactly
+   * one matches before clicking, so a stale/prefix name can't silently select the wrong item.
+   */
+  async selectItemByText(text: string, options: { exact?: boolean } = {}): Promise<void> {
     await this.textInput.fill(text);
-    const filteredItems = this.items.filter({ hasText: text });
+    // `hasText` is a substring match; `exact` instead requires a label that equals `text` so a
+    // prefix/stale name (e.g. "env" against "env-2") resolves to 0 items and the guard below fires
+    const filteredItems = options.exact
+      ? this.items.filter({ has: this.page.getByText(text, { exact: true }) })
+      : this.items.filter({ hasText: text });
+    if (options.exact) {
+      await expect(filteredItems).toHaveCount(1);
+    }
     await filteredItems.first().click();
   }
 }
