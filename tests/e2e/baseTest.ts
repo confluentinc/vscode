@@ -27,7 +27,7 @@ import {
 } from "./utils/connections";
 import { produceMessages } from "./utils/producer";
 import { configureVSCodeSettings } from "./utils/settings";
-import { randomHexString } from "./utils/strings";
+import { e2eResourceName } from "./utils/uniqueName";
 import { openConfluentSidebar, prepareTestWorkspace } from "./utils/workspace";
 
 // NOTE: we can't import these two directly from 'global.setup.ts'
@@ -108,6 +108,10 @@ export const test = testBase.extend<VSCodeFixtures>({
   electronApp: async ({ testTempDir }, use, testInfo) => {
     const testConfigs = getTestSetupCache();
 
+    // write user settings before launch so editor defaults apply from the first frame rather than
+    // via VS Code's post-launch settings reload (unreliable on Windows)
+    configureVSCodeSettings(testTempDir);
+
     // launch VS Code with Electron using args pattern from vscode-test
     const electronApp = await electron.launch({
       executablePath: testConfigs.vscodeExecutablePath,
@@ -170,7 +174,7 @@ export const test = testBase.extend<VSCodeFixtures>({
   page: async ({ electronApp, testTempDir }, use, testInfo) => {
     const page = await electronApp.firstWindow();
 
-    await globalBeforeEach(page, testTempDir);
+    await globalBeforeEach(page);
 
     await use(page);
 
@@ -290,7 +294,7 @@ export const test = testBase.extend<VSCodeFixtures>({
     // ensure connection has resources available to work with
     await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
 
-    const topicName = `${topicConfig.name}-${randomHexString(6)}`;
+    const topicName = e2eResourceName(topicConfig.name);
 
     // set default replication factor (if it wasn't provided) based on connection type
     const replicationFactor =
@@ -299,17 +303,15 @@ export const test = testBase.extend<VSCodeFixtures>({
 
     const numPartitions = topicConfig.numPartitions ?? 1;
 
-    // if we need to produce messages, we likely have an API key/secret we need to match to a
-    // specific CCloud cluster, so we can't use the first one that shows up in the resources view
-    // (LOCAL/DIRECT connections don't have multiple clusters, so we can just skip this)
-    let clusterLabel: string | RegExp | undefined;
-    if (topicConfig.produce && connectionType === ConnectionType.Ccloud) {
-      clusterLabel = topicConfig.clusterLabel ?? process.env.E2E_KAFKA_CLUSTER_NAME!;
-    }
-
-    // setup: create the topic
+    // setup: create the topic. For CCloud, `getKafkaCluster` (via loadTopics) pins the cluster
+    // to the name configured in test-resources.ts when no explicit `clusterLabel` is passed, so
+    // topic-create/produce never lands on whichever cluster happens to render first.
     const topicsView = new TopicsView(page);
-    await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView, clusterLabel);
+    await topicsView.loadTopics(
+      connectionType,
+      SelectKafkaCluster.FromResourcesView,
+      topicConfig.clusterLabel,
+    );
     await topicsView.createTopic(topicName, numPartitions, replicationFactor);
     await topicsView.getTopicItem(topicName); // verify topic shows up in the view
 
@@ -330,7 +332,11 @@ export const test = testBase.extend<VSCodeFixtures>({
     // (explicitly make sure the sidebar is open and we reload the topics view in the event a test
     // navigated away to a new window or sidebar)
     await openConfluentSidebar(page);
-    await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView, clusterLabel);
+    await topicsView.loadTopics(
+      connectionType,
+      SelectKafkaCluster.FromResourcesView,
+      topicConfig.clusterLabel,
+    );
     await topicsView.deleteTopic(topicName);
   },
 });
@@ -342,10 +348,7 @@ export const test = testBase.extend<VSCodeFixtures>({
  * {@linkcode https://playwright.dev/docs/api/class-test#test-before-each test.beforeEach()}, which
  * did not consistently run before each test.
  */
-async function globalBeforeEach(page: Page, testTempDir: string): Promise<void> {
-  // make sure settings are set to defaults for each test
-  configureVSCodeSettings(testTempDir);
-
+async function globalBeforeEach(page: Page): Promise<void> {
   // dismiss the disabled-extensions notification and collapse the secondary sidebar
   await prepareTestWorkspace(page);
 }

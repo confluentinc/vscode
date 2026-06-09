@@ -70,15 +70,11 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
       electronApp,
     }) => {
       const resourcesView = new ResourcesView(page);
-      // First, expand a CCloud env
-      await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
-      await resourcesView.ccloudEnvironments.first().click();
-      // Then verify we can see a Flink compute pool
-      await expect(resourcesView.ccloudFlinkComputePools).not.toHaveCount(0);
-      const computePool = new FlinkComputePoolItem(
-        page,
-        resourcesView.ccloudFlinkComputePools.first(),
-      );
+      // expand the pinned CCloud env so compute pools render under it
+      await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
+      // pick the pinned Flink compute pool
+      const computePoolLocator = await resourcesView.getFlinkComputePool(ConnectionType.Ccloud);
+      const computePool = new FlinkComputePoolItem(page, computePoolLocator);
 
       // Grant clipboard permission for reading the copied pool ID
       await electronApp.context().grantPermissions(["clipboard-read"]);
@@ -162,7 +158,7 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
           connectionType,
           // only used by the "apply ___ template from Kafka topic" test in order to set up a topic
           // before the test runs, but this doesn't hurt to set up for the other tests
-          topicConfig: { name: `e2e-project-scaffold-${templateName}` },
+          topicConfig: { name: `project-scaffold-${templateName}` },
         });
 
         test.beforeEach(async ({ connectionItem }) => {
