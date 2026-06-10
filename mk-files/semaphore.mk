@@ -46,7 +46,7 @@ store-test-logs-to-semaphore:
 	@echo "Bundling Mocha triage logs..."
 	@zip -j "$(MOCHA_TRIAGE_ZIP)" TEST-result.xml TEST-extension.log TEST-sidecar.log 2>/dev/null || true
 	@if [ -f "$(MOCHA_TRIAGE_ZIP)" ]; then \
-		artifact push workflow "$(MOCHA_TRIAGE_ZIP)" --destination "test-results-mocha/$(MOCHA_TRIAGE_ZIP)" --force || true; \
+		artifact push workflow "$(MOCHA_TRIAGE_ZIP)" --destination "test-results-mocha/$(MOCHA_TRIAGE_ZIP)" --force; \
 		echo "Uploaded $(MOCHA_TRIAGE_ZIP)"; \
 	else \
 		echo "Triage log files not found, skipping bundle"; \
