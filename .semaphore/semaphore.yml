@@ -105,7 +105,7 @@ blocks:
             - make store-test-logs-to-semaphore
             # Upload Playwright artifacts if available
             - |
-              PLATFORM_ARCH="$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
+              PLATFORM_ARCH="$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')-$(uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/')"
               if [ -d test-results ]; then
                 artifact push workflow test-results --destination test-results-${PLATFORM_ARCH} --force
               fi
