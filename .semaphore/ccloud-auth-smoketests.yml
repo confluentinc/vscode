@@ -31,6 +31,7 @@ blocks:
             - make remove-test-env
             - make ci-bin-sem-cache-store
             - make store-test-results-to-semaphore
+            - make store-test-logs-to-semaphore
 
 after_pipeline:
   task:

@@ -1,6 +1,7 @@
 TEST_RESULT_FILE = $(CURDIR)/TEST-result.xml
 TEST_RESULT_E2E_FILE = $(CURDIR)/TEST-result-e2e.xml
 TEST_RESULT_WEBVIEW_FILE = $(CURDIR)/TEST-result-webview.xml
+MOCHA_TRIAGE_ZIP = test-results-mocha-$(PLATFORM)-$(ARCH).zip
 
 # How many days cache entries can stay in the semaphore cache before they are considered stale
 SEM_CACHE_DURATION_DAYS ?= 7
@@ -36,6 +37,20 @@ ifneq ($(wildcard $(TEST_RESULT_WEBVIEW_FILE)),)
 else
 	@echo "Webview test results not found at $(TEST_RESULT_WEBVIEW_FILE)"
 endif
+
+# Bundle Mocha JUnit results + extension/sidecar logs into one downloadable triage artifact.
+# Unlike `store-test-results-to-semaphore` (which only publishes the JUnit summary), this keeps
+# the logs needed to diagnose failures whose cause never reaches the JUnit XML.
+.PHONY: store-test-logs-to-semaphore
+store-test-logs-to-semaphore:
+	@echo "Bundling Mocha triage logs..."
+	@zip -j "$(MOCHA_TRIAGE_ZIP)" TEST-result.xml TEST-extension.log TEST-sidecar.log 2>/dev/null || true
+	@if [ -f "$(MOCHA_TRIAGE_ZIP)" ]; then \
+		artifact push workflow "$(MOCHA_TRIAGE_ZIP)" --destination "test-results-mocha/$(MOCHA_TRIAGE_ZIP)" --force || true; \
+		echo "Uploaded $(MOCHA_TRIAGE_ZIP)"; \
+	else \
+		echo "Triage log files not found, skipping bundle"; \
+	fi
 
 # Only write to the cache from main builds because of security reasons.
 .PHONY: ci-bin-sem-cache-store
