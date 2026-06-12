@@ -13,10 +13,12 @@ import {
 import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources/kafkaCluster";
 import { createResponseError, ResponseErrorSource } from "../../tests/unit/testUtils";
 import * as topicAuthz from "../authz/topics";
-import { TopicV3Api } from "../clients/kafkaRest";
+import { ConfigsV3Api, TopicV3Api } from "../clients/kafkaRest";
+import type { ClusterConfigData } from "../clients/kafkaRest";
 import { ClusterSelectSyncOption, SYNC_ON_KAFKA_SELECT } from "../extensionSettings/constants";
 import type { CCloudResourceLoader } from "../loaders";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
@@ -29,6 +31,7 @@ import {
   copyBootstrapServers,
   createTopicCommand,
   deleteTopicCommand,
+  getDefaultReplicationFactor,
   selectFlinkDatabaseViewKafkaClusterCommand,
   selectTopicsViewKafkaClusterCommand,
 } from "./kafkaClusters";
@@ -411,6 +414,60 @@ describe("commands/kafkaClusters.ts", () => {
 
       assert.strictEqual(result, false);
       sinon.assert.notCalled(topicChangedFireStub);
+    });
+  });
+
+  describe("getDefaultReplicationFactor", () => {
+    let stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle>;
+    let configsV3ApiStub: sinon.SinonStubbedInstance<ConfigsV3Api>;
+
+    beforeEach(() => {
+      stubbedSidecar = getSidecarStub(sandbox);
+      configsV3ApiStub = sandbox.createStubInstance(ConfigsV3Api);
+      stubbedSidecar.getConfigsV3Api.returns(configsV3ApiStub);
+    });
+
+    it("should use the cluster's default.replication.factor broker config when available", async () => {
+      // a non-CCloud cluster whose brokers require a replication factor of 3
+      configsV3ApiStub.getKafkaClusterConfig.resolves({
+        name: "default.replication.factor",
+        value: "3",
+      } as ClusterConfigData);
+
+      const result = await getDefaultReplicationFactor(TEST_LOCAL_KAFKA_CLUSTER);
+
+      assert.strictEqual(result, "3");
+      sinon.assert.calledWithMatch(configsV3ApiStub.getKafkaClusterConfig, {
+        cluster_id: TEST_LOCAL_KAFKA_CLUSTER.id,
+        name: "default.replication.factor",
+      });
+    });
+
+    it("should fall back to 3 for CCloud clusters when the broker config can't be read", async () => {
+      configsV3ApiStub.getKafkaClusterConfig.rejects(new Error("not allowed"));
+
+      const result = await getDefaultReplicationFactor(TEST_CCLOUD_KAFKA_CLUSTER);
+
+      assert.strictEqual(result, "3");
+    });
+
+    it("should fall back to 1 for non-CCloud clusters when the broker config can't be read", async () => {
+      configsV3ApiStub.getKafkaClusterConfig.rejects(new Error("not allowed"));
+
+      const result = await getDefaultReplicationFactor(TEST_LOCAL_KAFKA_CLUSTER);
+
+      assert.strictEqual(result, "1");
+    });
+
+    it("should fall back to the connection-type default when the broker config value is empty", async () => {
+      configsV3ApiStub.getKafkaClusterConfig.resolves({
+        name: "default.replication.factor",
+        value: null,
+      } as ClusterConfigData);
+
+      const result = await getDefaultReplicationFactor(TEST_LOCAL_KAFKA_CLUSTER);
+
+      assert.strictEqual(result, "1");
     });
   });
 

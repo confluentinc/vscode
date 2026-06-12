@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { fetchTopicAuthorizedOperations } from "../authz/topics";
-import type { TopicV3Api } from "../clients/kafkaRest";
+import type { ClusterConfigData, ConfigsV3Api, TopicV3Api } from "../clients/kafkaRest";
 import { ResponseError } from "../clients/kafkaRest";
 import {
   flinkDatabaseViewResourceChanged,
@@ -215,8 +215,7 @@ export async function createTopicCommand(item?: KafkaCluster): Promise<boolean> 
     value: "1",
   });
 
-  // CCloud Kafka clusters will return an error if replication factor is less than 3
-  const defaultReplicationFactor = isCCloud(cluster) ? "3" : "1";
+  const defaultReplicationFactor = await getDefaultReplicationFactor(cluster);
   const replicationFactor: string | undefined = await vscode.window.showInputBox({
     title: title,
     prompt: "Enter replication factor",
@@ -282,6 +281,43 @@ export async function createTopicCommand(item?: KafkaCluster): Promise<boolean> 
       }
     },
   );
+}
+
+/**
+ * Determine a sensible default replication factor to pre-fill when prompting the user to create a
+ * new topic.
+ *
+ * The cluster's brokers ultimately decide the minimum allowed replication factor (e.g. CCloud and
+ * many self-managed multi-broker clusters require `3`), so we query the cluster's
+ * `default.replication.factor` broker config and use that value. If the config can't be read (e.g.
+ * missing permissions, unsupported cluster), we fall back to a connection-type-based heuristic:
+ * `3` for CCloud, `1` otherwise.
+ *
+ * @param cluster The Kafka cluster the topic will be created in.
+ * @returns The default replication factor as a string, suitable for an input box `value`.
+ */
+export async function getDefaultReplicationFactor(cluster: KafkaCluster): Promise<string> {
+  // CCloud Kafka clusters will return an error if replication factor is less than 3.
+  const fallback = isCCloud(cluster) ? "3" : "1";
+  try {
+    const configsApi: ConfigsV3Api = (await getSidecar()).getConfigsV3Api(
+      cluster.id,
+      cluster.connectionId,
+    );
+    const config: ClusterConfigData = await configsApi.getKafkaClusterConfig({
+      cluster_id: cluster.id,
+      name: "default.replication.factor",
+    });
+    if (config.value != null && config.value !== "") {
+      return config.value;
+    }
+  } catch (error) {
+    logger.debug(
+      "couldn't read 'default.replication.factor' broker config; using connection-type default",
+      { error },
+    );
+  }
+  return fallback;
 }
 
 export async function copyBootstrapServers(item: KafkaCluster) {
