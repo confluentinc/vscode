@@ -3,15 +3,18 @@ import { expect } from "@playwright/test";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { test } from "../baseTest";
+import { FlinkStatementsView } from "../objects/views/FlinkStatementsView";
 import { Tag } from "../tags";
 import { ConnectionType } from "../types/connection";
 import { stopStatement, submitFlinkStatement } from "../utils/flinkStatement";
+import { openConfluentSidebar } from "../utils/workspace";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 test.describe("Flink Statements", { tag: [Tag.CCloud, Tag.FlinkStatements] }, () => {
-  let webview: FrameLocator;
+  let webview: FrameLocator | undefined;
+  let statementName: string | undefined;
 
   // tell the `connectionItem` fixture to set up a CCloud connection
   test.use({ connectionType: ConnectionType.Ccloud });
@@ -19,11 +22,24 @@ test.describe("Flink Statements", { tag: [Tag.CCloud, Tag.FlinkStatements] }, ()
   test.beforeEach(async ({ connectionItem }) => {
     // ensure connection tree item has resources available to work with
     await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+    webview = undefined;
+    statementName = undefined;
   });
 
-  test.afterEach(async () => {
-    // Stop the statement
-    await stopStatement(webview);
+  test.afterEach(async ({ page }) => {
+    if (!statementName) {
+      // submit failed before a statement was created; nothing to clean up
+      return;
+    }
+    // stop the statement (no-op if it already reached a terminal state) so it becomes deletable,
+    // then delete it - there is no global cleanup sweep, so each test removes its own statement
+    if (webview) {
+      await stopStatement(webview);
+    }
+    // the statement results open in an editor webview, so re-focus the Confluent sidebar before
+    // operating on the Flink Statements tree view (mirrors the topic fixture teardown)
+    await openConfluentSidebar(page);
+    await new FlinkStatementsView(page).deleteStatement(statementName);
   });
 
   const testCases = [
@@ -49,8 +65,8 @@ test.describe("Flink Statements", { tag: [Tag.CCloud, Tag.FlinkStatements] }, ()
 
   for (const testCase of testCases) {
     test(`${testCase.name}: should submit Flink Statement`, async ({ page, electronApp }) => {
-      // Submit the statement
-      await submitFlinkStatement(
+      // Submit the statement (capturing its name so afterEach can delete it)
+      statementName = await submitFlinkStatement(
         page,
         path.join(__dirname, `../../fixtures/flinksql/${testCase.fileName}`),
         electronApp,

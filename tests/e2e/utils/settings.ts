@@ -34,7 +34,19 @@ const DEFAULT_EDITOR_SETTINGS = {
   "editor.linkedEditing": false,
 };
 
-const DEFAULT_SETTINGS = { ...DEFAULT_EDITOR_SETTINGS, ...DEFAULT_UI_SETTINGS };
+const DEFAULT_EXTENSION_SETTINGS = {
+  // the extension generates Flink statement names as `<prefix>-vscode-...`, so a prefix of "e2e"
+  // yields `e2e-vscode-...`, matching E2E_RESOURCE_PREFIX so test-submitted statements are
+  // traceable like other E2E resources (statement names are generated extension-side, not built via
+  // e2eResourceName(), and the default is "flink", which would otherwise produce `flink-vscode-*`)
+  "confluent.flink.statementPrefix": "e2e",
+};
+
+const DEFAULT_SETTINGS = {
+  ...DEFAULT_EDITOR_SETTINGS,
+  ...DEFAULT_EXTENSION_SETTINGS,
+  ...DEFAULT_UI_SETTINGS,
+};
 
 /**
  * Write VS Code user settings directly to the `--user-data-dir` on disk.

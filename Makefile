@@ -33,7 +33,6 @@ setup-test-env:
 			echo "E2E_KAFKA_API_KEY=$(shell vault kv get -field=E2E_KAFKA_API_KEY stag/kv/semaphore/vscodeextension/testing)" >> .env; \
 			echo "E2E_KAFKA_API_SECRET=$(shell vault kv get -field=E2E_KAFKA_API_SECRET stag/kv/semaphore/vscodeextension/testing)" >> .env; \
 			echo "E2E_KAFKA_BOOTSTRAP_SERVERS=$(shell vault kv get -field=E2E_KAFKA_BOOTSTRAP_SERVERS stag/kv/semaphore/vscodeextension/testing)" >> .env; \
-			echo "E2E_KAFKA_CLUSTER_NAME=$(shell vault kv get -field=E2E_KAFKA_CLUSTER_NAME stag/kv/semaphore/vscodeextension/testing)" >> .env; \
 	elif [ "$(IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH)" = "stag.cpdev.cloud" ]; then \
 			echo "Setting up stag env vars for testing"; \
 			echo "E2E_USERNAME_STAG=$(shell vault kv get -field=E2E_USERNAME_STAG stag/kv/semaphore/vscodeextension/testing)" > .env; \

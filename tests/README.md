@@ -70,12 +70,19 @@ are being run:
     - `E2E_KAFKA_API_KEY`: API key for the Kafka cluster
     - `E2E_KAFKA_API_SECRET`: API secret for the Kafka cluster
     - `E2E_KAFKA_BOOTSTRAP_SERVERS`: Bootstrap servers for the Kafka cluster
-    - `E2E_KAFKA_CLUSTER_NAME`: Label/name of the Kafka cluster in the Resources view, used to
-      select the specific cluster when producing messages with the configured API key/secret
   - Including a configuration for a Schema Registry:
     - `E2E_SR_API_KEY`: API key for the Schema Registry server
     - `E2E_SR_API_SECRET`: API secret for the Schema Registry server
     - `E2E_SR_URL`: URL for the Schema Registry server
+
+Non-secret CCloud resource identifiers (the environment / Kafka cluster / Flink compute-pool display
+names used to pin the right resource in the Resources view) are **not** environment variables - they
+live in [`tests/e2e/test-resources.ts`](e2e/test-resources.ts) so changing them goes through a pull
+request. Update the literals there when the test environment is re-provisioned or renamed.
+
+Each test is responsible for deleting the resources it creates (topics, Flink statements, schema
+subjects, artifacts) in its own teardown - there is no global cleanup sweep, so a broad failure
+can't affect resources owned by other concurrent CI or local runs.
 
 If you're a Confluent engineer, you can run the following commands to populate the `.env` file with
 the environment variables listed above:

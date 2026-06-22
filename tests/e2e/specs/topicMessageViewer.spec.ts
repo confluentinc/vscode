@@ -42,21 +42,16 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
   ];
 
   for (const [connectionType, connectionTag] of connectionTypes) {
-    // specify the cluster label to use for all topics created in this suite so we can match it to
-    // the API key/secret used for producing messages, but only for CCLOUD connections
-    const clusterLabel =
-      connectionType === ConnectionType.Ccloud ? process.env.E2E_KAFKA_CLUSTER_NAME! : undefined;
-
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
       for (const compressionType of compressionTypes) {
         test.describe(`${compressionType} compression`, () => {
           // specify the connection type to use with the `connectionItem` fixture, and the topic to
-          // create with the `topic` fixture
+          // create with the `topic` fixture. CCloud cluster selection falls back to the name
+          // configured in test-resources.ts (see getKafkaCluster), so no clusterLabel is needed.
           test.use({
             connectionType,
             topicConfig: {
-              clusterLabel,
-              name: `e2e-topic-message-viewer-${compressionType}`,
+              name: `topic-message-viewer-${compressionType}`,
               produce: { compressionType },
             },
           });
@@ -67,7 +62,7 @@ test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer]
               { tag: [Tag.RequiresTopic] },
               async ({ page, topic: topicName }) => {
                 const topicsView = new TopicsView(page);
-                await topicsView.loadTopics(connectionType, entrypoint, clusterLabel);
+                await topicsView.loadTopics(connectionType, entrypoint);
 
                 // open the message viewer for the topic
                 const topicItem: TopicItem = await topicsView.getTopicItem(topicName);
