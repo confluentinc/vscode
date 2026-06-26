@@ -5,7 +5,7 @@ import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { FlinkDatabaseView } from "../objects/views/FlinkDatabaseView";
 import { Tag } from "../tags";
 import { ConnectionType } from "../types/connection";
-import { randomHexString } from "../utils/strings";
+import { e2eResourceName } from "../utils/uniqueName";
 
 test.describe("Flink UDFs", { tag: [Tag.CCloud, Tag.FlinkUDFs] }, () => {
   test.use({ connectionType: ConnectionType.Ccloud });
@@ -22,7 +22,7 @@ test.describe("Flink UDFs", { tag: [Tag.CCloud, Tag.FlinkUDFs] }, () => {
 
       test("should create a UDF via the guided flow", async ({ page, artifact }) => {
         const flinkDatabaseView = new FlinkDatabaseView(page);
-        const functionName = `test_udf_${randomHexString(6)}`;
+        const functionName = e2eResourceName("udf");
 
         await flinkDatabaseView.startGuidedUdfCreation(
           artifact,
@@ -61,7 +61,7 @@ test.describe("Flink UDFs", { tag: [Tag.CCloud, Tag.FlinkUDFs] }, () => {
 
       test("should delete a UDF", async ({ page, artifact }) => {
         const flinkDatabaseView = new FlinkDatabaseView(page);
-        const functionName = `test_udf_delete_${randomHexString(6)}`;
+        const functionName = e2eResourceName("udf-delete");
 
         await flinkDatabaseView.startGuidedUdfCreation(
           artifact,
