@@ -25,7 +25,23 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
   });
 
-  test.afterEach(async () => {
+  test.afterEach(async ({ page }) => {
+    // server-side cleanup: if the happy-path test didn't reach its inline delete
+    // (e.g. an earlier assertion failed), drop the orphaned artifact here so
+    // reruns don't pile up dangling artifacts on the cluster. Best-effort: a
+    // failed cleanup must not mask the original test failure, hence the catch.
+    if (uploadedArtifactName) {
+      try {
+        const artifactsView = new FlinkDatabaseView(page);
+        await openConfluentSidebar(page);
+        await artifactsView.ensureExpanded();
+        await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
+      } catch (err) {
+        console.warn(`failed to clean up orphaned artifact "${uploadedArtifactName}":`, err);
+      }
+      uploadedArtifactName = undefined;
+    }
+
     // Only delete temporary test files, not permanent fixtures
     const permanentFixture = path.join(fixturesDir, "udfs-simple.jar");
     if (artifactPath && existsSync(artifactPath) && artifactPath !== permanentFixture) {
@@ -35,6 +51,8 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
   /** The path to an artifact created by the test suite, to be cleaned up in afterEach. */
   let artifactPath: string | undefined;
+  /** The name of an artifact uploaded to CCloud, tracked so afterEach can clean it up if a happy-path test fails before its inline deletion runs. */
+  let uploadedArtifactName: string | undefined;
 
   const fixturesDir = path.join(__dirname, "..", "..", "fixtures", "flink-artifacts");
 
@@ -82,7 +100,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
 
         await artifactsView.ensureExpanded();
         await artifactsView.loadArtifacts(entrypoint);
-        const uploadedArtifactName = await startUploadFlow(
+        const artifactName = await startUploadFlow(
           entrypoint,
           page,
           electronApp,
@@ -91,6 +109,10 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
           region,
           artifactPath,
         );
+        // record the upload so afterEach can clean it up if the rest of the
+        // test throws before the inline deletion below
+        uploadedArtifactName = artifactName;
+
         await artifactsView.waitForUploadSuccess();
         const notificationArea = new NotificationArea(page);
         const successNotifications = notificationArea.infoNotifications.filter({
@@ -98,15 +120,15 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
         });
         await expect(successNotifications.first()).toBeVisible();
         const artifactViewItem = await artifactsView.getDatabaseResourceByLabel(
-          uploadedArtifactName,
+          artifactName,
           artifactsView.artifactsContainer,
         );
 
         await expect(artifactViewItem).toBeVisible();
-        await artifactsView.deleteFlinkArtifact(uploadedArtifactName);
-        await expect(artifactsView.artifacts.filter({ hasText: uploadedArtifactName })).toHaveCount(
-          0,
-        );
+        await artifactsView.deleteFlinkArtifact(artifactName);
+        await expect(artifactsView.artifacts.filter({ hasText: artifactName })).toHaveCount(0);
+        // inline deletion succeeded, so afterEach has no server-side work to do
+        uploadedArtifactName = undefined;
       });
 
       test(`should fail to upload a jar exceeding the file limit [${provider}/${region}] - ${testName}`, async ({
