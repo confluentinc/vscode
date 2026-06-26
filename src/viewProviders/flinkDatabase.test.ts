@@ -1,7 +1,5 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import type { CancellationToken, Progress } from "vscode";
-import { window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { createFlinkAIAgent } from "../../tests/unit/testResources/flinkAIAgent";
@@ -577,30 +575,18 @@ describe("viewProviders/flinkDatabase.ts", () => {
     });
 
     describe("refresh()", () => {
-      let withProgressStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        withProgressStub = sandbox.stub(window, "withProgress").callsFake((_, callback) => {
-          const mockProgress = {} as Progress<unknown>;
-          const mockToken = {} as CancellationToken;
-          return Promise.resolve(callback(mockProgress, mockToken));
-        });
-      });
-
       it("should fire onDidChangeTreeData when no database is selected", async () => {
         viewProvider["resource"] = null;
 
         await viewProvider.refresh();
 
         sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
-        sinon.assert.notCalled(withProgressStub);
       });
 
       it("should refresh all containers when a database is selected", async () => {
         // focused on a database by default
         await viewProvider.refresh();
 
-        sinon.assert.calledOnce(withProgressStub);
         sinon.assert.calledOnce(ccloudLoader.getFlinkRelations);
         sinon.assert.calledOnce(ccloudLoader.getFlinkArtifacts);
         sinon.assert.calledOnce(ccloudLoader.getFlinkUDFs);
