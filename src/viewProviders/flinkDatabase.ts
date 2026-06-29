@@ -13,16 +13,16 @@ import {
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { IconNames } from "../icons";
 import { CCloudResourceLoader } from "../loaders";
+import {
+  FlinkDatabaseContainerLabel,
+  FlinkDatabaseResourceContainer,
+} from "../models/containers/flinkDatabaseResourceContainer";
 import { FlinkAIAgent, FlinkAIAgentTreeItem } from "../models/flinkAiAgent";
 import { FlinkAIConnection, FlinkAIConnectionTreeItem } from "../models/flinkAiConnection";
 import { FlinkAIModel, FlinkAIModelTreeItem } from "../models/flinkAiModel";
 import { FlinkAITool, FlinkAIToolTreeItem } from "../models/flinkAiTool";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
 import type { FlinkAIResource, FlinkDatabaseResource } from "../models/flinkDatabaseResource";
-import {
-  FlinkDatabaseContainerLabel,
-  FlinkDatabaseResourceContainer,
-} from "../models/containers/flinkDatabaseResourceContainer";
 import { FlinkRelation, FlinkRelationColumn } from "../models/flinkRelation";
 import { FlinkTypeNode } from "../models/flinkTypeNode";
 import { FlinkUdf, FlinkUdfTreeItem } from "../models/flinkUDF";
@@ -339,21 +339,18 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
       `refreshing entire Flink Database view for ${database.name} (${database.id})`,
     );
 
-    await this.withProgress(
-      "Loading Flink Database resources...",
-      async () => {
-        await Promise.allSettled([
-          this.refreshRelationsContainer(database, forceDeepRefresh),
-          this.refreshArtifactsContainer(database, forceDeepRefresh),
-          this.refreshUDFsContainer(database, forceDeepRefresh),
-          this.refreshAIConnectionsContainer(database, forceDeepRefresh),
-          this.refreshAIToolsContainer(database, forceDeepRefresh),
-          this.refreshAIModelsContainer(database, forceDeepRefresh),
-          this.refreshAIAgentsContainer(database, forceDeepRefresh),
-        ]);
-      },
-      false,
-    );
+    // each container manages its own loading state (setLoading/setLoaded), so we deliberately do
+    // not raise a view-level progress indicator here: it would keep the whole pane busy until the
+    // slowest container settles
+    await Promise.allSettled([
+      this.refreshRelationsContainer(database, forceDeepRefresh),
+      this.refreshArtifactsContainer(database, forceDeepRefresh),
+      this.refreshUDFsContainer(database, forceDeepRefresh),
+      this.refreshAIConnectionsContainer(database, forceDeepRefresh),
+      this.refreshAIToolsContainer(database, forceDeepRefresh),
+      this.refreshAIModelsContainer(database, forceDeepRefresh),
+      this.refreshAIAgentsContainer(database, forceDeepRefresh),
+    ]);
 
     this._onDidChangeTreeData.fire();
   }
