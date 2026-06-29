@@ -48,6 +48,16 @@ export class FlinkDatabaseView extends SearchableView {
     return this.treeItems.and(this.page.locator('[aria-label^="Flink Artifact: "]'));
   }
 
+  /** Get the UDFs container item. */
+  get udfsContainer(): Locator {
+    return this.treeItems.filter({ hasText: /^UDFs/ }).first();
+  }
+
+  /** UDF items based on their accessibilityInformation label. */
+  get udfs(): Locator {
+    return this.treeItems.and(this.page.locator('[aria-label^="Flink UDF: "]'));
+  }
+
   /**
    * Load the Flink Artifacts view by selecting a Kafka cluster as the Flink database,
    * using the specified entrypoint.
@@ -203,6 +213,63 @@ export class FlinkDatabaseView extends SearchableView {
     await this.expandContainer(this.artifactsContainer);
   }
 
+  /** Expand the UDFs container to show any available UDF tree items. */
+  async expandUdfsContainer(): Promise<void> {
+    await this.expandContainer(this.udfsContainer);
+  }
+
+  /**
+   * Run the "Register As UDF" guided flow for the given artifact, providing `className` and
+   * `functionName` to the series of quickinput boxes.
+   */
+  async startGuidedUdfCreation(
+    artifactName: string,
+    className: string,
+    functionName: string,
+  ): Promise<void> {
+    await this.expandArtifactsContainer();
+    const artifactLocator = this.artifacts.filter({ hasText: artifactName });
+    await expect(artifactLocator).toHaveCount(1);
+    const artifactItem = new ViewItem(this.page, artifactLocator.first());
+    await artifactItem.rightClickContextMenuAction("Register As UDF");
+
+    const classNameInput = new InputBox(this.page);
+    await expect(classNameInput.locator).toBeVisible();
+    await classNameInput.input.fill(className);
+    await classNameInput.confirm();
+
+    const functionNameInput = new InputBox(this.page);
+    await expect(functionNameInput.locator).toBeVisible();
+    await functionNameInput.input.fill(functionName);
+    await functionNameInput.confirm();
+  }
+
+  /** Open the "Register With Flink SQL" document for the given artifact. */
+  async openUdfRegistrationDocument(artifactName: string): Promise<void> {
+    await this.expandArtifactsContainer();
+    const artifactLocator = this.artifacts.filter({ hasText: artifactName });
+    await expect(artifactLocator).toHaveCount(1);
+    const artifactItem = new ViewItem(this.page, artifactLocator.first());
+    await artifactItem.rightClickContextMenuAction("Register With Flink SQL");
+  }
+
+  /** Delete a Flink UDF via its tree-item context menu. */
+  async deleteFlinkUdf(functionName: string): Promise<void> {
+    // scope to UDF tree items so the search result can't match a same-named item from a
+    // different container (e.g. an artifact reusing the suffix)
+    const udfLocator = await this.getItemByLabel(functionName, this.udfs);
+    const udfItem = new ViewItem(this.page, udfLocator);
+    await udfItem.locator.scrollIntoViewIfNeeded();
+    await expect(udfItem.locator).toBeVisible();
+
+    await udfItem.rightClickContextMenuAction("Delete UDF");
+    const notificationArea = new NotificationArea(this.page);
+    const successNotifications = notificationArea.infoNotifications.filter({
+      hasText: "deleted successfully",
+    });
+    await expect(successNotifications).not.toHaveCount(0);
+  }
+
   /**
    * Click the upload button on the Artifacts container to initiate the artifact upload flow.
    */
@@ -282,9 +349,10 @@ export class FlinkDatabaseView extends SearchableView {
    * @param artifactName - The name of the artifact to delete
    */
   async deleteFlinkArtifact(artifactName: string): Promise<void> {
-    const artifactLocator = this.artifacts.filter({ hasText: artifactName });
-    await expect(artifactLocator).toHaveCount(1);
-    const artifactItem = new ViewItem(this.page, artifactLocator.first());
+    // scope to artifact tree items so the search result can't match a same-named item from a
+    // different container (e.g. a UDF reusing the suffix)
+    const artifactLocator = await this.getItemByLabel(artifactName, this.artifacts);
+    const artifactItem = new ViewItem(this.page, artifactLocator);
     await artifactItem.locator.scrollIntoViewIfNeeded();
     await expect(artifactItem.locator).toBeVisible();
 

@@ -405,7 +405,7 @@ promotions:
     parameters:
       env_vars:
         - name: TEST_SUITE
-          default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts"
+          default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts|@flink-udfs"
           description: "Playwright E2E test tags to run, separated by |. By default, runs the smoketests and CUJ-related tests."
         - name: VSCODE_VERSION
           default_value: "stable"
