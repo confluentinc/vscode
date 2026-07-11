@@ -5,9 +5,11 @@ import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
 import { createWriteStream, existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
+import { fileURLToPath } from "url";
 import { DEBUG_LOGGING_ENABLED } from "./constants";
 import { NotificationArea } from "./objects/notifications/NotificationArea";
 import { Quickpick } from "./objects/quickInputs/Quickpick";
+import { FlinkDatabaseView, SelectFlinkDatabase } from "./objects/views/FlinkDatabaseView";
 import {
   DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
   SelectKafkaCluster,
@@ -16,6 +18,7 @@ import {
 import type { CCloudConnectionItem } from "./objects/views/viewItems/CCloudConnectionItem";
 import type { DirectConnectionItem } from "./objects/views/viewItems/DirectConnectionItem";
 import type { LocalConnectionItem } from "./objects/views/viewItems/LocalConnectionItem";
+import type { ArtifactConfig } from "./types/artifact";
 import type { DirectConnectionOptions, LocalConnectionOptions } from "./types/connection";
 import { ConnectionType, FormConnectionType, SupportedAuthType } from "./types/connection";
 import type { TopicConfig } from "./types/topic";
@@ -96,6 +99,16 @@ interface VSCodeFixtures {
    * `name` for tests to reference.
    */
   topic: string;
+
+  /**
+   * Configuration options for creating an artifact with the {@linkcode artifact} fixture.
+   */
+  artifactConfig: ArtifactConfig | undefined;
+  /**
+   * Set up a Flink artifact based on the {@linkcode artifactConfig} option and return the
+   * artifact `name` for tests to reference. Tears down the artifact after the test completes.
+   */
+  artifact: string;
 }
 
 export const test = testBase.extend<VSCodeFixtures>({
@@ -338,6 +351,56 @@ export const test = testBase.extend<VSCodeFixtures>({
       topicConfig.clusterLabel,
     );
     await topicsView.deleteTopic(topicName);
+  },
+
+  // no default value, must be provided by test
+  artifactConfig: [undefined, { option: true }],
+
+  artifact: async ({ electronApp, page, connectionItem, artifactConfig }, use) => {
+    if (!artifactConfig) {
+      throw new Error("artifactConfig must be set, like `test.use({ artifactConfig: {} })`");
+    }
+
+    await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+
+    const entrypoint = artifactConfig.entrypoint ?? SelectFlinkDatabase.FromDatabaseViewButton;
+    const jarPath =
+      artifactConfig.jarPath ??
+      path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "fixtures",
+        "flink-artifacts",
+        "udfs-simple.jar",
+      );
+
+    const artifactsView = new FlinkDatabaseView(page);
+
+    if (artifactConfig.provider && artifactConfig.region) {
+      await artifactsView.selectKafkaClusterByProviderRegion(
+        artifactConfig.provider,
+        artifactConfig.region,
+      );
+    } else {
+      await artifactsView.ensureExpanded();
+      await artifactsView.loadArtifacts(entrypoint);
+    }
+
+    // track the artifact name across try/finally so cleanup runs even if a
+    // post-upload setup step throws before use()
+    let artifactName: string | undefined;
+    try {
+      artifactName = await artifactsView.uploadFlinkArtifact(electronApp, jarPath);
+      await artifactsView.waitForUploadSuccess();
+      await use(artifactName);
+    } finally {
+      if (artifactName) {
+        await openConfluentSidebar(page);
+        await artifactsView.ensureExpanded();
+        // deleteFlinkArtifact searches internally; expanding here could be hidden by a prior search
+        await artifactsView.deleteFlinkArtifact(artifactName);
+      }
+    }
   },
 });
 
