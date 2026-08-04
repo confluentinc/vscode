@@ -16,6 +16,7 @@ import {
 import { TEST_CCLOUD_ORGANIZATION_ID } from "../../tests/unit/testResources/organization";
 import { createResponseError } from "../../tests/unit/testUtils";
 import type {
+  CreateSqlv1Statement201Response,
   CreateSqlv1StatementOperationRequest,
   GetSqlv1Statement200Response,
   GetSqlv1StatementResult200Response,
@@ -275,19 +276,20 @@ describe("flinkSql/statementUtils.ts", function () {
           snapshotMode,
         };
 
-        const createSqlv1StatementStub = sandbox.stub().resolves(TEST_CCLOUD_FLINK_STATEMENT);
+        const stubbedStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
+        stubbedStatementsApi.createSqlv1Statement.resolves(
+          TEST_CCLOUD_FLINK_STATEMENT as unknown as CreateSqlv1Statement201Response,
+        );
         sandbox
           .stub(flinkStatementModels, "restFlinkStatementToModel")
           .returns(TEST_CCLOUD_FLINK_STATEMENT);
-        mockSidecar.getFlinkSqlStatementsApi.returns({
-          createSqlv1Statement: createSqlv1StatementStub,
-        } as any);
+        mockSidecar.getFlinkSqlStatementsApi.returns(stubbedStatementsApi);
 
         await submitFlinkStatement(params);
 
-        sinon.assert.calledOnce(createSqlv1StatementStub);
-        const request = createSqlv1StatementStub.firstCall
-          .args[0] as CreateSqlv1StatementOperationRequest;
+        sinon.assert.calledOnce(stubbedStatementsApi.createSqlv1Statement);
+        const request: CreateSqlv1StatementOperationRequest =
+          stubbedStatementsApi.createSqlv1Statement.firstCall.args[0];
         const spec = request.CreateSqlv1StatementRequest?.spec as {
           properties?: Record<string, string>;
         };
