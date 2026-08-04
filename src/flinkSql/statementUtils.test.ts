@@ -16,6 +16,7 @@ import {
 import { TEST_CCLOUD_ORGANIZATION_ID } from "../../tests/unit/testResources/organization";
 import { createResponseError } from "../../tests/unit/testUtils";
 import type {
+  CreateSqlv1StatementOperationRequest,
   GetSqlv1Statement200Response,
   GetSqlv1StatementResult200Response,
 } from "../clients/flinkSql";
@@ -24,7 +25,7 @@ import { uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
 import type { CCloudResourceLoader } from "../loaders";
 import * as flinkStatementModels from "../models/flinkStatement";
-import { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
+import { FlinkSnapshotMode, FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import type { EnvironmentId } from "../models/resource";
 import type * as sidecar from "../sidecar";
@@ -250,6 +251,47 @@ describe("flinkSql/statementUtils.ts", function () {
           TEST_CCLOUD_FLINK_STATEMENT,
           TEST_CCLOUD_FLINK_COMPUTE_POOL,
         );
+      });
+    }
+
+    const snapshotModeCases: Array<{
+      snapshotMode: FlinkSnapshotMode | undefined;
+      expectedProperty: string | undefined;
+    }> = [
+      { snapshotMode: undefined, expectedProperty: undefined },
+      { snapshotMode: FlinkSnapshotMode.STREAMING, expectedProperty: undefined },
+      { snapshotMode: FlinkSnapshotMode.BATCH, expectedProperty: "now" },
+    ];
+
+    for (const { snapshotMode, expectedProperty } of snapshotModeCases) {
+      it(`sets "sql.snapshot.mode" property correctly for snapshotMode=${snapshotMode}`, async function () {
+        const params: IFlinkStatementSubmitParameters = {
+          statement: "SELECT * FROM my_table",
+          statementName: "test-statement",
+          computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+          organizationId: TEST_CCLOUD_ORGANIZATION_ID,
+          hidden: false,
+          properties: new FlinkSpecProperties({}),
+          snapshotMode,
+        };
+
+        const createSqlv1StatementStub = sandbox.stub().resolves(TEST_CCLOUD_FLINK_STATEMENT);
+        sandbox
+          .stub(flinkStatementModels, "restFlinkStatementToModel")
+          .returns(TEST_CCLOUD_FLINK_STATEMENT);
+        mockSidecar.getFlinkSqlStatementsApi.returns({
+          createSqlv1Statement: createSqlv1StatementStub,
+        } as any);
+
+        await submitFlinkStatement(params);
+
+        sinon.assert.calledOnce(createSqlv1StatementStub);
+        const request = createSqlv1StatementStub.firstCall
+          .args[0] as CreateSqlv1StatementOperationRequest;
+        const spec = request.CreateSqlv1StatementRequest?.spec as {
+          properties?: Record<string, string>;
+        };
+        assert.strictEqual(spec.properties?.["sql.snapshot.mode"], expectedProperty);
       });
     }
   });
@@ -484,6 +526,18 @@ describe("flinkSql/statementUtils.ts", function () {
 
       sinon.assert.calledWith(rmSetUriMetadataStub, uri, {
         [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+      });
+
+      sinon.assert.calledWith(uriMetadataSetFireStub, uri);
+    });
+
+    it("should set the snapshot mode metadata when provided", async () => {
+      await setFlinkDocumentMetadata(uri, {
+        snapshotMode: FlinkSnapshotMode.BATCH,
+      });
+
+      sinon.assert.calledWith(rmSetUriMetadataStub, uri, {
+        [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: FlinkSnapshotMode.BATCH,
       });
 
       sinon.assert.calledWith(uriMetadataSetFireStub, uri);

@@ -15,7 +15,11 @@ import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import type { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
-import { restFlinkStatementToModel, TERMINAL_PHASES } from "../models/flinkStatement";
+import {
+  FlinkSnapshotMode,
+  restFlinkStatementToModel,
+  TERMINAL_PHASES,
+} from "../models/flinkStatement";
 import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { getSidecar } from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
@@ -47,6 +51,12 @@ export interface IFlinkStatementSubmitParameters {
   properties: FlinkSpecProperties;
 
   /**
+   * Batch ("snapshot") vs streaming execution mode to submit the statement with.
+   * Defaults to {@link FlinkSnapshotMode.STREAMING} when omitted.
+   */
+  snapshotMode?: FlinkSnapshotMode;
+
+  /**
    * False if user directly gestured / wrote this statement, true if it was created by the extension
    * (system catalog queries to support our view providers, ...).
    */
@@ -61,6 +71,11 @@ export async function submitFlinkStatement(
 ): Promise<FlinkStatement> {
   const handle = await getSidecar();
 
+  const properties: Record<string, string> = params.properties.toProperties();
+  if (params.snapshotMode === FlinkSnapshotMode.BATCH) {
+    properties["sql.snapshot.mode"] = "now";
+  }
+
   const requestInner: CreateSqlv1StatementRequest = {
     api_version: CreateSqlv1StatementRequestApiVersionEnum.SqlV1,
     kind: CreateSqlv1StatementRequestKindEnum.Statement,
@@ -70,7 +85,7 @@ export async function submitFlinkStatement(
     spec: {
       statement: params.statement,
       compute_pool_id: params.computePool.id,
-      properties: params.properties.toProperties(),
+      properties,
     },
   };
 
@@ -429,11 +444,12 @@ export async function setFlinkDocumentMetadata(
     database?: CCloudFlinkDbKafkaCluster;
     computePool?: CCloudFlinkComputePool;
     fromWorkspace?: boolean;
+    snapshotMode?: FlinkSnapshotMode;
   },
 ): Promise<void> {
   const metadata: UriMetadata = {};
 
-  const { catalog: environment, database, computePool, fromWorkspace } = opts;
+  const { catalog: environment, database, computePool, fromWorkspace, snapshotMode } = opts;
 
   if (environment) {
     metadata[UriMetadataKeys.FLINK_CATALOG_ID] = environment.id;
@@ -451,6 +467,10 @@ export async function setFlinkDocumentMetadata(
 
   if (fromWorkspace) {
     metadata[UriMetadataKeys.FLINK_FROM_WORKSPACE] = true;
+  }
+
+  if (snapshotMode) {
+    metadata[UriMetadataKeys.FLINK_SNAPSHOT_MODE] = snapshotMode;
   }
 
   logger.debug(`setting Flink catalog / database / compute pool metadata for URI`, {
