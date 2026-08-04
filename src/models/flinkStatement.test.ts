@@ -9,6 +9,7 @@ import type { SqlV1StatementStatus } from "../clients/flinkSql";
 import { CCLOUD_BASE_PATH } from "../constants";
 import { IconNames } from "../icons";
 import {
+  FlinkSnapshotMode,
   FlinkStatement,
   FlinkStatementTreeItem,
   Phase,
@@ -293,6 +294,24 @@ describe("FlinkStatement", () => {
         });
         assert.strictEqual(flinkStatement.canRequestResults, expected);
       });
+    });
+  });
+
+  describe("mode", () => {
+    it("returns STREAMING when sql.snapshot.mode property is absent", () => {
+      const statement = createFlinkStatement({});
+      assert.strictEqual(statement.mode, FlinkSnapshotMode.STREAMING);
+    });
+
+    it("returns BATCH when sql.snapshot.mode property is 'now'", () => {
+      const statement = createFlinkStatement({ mode: FlinkSnapshotMode.BATCH });
+      assert.strictEqual(statement.mode, FlinkSnapshotMode.BATCH);
+    });
+
+    it("returns STREAMING when sql.snapshot.mode property is some other unrecognized value", () => {
+      const statement = createFlinkStatement({});
+      statement.spec.properties = { ...statement.spec.properties, "sql.snapshot.mode": "later" };
+      assert.strictEqual(statement.mode, FlinkSnapshotMode.STREAMING);
     });
   });
 
