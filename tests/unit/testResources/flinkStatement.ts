@@ -1,7 +1,7 @@
 import type { ColumnDetails, SqlV1StatementStatus } from "../../../src/clients/flinkSql";
 import { ConnectionType } from "../../../src/clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
-import { FlinkStatement, Phase } from "../../../src/models/flinkStatement";
+import { FlinkSnapshotMode, FlinkStatement, Phase } from "../../../src/models/flinkStatement";
 import type { EnvironmentId, OrganizationId } from "../../../src/models/resource";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_PROVIDER, TEST_CCLOUD_REGION } from "./environments";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "./flinkComputePool";
@@ -27,6 +27,8 @@ export interface CreateFlinkStatementArgs {
   appendOnly?: boolean;
   upsertColumns?: number[];
   schemaColumns?: ColumnDetails[];
+
+  mode?: FlinkSnapshotMode;
 }
 
 export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): FlinkStatement {
@@ -65,6 +67,7 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
         "sql.current-catalog": TEST_CCLOUD_ENVIRONMENT.name,
         "sql.current-database": TEST_CCLOUD_KAFKA_CLUSTER.name,
         "sql.local-time-zone": "GMT-04:00",
+        ...(overrides.mode === FlinkSnapshotMode.BATCH ? { "sql.snapshot.mode": "now" } : {}),
       },
       stopped: false,
     },
