@@ -14,6 +14,7 @@ import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSe
 import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { FlinkSnapshotMode } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import type { EnvironmentId } from "../models/resource";
 import * as ccloud from "../sidecar/connections/ccloud";
@@ -27,6 +28,7 @@ import {
   getCatalogDatabaseFromMetadata,
   getComputePoolFromMetadata,
   getDefaultCatalogDatabase,
+  getSnapshotModeFromMetadata,
 } from "./flinkSqlProvider";
 
 const testUri = Uri.parse("file:///test/file.sql");
@@ -202,11 +204,22 @@ describe("codelens/flinkSqlProvider.ts", () => {
 
         const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
-        assert.strictEqual(codeLenses.length, 3);
+        assert.strictEqual(codeLenses.length, 4);
 
-        const poolLens = codeLenses[0];
-        const dbLens = codeLenses[1];
-        const resetLens = codeLenses[2];
+        const snapshotModeLens = codeLenses[0];
+        const poolLens = codeLenses[1];
+        const dbLens = codeLenses[2];
+        const resetLens = codeLenses[3];
+
+        assert.strictEqual(
+          snapshotModeLens.command?.command,
+          "confluent.document.flinksql.toggleSnapshotMode",
+        );
+        assert.strictEqual(snapshotModeLens.command?.title, "Mode: Streaming");
+        assert.deepStrictEqual(snapshotModeLens.command?.arguments, [
+          fakeDocument.uri,
+          FlinkSnapshotMode.STREAMING,
+        ]);
 
         assert.strictEqual(
           dbLens.command?.command,
@@ -244,11 +257,18 @@ describe("codelens/flinkSqlProvider.ts", () => {
 
         const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
-        assert.strictEqual(codeLenses.length, 3);
+        assert.strictEqual(codeLenses.length, 4);
 
-        const poolLens = codeLenses[0];
-        const dbLens = codeLenses[1];
-        const resetLens = codeLenses[2];
+        const snapshotModeLens = codeLenses[0];
+        const poolLens = codeLenses[1];
+        const dbLens = codeLenses[2];
+        const resetLens = codeLenses[3];
+
+        assert.strictEqual(
+          snapshotModeLens.command?.command,
+          "confluent.document.flinksql.toggleSnapshotMode",
+        );
+        assert.strictEqual(snapshotModeLens.command?.title, "Mode: Streaming");
 
         assert.strictEqual(
           dbLens.command?.command,
@@ -291,16 +311,27 @@ describe("codelens/flinkSqlProvider.ts", () => {
 
       const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
-      assert.strictEqual(codeLenses.length, 4);
+      assert.strictEqual(codeLenses.length, 5);
 
       const submitLens = codeLenses[0];
-      const poolLens = codeLenses[1];
-      const dbLens = codeLenses[2];
-      const resetLens = codeLenses[3];
+      const snapshotModeLens = codeLenses[1];
+      const poolLens = codeLenses[2];
+      const dbLens = codeLenses[3];
+      const resetLens = codeLenses[4];
 
       assert.strictEqual(submitLens.command?.command, "confluent.statements.create");
       assert.strictEqual(submitLens.command?.title, "▶️ Submit Statement");
       assert.deepStrictEqual(submitLens.command?.arguments, [fakeDocument.uri, pool, database]);
+
+      assert.strictEqual(
+        snapshotModeLens.command?.command,
+        "confluent.document.flinksql.toggleSnapshotMode",
+      );
+      assert.strictEqual(snapshotModeLens.command?.title, "Mode: Streaming");
+      assert.deepStrictEqual(snapshotModeLens.command?.arguments, [
+        fakeDocument.uri,
+        FlinkSnapshotMode.STREAMING,
+      ]);
 
       assert.strictEqual(dbLens.command?.command, "confluent.document.flinksql.setCCloudDatabase");
       assert.strictEqual(
@@ -322,6 +353,56 @@ describe("codelens/flinkSqlProvider.ts", () => {
       );
       assert.strictEqual(resetLens.command?.title, "Clear Settings");
       assert.deepStrictEqual(resetLens.command?.arguments, [fakeDocument.uri]);
+    });
+
+    it("should provide 'Mode: Snapshot' codelens when snapshot mode metadata is set to BATCH", async () => {
+      const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+      const database: CCloudKafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+      resourceManagerStub.getUriMetadata.resolves({
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
+        [UriMetadataKeys.FLINK_CATALOG_ID]: TEST_CCLOUD_ENVIRONMENT.id,
+        [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT.name,
+        [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
+        [UriMetadataKeys.FLINK_DATABASE_NAME]: database.name,
+        [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: FlinkSnapshotMode.BATCH,
+      });
+      ccloudLoaderStub.getEnvironments.resolves([testEnvWithPoolAndCluster]);
+
+      const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
+
+      const snapshotModeLens = codeLenses[1];
+      assert.strictEqual(
+        snapshotModeLens.command?.command,
+        "confluent.document.flinksql.toggleSnapshotMode",
+      );
+      assert.strictEqual(snapshotModeLens.command?.title, "Mode: Snapshot");
+      assert.deepStrictEqual(snapshotModeLens.command?.arguments, [
+        fakeDocument.uri,
+        FlinkSnapshotMode.BATCH,
+      ]);
+    });
+  });
+
+  describe("getSnapshotModeFromMetadata()", () => {
+    it("should return STREAMING when metadata is undefined", () => {
+      assert.strictEqual(getSnapshotModeFromMetadata(undefined), FlinkSnapshotMode.STREAMING);
+    });
+
+    it("should return STREAMING when snapshot mode metadata is unset", () => {
+      const metadata: UriMetadata = { [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "pool-123" };
+      assert.strictEqual(getSnapshotModeFromMetadata(metadata), FlinkSnapshotMode.STREAMING);
+    });
+
+    it("should return STREAMING when snapshot mode metadata is explicitly cleared (null)", () => {
+      const metadata: UriMetadata = { [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: null };
+      assert.strictEqual(getSnapshotModeFromMetadata(metadata), FlinkSnapshotMode.STREAMING);
+    });
+
+    it("should return BATCH when snapshot mode metadata is set to BATCH", () => {
+      const metadata: UriMetadata = {
+        [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: FlinkSnapshotMode.BATCH,
+      };
+      assert.strictEqual(getSnapshotModeFromMetadata(metadata), FlinkSnapshotMode.BATCH);
     });
   });
 

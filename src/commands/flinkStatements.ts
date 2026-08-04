@@ -1,6 +1,9 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
+import {
+  getCatalogDatabaseFromMetadata,
+  getSnapshotModeFromMetadata,
+} from "../codelens/flinkSqlProvider";
 import {
   FLINKSTATEMENT_URI_SCHEME,
   FlinkStatementDocumentProvider,
@@ -128,6 +131,7 @@ export async function submitFlinkStatementCommand(
   const document = await getEditorOrFileContents(statementBodyUri);
   const statement = document.content;
   const uriMetadata = await ResourceManager.getInstance().getUriMetadata(statementBodyUri);
+  const snapshotMode = getSnapshotModeFromMetadata(uriMetadata);
 
   // 2. Choose the statement name
   const statementName = await determineFlinkStatementName();
@@ -184,6 +188,7 @@ export async function submitFlinkStatementCommand(
       organizationId: organization.id,
       hidden: false, // Do not create a hidden statement, the user authored it.
       properties: currentDatabaseKafkaCluster.toFlinkSpecProperties(),
+      snapshotMode,
     };
 
     const newStatement = await submitFlinkStatement(submission);
@@ -197,6 +202,7 @@ export async function submitFlinkStatementCommand(
         compute_pool_id: computePool.id,
         failure_reason: newStatement.status.detail,
         from_flink_workspace: isFromFlinkWorkspace(uriMetadata),
+        snapshot_mode: snapshotMode,
       });
 
       // limit the error message content so the notification isn't hidden automatically
@@ -211,6 +217,7 @@ export async function submitFlinkStatementCommand(
       sql_kind: newStatement.sqlKind,
       compute_pool_id: computePool.id,
       from_flink_workspace: isFromFlinkWorkspace(uriMetadata),
+      snapshot_mode: snapshotMode,
     });
 
     // Refresh the statements view onto the compute pool in question,

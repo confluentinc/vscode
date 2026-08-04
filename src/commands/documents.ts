@@ -14,6 +14,7 @@ import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { FlinkSnapshotMode } from "../models/flinkStatement";
 import type { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { showInfoNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
@@ -142,6 +143,26 @@ export async function setCCloudDatabaseForUriCommand(uri?: Uri, pool?: CCloudFli
   }
 }
 
+export async function toggleSnapshotModeForUriCommand(
+  uri?: Uri,
+  currentMode?: FlinkSnapshotMode,
+): Promise<void> {
+  if (!(uri instanceof Uri)) {
+    return;
+  }
+  if (!hasCCloudAuthSession()) {
+    // shouldn't happen since callers shouldn't be able to call this command without a valid CCloud
+    // connection, but just in case
+    logger.warn("not toggling snapshot mode for URI: no CCloud auth session");
+    return;
+  }
+
+  const newMode: FlinkSnapshotMode =
+    currentMode === FlinkSnapshotMode.BATCH ? FlinkSnapshotMode.STREAMING : FlinkSnapshotMode.BATCH;
+
+  await setFlinkDocumentMetadata(uri, { snapshotMode: newMode });
+}
+
 export async function resetCCloudMetadataForUriCommand(uri?: Uri) {
   if (!(uri instanceof Uri)) {
     return;
@@ -163,6 +184,7 @@ export async function resetCCloudMetadataForUriCommand(uri?: Uri) {
     [UriMetadataKeys.FLINK_CATALOG_NAME]: null,
     [UriMetadataKeys.FLINK_DATABASE_ID]: null,
     [UriMetadataKeys.FLINK_DATABASE_NAME]: null,
+    [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: null,
   });
   uriMetadataSet.fire(uri);
 }
@@ -180,6 +202,10 @@ export function registerDocumentCommands(): Disposable[] {
     registerCommandWithLogging(
       "confluent.document.flinksql.resetCCloudMetadata",
       resetCCloudMetadataForUriCommand,
+    ),
+    registerCommandWithLogging(
+      "confluent.document.flinksql.toggleSnapshotMode",
+      toggleSnapshotModeForUriCommand,
     ),
   ];
 }
