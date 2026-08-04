@@ -51,3 +51,32 @@ assignment instead: `obj["methodName"] = sandbox.stub()`.
 
 - Unit test fixtures in `tests/fixtures/`
 - Shared stubs in `tests/stubs/`
+
+## macOS: Local Electron Test Host Won't Launch (e.g. VS Code 1.131.0)
+
+`npx gulp test` downloads a real VS Code build into `.vscode-test/vscode-darwin-arm64-<version>/`
+(gitignored cache) and spawns it via `@vscode/test-electron@2.3.9` as the Extension Development
+Host. Two independent problems show up together on newer VS Code releases (first seen with 1.131.0):
+
+**1. `spawn .../Electron ENOENT`** — `@vscode/test-electron@2.3.9` hardcodes the launcher binary
+name as `Electron`, but this VS Code build ships it renamed to `Code`. Fix locally (never commit —
+this only touches the gitignored cache):
+
+```bash
+cd ".vscode-test/vscode-darwin-arm64-<version>/Visual Studio Code.app/Contents/MacOS/"
+ln -s Code Electron
+```
+
+**2. `"Visual Studio Code" is damaged and can't be opened`** — adding that symlink modifies the
+signed `.app` bundle's contents, which invalidates its code signature. macOS then refuses to launch
+it and reports it as "damaged" (this is a broken-signature error, not a Gatekeeper quarantine issue
+— no `com.apple.quarantine` xattr needs to be present for it to happen). Fix by re-signing ad hoc
+after adding the symlink:
+
+```bash
+codesign --force --deep --sign - "Visual Studio Code.app"
+```
+
+Re-run `npx gulp test` after both steps. If it still fails with `SIGKILL` or an Electron "bad
+option" error, that's a genuine headless/no-GUI-session environment (e.g. a sandboxed agent session
+without display access) — not a code or signing issue, and not fixable with the above.

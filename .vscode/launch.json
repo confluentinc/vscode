@@ -10,7 +10,9 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/out"
+        "--extensionDevelopmentPath=${workspaceFolder}/out",
+        "--disable-extension",
+        "confluentinc.vscode-confluent"
       ],
       "outFiles": [
         "${workspaceFolder}/out/**/*.js"
