@@ -5,7 +5,11 @@ import type { FlinkStatementResultsManagerTestContext } from "../../tests/create
 import { createTestResultsManagerContext } from "../../tests/createResultsManager";
 import { eventually } from "../../tests/eventually";
 import { loadFixtureFromFile } from "../../tests/fixtures/utils";
-import { createResponseError } from "../../tests/unit/testUtils";
+import {
+  createResponseError,
+  createSingleUseResponseError,
+  ResponseErrorSource,
+} from "../../tests/unit/testUtils";
 import type { GetSqlv1StatementResult200Response } from "../clients/flinkSql";
 import {
   GetSqlv1StatementResult200ResponseApiVersionEnum,
@@ -18,6 +22,15 @@ import type {
   FlinkStatementResultsViewModel,
   ResultsViewerStorageState,
 } from "../webview/flink-statement-results";
+import { transientBackoffWindow } from "./flinkStatementResultsManager";
+
+/** A successful results response carrying no rows. */
+const EMPTY_RESULTS_RESPONSE: GetSqlv1StatementResult200Response = {
+  api_version: GetSqlv1StatementResult200ResponseApiVersionEnum.SqlV1,
+  kind: GetSqlv1StatementResult200ResponseKindEnum.StatementResult,
+  metadata: {},
+  results: { data: [] },
+};
 
 function createMockStatement(): FlinkStatement {
   const fakeFlinkStatement = loadFixtureFromFile(
@@ -401,14 +414,9 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult
         .onSecondCall()
         .rejects(createResponseError(409, "Conflict", "{}"));
-      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.onThirdCall().resolves({
-        api_version: GetSqlv1StatementResult200ResponseApiVersionEnum.SqlV1,
-        kind: GetSqlv1StatementResult200ResponseKindEnum.StatementResult,
-        metadata: {},
-        results: {
-          data: [],
-        },
-      });
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult
+        .onThirdCall()
+        .resolves(EMPTY_RESULTS_RESPONSE);
 
       // Trigger a fetch
       const fetchPromise = ctx.manager.fetchResults();
@@ -442,9 +450,8 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       assert.ok(ctx.manager["_latestError"]());
     });
 
-    it("should not retry on non-409 errors during fetch", async () => {
-      // Mock the getSqlv1StatementResult to fail with 500
-      const responseError = createResponseError(500, "Internal Server Error", "{}");
+    it("should not retry on errors that are neither 409 nor transient during fetch", async () => {
+      const responseError = createResponseError(403, "Forbidden", "{}");
       ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(responseError);
 
       // Trigger a fetch
@@ -455,9 +462,108 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
       await fetchPromise;
 
-      assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
+      sinon.assert.calledOnce(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult);
       // Verify error state is set
       assert.ok(ctx.manager["_latestError"]());
+    });
+
+    it("should retry get statement results on transient errors", async () => {
+      // CCloud briefly can't resolve a just-created statement, answering 429 or 5xx before the
+      // results endpoint starts working
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult
+        .onFirstCall()
+        .rejects(createResponseError(429, "Too Many Requests", "{}"));
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult
+        .onSecondCall()
+        .rejects(createResponseError(500, "Internal Server Error", "{}"));
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult
+        .onThirdCall()
+        .resolves(EMPTY_RESULTS_RESPONSE);
+
+      const fetchPromise = ctx.manager.fetchResults();
+
+      // backoff doubles from 500ms and is jittered, so tick past the two maximums
+      await clock.tickAsync(500 + 1000);
+
+      await fetchPromise;
+
+      sinon.assert.calledThrice(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult);
+      assert.equal(ctx.manager["_latestError"](), null);
+    });
+
+    it("should wait for the server's Retry-After rather than the exponential curve", async () => {
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.onFirstCall().rejects(
+        createResponseError(429, "Too Many Requests", "{}", ResponseErrorSource.Sidecar, {
+          "retry-after": "2",
+        }),
+      );
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult
+        .onSecondCall()
+        .resolves(EMPTY_RESULTS_RESPONSE);
+
+      const fetchPromise = ctx.manager.fetchResults();
+
+      // the exponential curve would have retried by now, but the server asked for 2s
+      await clock.tickAsync(1000);
+      sinon.assert.calledOnce(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult);
+
+      // 2s as requested, plus up to one base delay of jitter on top
+      await clock.tickAsync(1500);
+      await fetchPromise;
+
+      sinon.assert.calledTwice(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult);
+      assert.equal(ctx.manager["_latestError"](), null);
+    });
+
+    it("should complete the stream after exhausting transient retries", async () => {
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(
+        createResponseError(500, "Internal Server Error", "{}"),
+      );
+
+      const fetchPromise = ctx.manager.fetchResults();
+
+      // 4 transient retries at up to 500/1000/2000/4000ms
+      await clock.tickAsync(7500);
+
+      await fetchPromise;
+
+      // 1 initial attempt + MAX_TRANSIENT_RETRIES
+      sinon.assert.callCount(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult, 5);
+      assert.ok(ctx.manager["_latestError"]());
+      assert.equal(ctx.manager["_state"](), "completed");
+    });
+
+    it("should not let transient retries eat into the 409 budget", async () => {
+      // 4 transient retries first, exhausting that budget, then nothing but 409s
+      const stub = ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult;
+      for (let i = 0; i < 4; i++) {
+        stub.onCall(i).rejects(createResponseError(500, "Internal Server Error", "{}"));
+      }
+      stub.rejects(createResponseError(409, "Conflict", "{}"));
+
+      const fetchPromise = ctx.manager.fetchResults();
+
+      // 7500ms covers the transient backoffs, then the 409 waits with a little margin
+      await clock.tickAsync(7500 + 61 * 500);
+
+      await fetchPromise;
+
+      // 4 transient calls + the 409s' full 60-attempt budget, untouched by them
+      sinon.assert.callCount(stub, 64);
+    });
+
+    it("should leave the error response body readable for logging", async () => {
+      // a real single-use Response, so reading the body without cloning would be observable
+      const responseError = createSingleUseResponseError(
+        400,
+        "Bad Request",
+        '{"errors":[{"code":"cr_failed_get_stmt_name"}]}',
+      );
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(responseError);
+
+      await ctx.manager.fetchResults();
+
+      assert.strictEqual(responseError.response.bodyUsed, false);
     });
 
     it("should only allow one instance of fetchResults to run at a time", async () => {
@@ -486,12 +592,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
 
       // Resolve the API call
-      resolveRequest!({
-        api_version: GetSqlv1StatementResult200ResponseApiVersionEnum.SqlV1,
-        kind: GetSqlv1StatementResult200ResponseKindEnum.StatementResult,
-        metadata: {},
-        results: { data: [] },
-      });
+      resolveRequest!(EMPTY_RESULTS_RESPONSE);
 
       // Wait for all calls to complete
       await Promise.all(fetchPromises);
@@ -766,5 +867,67 @@ describe("FlinkStatementResultsViewModel only", () => {
       ctx.manager.dispose();
       vm.dispose();
     }
+  });
+});
+
+describe("flinkStatementResultsManager.ts transientBackoffWindow()", () => {
+  function responseWithHeaders(headers: Record<string, string>): Response {
+    return new Response("{}", { status: 429, headers });
+  }
+
+  it("should honor a Retry-After the server sends, never shortening it", () => {
+    const { minMs, maxMs } = transientBackoffWindow(responseWithHeaders({ "retry-after": "2" }), 0);
+
+    assert.equal(minMs, 2000);
+    assert.ok(maxMs > minMs, "jitter should only extend a server-requested delay");
+  });
+
+  it("should cap an outsized Retry-After", () => {
+    const { minMs } = transientBackoffWindow(responseWithHeaders({ "retry-after": "600" }), 0);
+
+    assert.equal(minMs, 8000);
+  });
+
+  it("should fall back to X-RateLimit-Reset when a 429 omits Retry-After", () => {
+    const { minMs } = transientBackoffWindow(
+      responseWithHeaders({ "x-ratelimit-limit": "5", "x-ratelimit-reset": "3" }),
+      0,
+    );
+
+    assert.equal(minMs, 3000);
+  });
+
+  it("should prefer Retry-After over X-RateLimit-Reset when both are present", () => {
+    const { minMs } = transientBackoffWindow(
+      responseWithHeaders({ "retry-after": "1", "x-ratelimit-reset": "3" }),
+      0,
+    );
+
+    assert.equal(minMs, 1000);
+  });
+
+  it("should fall back to an exponential curve without either header", () => {
+    const windows = [0, 1, 2, 3].map((attempt) =>
+      transientBackoffWindow(responseWithHeaders({}), attempt),
+    );
+
+    assert.deepEqual(
+      windows.map((w) => w.maxMs),
+      [500, 1000, 2000, 4000],
+    );
+    assert.deepEqual(
+      windows.map((w) => w.minMs),
+      [250, 500, 1000, 2000],
+    );
+  });
+
+  it("should fall back to the curve for a non-numeric Retry-After", () => {
+    // RFC 7231 also permits an HTTP-date, which we don't parse
+    const { maxMs } = transientBackoffWindow(
+      responseWithHeaders({ "retry-after": "Wed, 21 Oct 2015 07:28:00 GMT" }),
+      0,
+    );
+
+    assert.equal(maxMs, 500);
   });
 });
