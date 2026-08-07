@@ -16,13 +16,13 @@ import {
   GetSqlv1StatementResult200ResponseKindEnum,
 } from "../clients/flinkSql";
 import * as messageUtils from "../documentProviders/message";
-import { transientBackoffWindow } from "./flinkStatementResultsManager";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
 import type { WebviewStorage } from "../webview/comms/comms";
 import type {
   FlinkStatementResultsViewModel,
   ResultsViewerStorageState,
 } from "../webview/flink-statement-results";
+import { transientBackoffWindow } from "./flinkStatementResultsManager";
 
 /** A successful results response carrying no rows. */
 const EMPTY_RESULTS_RESPONSE: GetSqlv1StatementResult200Response = {
@@ -543,7 +543,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
       const fetchPromise = ctx.manager.fetchResults();
 
-      // 7500ms covers the transient backoffs, then 60 x 500ms of 409 backoff
+      // 7500ms covers the transient backoffs, then the 409 waits with a little margin
       await clock.tickAsync(7500 + 61 * 500);
 
       await fetchPromise;
