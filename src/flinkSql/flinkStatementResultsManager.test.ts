@@ -533,6 +533,25 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       assert.equal(ctx.manager["_state"](), "completed");
     });
 
+    it("should not let transient retries eat into the 409 budget", async () => {
+      // 4 transient retries first, exhausting that budget, then nothing but 409s
+      const stub = ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult;
+      for (let i = 0; i < 4; i++) {
+        stub.onCall(i).rejects(createResponseError(500, "Internal Server Error", "{}"));
+      }
+      stub.rejects(createResponseError(409, "Conflict", "{}"));
+
+      const fetchPromise = ctx.manager.fetchResults();
+
+      // 7500ms covers the transient backoffs, then 60 x 500ms of 409 backoff
+      await clock.tickAsync(7500 + 61 * 500);
+
+      await fetchPromise;
+
+      // 4 transient calls + the 409s' full 60-attempt budget, untouched by them
+      sinon.assert.callCount(stub, 64);
+    });
+
     it("should leave the error response body readable for logging", async () => {
       // a real single-use Response, so reading the body without cloning would be observable
       const responseError = createSingleUseResponseError(

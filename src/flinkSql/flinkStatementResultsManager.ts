@@ -396,19 +396,24 @@ export class FlinkStatementResultsManager {
     retryTransient: boolean = false,
   ): Promise<T> {
     let lastErr: Error | undefined;
+    let conflictAttempts = 0;
     let transientAttempts = 0;
-    for (let attempt = 0; attempt < MAX_CONFLICT_RETRIES; attempt++) {
+    // each branch is bounded by its own counter, so this ceiling should never be what stops us;
+    // it is here only so the loop is self-evidently finite
+    for (let i = 0; i <= MAX_CONFLICT_RETRIES + MAX_TRANSIENT_RETRIES; i++) {
       try {
         return await operation();
       } catch (err) {
         lastErr = err as Error;
         if (isResponseErrorWithStatus(err, 409)) {
-          if (attempt < MAX_CONFLICT_RETRIES - 1) {
-            logger.debug(
-              `Retrying ${operationName} after 409 conflict. Attempt ${attempt + 1}/${MAX_CONFLICT_RETRIES}. Waiting ${CONFLICT_BACKOFF_MS}ms`,
-            );
-            await new Promise((resolve) => setTimeout(resolve, CONFLICT_BACKOFF_MS));
+          if (conflictAttempts >= MAX_CONFLICT_RETRIES - 1) {
+            break;
           }
+          conflictAttempts++;
+          logger.debug(
+            `Retrying ${operationName} after 409 conflict. Attempt ${conflictAttempts}/${MAX_CONFLICT_RETRIES}. Waiting ${CONFLICT_BACKOFF_MS}ms`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, CONFLICT_BACKOFF_MS));
         } else if (
           retryTransient &&
           isTransientResponseError(err) &&
