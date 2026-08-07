@@ -13,6 +13,7 @@ import {
 } from "../extensionSettings/constants";
 import * as statementUtils from "../flinkSql/statementUtils";
 import type { CCloudResourceLoader } from "../loaders";
+import { FlinkSnapshotMode } from "../models/flinkStatement";
 import * as flinkComputePoolsQuickPick from "../quickpicks/flinkComputePools";
 import * as flinkDatabaseQuickpick from "../quickpicks/kafkaClusters";
 import * as ccloudConnections from "../sidecar/connections/ccloud";
@@ -22,6 +23,7 @@ import {
   resetCCloudMetadataForUriCommand,
   setCCloudComputePoolForUriCommand,
   setCCloudDatabaseForUriCommand,
+  toggleSnapshotModeForUriCommand,
 } from "./documents";
 
 const testUri = Uri.parse("file:///path/to/test.sql");
@@ -428,8 +430,69 @@ describe("commands/documents.ts resetCCloudMetadataForUriCommand()", () => {
       [UriMetadataKeys.FLINK_CATALOG_NAME]: null,
       [UriMetadataKeys.FLINK_DATABASE_ID]: null,
       [UriMetadataKeys.FLINK_DATABASE_NAME]: null,
+      [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: null,
     });
     sinon.assert.calledOnce(uriMetadataSetFireStub);
     sinon.assert.calledOnceWithExactly(uriMetadataSetFireStub, testUri);
+  });
+});
+
+describe("commands/documents.ts toggleSnapshotModeForUriCommand()", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  let setFlinkDocumentMetadataStub: sinon.SinonStub;
+  let hasCCloudAuthSessionStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    setFlinkDocumentMetadataStub = sandbox
+      .stub(statementUtils, "setFlinkDocumentMetadata")
+      .resolves();
+    hasCCloudAuthSessionStub = sandbox
+      .stub(ccloudConnections, "hasCCloudAuthSession")
+      .returns(true);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should do nothing when no Uri is provided", async () => {
+    await toggleSnapshotModeForUriCommand();
+
+    sinon.assert.notCalled(setFlinkDocumentMetadataStub);
+  });
+
+  it("should do nothing when no CCloud auth session is available", async () => {
+    hasCCloudAuthSessionStub.returns(false);
+
+    await toggleSnapshotModeForUriCommand(testUri);
+
+    sinon.assert.notCalled(setFlinkDocumentMetadataStub);
+  });
+
+  it("should set mode to BATCH when current mode is undefined", async () => {
+    await toggleSnapshotModeForUriCommand(testUri, undefined);
+
+    sinon.assert.calledOnceWithExactly(setFlinkDocumentMetadataStub, testUri, {
+      snapshotMode: FlinkSnapshotMode.BATCH,
+    });
+  });
+
+  it("should set mode to BATCH when current mode is STREAMING", async () => {
+    await toggleSnapshotModeForUriCommand(testUri, FlinkSnapshotMode.STREAMING);
+
+    sinon.assert.calledOnceWithExactly(setFlinkDocumentMetadataStub, testUri, {
+      snapshotMode: FlinkSnapshotMode.BATCH,
+    });
+  });
+
+  it("should set mode to STREAMING when current mode is BATCH", async () => {
+    await toggleSnapshotModeForUriCommand(testUri, FlinkSnapshotMode.BATCH);
+
+    sinon.assert.calledOnceWithExactly(setFlinkDocumentMetadataStub, testUri, {
+      snapshotMode: FlinkSnapshotMode.STREAMING,
+    });
   });
 });
