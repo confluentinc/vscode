@@ -579,24 +579,35 @@ export class FlinkStatementResultsManager {
 }
 
 /**
- * Pick the backoff window for a transient response, preferring the server's own `Retry-After`
- * (CCloud sends it on 429) over a locally-guessed exponential delay.
+ * Pick the backoff window for a transient response, preferring a delay Confluent Cloud asked for
+ * over a locally-guessed exponential one.
  *
- * A server-requested delay is only ever extended by jitter, never shortened - retrying before the
- * rate-limit window resets just earns another 429. The exponential fallback covers 5xx responses,
- * which carry no `Retry-After`.
+ * `Retry-After` is only sent once a rate limit is actually hit, so `X-RateLimit-Reset` (which rides
+ * along on every response) covers a 429 that omits it. A server-requested delay is only ever
+ * extended by jitter, never shortened, since retrying before the window resets just earns another
+ * 429. The exponential fallback covers 5xx responses, which carry neither header.
  */
 export function transientBackoffWindow(
   response: Response,
   attempt: number,
 ): { minMs: number; maxMs: number } {
-  // per RFC 7231 this may also be an HTTP-date, which is not a finite number and so falls through
-  const retryAfterSeconds = Number(response.headers?.get("retry-after"));
-  if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
-    const minMs = Math.min(retryAfterSeconds * 1000, MAX_TRANSIENT_BACKOFF_MS);
+  const serverDelaySeconds =
+    relativeSeconds(response.headers?.get("retry-after")) ??
+    relativeSeconds(response.headers?.get("x-ratelimit-reset"));
+  if (serverDelaySeconds !== undefined) {
+    const minMs = Math.min(serverDelaySeconds * 1000, MAX_TRANSIENT_BACKOFF_MS);
     return { minMs, maxMs: minMs + TRANSIENT_BASE_BACKOFF_MS };
   }
 
   const maxMs = Math.min(TRANSIENT_BASE_BACKOFF_MS * 2 ** attempt, MAX_TRANSIENT_BACKOFF_MS);
   return { minMs: maxMs / 2, maxMs };
+}
+
+/**
+ * Read a header carrying a positive number of seconds, ignoring absent values and the HTTP-date
+ * form of `Retry-After` that RFC 7231 also permits.
+ */
+function relativeSeconds(header: string | null | undefined): number | undefined {
+  const seconds = Number(header);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
 }

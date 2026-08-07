@@ -869,7 +869,25 @@ describe("flinkStatementResultsManager.ts transientBackoffWindow()", () => {
     assert.equal(minMs, 8000);
   });
 
-  it("should fall back to an exponential curve without a Retry-After", () => {
+  it("should fall back to X-RateLimit-Reset when a 429 omits Retry-After", () => {
+    const { minMs } = transientBackoffWindow(
+      responseWithHeaders({ "x-ratelimit-limit": "5", "x-ratelimit-reset": "3" }),
+      0,
+    );
+
+    assert.equal(minMs, 3000);
+  });
+
+  it("should prefer Retry-After over X-RateLimit-Reset when both are present", () => {
+    const { minMs } = transientBackoffWindow(
+      responseWithHeaders({ "retry-after": "1", "x-ratelimit-reset": "3" }),
+      0,
+    );
+
+    assert.equal(minMs, 1000);
+  });
+
+  it("should fall back to an exponential curve without either header", () => {
     const windows = [0, 1, 2, 3].map((attempt) =>
       transientBackoffWindow(responseWithHeaders({}), attempt),
     );
