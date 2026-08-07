@@ -424,7 +424,10 @@ export class FlinkStatementResultsManager {
           logger.debug(
             `Retrying ${operationName} after status ${err.response.status}. Transient attempt ${transientAttempts}/${MAX_TRANSIENT_RETRIES}`,
           );
-          await pauseWithJitter(minMs, maxMs);
+          await this.pauseUnlessAborted(minMs, maxMs);
+          if (this._getResultsAbortController.signal.aborted) {
+            break;
+          }
         } else {
           break;
         }
@@ -432,6 +435,32 @@ export class FlinkStatementResultsManager {
     }
 
     throw lastErr;
+  }
+
+  /**
+   * Sleep for a jittered interval, returning as soon as the results fetch is aborted so a backoff
+   * can't outlive {@linkcode dispose}. Only the results fetch opts into transient retries, so this
+   * deliberately watches that controller; `stopStatement()` aborts it before its own retries and
+   * must not be cut short.
+   */
+  private async pauseUnlessAborted(minMs: number, maxMs: number): Promise<void> {
+    const { signal } = this._getResultsAbortController;
+    if (signal.aborted) {
+      return;
+    }
+
+    let stopWatchingAbort = () => {};
+    const abortedEarly = new Promise<void>((resolve) => {
+      const onAbort = () => resolve();
+      signal.addEventListener("abort", onAbort, { once: true });
+      stopWatchingAbort = () => signal.removeEventListener("abort", onAbort);
+    });
+
+    try {
+      await Promise.race([pauseWithJitter(minMs, maxMs), abortedEarly]);
+    } finally {
+      stopWatchingAbort();
+    }
   }
 
   private async stopStatement(): Promise<void> {

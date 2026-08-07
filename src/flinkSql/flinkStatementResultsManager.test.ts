@@ -533,6 +533,24 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       assert.equal(ctx.manager["_state"](), "completed");
     });
 
+    it("should abandon a transient backoff when the manager is disposed", async () => {
+      const stub = ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult;
+      stub.rejects(createResponseError(500, "Internal Server Error", "{}"));
+
+      const fetchPromise = ctx.manager.fetchResults();
+      // let the first attempt fail and settle into its backoff
+      await clock.tickAsync(1);
+      sinon.assert.calledOnce(stub);
+
+      ctx.manager.dispose();
+      // well past the rest of the transient budget
+      await clock.tickAsync(7500);
+      await fetchPromise;
+
+      // without the abort race, the remaining 4 retries would have fired after disposal
+      sinon.assert.calledOnce(stub);
+    });
+
     it("should not let transient retries eat into the 409 budget", async () => {
       // 4 transient retries first, exhausting that budget, then nothing but 409s
       const stub = ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult;
