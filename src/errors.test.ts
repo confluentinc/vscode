@@ -7,6 +7,7 @@ import {
   getNestedErrorChain,
   hasErrorCause,
   isResponseErrorWithStatus,
+  isTransientResponseError,
   logError,
 } from "./errors";
 import { Logger } from "./logging";
@@ -167,6 +168,27 @@ describe("errors.ts isResponseErrorWithStatus()", () => {
     const error = createResponseError(404, "Not Found", "test");
     assert.strictEqual(isResponseErrorWithStatus(error, 404), true);
   });
+});
+
+describe("errors.ts isTransientResponseError()", () => {
+  it("should return false for not-a-response-error", () => {
+    const error = new Error("test");
+    assert.strictEqual(isTransientResponseError(error), false);
+  });
+
+  for (const status of [429, 500, 502, 503, 504]) {
+    it(`should return true for a ${status} response error`, () => {
+      const error = createResponseError(status, "Transient", "test");
+      assert.strictEqual(isTransientResponseError(error), true);
+    });
+  }
+
+  for (const status of [400, 401, 403, 404, 409]) {
+    it(`should return false for a ${status} response error`, () => {
+      const error = createResponseError(status, "Client Error", "test");
+      assert.strictEqual(isTransientResponseError(error), false);
+    });
+  }
 });
 
 describe("errors.ts extractResponseBody()", () => {
