@@ -16,6 +16,16 @@ All notable changes to this extension will be documented in this file.
 - Support for submitting Flink statements in
   "[snapshot](https://docs.confluent.io/cloud/current/flink/concepts/snapshot-queries.html)" mode.
   New codelens control for toggling streaming vs snapshot submission.
+- Flink statement results now show which mode the statement was submitted in, plus timing details:
+  an elapsed clock while the statement runs, and its end time, total duration, and Confluent Cloud
+  execution time once it finishes. While waiting for the first rows, the viewer names the phase the
+  statement is in, and notes that snapshot queries return no rows until they complete.
+  ([#1851](https://github.com/confluentinc/vscode/issues/1851),
+  [#1852](https://github.com/confluentinc/vscode/issues/1852),
+  [#2674](https://github.com/confluentinc/vscode/issues/2674))
+- Flink statement tooltips now include the submission mode, and, for statements that have finished,
+  when they ended and how long they took.
+  ([#2673](https://github.com/confluentinc/vscode/issues/2673))
 
 ## 2.3.1
 

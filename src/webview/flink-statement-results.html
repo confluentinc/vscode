@@ -16,11 +16,16 @@
         <section class="statement-details-section">
           <h4>Statement details</h4>
           <div class="statement-info">
-            <div class="flex-row">
-              <div class="info-item">
-                <label>Start Time:</label>
-                <span data-text="this.statementMeta().startTime"></span>
-              </div>
+            <div class="flex-row statement-info-row">
+              <template data-if="this.startTimeDisplay() != null">
+                <div class="info-item">
+                  <label>Start Time:</label>
+                  <span
+                    data-testid="statement-start-time"
+                    data-text="this.startTimeDisplay()"
+                  ></span>
+                </div>
+              </template>
               <div class="info-item">
                 <label>Status:</label>
                 <span data-testid="statement-status" data-text="this.statementMeta().status"></span>
@@ -31,20 +36,73 @@
                   >
                 </template>
               </div>
-              <vscode-button
-                data-testid="view-statement-source-button"
-                data-on-click="this.viewStatementSource()"
-              >
-                <label>View Statement Source</label>
-              </vscode-button>
-              <vscode-button
-                appearance="primary"
-                data-testid="stop-statement-button"
-                data-on-click="this.stopStatement()"
-                data-attr-disabled="!this.statementMeta().stoppable || this.stopButtonClicked()"
-              >
-                <label>Stop</label>
-              </vscode-button>
+              <div class="info-item">
+                <label>Mode:</label>
+                <span
+                  class="mode-chip"
+                  data-testid="statement-mode"
+                  data-text="this.statementMeta().modeLabel"
+                  data-attr-title="this.statementMeta().modeDescription"
+                ></span>
+              </div>
+              <template data-if="this.elapsedTimer() != null">
+                <div class="info-item">
+                  <label data-text="this.elapsedLabel()"></label>
+                  <flink-timer
+                    data-testid="statement-elapsed"
+                    data-prop-time="this.elapsedTimer()"
+                    data-prop-state="this.elapsedTimerState()"
+                  ></flink-timer>
+                </div>
+              </template>
+              <template data-if="this.endTimeDisplay() != null">
+                <div class="info-item">
+                  <label>End Time:</label>
+                  <span data-testid="statement-end-time" data-text="this.endTimeDisplay()"></span>
+                </div>
+              </template>
+              <template data-if="this.executionDurationDisplay() != null">
+                <div class="info-item">
+                  <label
+                    title="Time Confluent Cloud spent executing the statement, which excludes any time it spent pending."
+                  >
+                    Execution:
+                  </label>
+                  <span
+                    data-testid="statement-execution-duration"
+                    data-text="this.executionDurationDisplay()"
+                  ></span>
+                </div>
+              </template>
+              <template data-if="this.fetchedBytesDisplay() != null">
+                <div class="info-item">
+                  <label
+                    title="Result data this viewer has downloaded so far. Confluent Cloud does not report the size of a statement's full result set."
+                  >
+                    Fetched:
+                  </label>
+                  <span
+                    data-testid="statement-fetched-bytes"
+                    data-text="this.fetchedBytesDisplay()"
+                  ></span>
+                </div>
+              </template>
+              <div class="header-actions">
+                <vscode-button
+                  data-testid="view-statement-source-button"
+                  data-on-click="this.viewStatementSource()"
+                >
+                  <label>View Statement Source</label>
+                </vscode-button>
+                <vscode-button
+                  appearance="primary"
+                  data-testid="stop-statement-button"
+                  data-on-click="this.stopStatement()"
+                  data-attr-disabled="!this.statementMeta().stoppable || this.stopButtonClicked()"
+                >
+                  <label>Stop</label>
+                </vscode-button>
+              </div>
             </div>
           </div>
           <div class="flex-row">
@@ -207,7 +265,22 @@
           >
             <div class="grid-banner" data-testid="waiting-for-results">
               <vscode-progress-ring></vscode-progress-ring>
-              <label>Waiting for results…</label>
+              <div class="banner-status">
+                <label data-testid="waiting-message" data-text="this.waitingMessage()"></label>
+                <template data-if="this.elapsedTimer() != null">
+                  <flink-timer
+                    data-prop-time="this.elapsedTimer()"
+                    data-prop-state="this.elapsedTimerState()"
+                  ></flink-timer>
+                </template>
+              </div>
+              <template data-if="this.snapshotModeHint() != null">
+                <label
+                  class="banner-hint"
+                  data-testid="snapshot-mode-hint"
+                  data-text="this.snapshotModeHint()"
+                ></label>
+              </template>
             </div>
           </template>
         </div>
@@ -572,6 +645,50 @@
       .info-item label {
         font-weight: 500;
         color: var(--vscode-descriptionForeground);
+      }
+
+      /* the header carries a variable number of facts, so let them wrap rather than squeeze */
+      .statement-info-row {
+        flex-wrap: wrap;
+        align-items: center;
+        row-gap: 0.5rem;
+      }
+
+      .header-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .mode-chip {
+        padding: 1px 8px;
+        border-radius: 10px;
+        border: 1px solid var(--vscode-badge-background);
+        background: var(--vscode-badge-background);
+        color: var(--vscode-badge-foreground);
+        font-size: 90%;
+        white-space: nowrap;
+      }
+
+      /* tabular figures so the ticking clock doesn't shift the layout every second */
+      flink-timer {
+        font-variant-numeric: tabular-nums;
+        color: var(--vscode-editor-foreground);
+      }
+
+      .banner-status {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .banner-hint {
+        color: var(--vscode-descriptionForeground);
+        font-size: 95%;
+        max-width: 32rem;
+        text-align: center;
       }
 
       .detail-section {
