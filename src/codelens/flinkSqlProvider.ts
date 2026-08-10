@@ -6,6 +6,7 @@ import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { FlinkSnapshotMode } from "../models/flinkStatement";
 import type { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
@@ -87,6 +88,20 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
     const computePool: CCloudFlinkComputePool | undefined =
       await getComputePoolFromMetadata(uriMetadata);
     const { catalog, database } = await getCatalogDatabaseFromMetadata(uriMetadata, computePool);
+    const snapshotMode: FlinkSnapshotMode = getSnapshotModeFromMetadata(uriMetadata);
+
+    // codelens for toggling between streaming (default, continuous) and snapshot (one-shot,
+    // bounded) statement execution mode
+    const isSnapshotMode = snapshotMode === FlinkSnapshotMode.BATCH;
+    const toggleSnapshotModeCommand: Command = {
+      title: isSnapshotMode ? "Mode: Snapshot" : "Mode: Streaming",
+      command: "confluent.document.flinksql.toggleSnapshotMode",
+      tooltip: isSnapshotMode
+        ? "Statement will run once against a snapshot of current data, then complete. Click to switch to streaming mode."
+        : "Statement will run continuously against new data as it arrives. Click to switch to one-time snapshot mode.",
+      arguments: [document.uri, snapshotMode],
+    };
+    const snapshotModeLens = new CodeLens(range, toggleSnapshotModeCommand);
 
     // codelens for selecting a compute pool, which we'll use to derive the rest of the properties
     // needed for various Flink operations (env ID, provider/region, etc)
@@ -129,11 +144,11 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
         arguments: [document.uri, computePool, database],
       };
       const submitLens = new CodeLens(range, submitCommand);
-      // show the "Submit Statement" | <current pool> | <current catalog+db> codelenses
-      codeLenses.push(submitLens, computePoolLens, databaseLens, resetLens);
+      // show the "Submit Statement" | mode | <current pool> | <current catalog+db> codelenses
+      codeLenses.push(submitLens, snapshotModeLens, computePoolLens, databaseLens, resetLens);
     } else {
       // don't show the submit codelens if we don't have a compute pool and database
-      codeLenses.push(computePoolLens, databaseLens, resetLens);
+      codeLenses.push(snapshotModeLens, computePoolLens, databaseLens, resetLens);
     }
 
     return codeLenses;
@@ -160,6 +175,17 @@ export async function getComputePoolFromMetadata(
 
   const loader = CCloudResourceLoader.getInstance();
   return await loader.getFlinkComputePool(computePoolId);
+}
+
+/**
+ * Get the snapshot ("batch") vs streaming execution mode from the metadata stored in the document.
+ * Defaults to {@link FlinkSnapshotMode.STREAMING} when unset or explicitly cleared.
+ * @param metadata The metadata stored in the document.
+ */
+export function getSnapshotModeFromMetadata(metadata: UriMetadata | undefined): FlinkSnapshotMode {
+  return metadata?.[UriMetadataKeys.FLINK_SNAPSHOT_MODE] === FlinkSnapshotMode.BATCH
+    ? FlinkSnapshotMode.BATCH
+    : FlinkSnapshotMode.STREAMING;
 }
 
 export interface CatalogDatabase {

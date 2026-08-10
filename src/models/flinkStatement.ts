@@ -254,6 +254,17 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
     return this.spec.properties?.["sql.current-database"];
   }
 
+  /**
+   * Whether the statement was (or will be) evaluated in bounded "batch" (snapshot) mode or
+   * continuous "streaming" mode.
+   * @see https://docs.confluent.io/cloud/current/flink/concepts/snapshot-queries.html#snapshot-mode
+   */
+  get mode(): FlinkSnapshotMode {
+    return this.spec.properties?.["sql.snapshot.mode"] === "now"
+      ? FlinkSnapshotMode.BATCH
+      : FlinkSnapshotMode.STREAMING;
+  }
+
   /** Returns true if the statement is in a failed or failing phase. */
   get failed(): boolean {
     return FAILED_PHASES.includes(this.phase);
@@ -439,6 +450,17 @@ export function createFlinkStatementTooltip(resource: FlinkStatement) {
     .addCCloudLink(resource.ccloudUrl);
 
   return tooltip;
+}
+
+/**
+ * Statement execution mode, derived from (or set via) the `sql.snapshot.mode` statement property.
+ * @see https://docs.confluent.io/cloud/current/flink/concepts/snapshot-queries.html#snapshot-mode
+ */
+export enum FlinkSnapshotMode {
+  /** Bounded, one-shot evaluation against a snapshot of the data as of submission time. */
+  BATCH = "batch",
+  /** Continuous, unbounded evaluation against data as it arrives. This is the CCloud default. */
+  STREAMING = "streaming",
 }
 
 export class FlinkSpecProperties {

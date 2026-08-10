@@ -421,6 +421,12 @@
         "category": "Confluent: Flink SQL"
       },
       {
+        "command": "confluent.document.flinksql.toggleSnapshotMode",
+        "icon": "$(confluent-logo)",
+        "title": "Toggle Snapshot Mode for Flink Statement",
+        "category": "Confluent: Flink SQL"
+      },
+      {
         "command": "confluent.flink.configureFlinkDefaults",
         "icon": "$(settings-gear)",
         "title": "Configure default settings for Flink SQL actions",
@@ -1445,6 +1451,10 @@
         },
         {
           "command": "confluent.document.flinksql.setCCloudDatabase",
+          "when": "false"
+        },
+        {
+          "command": "confluent.document.flinksql.toggleSnapshotMode",
           "when": "false"
         },
         {

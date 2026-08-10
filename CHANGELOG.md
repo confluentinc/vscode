@@ -11,6 +11,12 @@ All notable changes to this extension will be documented in this file.
   long as Confluent Cloud asks when it sends a rate-limit delay, instead of showing "Failed to load
   results."
 
+### Added
+
+- Support for submitting Flink statements in
+  "[snapshot](https://docs.confluent.io/cloud/current/flink/concepts/snapshot-queries.html)" mode.
+  New codelens control for toggling streaming vs snapshot submission.
+
 ## 2.3.1
 
 ### Fixed
