@@ -121,6 +121,7 @@ export enum ResponseErrorSource {
  * @param statusText - HTTP status text
  * @param body - Response body
  * @param source - Which {@link ResponseErrorSource client source} ResponseError is returned, defaults to sidecar
+ * @param headers - Response headers, for code that reads things like `Retry-After`
  * @returns A ResponseError instance
  */
 export function createResponseError(
@@ -128,10 +129,12 @@ export function createResponseError(
   statusText: string,
   body: string,
   source: ResponseErrorSource = ResponseErrorSource.Sidecar,
+  headers: Record<string, string> = {},
 ): AnyResponseError {
   const response = {
     status,
     statusText,
+    headers: new Headers(headers),
     clone: () => ({
       text: () => Promise.resolve(body),
       json: () => Promise.resolve(JSON.parse(body)),
@@ -140,8 +143,28 @@ export function createResponseError(
     json: () => Promise.resolve(JSON.parse(body)),
   } as Response;
 
-  // any callers that end up using `isResponseError()` will need to know which client code subdir
-  // the error came from, so we need to return the correct subclass of ResponseError
+  return wrapResponseError(response, source);
+}
+
+/**
+ * Create a mock ResponseError backed by a real single-use {@link Response}, so a body consumed
+ * without `.clone()` is observable. {@linkcode createResponseError}'s stand-in is re-readable
+ * forever and can't catch that.
+ */
+export function createSingleUseResponseError(
+  status: number,
+  statusText: string,
+  body: string,
+  source: ResponseErrorSource = ResponseErrorSource.Sidecar,
+): AnyResponseError {
+  return wrapResponseError(new Response(body, { status, statusText }), source);
+}
+
+/**
+ * Wrap a response in the ResponseError subclass matching its client source, since callers relying
+ * on `isResponseError()` need the subdir the error came from.
+ */
+function wrapResponseError(response: Response, source: ResponseErrorSource): AnyResponseError {
   switch (source) {
     case ResponseErrorSource.Docker:
       return new DockerResponseError(response);
