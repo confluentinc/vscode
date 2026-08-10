@@ -294,12 +294,7 @@ export class FlinkStatementResultsManager {
           this.notifyUI();
         });
       } catch (error) {
-        // Aborting mid-backoff rethrows whatever failure started the retry, so the signal has to be
-        // checked too: otherwise closing the results pane reports that failure to the user.
-        if (
-          this._getResultsAbortController.signal.aborted ||
-          (error instanceof FetchError && error?.cause?.name === "AbortError")
-        ) {
+        if (this.wasFetchAborted(error)) {
           logger.info("Statement results fetch was aborted");
           return;
         }
@@ -419,6 +414,18 @@ export class FlinkStatementResultsManager {
     }
 
     throw lastErr;
+  }
+
+  /**
+   * Did this failure come from the fetch being abandoned rather than from the server? Aborting
+   * mid-backoff rethrows whatever failure started the retry, so the signal has to be checked as
+   * well, or closing the results pane would report that failure to the user.
+   */
+  private wasFetchAborted(error: unknown): boolean {
+    return (
+      this._getResultsAbortController.signal.aborted ||
+      (error instanceof FetchError && error?.cause?.name === "AbortError")
+    );
   }
 
   /**
