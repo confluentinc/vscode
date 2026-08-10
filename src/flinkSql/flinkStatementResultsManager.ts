@@ -44,6 +44,9 @@ const MAX_TRANSIENT_BACKOFF_MS = 8_000;
 export type ResultCount = { total: number; filter: number | null };
 export type StreamState = "running" | "completed";
 
+/** Retry attempts already spent, per class of failure. */
+type RetryBudget = { conflict: number; transient: number };
+
 export type MessageType =
   | "GetResults"
   | "GetResultsCount"
@@ -291,7 +294,12 @@ export class FlinkStatementResultsManager {
           this.notifyUI();
         });
       } catch (error) {
-        if (error instanceof FetchError && error?.cause?.name === "AbortError") {
+        // Aborting mid-backoff rethrows whatever failure started the retry, so the signal has to be
+        // checked too: otherwise closing the results pane reports that failure to the user.
+        if (
+          this._getResultsAbortController.signal.aborted ||
+          (error instanceof FetchError && error?.cause?.name === "AbortError")
+        ) {
           logger.info("Statement results fetch was aborted");
           return;
         }
@@ -396,45 +404,61 @@ export class FlinkStatementResultsManager {
     retryTransient: boolean = false,
   ): Promise<T> {
     let lastErr: Error | undefined;
-    let conflictAttempts = 0;
-    let transientAttempts = 0;
-    // each branch is bounded by its own counter, so this ceiling should never be what stops us;
+    const spent: RetryBudget = { conflict: 0, transient: 0 };
+    // each budget is bounded by its own counter, so this ceiling should never be what stops us;
     // it is here only so the loop is self-evidently finite
     for (let i = 0; i <= MAX_CONFLICT_RETRIES + MAX_TRANSIENT_RETRIES; i++) {
       try {
         return await operation();
       } catch (err) {
         lastErr = err as Error;
-        if (isResponseErrorWithStatus(err, 409)) {
-          if (conflictAttempts >= MAX_CONFLICT_RETRIES - 1) {
-            break;
-          }
-          conflictAttempts++;
-          logger.debug(
-            `Retrying ${operationName} after 409 conflict. Attempt ${conflictAttempts}/${MAX_CONFLICT_RETRIES}. Waiting ${CONFLICT_BACKOFF_MS}ms`,
-          );
-          await new Promise((resolve) => setTimeout(resolve, CONFLICT_BACKOFF_MS));
-        } else if (
-          retryTransient &&
-          isTransientResponseError(err) &&
-          transientAttempts < MAX_TRANSIENT_RETRIES
-        ) {
-          const { minMs, maxMs } = transientBackoffWindow(err.response, transientAttempts);
-          transientAttempts++;
-          logger.debug(
-            `Retrying ${operationName} after status ${err.response.status}. Transient attempt ${transientAttempts}/${MAX_TRANSIENT_RETRIES}`,
-          );
-          await this.pauseUnlessAborted(minMs, maxMs);
-          if (this._getResultsAbortController.signal.aborted) {
-            break;
-          }
-        } else {
+        if (!(await this.backOffBeforeRetry(err, operationName, retryTransient, spent))) {
           break;
         }
       }
     }
 
     throw lastErr;
+  }
+
+  /**
+   * Wait out a retryable failure, charging it to the matching budget in {@linkcode spent}. Returns
+   * false when the error isn't retryable, its budget is spent, or the fetch was aborted while
+   * waiting, all of which mean {@linkcode retry} should give up.
+   */
+  private async backOffBeforeRetry(
+    err: unknown,
+    operationName: string,
+    retryTransient: boolean,
+    spent: RetryBudget,
+  ): Promise<boolean> {
+    if (isResponseErrorWithStatus(err, 409)) {
+      if (spent.conflict >= MAX_CONFLICT_RETRIES - 1) {
+        return false;
+      }
+      spent.conflict++;
+      logger.debug(
+        `Retrying ${operationName} after 409 conflict. Attempt ${spent.conflict}/${MAX_CONFLICT_RETRIES}. Waiting ${CONFLICT_BACKOFF_MS}ms`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, CONFLICT_BACKOFF_MS));
+      return true;
+    }
+
+    if (
+      retryTransient &&
+      isTransientResponseError(err) &&
+      spent.transient < MAX_TRANSIENT_RETRIES
+    ) {
+      const { minMs, maxMs } = transientBackoffWindow(err.response, spent.transient);
+      spent.transient++;
+      logger.debug(
+        `Retrying ${operationName} after status ${err.response.status}. Transient attempt ${spent.transient}/${MAX_TRANSIENT_RETRIES}`,
+      );
+      await this.pauseUnlessAborted(minMs, maxMs);
+      return !this._getResultsAbortController.signal.aborted;
+    }
+
+    return false;
   }
 
   /**

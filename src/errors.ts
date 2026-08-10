@@ -56,11 +56,11 @@ export function isResponseErrorWithStatus(
 }
 
 /** HTTP statuses where repeating the same request after a short delay may succeed. */
-const TRANSIENT_RESPONSE_STATUSES = [429, 500, 502, 503, 504];
+const TRANSIENT_RESPONSE_STATUSES = new Set([429, 500, 502, 503, 504]);
 
 /** Was this a response error whose status suggests the request is worth retrying? */
 export function isTransientResponseError(error: unknown): error is AnyResponseError {
-  return isResponseError(error) && TRANSIENT_RESPONSE_STATUSES.includes(error.response.status);
+  return isResponseError(error) && TRANSIENT_RESPONSE_STATUSES.has(error.response.status);
 }
 
 /**

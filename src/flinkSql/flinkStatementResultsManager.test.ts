@@ -533,7 +533,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       assert.equal(ctx.manager["_state"](), "completed");
     });
 
-    it("should abandon a transient backoff when the manager is disposed", async () => {
+    it("should stop waiting out a transient backoff when the manager is disposed", async () => {
       const stub = ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult;
       stub.rejects(createResponseError(500, "Internal Server Error", "{}"));
 
@@ -543,12 +543,24 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       sinon.assert.calledOnce(stub);
 
       ctx.manager.dispose();
-      // well past the rest of the transient budget
-      await clock.tickAsync(7500);
+
+      // settles without the clock ever reaching the end of that backoff, which is the point: a real
+      // aborted signal would also end the loop, but only after the full wait
+      await fetchPromise;
+    });
+
+    it("should not report a disposal-interrupted fetch as an error", async () => {
+      const stub = ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult;
+      stub.rejects(createResponseError(500, "Internal Server Error", "{}"));
+
+      const fetchPromise = ctx.manager.fetchResults();
+      await clock.tickAsync(1);
+      ctx.manager.dispose();
       await fetchPromise;
 
-      // without the abort race, the remaining 4 retries would have fired after disposal
-      sinon.assert.calledOnce(stub);
+      // aborting rethrows the 500 that started the retry; surfacing it would toast the user for
+      // closing the results pane
+      assert.equal(ctx.manager["_latestError"](), null);
     });
 
     it("should not let transient retries eat into the 409 budget", async () => {
