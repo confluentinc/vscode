@@ -4,6 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- Flink statement results no longer stop loading when Confluent Cloud returns a temporary error
+  right after a statement is submitted. The Results Viewer now retries before giving up, waiting as
+  long as Confluent Cloud asks when it sends a rate-limit delay, instead of showing "Failed to load
+  results."
+
 ### Added
 
 - Support for submitting Flink statements in
