@@ -474,6 +474,7 @@ export function createFlinkStatementTooltip(resource: FlinkStatement) {
     );
   }
 
+  const totalDurationMillis: number | undefined = resource.totalDurationMillis;
   tooltip
     .addField(
       "Created At",
@@ -486,9 +487,8 @@ export function createFlinkStatementTooltip(resource: FlinkStatement) {
     .addField("Ended At", resource.endTime?.toLocaleString(undefined, { timeZoneName: "short" }))
     .addField(
       "Total Duration",
-      resource.totalDurationMillis !== undefined
-        ? formatDurationMillis(resource.totalDurationMillis)
-        : undefined,
+      // not a truthiness check: 0 is a real duration, and formats as "0s" rather than dropping the field
+      totalDurationMillis === undefined ? undefined : formatDurationMillis(totalDurationMillis),
     )
     .addField(
       "Execution Time",

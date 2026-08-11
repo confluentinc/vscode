@@ -35,6 +35,8 @@ describe("utils/durations.ts", () => {
       ["P1D", 86_400_000],
       ["P1DT2H", 93_600_000],
       [" PT30S ", 30_000],
+      ["PT1.5H", 5_400_000],
+      ["P1DT", 86_400_000], // trailing "T" with no time components
     ];
 
     parseable.forEach(([duration, expected]) => {
@@ -52,6 +54,13 @@ describe("utils/durations.ts", () => {
       "P1Y",
       "PT1H30",
       "not a duration",
+      "pt30s", // lowercase isn't ISO 8601
+      "P1M", // months, not minutes: ambiguous in milliseconds, so not ours to guess at
+      "P1W", // weeks are a unit we don't accept
+      "PT1S30M", // components out of order
+      "PT1S1S", // repeated component
+      "P1DT1HT1S", // two time sections
+      "PT.5S", // no digits before the decimal point
     ];
 
     unparseable.forEach((duration) => {

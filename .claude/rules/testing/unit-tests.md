@@ -86,8 +86,12 @@ passes. The cause is an inherited `ELECTRON_RUN_AS_NODE=1`, which any terminal h
 IDE. Confirm with `env | grep -i electron`, then run the suite with it stripped:
 
 ```bash
-env -u ELECTRON_RUN_AS_NODE -u ELECTRON_NO_ATTACH_CONSOLE npx gulp test
+env -u ELECTRON_RUN_AS_NODE npx gulp test
 ```
+
+`ELECTRON_NO_ATTACH_CONSOLE=1` is usually inherited alongside it, but it is harmless — verified
+against VS Code 1.132.0: stripping `ELECTRON_RUN_AS_NODE` alone is enough, so there is no need to
+unset both.
 
 A quick tell that this is the problem rather than a broken bundle:
 `.../Contents/MacOS/Code --version` prints a Node version (e.g. `v24.18.0`) instead of a VS Code

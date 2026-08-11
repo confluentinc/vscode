@@ -174,36 +174,36 @@ export class FlinkStatementResultsManager {
    * where each key is a unique identifier for the row and the value is the row data.
    * The row data value is a {@link Map} of column names to their respective data value (represented as `any`).
    */
-  private _results: Signal<Map<string, Map<string, any>>>;
+  private readonly _results: Signal<Map<string, Map<string, any>>>;
   /**
    * Signal containing the raw statement results as received from the API, before any processing or transformation.
    * This represents a changelog stream where each result represents a change to the data rather than just the current state.
    * This is used in changelog view mode to show the history of changes, while table view mode uses the processed {@link _results}.
    */
-  private _rawResults: Signal<StatementResultsRow[]>;
-  private _state: Signal<StreamState>;
-  private _moreResults: Signal<boolean>;
-  private _latestResult: Signal<GetSqlv1StatementResult200Response | null>;
-  private _latestError: Signal<{ message: string } | null>;
-  private _isResultsFull: Signal<boolean>;
+  private readonly _rawResults: Signal<StatementResultsRow[]>;
+  private readonly _state: Signal<StreamState>;
+  private readonly _moreResults: Signal<boolean>;
+  private readonly _latestResult: Signal<GetSqlv1StatementResult200Response | null>;
+  private readonly _latestError: Signal<{ message: string } | null>;
+  private readonly _isResultsFull: Signal<boolean>;
   /**
    * Running total of the estimated bytes of result rows fetched so far. Client-side accounting:
    * CCloud exposes no server-side result-set size, so this describes what this viewer has pulled
    * down, not how large the statement's full result set is.
    */
-  private _fetchedBytes: Signal<number>;
+  private readonly _fetchedBytes: Signal<number>;
   private _pollingInterval: NodeJS.Timeout | undefined;
-  private _getResultsAbortController: AbortController;
+  private readonly _getResultsAbortController: AbortController;
   /** Filter by substring text query. */
-  private _searchQuery: Signal<string | null>;
-  private _visibleColumns: Signal<string[] | null>;
-  private _filteredResults: Signal<any[]>;
+  private readonly _searchQuery: Signal<string | null>;
+  private readonly _visibleColumns: Signal<string[] | null>;
+  private readonly _filteredResults: Signal<any[]>;
   private _fetchCount = 0;
   private _statementRefreshInterval: NodeJS.Timeout | undefined;
-  private _viewMode!: Signal<ViewMode>;
+  private readonly _viewMode: Signal<ViewMode>;
 
-  private _flinkStatementResultsSqlApi: StatementResultsSqlV1Api;
-  private _flinkStatementsSqlApi: StatementsSqlV1Api;
+  private readonly _flinkStatementResultsSqlApi: StatementResultsSqlV1Api;
+  private readonly _flinkStatementsSqlApi: StatementsSqlV1Api;
 
   private _fetchResultsLocked = false;
 
