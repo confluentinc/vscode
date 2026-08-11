@@ -446,14 +446,18 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     }, null);
 
     /**
-     * Nothing to show, and nothing more coming: the host reports "completed" once the result stream
-     * is exhausted, so this is the point at which zero rows means zero rows rather than "not yet".
-     * Keyed off the stream rather than the statement's own terminal state, since a COMPLETED
-     * snapshot statement's rows are still being paged in for a moment afterwards.
+     * Nothing to show, and nothing more coming: the point at which zero rows means zero rows rather
+     * than "not yet". Two ways to get there, and both are needed — the host reports "completed" once
+     * the result stream is exhausted, but a statement that stops being fetchable (it failed, or it
+     * aged out of the 24-hour window) leaves the stream sitting in "running" forever, since polling
+     * self-destructs without completing it.
+     *
+     * Deliberately not keyed off the statement's own terminal state: a COMPLETED snapshot
+     * statement's rows are still being paged in for a moment afterwards.
      */
     this.noResultsAvailable = this.derive(
       () =>
-        this.streamState() === "completed" &&
+        (this.streamState() === "completed" || !this.statementMeta().areResultsViewable) &&
         this.streamError() == null &&
         !this.hasResults() &&
         !this.emptyFilterResult(),
