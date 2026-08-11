@@ -315,6 +315,67 @@ describe("FlinkStatement", () => {
     });
   });
 
+  describe("endTime / executionDuration", () => {
+    it("returns undefined for a statement CCloud hasn't reported timings for", () => {
+      const statement = createFlinkStatement({ phase: Phase.RUNNING });
+      assert.strictEqual(statement.endTime, undefined);
+      assert.strictEqual(statement.executionDuration, undefined);
+    });
+
+    it("returns what the status reports", () => {
+      const endTime = new Date();
+      const statement = createFlinkStatement({
+        phase: Phase.COMPLETED,
+        endTime,
+        duration: "PT1M30S",
+      });
+      assert.strictEqual(statement.endTime, endTime);
+      assert.strictEqual(statement.executionDuration, "PT1M30S");
+    });
+  });
+
+  describe("totalDurationMillis", () => {
+    const createdAt = new Date("2026-08-10T12:00:00Z");
+
+    it("returns undefined while the statement is not terminal", () => {
+      const statement = createFlinkStatement({
+        phase: Phase.RUNNING,
+        createdAt,
+        endTime: new Date(createdAt.getTime() + 5_000),
+      });
+      assert.strictEqual(statement.totalDurationMillis, undefined);
+    });
+
+    it("measures from creation to end time, including time spent PENDING", () => {
+      const statement = createFlinkStatement({
+        phase: Phase.COMPLETED,
+        createdAt,
+        endTime: new Date(createdAt.getTime() + 95_000),
+        // CCloud's own duration excludes queue time, so it should not be what we measure
+        duration: "PT1M15S",
+      });
+      assert.strictEqual(statement.totalDurationMillis, 95_000);
+    });
+
+    it("falls back to updatedAt when end time is missing", () => {
+      const statement = createFlinkStatement({
+        phase: Phase.STOPPED,
+        createdAt,
+        updatedAt: new Date(createdAt.getTime() + 42_000),
+      });
+      assert.strictEqual(statement.totalDurationMillis, 42_000);
+    });
+
+    it("returns undefined rather than a negative duration when timestamps disagree", () => {
+      const statement = createFlinkStatement({
+        phase: Phase.FAILED,
+        createdAt,
+        endTime: new Date(createdAt.getTime() - 1_000),
+      });
+      assert.strictEqual(statement.totalDurationMillis, undefined);
+    });
+  });
+
   describe("possiblyViewable", () => {
     const ONE_DAY_MS = 24 * 60 * 60 * 1000;
     const now = new Date();
@@ -464,12 +525,82 @@ describe("FlinkStatementTreeItem", () => {
 
     const expectedKeyValuePairs: KeyValuePairArray = [
       ["Kind", statement.sqlKindDisplay],
+      ["Mode", "Streaming"],
       ["Status", statement.phase],
       ["Created At", statement.createdAt!.toLocaleString()],
       ["Updated At", statement.updatedAt!.toLocaleString()],
       ["Environment", statement.environmentId],
       ["Compute Pool", statement.computePoolId],
       ["Detail", statement.status.detail],
+    ];
+
+    for (const [key, value] of expectedKeyValuePairs) {
+      assert.ok(tooltip.value.includes(key), `expected key ${key} to be in tooltip`);
+      assert.ok(
+        tooltip.value.includes(value!),
+        `expected value ${value} to be in tooltip for key ${key}\n${tooltip.value}`,
+      );
+    }
+
+    // nothing terminal to report while the statement is still running
+    assert.ok(!tooltip.value.includes("Ended At"));
+    assert.ok(!tooltip.value.includes("Total Duration"));
+    assert.ok(!tooltip.value.includes("Execution Time"));
+  });
+
+  it("tooltip describes snapshot mode and terminal timings", () => {
+    const createdAt = new Date("2026-08-10T12:00:00Z");
+    const statement = createFlinkStatement({
+      name: "statement0",
+      phase: Phase.COMPLETED,
+      mode: FlinkSnapshotMode.BATCH,
+      createdAt,
+      endTime: new Date(createdAt.getTime() + 95_000),
+      duration: "PT1M15S",
+    });
+
+    const treeItem = new FlinkStatementTreeItem(statement);
+    const tooltip = treeItem.tooltip as CustomMarkdownString;
+
+    const expectedKeyValuePairs: KeyValuePairArray = [
+      ["Mode", "Snapshot"],
+      ["Ended At", statement.endTime!.toLocaleString()],
+      ["Total Duration", "1m 35s"],
+    ];
+
+    for (const [key, value] of expectedKeyValuePairs) {
+      assert.ok(tooltip.value.includes(key), `expected key ${key} to be in tooltip`);
+      assert.ok(
+        tooltip.value.includes(value!),
+        `expected value ${value} to be in tooltip for key ${key}\n${tooltip.value}`,
+      );
+    }
+
+    // snapshot statements barely queue, so CCloud's execution time only invites a nonsensical
+    // comparison against the wall-clock total; it's withheld here
+    assert.ok(!tooltip.value.includes("Execution Time"), tooltip.value);
+  });
+
+  it("tooltip reports execution time alongside the total for a terminal streaming statement", () => {
+    const createdAt = new Date("2026-08-10T12:00:00Z");
+    const statement = createFlinkStatement({
+      name: "statement0",
+      phase: Phase.STOPPED,
+      mode: FlinkSnapshotMode.STREAMING,
+      createdAt,
+      endTime: new Date(createdAt.getTime() + 95_000),
+      duration: "PT1M15S",
+    });
+
+    const treeItem = new FlinkStatementTreeItem(statement);
+    const tooltip = treeItem.tooltip as CustomMarkdownString;
+
+    const expectedKeyValuePairs: KeyValuePairArray = [
+      ["Mode", "Streaming"],
+      // wall clock from submission (1m 35s), versus CCloud's execution-only 1m 15s: the difference
+      // is the time the statement spent PENDING
+      ["Total Duration", "1m 35s"],
+      ["Execution Time", "1m 15s"],
     ];
 
     for (const [key, value] of expectedKeyValuePairs) {

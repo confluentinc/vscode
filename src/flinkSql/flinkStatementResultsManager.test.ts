@@ -16,12 +16,18 @@ import {
   GetSqlv1StatementResult200ResponseKindEnum,
 } from "../clients/flinkSql";
 import * as messageUtils from "../documentProviders/message";
-import { FlinkStatement, Phase } from "../models/flinkStatement";
+import {
+  FlinkSnapshotMode,
+  flinkSnapshotModeDescription,
+  FlinkStatement,
+  Phase,
+} from "../models/flinkStatement";
 import type { WebviewStorage } from "../webview/comms/comms";
 import type {
   FlinkStatementResultsViewModel,
   ResultsViewerStorageState,
 } from "../webview/flink-statement-results";
+import type { StatementMeta } from "./flinkStatementResultsManager";
 import { transientBackoffWindow } from "./flinkStatementResultsManager";
 
 /** A successful results response carrying no rows. */
@@ -264,11 +270,20 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
   });
 
   it("should handle GetStatementMeta message", async () => {
-    const meta = vm.statementMeta();
+    const { fetchedBytes, ...meta } = vm.statementMeta();
+
     assert.deepStrictEqual(meta, {
       name: ctx.statement.name,
-      status: ctx.statement.status?.phase,
-      startTime: ctx.statement.metadata?.created_at,
+      status: ctx.statement.phase,
+      startTimeMillis: ctx.statement.createdAt!.getTime(),
+      // the fixture statement is still RUNNING, so nothing terminal to report yet
+      endTimeMillis: null,
+      totalDurationMillis: null,
+      executionDuration: null,
+      modeLabel: "Streaming",
+      modeDescription: flinkSnapshotModeDescription(FlinkSnapshotMode.STREAMING),
+      isSnapshotMode: false,
+      isTerminal: false,
       detail: ctx.statement.status?.detail ?? null,
       failed: ctx.statement.failed,
       stoppable: ctx.statement.stoppable,
@@ -276,6 +291,56 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       possiblyViewable: ctx.statement.possiblyViewable,
       isForeground: ctx.statement.isForeground,
       warnings: ctx.statement.warnings,
+    });
+
+    // the fixture rows have already been fetched by the time the view model is created
+    assert.ok(fetchedBytes > 0, `expected some fetched bytes, got ${fetchedBytes}`);
+  });
+
+  it("should report snapshot mode in GetStatementMeta for a snapshot-mode statement", async () => {
+    const snapshotStatement = new FlinkStatement({
+      ...ctx.statement,
+      spec: {
+        ...ctx.statement.spec,
+        properties: { ...ctx.statement.spec.properties, "sql.snapshot.mode": "now" },
+      },
+    });
+    ctx.refreshFlinkStatementStub.returns(Promise.resolve(snapshotStatement));
+
+    // asserting against the manager rather than the view model: the view model only re-resolves
+    // when the host pushes a new timestamp, which the test harness stubs out
+    await eventually(() => {
+      const meta: StatementMeta = ctx.manager.handleMessage("GetStatementMeta", {});
+      assert.strictEqual(meta.modeLabel, "Snapshot");
+      assert.strictEqual(meta.isSnapshotMode, true);
+      assert.strictEqual(
+        meta.modeDescription,
+        flinkSnapshotModeDescription(FlinkSnapshotMode.BATCH),
+      );
+    });
+  });
+
+  it("should report end time and durations in GetStatementMeta once the statement is terminal", async () => {
+    const createdAt: Date = ctx.statement.createdAt!;
+    const endTime = new Date(createdAt.getTime() + 90_000);
+    const completedStatement = new FlinkStatement({
+      ...ctx.statement,
+      status: {
+        ...ctx.statement.status,
+        phase: Phase.COMPLETED,
+        end_time: endTime,
+        duration: "PT1M15S",
+      },
+    });
+    ctx.refreshFlinkStatementStub.returns(Promise.resolve(completedStatement));
+
+    await eventually(() => {
+      const meta: StatementMeta = ctx.manager.handleMessage("GetStatementMeta", {});
+      assert.strictEqual(meta.isTerminal, true);
+      assert.strictEqual(meta.endTimeMillis, endTime.getTime());
+      // wall clock includes the time spent PENDING; CCloud's own duration does not
+      assert.strictEqual(meta.totalDurationMillis, 90_000);
+      assert.strictEqual(meta.executionDuration, "PT1M15S");
     });
   });
 
@@ -897,6 +962,82 @@ describe("FlinkStatementResultsViewModel only", () => {
       ctx.manager.dispose();
       vm.dispose();
     }
+  });
+});
+
+/**
+ * Whether the results viewer shows CCloud's execution time, which depends on the statement's mode
+ * and so has to be baked into the statement before the view model is built. Kept in its own describe
+ * for that reason: each test needs the one and only results manager context of its sandbox.
+ */
+describe("FlinkStatementResultsViewModel execution duration display", () => {
+  let sandbox: sinon.SinonSandbox;
+  let ctx: FlinkStatementResultsManagerTestContext | undefined;
+  let vm: FlinkStatementResultsViewModel | undefined;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    ctx = undefined;
+    vm = undefined;
+  });
+
+  afterEach(() => {
+    ctx?.manager.dispose();
+    vm?.dispose();
+    sandbox.restore();
+  });
+
+  /**
+   * Build a view model over a terminal statement in the given mode, reporting both a wall-clock
+   * total (90s) and CCloud's shorter execution-only duration (1m 15s).
+   */
+  async function createViewModel(mode: FlinkSnapshotMode): Promise<FlinkStatementResultsViewModel> {
+    const base: FlinkStatement = createMockStatement();
+    const terminalStatement = new FlinkStatement({
+      ...base,
+      spec: {
+        ...base.spec,
+        properties:
+          mode === FlinkSnapshotMode.BATCH
+            ? { ...base.spec.properties, "sql.snapshot.mode": "now" }
+            : base.spec.properties,
+      },
+      status: {
+        ...base.status,
+        phase: Phase.COMPLETED,
+        end_time: new Date(base.createdAt!.getTime() + 90_000),
+        duration: "PT1M15S",
+      },
+    });
+
+    ({ ctx, vm } = await createTestResultsManagerContext(sandbox, terminalStatement));
+    return vm;
+  }
+
+  it("should withhold execution time for a snapshot statement", async () => {
+    const snapshotVm: FlinkStatementResultsViewModel = await createViewModel(
+      FlinkSnapshotMode.BATCH,
+    );
+
+    await eventually(() => {
+      assert.strictEqual(snapshotVm.statementMeta().isSnapshotMode, true);
+    });
+
+    // the meta still carries CCloud's duration...
+    assert.strictEqual(snapshotVm.statementMeta().executionDuration, "PT1M15S");
+    // ...but a snapshot statement barely queues, so displaying it beside the wall-clock total would
+    // only invite comparing two measurements of the same span
+    assert.strictEqual(snapshotVm.executionDurationDisplay(), null);
+  });
+
+  it("should display execution time for a streaming statement", async () => {
+    const streamingVm: FlinkStatementResultsViewModel = await createViewModel(
+      FlinkSnapshotMode.STREAMING,
+    );
+
+    await eventually(() => {
+      assert.strictEqual(streamingVm.executionDurationDisplay(), "1m 15s");
+    });
   });
 });
 

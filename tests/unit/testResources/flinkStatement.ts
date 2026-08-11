@@ -23,6 +23,10 @@ export interface CreateFlinkStatementArgs {
 
   createdAt?: Date;
   updatedAt?: Date;
+  /** When the statement reached a terminal phase. Only set by CCloud for terminal statements. */
+  endTime?: Date;
+  /** CCloud's execution time as an ISO 8601 duration, e.g. `PT1M30S`. */
+  duration?: string;
 
   appendOnly?: boolean;
   upsertColumns?: number[];
@@ -50,6 +54,8 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
     status: {
       phase: (overrides.phase as string) || Phase.RUNNING,
       detail: overrides.detail || "Running",
+      end_time: overrides.endTime,
+      duration: overrides.duration,
       traits: {
         sql_kind: overrides.sqlKind || "SELECT",
         is_bounded: true,
