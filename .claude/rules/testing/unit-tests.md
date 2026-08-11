@@ -77,6 +77,33 @@ after adding the symlink:
 codesign --force --deep --sign - "Visual Studio Code.app"
 ```
 
-Re-run `npx gulp test` after both steps. If it still fails with `SIGKILL` or an Electron "bad
-option" error, that's a genuine headless/no-GUI-session environment (e.g. a sandboxed agent session
-without display access) — not a code or signing issue, and not fixable with the above.
+Re-run `npx gulp test` after both steps.
+
+**3. `bad option: --no-sandbox` (and every other flag), exit code 9** — the test host is being run
+as plain Node instead of as Electron, so it rejects all of the Chromium/VS Code flags the runner
+passes. The cause is an inherited `ELECTRON_RUN_AS_NODE=1`, which any terminal hosted inside VS Code
+(or another Electron app) exports to its child processes — including agent sessions running in the
+IDE. Confirm with `env | grep -i electron`, then run the suite with it stripped:
+
+```bash
+env -u ELECTRON_RUN_AS_NODE npx gulp test
+```
+
+`ELECTRON_NO_ATTACH_CONSOLE=1` is usually inherited alongside it, but it is harmless — verified
+against VS Code 1.132.0: stripping `ELECTRON_RUN_AS_NODE` alone is enough, so there is no need to
+unset both.
+
+A quick tell that this is the problem rather than a broken bundle:
+`.../Contents/MacOS/Code --version` prints a Node version (e.g. `v24.18.0`) instead of a VS Code
+version.
+
+**4. Global suite setup times out or fails with `PORT_IN_USE` on 26636** — activation starts the
+sidecar, and the sidecar port is shared machine-wide. Another VS Code window running the
+marketplace-installed Confluent extension (or a second dev host) already owns it, and it re-spawns
+its own sidecar within seconds of being killed, so the test run loses the race repeatedly. Close the
+other workspace (or disable its Confluent extension) rather than killing the sidecar process in a
+loop.
+
+If it still fails with `SIGKILL`, that's a genuine headless/no-GUI-session environment (e.g. a
+sandboxed agent session without display access) — not a code or signing issue, and not fixable with
+the above.
