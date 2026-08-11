@@ -5,10 +5,12 @@ import { createColumnDefinitions, getColumnOrder } from "../flinkSql/flinkStatem
 import type {
   PostFunction,
   ResultCount,
+  StatementMeta,
   StreamState,
 } from "../flinkSql/flinkStatementResultsManager";
-import type { SqlV1StatementWarning } from "../clients/flinkSql";
 import { stripWarningsFromDetail } from "../flinkSql/warningParser";
+import { formatBytes } from "../utils/bytes";
+import { formatIsoDuration } from "../utils/durations";
 import { ViewModel } from "./bindings/view-model";
 import type { WebviewStorage } from "./comms/comms";
 import { createWebviewStorage, sendWebviewMessage } from "./comms/comms";
@@ -49,19 +51,20 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly emptySnapshot: { results: any[] };
   readonly snapshot: Signal<{ results: any[] }>;
   readonly resultCount: Signal<ResultCount>;
-  readonly statementMeta: Signal<{
-    name: string;
-    status: string;
-    startTime: string | null;
-    detail: string | null;
-    failed: boolean;
-    areResultsViewable: boolean;
-    isForeground: boolean;
-    warnings: SqlV1StatementWarning[];
-  }>;
+  readonly statementMeta: Signal<StatementMeta>;
+  readonly startTimeDisplay: Signal<string | null>;
+  readonly endTimeDisplay: Signal<string | null>;
+  readonly executionDurationDisplay: Signal<string | null>;
+  readonly fetchedBytesDisplay: Signal<string | null>;
+  readonly elapsedLabel: Signal<string>;
+  readonly elapsedTimer: Signal<{ start: number; offset: number } | null>;
+  readonly elapsedTimerState: Signal<"running" | "paused" | null>;
+  readonly waitingMessage: Signal<string>;
+  readonly snapshotModeHint: Signal<string | null>;
   readonly waitingForResults: Signal<boolean>;
   readonly emptyFilterResult: Signal<boolean>;
   readonly hasResults: Signal<boolean>;
+  readonly noResultsAvailable: Signal<boolean>;
   readonly streamState: Signal<StreamState>;
   readonly streamError: Signal<{ message: string } | null>;
   readonly pageStatLabel: Signal<string | null>;
@@ -155,18 +158,104 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       {
         name: "",
         status: "",
-        startTime: null,
+        startTimeMillis: null,
+        endTimeMillis: null,
+        totalDurationMillis: null,
+        executionDuration: null,
+        fetchedBytes: 0,
+        modeLabel: "",
+        modeDescription: "",
+        isSnapshotMode: false,
+        isTerminal: false,
         detail: null,
         failed: false,
+        stoppable: false,
         areResultsViewable: true,
+        possiblyViewable: true,
         isForeground: false,
         warnings: [],
       },
     );
 
+    this.startTimeDisplay = this.derive(() =>
+      formatTimestamp(this.statementMeta().startTimeMillis),
+    );
+    this.endTimeDisplay = this.derive(() => formatTimestamp(this.statementMeta().endTimeMillis));
+
+    /**
+     * CCloud's execution time, which excludes any time the statement spent PENDING. Shown alongside
+     * the wall-clock total so the difference between the two reads as queue time.
+     */
+    this.executionDurationDisplay = this.derive(() => {
+      const duration = this.statementMeta().executionDuration;
+      return duration ? formatIsoDuration(duration) : null;
+    });
+
+    /** Bytes of results this viewer has pulled down; nothing to say before the first row arrives. */
+    this.fetchedBytesDisplay = this.derive(() => {
+      const bytes = this.statementMeta().fetchedBytes;
+      return bytes > 0 ? formatBytes(bytes) : null;
+    });
+
+    /**
+     * Elapsed wall-clock time, as the `<flink-timer>` element wants it: it ticks up from `start`
+     * while "running", and displays a frozen `offset` while "paused". A terminal statement therefore
+     * hands over the total it actually took, and a live one keeps counting from submission.
+     */
+    this.elapsedTimer = this.derive(() => {
+      const { startTimeMillis, isTerminal, totalDurationMillis } = this.statementMeta();
+      if (startTimeMillis == null) {
+        return null;
+      }
+      if (isTerminal) {
+        // fall back to the last elapsed time we can compute when CCloud hasn't reported an end
+        return {
+          start: startTimeMillis,
+          offset: totalDurationMillis ?? Date.now() - startTimeMillis,
+        };
+      }
+      return { start: startTimeMillis, offset: 0 };
+    });
+
+    this.elapsedTimerState = this.derive(() => {
+      if (this.elapsedTimer() == null) {
+        return null;
+      }
+      return this.statementMeta().isTerminal ? "paused" : "running";
+    });
+
+    this.elapsedLabel = this.derive<string>(() =>
+      this.statementMeta().isTerminal ? "Total:" : "Elapsed:",
+    );
+
     /** For now, the only way to expose a loading spinner. */
     this.waitingForResults = this.derive(() => {
       return this.resultCount().total === 0 && this.statementMeta().areResultsViewable;
+    });
+
+    /**
+     * What the statement is doing while we have nothing to show yet. Snapshot queries can sit in
+     * PENDING for a while and then run for minutes, so naming the phase beats a bare spinner.
+     */
+    this.waitingMessage = this.derive<string>(() => {
+      switch (this.statementMeta().status) {
+        case "PENDING":
+          return "Statement is pending…";
+        case "RUNNING":
+        case "DEGRADED":
+          return "Running — waiting for the first results…";
+        default:
+          return "Waiting for results…";
+      }
+    });
+
+    /** Snapshot queries emit nothing at all until they finish, which otherwise looks like a stall. */
+    this.snapshotModeHint = this.derive<string | null>(() => {
+      const { isSnapshotMode, isTerminal } = this.statementMeta();
+      if (!isSnapshotMode || isTerminal) {
+        return null;
+      }
+      return "Snapshot queries will only return results when statement execution completes.";
     });
 
     this.emptyFilterResult = this.derive(
@@ -355,6 +444,20 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     this.streamError = this.resolve(() => {
       return this.post("GetStreamError", { timestamp: this.timestamp() });
     }, null);
+
+    /**
+     * Nothing to show, and nothing more coming: the host reports "completed" once the result stream
+     * is exhausted, so this is the point at which zero rows means zero rows rather than "not yet".
+     * Keyed off the stream rather than the statement's own terminal state, since a COMPLETED
+     * snapshot statement's rows are still being paged in for a moment afterwards.
+     */
+    this.noResultsAvailable = this.derive(
+      () =>
+        this.streamState() === "completed" &&
+        this.streamError() == null &&
+        !this.hasResults() &&
+        !this.emptyFilterResult(),
+    );
   }
 
   search = this.resolve(async () => {
@@ -584,4 +687,9 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     fragment.append(input.substring(cursor));
     return fragment;
   }
+}
+
+/** Render epoch millis in the viewer's local time zone, or null when we have no timestamp. */
+function formatTimestamp(millis: number | null): string | null {
+  return millis == null ? null : new Date(millis).toLocaleString();
 }
