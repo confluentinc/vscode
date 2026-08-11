@@ -255,7 +255,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       if (!isSnapshotMode || isTerminal) {
         return null;
       }
-      return "Snapshot queries return no rows until the whole query has finished.";
+      return "Snapshot queries will only return results when statement execution completes.";
     });
 
     this.emptyFilterResult = this.derive(
