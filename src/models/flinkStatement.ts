@@ -492,7 +492,12 @@ export function createFlinkStatementTooltip(resource: FlinkStatement) {
     )
     .addField(
       "Execution Time",
-      resource.executionDuration ? formatIsoDuration(resource.executionDuration) : undefined,
+      // withheld for snapshot statements, which barely queue: CCloud's duration and our own
+      // "Total Duration" then measure the same span two ways and can disagree by a second in
+      // either direction, which reads as nonsense rather than as queue time
+      resource.executionDuration && resource.mode !== FlinkSnapshotMode.BATCH
+        ? formatIsoDuration(resource.executionDuration)
+        : undefined,
     )
     .addField("Environment", resource.environmentId)
     .addField("Compute Pool", resource.computePoolId)

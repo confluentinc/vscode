@@ -565,7 +565,40 @@ describe("FlinkStatementTreeItem", () => {
     const expectedKeyValuePairs: KeyValuePairArray = [
       ["Mode", "Snapshot"],
       ["Ended At", statement.endTime!.toLocaleString()],
-      // wall clock from submission (1m 35s), versus CCloud's execution-only 1m 15s
+      ["Total Duration", "1m 35s"],
+    ];
+
+    for (const [key, value] of expectedKeyValuePairs) {
+      assert.ok(tooltip.value.includes(key), `expected key ${key} to be in tooltip`);
+      assert.ok(
+        tooltip.value.includes(value!),
+        `expected value ${value} to be in tooltip for key ${key}\n${tooltip.value}`,
+      );
+    }
+
+    // snapshot statements barely queue, so CCloud's execution time only invites a nonsensical
+    // comparison against the wall-clock total; it's withheld here
+    assert.ok(!tooltip.value.includes("Execution Time"), tooltip.value);
+  });
+
+  it("tooltip reports execution time alongside the total for a terminal streaming statement", () => {
+    const createdAt = new Date("2026-08-10T12:00:00Z");
+    const statement = createFlinkStatement({
+      name: "statement0",
+      phase: Phase.STOPPED,
+      mode: FlinkSnapshotMode.STREAMING,
+      createdAt,
+      endTime: new Date(createdAt.getTime() + 95_000),
+      duration: "PT1M15S",
+    });
+
+    const treeItem = new FlinkStatementTreeItem(statement);
+    const tooltip = treeItem.tooltip as CustomMarkdownString;
+
+    const expectedKeyValuePairs: KeyValuePairArray = [
+      ["Mode", "Streaming"],
+      // wall clock from submission (1m 35s), versus CCloud's execution-only 1m 15s: the difference
+      // is the time the statement spent PENDING
       ["Total Duration", "1m 35s"],
       ["Execution Time", "1m 15s"],
     ];

@@ -185,10 +185,17 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     /**
      * CCloud's execution time, which excludes any time the statement spent PENDING. Shown alongside
      * the wall-clock total so the difference between the two reads as queue time.
+     *
+     * Withheld in snapshot mode: those statements barely queue, so CCloud's coarse duration and our
+     * millisecond-precision total are two measurements of the same span, and can disagree — even
+     * invert — by a second without either being wrong.
      */
     this.executionDurationDisplay = this.derive(() => {
-      const duration = this.statementMeta().executionDuration;
-      return duration ? formatIsoDuration(duration) : null;
+      const { executionDuration, isSnapshotMode } = this.statementMeta();
+      if (!executionDuration || isSnapshotMode) {
+        return null;
+      }
+      return formatIsoDuration(executionDuration);
     });
 
     /** Bytes of results this viewer has pulled down; nothing to say before the first row arrives. */
