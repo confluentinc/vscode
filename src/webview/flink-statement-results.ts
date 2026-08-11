@@ -64,6 +64,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly waitingForResults: Signal<boolean>;
   readonly emptyFilterResult: Signal<boolean>;
   readonly hasResults: Signal<boolean>;
+  readonly noResultsAvailable: Signal<boolean>;
   readonly streamState: Signal<StreamState>;
   readonly streamError: Signal<{ message: string } | null>;
   readonly pageStatLabel: Signal<string | null>;
@@ -443,6 +444,20 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     this.streamError = this.resolve(() => {
       return this.post("GetStreamError", { timestamp: this.timestamp() });
     }, null);
+
+    /**
+     * Nothing to show, and nothing more coming: the host reports "completed" once the result stream
+     * is exhausted, so this is the point at which zero rows means zero rows rather than "not yet".
+     * Keyed off the stream rather than the statement's own terminal state, since a COMPLETED
+     * snapshot statement's rows are still being paged in for a moment afterwards.
+     */
+    this.noResultsAvailable = this.derive(
+      () =>
+        this.streamState() === "completed" &&
+        this.streamError() == null &&
+        !this.hasResults() &&
+        !this.emptyFilterResult(),
+    );
   }
 
   search = this.resolve(async () => {

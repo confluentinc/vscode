@@ -46,7 +46,7 @@ describe("utils/bytes.ts", () => {
       );
     });
 
-    it("should return 0 for an empty array", () => {
+    it("should count an empty array as its two bracket bytes", () => {
       assert.strictEqual(estimateJsonBytes([]), 2);
     });
   });
