@@ -6,7 +6,7 @@ import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FlinkSnapshotMode } from "../models/flinkStatement";
+import { FlinkSnapshotMode, flinkSnapshotModeLabel } from "../models/flinkStatement";
 import type { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
@@ -94,7 +94,7 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
     // bounded) statement execution mode
     const isSnapshotMode = snapshotMode === FlinkSnapshotMode.BATCH;
     const toggleSnapshotModeCommand: Command = {
-      title: isSnapshotMode ? "Mode: Snapshot" : "Mode: Streaming",
+      title: `Mode: ${flinkSnapshotModeLabel(snapshotMode)}`,
       command: "confluent.document.flinksql.toggleSnapshotMode",
       tooltip: isSnapshotMode
         ? "Statement will run once against a snapshot of current data, then complete. Click to switch to streaming mode."

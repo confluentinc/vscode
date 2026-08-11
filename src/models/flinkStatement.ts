@@ -14,6 +14,7 @@ import { extractWarnings } from "../flinkSql/warningParser";
 import { IconNames } from "../icons";
 import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
+import { formatDurationMillis, formatIsoDuration } from "../utils/durations";
 import type {
   ConnectionId,
   EnvironmentId,
@@ -265,6 +266,47 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
       : FlinkSnapshotMode.STREAMING;
   }
 
+  /**
+   * When the statement reached its final terminal phase, if it has gotten there. CCloud only sets
+   * this once the phase is COMPLETED, FAILED, or STOPPED.
+   */
+  get endTime(): Date | undefined {
+    return this.status?.end_time;
+  }
+
+  /**
+   * How long the statement spent executing, as an ISO 8601 duration (say, `PT1M30S`), measured from
+   * the PENDING -> RUNNING transition through reaching a terminal phase. Excludes any time spent
+   * waiting in PENDING, so it reads shorter than {@link totalDurationMillis}.
+   */
+  get executionDuration(): string | undefined {
+    return this.status?.duration;
+  }
+
+  /**
+   * Wall-clock milliseconds from submission until the statement reached a terminal phase, or
+   * undefined while it's still going (or if we can't tell). Includes time spent PENDING, so this is
+   * the elapsed time the user actually waited on.
+   *
+   * `end_time` is an Early Access field and may be missing, so fall back to `updatedAt`, which lands
+   * on the terminal transition.
+   */
+  get totalDurationMillis(): number | undefined {
+    const startedAt: Date | undefined = this.createdAt;
+    if (!startedAt || !this.isTerminal) {
+      return undefined;
+    }
+
+    const finishedAt: Date | undefined = this.endTime ?? this.updatedAt;
+    if (!finishedAt) {
+      return undefined;
+    }
+
+    const elapsed: number = finishedAt.getTime() - startedAt.getTime();
+    // guard against clock skew between the two timestamps reading as negative elapsed time
+    return elapsed >= 0 ? elapsed : undefined;
+  }
+
   /** Returns true if the statement is in a failed or failing phase. */
   get failed(): boolean {
     return FAILED_PHASES.includes(this.phase);
@@ -286,10 +328,6 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
   get warnings(): SqlV1StatementWarning[] {
     const statusWarnings = this.status.warnings;
     return extractWarnings(statusWarnings, this.detail);
-  }
-
-  get startTime(): Date | undefined {
-    return this.metadata?.created_at;
   }
 }
 
@@ -427,6 +465,7 @@ export function createFlinkStatementTooltip(resource: FlinkStatement) {
   const tooltip = new CustomMarkdownString()
     .addHeader("Flink Statement", getFlinkStatementThemeIcon(resource.phase).id as IconNames)
     .addField("Kind", resource.sqlKindDisplay)
+    .addField("Mode", flinkSnapshotModeLabel(resource.mode))
     .addField("Status", resource.phase);
 
   if (resource.phase === Phase.DEGRADED) {
@@ -435,6 +474,7 @@ export function createFlinkStatementTooltip(resource: FlinkStatement) {
     );
   }
 
+  const totalDurationMillis: number | undefined = resource.totalDurationMillis;
   tooltip
     .addField(
       "Created At",
@@ -443,6 +483,16 @@ export function createFlinkStatementTooltip(resource: FlinkStatement) {
     .addField(
       "Updated At",
       resource.updatedAt?.toLocaleString(undefined, { timeZoneName: "short" }),
+    )
+    .addField("Ended At", resource.endTime?.toLocaleString(undefined, { timeZoneName: "short" }))
+    .addField(
+      "Total Duration",
+      // not a truthiness check: 0 is a real duration, and formats as "0s" rather than dropping the field
+      totalDurationMillis === undefined ? undefined : formatDurationMillis(totalDurationMillis),
+    )
+    .addField(
+      "Execution Time",
+      resource.executionDuration ? formatIsoDuration(resource.executionDuration) : undefined,
     )
     .addField("Environment", resource.environmentId)
     .addField("Compute Pool", resource.computePoolId)
@@ -461,6 +511,25 @@ export enum FlinkSnapshotMode {
   BATCH = "batch",
   /** Continuous, unbounded evaluation against data as it arrives. This is the CCloud default. */
   STREAMING = "streaming",
+}
+
+/**
+ * User-facing label for a {@link FlinkSnapshotMode}. Shared by the CodeLens toggle, the statement
+ * tooltip, and the results viewer so all three name the mode the same way.
+ */
+export function flinkSnapshotModeLabel(mode: FlinkSnapshotMode): string {
+  return mode === FlinkSnapshotMode.BATCH ? "Snapshot" : "Streaming";
+}
+
+/**
+ * One-line explanation of what a {@link FlinkSnapshotMode} means for a statement that has already
+ * been submitted, for hover text in read-only views. (The CodeLens toggle has its own wording, since
+ * there the mode is still a choice the user can click to change.)
+ */
+export function flinkSnapshotModeDescription(mode: FlinkSnapshotMode): string {
+  return mode === FlinkSnapshotMode.BATCH
+    ? "Bounded query: ran once against a snapshot of the data as of submission time, then completed."
+    : "Streaming query: runs continuously against new data as it arrives.";
 }
 
 export class FlinkSpecProperties {
