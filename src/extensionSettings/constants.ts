@@ -1,3 +1,4 @@
+import type { FlinkSnapshotMode } from "../models/flinkStatement";
 import { ExtensionSetting, Setting, SettingsSection } from "./base";
 
 export type NeverAskAlways = "never" | "ask" | "always";
@@ -183,6 +184,14 @@ export const STATEMENT_POLLING_CONCURRENCY = new ExtensionSetting<number>(
 /** Default location for displaying Flink statement results (editor area or bottom panel). */
 export const STATEMENT_RESULTS_LOCATION = new ExtensionSetting<"editor" | "panel">(
   "confluent.flink.statementResults.defaultLocation",
+  SettingsSection.FLINK,
+);
+/**
+ * Default {@link FlinkSnapshotMode} to submit Flink statements with, used when a document doesn't
+ * have its own mode set via the "Mode:" codelens.
+ */
+export const FLINK_DEFAULT_SUBMISSION_MODE = new ExtensionSetting<FlinkSnapshotMode>(
+  "confluent.flink.defaultSubmissionMode",
   SettingsSection.FLINK,
 );
 

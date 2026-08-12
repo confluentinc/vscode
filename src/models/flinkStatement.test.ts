@@ -303,9 +303,9 @@ describe("FlinkStatement", () => {
       assert.strictEqual(statement.mode, FlinkSnapshotMode.STREAMING);
     });
 
-    it("returns BATCH when sql.snapshot.mode property is 'now'", () => {
-      const statement = createFlinkStatement({ mode: FlinkSnapshotMode.BATCH });
-      assert.strictEqual(statement.mode, FlinkSnapshotMode.BATCH);
+    it("returns SNAPSHOT when sql.snapshot.mode property is 'now'", () => {
+      const statement = createFlinkStatement({ mode: FlinkSnapshotMode.SNAPSHOT });
+      assert.strictEqual(statement.mode, FlinkSnapshotMode.SNAPSHOT);
     });
 
     it("returns STREAMING when sql.snapshot.mode property is some other unrecognized value", () => {
@@ -553,7 +553,7 @@ describe("FlinkStatementTreeItem", () => {
     const statement = createFlinkStatement({
       name: "statement0",
       phase: Phase.COMPLETED,
-      mode: FlinkSnapshotMode.BATCH,
+      mode: FlinkSnapshotMode.SNAPSHOT,
       createdAt,
       endTime: new Date(createdAt.getTime() + 95_000),
       duration: "PT1M15S",

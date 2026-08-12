@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import { extensions } from "vscode";
 import { EXTENSION_ID } from "../constants";
+import { FlinkSnapshotMode } from "../models/flinkStatement";
 import type { ExtensionConfiguration } from "./base";
 import {
   ALLOW_OLDER_SCHEMA_VERSIONS,
@@ -12,6 +13,7 @@ import {
   FLINK_CONFIG_COMPUTE_POOL,
   FLINK_CONFIG_DATABASE,
   FLINK_CONFIG_STATEMENT_PREFIX,
+  FLINK_DEFAULT_SUBMISSION_MODE,
   KRB5_CONFIG_PATH,
   LOCAL_DOCKER_SOCKET_PATH,
   LOCAL_KAFKA_IMAGE,
@@ -283,6 +285,30 @@ describe("extensionSettings/constants.ts", function () {
       assert.ok(FLINK_CONFIG_STATEMENT_PREFIX.defaultValue !== undefined);
       assert.strictEqual(FLINK_CONFIG_STATEMENT_PREFIX.defaultValue, expectedDefault);
       assert.ok(FLINK_CONFIG_STATEMENT_PREFIX.value !== undefined);
+    });
+
+    it("should set the correct section and default value for FLINK_DEFAULT_SUBMISSION_MODE", () => {
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
+        FLINK_DEFAULT_SUBMISSION_MODE.id,
+      );
+      assert.ok(section);
+      assert.strictEqual(FLINK_DEFAULT_SUBMISSION_MODE.sectionTitle, section.title);
+
+      const expectedDefault = section.properties[FLINK_DEFAULT_SUBMISSION_MODE.id].default;
+      assert.strictEqual(expectedDefault, FlinkSnapshotMode.STREAMING);
+      assert.ok(FLINK_DEFAULT_SUBMISSION_MODE.defaultValue !== undefined);
+      assert.strictEqual(FLINK_DEFAULT_SUBMISSION_MODE.defaultValue, expectedDefault);
+      assert.ok(FLINK_DEFAULT_SUBMISSION_MODE.value !== undefined);
+    });
+
+    it("should only allow FlinkSnapshotMode values for FLINK_DEFAULT_SUBMISSION_MODE", () => {
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
+        FLINK_DEFAULT_SUBMISSION_MODE.id,
+      );
+      assert.ok(section);
+
+      const enumValues: string[] = section.properties[FLINK_DEFAULT_SUBMISSION_MODE.id].enum;
+      assert.deepStrictEqual(enumValues.slice().sort(), Object.values(FlinkSnapshotMode).sort());
     });
 
     it("should set the correct section and default value for UPDATE_DEFAULT_POOL_ID_FROM_LENS", () => {

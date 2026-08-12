@@ -256,13 +256,13 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
   }
 
   /**
-   * Whether the statement was (or will be) evaluated in bounded "batch" (snapshot) mode or
-   * continuous "streaming" mode.
+   * Whether the statement was (or will be) evaluated in bounded "snapshot" mode or continuous
+   * "streaming" mode.
    * @see https://docs.confluent.io/cloud/current/flink/concepts/snapshot-queries.html#snapshot-mode
    */
   get mode(): FlinkSnapshotMode {
     return this.spec.properties?.["sql.snapshot.mode"] === "now"
-      ? FlinkSnapshotMode.BATCH
+      ? FlinkSnapshotMode.SNAPSHOT
       : FlinkSnapshotMode.STREAMING;
   }
 
@@ -495,7 +495,7 @@ export function createFlinkStatementTooltip(resource: FlinkStatement) {
       // withheld for snapshot statements, which barely queue: CCloud's duration and our own
       // "Total Duration" then measure the same span two ways and can disagree by a second in
       // either direction, which reads as nonsense rather than as queue time
-      resource.executionDuration && resource.mode !== FlinkSnapshotMode.BATCH
+      resource.executionDuration && resource.mode !== FlinkSnapshotMode.SNAPSHOT
         ? formatIsoDuration(resource.executionDuration)
         : undefined,
     )
@@ -513,7 +513,7 @@ export function createFlinkStatementTooltip(resource: FlinkStatement) {
  */
 export enum FlinkSnapshotMode {
   /** Bounded, one-shot evaluation against a snapshot of the data as of submission time. */
-  BATCH = "batch",
+  SNAPSHOT = "snapshot",
   /** Continuous, unbounded evaluation against data as it arrives. This is the CCloud default. */
   STREAMING = "streaming",
 }
@@ -523,7 +523,7 @@ export enum FlinkSnapshotMode {
  * tooltip, and the results viewer so all three name the mode the same way.
  */
 export function flinkSnapshotModeLabel(mode: FlinkSnapshotMode): string {
-  return mode === FlinkSnapshotMode.BATCH ? "Snapshot" : "Streaming";
+  return mode === FlinkSnapshotMode.SNAPSHOT ? "Snapshot" : "Streaming";
 }
 
 /**
@@ -532,7 +532,7 @@ export function flinkSnapshotModeLabel(mode: FlinkSnapshotMode): string {
  * there the mode is still a choice the user can click to change.)
  */
 export function flinkSnapshotModeDescription(mode: FlinkSnapshotMode): string {
-  return mode === FlinkSnapshotMode.BATCH
+  return mode === FlinkSnapshotMode.SNAPSHOT
     ? "Bounded query: ran once against a snapshot of the data as of submission time, then completed."
     : "Streaming query: runs continuously against new data as it arrives.";
 }

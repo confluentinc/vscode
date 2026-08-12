@@ -27,6 +27,11 @@ All notable changes to this extension will be documented in this file.
 - Flink statement tooltips now include the submission mode, and, for statements that have finished,
   when they ended and how long they took.
   ([#2673](https://github.com/confluentinc/vscode/issues/2673))
+- New
+  [`confluent.flink.defaultSubmissionMode`](vscode://settings/confluent.flink.defaultSubmissionMode)
+  setting controls which mode Flink statements are submitted in by default. It ships set to
+  `streaming`, matching the existing behavior; the per-document 'Mode:' codelens still overrides it.
+  ([#3429](https://github.com/confluentinc/vscode/issues/3429))
 
 ## 2.3.1
 

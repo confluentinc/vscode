@@ -73,7 +73,7 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
         "sql.current-catalog": TEST_CCLOUD_ENVIRONMENT.name,
         "sql.current-database": TEST_CCLOUD_KAFKA_CLUSTER.name,
         "sql.local-time-zone": "GMT-04:00",
-        ...(overrides.mode === FlinkSnapshotMode.BATCH ? { "sql.snapshot.mode": "now" } : {}),
+        ...(overrides.mode === FlinkSnapshotMode.SNAPSHOT ? { "sql.snapshot.mode": "now" } : {}),
       },
       stopped: false,
     },
