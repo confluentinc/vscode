@@ -85,7 +85,7 @@ export type StatementMeta = {
   modeLabel: string;
   /** One-line explanation of the execution mode, for the mode chip's hover text. */
   modeDescription: string;
-  /** Whether this is a bounded snapshot ("batch") query, which yields no rows until it finishes. */
+  /** Whether this is a bounded snapshot query, which yields no rows until it finishes. */
   isSnapshotMode: boolean;
   isTerminal: boolean;
   detail: string | null;
@@ -678,7 +678,7 @@ export class FlinkStatementResultsManager {
       fetchedBytes: this._fetchedBytes(),
       modeLabel: flinkSnapshotModeLabel(statement.mode),
       modeDescription: flinkSnapshotModeDescription(statement.mode),
-      isSnapshotMode: statement.mode === FlinkSnapshotMode.BATCH,
+      isSnapshotMode: statement.mode === FlinkSnapshotMode.SNAPSHOT,
       isTerminal: statement.isTerminal,
       detail: statement.status?.detail ?? null,
       failed: statement.failed,

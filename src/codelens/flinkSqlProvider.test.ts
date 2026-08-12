@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import type { CodeLens, TextDocument } from "vscode";
+import type { CodeLens, ConfigurationChangeEvent, TextDocument } from "vscode";
 import { Position, Range, Uri } from "vscode";
 import type { StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
@@ -10,7 +10,11 @@ import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfig
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
-import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
+import {
+  FLINK_CONFIG_COMPUTE_POOL,
+  FLINK_CONFIG_DATABASE,
+  FLINK_DEFAULT_SUBMISSION_MODE,
+} from "../extensionSettings/constants";
 import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
@@ -65,6 +69,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
   describe("FlinkSqlCodelensProvider", () => {
     let provider: FlinkSqlCodelensProvider;
     let resourceManagerStub: sinon.SinonStubbedInstance<ResourceManager>;
+    let stubbedConfigs: StubbedWorkspaceConfiguration;
 
     // NOTE: setting up fake TextDocuments is tricky since we can't create them directly, so we're
     // only populating the fields needed for the test and associated codebase logic, then using the
@@ -75,6 +80,9 @@ describe("codelens/flinkSqlProvider.ts", () => {
       // reset any stored metadata
       await getResourceManager().deleteAllUriMetadata();
       resourceManagerStub = getStubbedResourceManager(sandbox);
+      // don't let the developer's own settings affect the codelens titles under test
+      stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+      stubbedConfigs.stubGet(FLINK_DEFAULT_SUBMISSION_MODE, FlinkSnapshotMode.STREAMING);
 
       provider = FlinkSqlCodelensProvider.getInstance();
     });
@@ -105,7 +113,8 @@ describe("codelens/flinkSqlProvider.ts", () => {
 
       it("setEventListeners() should return the expected number of listeners", () => {
         const listeners = provider["setEventListeners"]();
-        assert.strictEqual(listeners.length, handlerEmitterPairs.length);
+        // the emitter-driven handlers, plus the workspace configuration listener
+        assert.strictEqual(listeners.length, handlerEmitterPairs.length + 1);
       });
 
       handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
@@ -154,6 +163,33 @@ describe("codelens/flinkSqlProvider.ts", () => {
       it("uriMetadataSetHandler() should call onDidChangeCodeLenses.fire()", () => {
         provider.uriMetadataSetHandler(); // disregards the Uri of the document, so no need to pass it.
         sinon.assert.calledOnce(onDidChangeCodeLensesFireStub);
+      });
+
+      const flinkDefaultSettings = [
+        FLINK_CONFIG_COMPUTE_POOL,
+        FLINK_CONFIG_DATABASE,
+        FLINK_DEFAULT_SUBMISSION_MODE,
+      ];
+      for (const setting of flinkDefaultSettings) {
+        it(`configurationChangedHandler() should call onDidChangeCodeLenses.fire() when "${setting.id}" changes`, () => {
+          const event = {
+            affectsConfiguration: sandbox.stub().callsFake((id: string) => id === setting.id),
+          } as unknown as ConfigurationChangeEvent;
+
+          provider.configurationChangedHandler(event);
+
+          sinon.assert.calledOnce(onDidChangeCodeLensesFireStub);
+        });
+      }
+
+      it("configurationChangedHandler() should not call onDidChangeCodeLenses.fire() for unrelated settings", () => {
+        const event = {
+          affectsConfiguration: sandbox.stub().returns(false),
+        } as unknown as ConfigurationChangeEvent;
+
+        provider.configurationChangedHandler(event);
+
+        sinon.assert.notCalled(onDidChangeCodeLensesFireStub);
       });
     });
 
@@ -355,7 +391,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
       assert.deepStrictEqual(resetLens.command?.arguments, [fakeDocument.uri]);
     });
 
-    it("should provide 'Mode: Snapshot' codelens when snapshot mode metadata is set to BATCH", async () => {
+    it("should provide 'Mode: Snapshot' codelens when snapshot mode metadata is set to SNAPSHOT", async () => {
       const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
       const database: CCloudKafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
       resourceManagerStub.getUriMetadata.resolves({
@@ -364,7 +400,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
         [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT.name,
         [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
         [UriMetadataKeys.FLINK_DATABASE_NAME]: database.name,
-        [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: FlinkSnapshotMode.BATCH,
+        [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: FlinkSnapshotMode.SNAPSHOT,
       });
       ccloudLoaderStub.getEnvironments.resolves([testEnvWithPoolAndCluster]);
 
@@ -378,32 +414,71 @@ describe("codelens/flinkSqlProvider.ts", () => {
       assert.strictEqual(snapshotModeLens.command?.title, "Mode: Snapshot");
       assert.deepStrictEqual(snapshotModeLens.command?.arguments, [
         fakeDocument.uri,
-        FlinkSnapshotMode.BATCH,
+        FlinkSnapshotMode.SNAPSHOT,
+      ]);
+    });
+
+    it(`should provide 'Mode: Snapshot' codelens when the "${FLINK_DEFAULT_SUBMISSION_MODE.id}" setting is SNAPSHOT and no snapshot mode metadata is set`, async () => {
+      stubbedConfigs.stubGet(FLINK_DEFAULT_SUBMISSION_MODE, FlinkSnapshotMode.SNAPSHOT);
+      resourceManagerStub.getUriMetadata.resolves({});
+
+      const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
+
+      const snapshotModeLens = codeLenses[0];
+      assert.strictEqual(
+        snapshotModeLens.command?.command,
+        "confluent.document.flinksql.toggleSnapshotMode",
+      );
+      assert.strictEqual(snapshotModeLens.command?.title, "Mode: Snapshot");
+      assert.deepStrictEqual(snapshotModeLens.command?.arguments, [
+        fakeDocument.uri,
+        FlinkSnapshotMode.SNAPSHOT,
       ]);
     });
   });
 
   describe("getSnapshotModeFromMetadata()", () => {
-    it("should return STREAMING when metadata is undefined", () => {
-      assert.strictEqual(getSnapshotModeFromMetadata(undefined), FlinkSnapshotMode.STREAMING);
+    let stubbedConfigs: StubbedWorkspaceConfiguration;
+
+    beforeEach(() => {
+      stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
     });
 
-    it("should return STREAMING when snapshot mode metadata is unset", () => {
-      const metadata: UriMetadata = { [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "pool-123" };
-      assert.strictEqual(getSnapshotModeFromMetadata(metadata), FlinkSnapshotMode.STREAMING);
-    });
+    for (const defaultMode of [FlinkSnapshotMode.STREAMING, FlinkSnapshotMode.SNAPSHOT]) {
+      it(`should return the default "${FLINK_DEFAULT_SUBMISSION_MODE.id}" value (${defaultMode}) when metadata is undefined`, () => {
+        stubbedConfigs.stubGet(FLINK_DEFAULT_SUBMISSION_MODE, defaultMode);
 
-    it("should return STREAMING when snapshot mode metadata is explicitly cleared (null)", () => {
-      const metadata: UriMetadata = { [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: null };
-      assert.strictEqual(getSnapshotModeFromMetadata(metadata), FlinkSnapshotMode.STREAMING);
-    });
+        assert.strictEqual(getSnapshotModeFromMetadata(undefined), defaultMode);
+      });
 
-    it("should return BATCH when snapshot mode metadata is set to BATCH", () => {
-      const metadata: UriMetadata = {
-        [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: FlinkSnapshotMode.BATCH,
-      };
-      assert.strictEqual(getSnapshotModeFromMetadata(metadata), FlinkSnapshotMode.BATCH);
-    });
+      it(`should return the default "${FLINK_DEFAULT_SUBMISSION_MODE.id}" value (${defaultMode}) when snapshot mode metadata is unset`, () => {
+        stubbedConfigs.stubGet(FLINK_DEFAULT_SUBMISSION_MODE, defaultMode);
+        const metadata: UriMetadata = { [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "pool-123" };
+
+        assert.strictEqual(getSnapshotModeFromMetadata(metadata), defaultMode);
+      });
+
+      it(`should return the default "${FLINK_DEFAULT_SUBMISSION_MODE.id}" value (${defaultMode}) when snapshot mode metadata is explicitly cleared (null)`, () => {
+        stubbedConfigs.stubGet(FLINK_DEFAULT_SUBMISSION_MODE, defaultMode);
+        const metadata: UriMetadata = { [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: null };
+
+        assert.strictEqual(getSnapshotModeFromMetadata(metadata), defaultMode);
+      });
+    }
+
+    for (const storedMode of [FlinkSnapshotMode.STREAMING, FlinkSnapshotMode.SNAPSHOT]) {
+      it(`should favor stored "${UriMetadataKeys.FLINK_SNAPSHOT_MODE}" metadata (${storedMode}) over the default "${FLINK_DEFAULT_SUBMISSION_MODE.id}" value`, () => {
+        // stub the opposite mode as the default to prove the metadata wins
+        const oppositeMode =
+          storedMode === FlinkSnapshotMode.SNAPSHOT
+            ? FlinkSnapshotMode.STREAMING
+            : FlinkSnapshotMode.SNAPSHOT;
+        stubbedConfigs.stubGet(FLINK_DEFAULT_SUBMISSION_MODE, oppositeMode);
+        const metadata: UriMetadata = { [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: storedMode };
+
+        assert.strictEqual(getSnapshotModeFromMetadata(metadata), storedMode);
+      });
+    }
   });
 
   describe("getComputePoolFromMetadata()", () => {
