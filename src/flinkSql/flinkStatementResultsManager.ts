@@ -19,6 +19,11 @@ import {
 import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
 import { Logger } from "../logging";
 import type { FlinkStatement } from "../models/flinkStatement";
+import {
+  FlinkSnapshotMode,
+  flinkSnapshotModeDescription,
+  flinkSnapshotModeLabel,
+} from "../models/flinkStatement";
 import { showErrorNotificationWithButtons } from "../notifications";
 import type { SidecarHandle } from "../sidecar";
 import type { ViewMode } from "./flinkStatementResultColumns";
@@ -26,6 +31,7 @@ import type { StatementResultsRow } from "./flinkStatementResults";
 import { parseResults } from "./flinkStatementResults";
 import { extractPageToken } from "./utils";
 import { pauseWithJitter } from "../utils/timing";
+import { estimateJsonBytes } from "../utils/bytes";
 import type { SqlV1StatementWarning } from "../clients/flinkSql";
 
 const logger = new Logger("flink-statement-results");
@@ -43,6 +49,53 @@ const MAX_TRANSIENT_BACKOFF_MS = 8_000;
 
 export type ResultCount = { total: number; filter: number | null };
 export type StreamState = "running" | "completed";
+
+/**
+ * Statement facts the results viewer renders in its header and progress banner. Dates cross the
+ * webview boundary as epoch millis so the webview can both format them and do timer arithmetic
+ * without reparsing strings.
+ */
+export type StatementMeta = {
+  name: string;
+  status: string;
+  /** When the statement was submitted. Start of the elapsed-time clock. */
+  startTimeMillis: number | null;
+  /** When the statement reached a terminal phase, if it has gotten there yet. */
+  endTimeMillis: number | null;
+  /**
+   * Wall-clock duration from submission to terminal phase, including time spent PENDING — the
+   * elapsed time the user actually waited. Null while the statement is still going.
+   */
+  totalDurationMillis: number | null;
+  /**
+   * CCloud's own execution time as an ISO 8601 duration, measured from PENDING -> RUNNING onward, so
+   * it excludes queue time and reads shorter than {@link totalDurationMillis}.
+   */
+  executionDuration: string | null;
+  /**
+   * Estimated bytes of result rows this viewer has fetched. Not the size of the statement's full
+   * result set, which CCloud does not report.
+   */
+  fetchedBytes: number;
+  /**
+   * Execution mode label — "Snapshot" or "Streaming" — worded the same as the Flink SQL document's
+   * CodeLens toggle. Labeled here rather than in the webview so the wording lives in one place and
+   * the webview doesn't have to import the vscode-coupled statement model.
+   */
+  modeLabel: string;
+  /** One-line explanation of the execution mode, for the mode chip's hover text. */
+  modeDescription: string;
+  /** Whether this is a bounded snapshot ("batch") query, which yields no rows until it finishes. */
+  isSnapshotMode: boolean;
+  isTerminal: boolean;
+  detail: string | null;
+  failed: boolean;
+  stoppable: boolean;
+  areResultsViewable: boolean;
+  possiblyViewable: boolean;
+  isForeground: boolean;
+  warnings: SqlV1StatementWarning[];
+};
 
 /** Retry attempts already spent, per class of failure. */
 type RetryBudget = { conflict: number; transient: number };
@@ -96,19 +149,7 @@ export type PostFunction = {
     type: "SetVisibleColumns",
     body: { visibleColumns: string[] | null; timestamp?: number },
   ): Promise<null>;
-  (
-    type: "GetStatementMeta",
-    body: { timestamp?: number },
-  ): Promise<{
-    name: string;
-    status: string;
-    startTime: string | null;
-    detail: string | null;
-    failed: boolean;
-    areResultsViewable: boolean;
-    isForeground: boolean;
-    warnings: SqlV1StatementWarning[];
-  }>;
+  (type: "GetStatementMeta", body: { timestamp?: number }): Promise<StatementMeta>;
   (type: "StopStatement", body: { timestamp?: number }): Promise<null>;
   (type: "ViewStatementSource", body: { timestamp?: number }): Promise<null>;
   (type: "SetViewMode", body: { viewMode: ViewMode; timestamp?: number }): Promise<null>;
@@ -133,30 +174,36 @@ export class FlinkStatementResultsManager {
    * where each key is a unique identifier for the row and the value is the row data.
    * The row data value is a {@link Map} of column names to their respective data value (represented as `any`).
    */
-  private _results: Signal<Map<string, Map<string, any>>>;
+  private readonly _results: Signal<Map<string, Map<string, any>>>;
   /**
    * Signal containing the raw statement results as received from the API, before any processing or transformation.
    * This represents a changelog stream where each result represents a change to the data rather than just the current state.
    * This is used in changelog view mode to show the history of changes, while table view mode uses the processed {@link _results}.
    */
-  private _rawResults: Signal<StatementResultsRow[]>;
-  private _state: Signal<StreamState>;
-  private _moreResults: Signal<boolean>;
-  private _latestResult: Signal<GetSqlv1StatementResult200Response | null>;
-  private _latestError: Signal<{ message: string } | null>;
-  private _isResultsFull: Signal<boolean>;
+  private readonly _rawResults: Signal<StatementResultsRow[]>;
+  private readonly _state: Signal<StreamState>;
+  private readonly _moreResults: Signal<boolean>;
+  private readonly _latestResult: Signal<GetSqlv1StatementResult200Response | null>;
+  private readonly _latestError: Signal<{ message: string } | null>;
+  private readonly _isResultsFull: Signal<boolean>;
+  /**
+   * Running total of the estimated bytes of result rows fetched so far. Client-side accounting:
+   * CCloud exposes no server-side result-set size, so this describes what this viewer has pulled
+   * down, not how large the statement's full result set is.
+   */
+  private readonly _fetchedBytes: Signal<number>;
   private _pollingInterval: NodeJS.Timeout | undefined;
-  private _getResultsAbortController: AbortController;
+  private readonly _getResultsAbortController: AbortController;
   /** Filter by substring text query. */
-  private _searchQuery: Signal<string | null>;
-  private _visibleColumns: Signal<string[] | null>;
-  private _filteredResults: Signal<any[]>;
+  private readonly _searchQuery: Signal<string | null>;
+  private readonly _visibleColumns: Signal<string[] | null>;
+  private readonly _filteredResults: Signal<any[]>;
   private _fetchCount = 0;
   private _statementRefreshInterval: NodeJS.Timeout | undefined;
-  private _viewMode!: Signal<ViewMode>;
+  private readonly _viewMode: Signal<ViewMode>;
 
-  private _flinkStatementResultsSqlApi: StatementResultsSqlV1Api;
-  private _flinkStatementsSqlApi: StatementsSqlV1Api;
+  private readonly _flinkStatementResultsSqlApi: StatementResultsSqlV1Api;
+  private readonly _flinkStatementsSqlApi: StatementsSqlV1Api;
 
   private _fetchResultsLocked = false;
 
@@ -177,6 +224,7 @@ export class FlinkStatementResultsManager {
     this._latestResult = os.signal<GetSqlv1StatementResult200Response | null>(null);
     this._latestError = os.signal<{ message: string } | null>(null);
     this._isResultsFull = os.signal(false);
+    this._fetchedBytes = os.signal(0);
     this._searchQuery = os.signal<string | null>(null);
     this._visibleColumns = os.signal<string[] | null>(null);
     this._filteredResults = os.signal<any[]>([]);
@@ -273,6 +321,11 @@ export class FlinkStatementResultsManager {
         this.os.batch(() => {
           // Store raw changelog data in order
           this._rawResults([...priorRawResults, ...(resultsData?.data ?? [])]);
+
+          // skip empty pages so idle polling doesn't accrue phantom bytes for the empty envelope
+          if (resultsData?.data?.length) {
+            this._fetchedBytes(this._fetchedBytes() + estimateJsonBytes(resultsData.data));
+          }
 
           // Process results for table view
           parseResults({
@@ -588,18 +641,7 @@ export class FlinkStatementResultsManager {
         return escaped;
       }
       case "GetStatementMeta": {
-        return {
-          name: this.statement.name,
-          status: this.statement.status?.phase,
-          startTime: this.statement.metadata?.created_at ?? null,
-          detail: this.statement.status?.detail ?? null,
-          failed: this.statement.failed,
-          stoppable: this.statement.stoppable,
-          areResultsViewable: this.statement.canRequestResults,
-          possiblyViewable: this.statement.possiblyViewable,
-          isForeground: this.statement.isForeground,
-          warnings: this.statement.warnings,
-        };
+        return this.statementMeta();
       }
       case "StopStatement": {
         return this.stopStatement();
@@ -621,6 +663,31 @@ export class FlinkStatementResultsManager {
         return _exhaustiveCheck;
       }
     }
+  }
+
+  /** Statement facts the results viewer renders, as of right now. */
+  private statementMeta(): StatementMeta {
+    const statement: FlinkStatement = this.statement;
+    return {
+      name: statement.name,
+      status: statement.phase,
+      startTimeMillis: statement.createdAt?.getTime() ?? null,
+      endTimeMillis: statement.endTime?.getTime() ?? null,
+      totalDurationMillis: statement.totalDurationMillis ?? null,
+      executionDuration: statement.executionDuration ?? null,
+      fetchedBytes: this._fetchedBytes(),
+      modeLabel: flinkSnapshotModeLabel(statement.mode),
+      modeDescription: flinkSnapshotModeDescription(statement.mode),
+      isSnapshotMode: statement.mode === FlinkSnapshotMode.BATCH,
+      isTerminal: statement.isTerminal,
+      detail: statement.status?.detail ?? null,
+      failed: statement.failed,
+      stoppable: statement.stoppable,
+      areResultsViewable: statement.canRequestResults,
+      possiblyViewable: statement.possiblyViewable,
+      isForeground: statement.isForeground,
+      warnings: statement.warnings,
+    };
   }
 
   private getResultsArray() {
