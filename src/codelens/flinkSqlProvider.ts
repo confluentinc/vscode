@@ -1,7 +1,18 @@
-import type { CodeLensProvider, Command, Disposable, Event, TextDocument } from "vscode";
-import { CodeLens, EventEmitter, Position, Range } from "vscode";
+import type {
+  CodeLensProvider,
+  Command,
+  ConfigurationChangeEvent,
+  Disposable,
+  Event,
+  TextDocument,
+} from "vscode";
+import { CodeLens, EventEmitter, Position, Range, workspace } from "vscode";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
-import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
+import {
+  FLINK_CONFIG_COMPUTE_POOL,
+  FLINK_CONFIG_DATABASE,
+  FLINK_DEFAULT_SUBMISSION_MODE,
+} from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import type { CCloudEnvironment } from "../models/environment";
@@ -15,6 +26,13 @@ import type { UriMetadata } from "../storage/types";
 import { DisposableCollection } from "../utils/disposables";
 
 const logger = new Logger("codelens.flinkSqlProvider");
+
+/** Settings whose values can appear in a Flink SQL document's codelens titles. */
+const FLINK_DEFAULT_SETTINGS = [
+  FLINK_CONFIG_COMPUTE_POOL,
+  FLINK_CONFIG_DATABASE,
+  FLINK_DEFAULT_SUBMISSION_MODE,
+];
 
 export class FlinkSqlCodelensProvider extends DisposableCollection implements CodeLensProvider {
   // controls refreshing the available codelenses
@@ -39,6 +57,7 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
     return [
       ccloudConnected.event(this.ccloudConnectedHandler.bind(this)),
       uriMetadataSet.event(this.uriMetadataSetHandler.bind(this)),
+      workspace.onDidChangeConfiguration(this.configurationChangedHandler.bind(this)),
     ];
   }
 
@@ -57,6 +76,23 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
    */
   uriMetadataSetHandler(): void {
     logger.debug("uriMetadataSetHandler called, updating codelenses");
+    this._onDidChangeCodeLenses.fire();
+  }
+
+  /**
+   * Refresh/update all codelenses when one of the Flink default settings changes, since documents
+   * without their own metadata show these defaults in their codelens titles.
+   */
+  configurationChangedHandler(event: ConfigurationChangeEvent): void {
+    const changedSetting = FLINK_DEFAULT_SETTINGS.find((setting) =>
+      event.affectsConfiguration(setting.id),
+    );
+    if (!changedSetting) {
+      return;
+    }
+    logger.debug("configurationChangedHandler called, updating codelenses", {
+      settingId: changedSetting.id,
+    });
     this._onDidChangeCodeLenses.fire();
   }
 
@@ -92,7 +128,7 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
 
     // codelens for toggling between streaming (default, continuous) and snapshot (one-shot,
     // bounded) statement execution mode
-    const isSnapshotMode = snapshotMode === FlinkSnapshotMode.BATCH;
+    const isSnapshotMode = snapshotMode === FlinkSnapshotMode.SNAPSHOT;
     const toggleSnapshotModeCommand: Command = {
       title: `Mode: ${flinkSnapshotModeLabel(snapshotMode)}`,
       command: "confluent.document.flinksql.toggleSnapshotMode",
@@ -178,14 +214,21 @@ export async function getComputePoolFromMetadata(
 }
 
 /**
- * Get the snapshot ("batch") vs streaming execution mode from the metadata stored in the document.
- * Defaults to {@link FlinkSnapshotMode.STREAMING} when unset or explicitly cleared.
+ * Get the snapshot vs streaming execution mode from the metadata stored in the document.
+ *
+ * Falls back to the {@link FLINK_DEFAULT_SUBMISSION_MODE} setting when the document has no mode of
+ * its own. Unlike the compute pool and database, a cleared (`null`) mode also falls back: there is
+ * no "no mode" state for a statement, so clearing a document's settings should return it to the
+ * user's default rather than pin it to streaming.
+ *
  * @param metadata The metadata stored in the document.
  */
 export function getSnapshotModeFromMetadata(metadata: UriMetadata | undefined): FlinkSnapshotMode {
-  return metadata?.[UriMetadataKeys.FLINK_SNAPSHOT_MODE] === FlinkSnapshotMode.BATCH
-    ? FlinkSnapshotMode.BATCH
-    : FlinkSnapshotMode.STREAMING;
+  const storedMode = metadata?.[UriMetadataKeys.FLINK_SNAPSHOT_MODE];
+  if (storedMode === FlinkSnapshotMode.SNAPSHOT || storedMode === FlinkSnapshotMode.STREAMING) {
+    return storedMode;
+  }
+  return FLINK_DEFAULT_SUBMISSION_MODE.value;
 }
 
 export interface CatalogDatabase {

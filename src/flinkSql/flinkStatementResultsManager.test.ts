@@ -315,7 +315,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       assert.strictEqual(meta.isSnapshotMode, true);
       assert.strictEqual(
         meta.modeDescription,
-        flinkSnapshotModeDescription(FlinkSnapshotMode.BATCH),
+        flinkSnapshotModeDescription(FlinkSnapshotMode.SNAPSHOT),
       );
     });
   });
@@ -998,7 +998,7 @@ describe("FlinkStatementResultsViewModel execution duration display", () => {
       spec: {
         ...base.spec,
         properties:
-          mode === FlinkSnapshotMode.BATCH
+          mode === FlinkSnapshotMode.SNAPSHOT
             ? { ...base.spec.properties, "sql.snapshot.mode": "now" }
             : base.spec.properties,
       },
@@ -1016,7 +1016,7 @@ describe("FlinkStatementResultsViewModel execution duration display", () => {
 
   it("should withhold execution time for a snapshot statement", async () => {
     const snapshotVm: FlinkStatementResultsViewModel = await createViewModel(
-      FlinkSnapshotMode.BATCH,
+      FlinkSnapshotMode.SNAPSHOT,
     );
 
     await eventually(() => {

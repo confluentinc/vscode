@@ -45,7 +45,7 @@ export enum UriMetadataKeys {
   FLINK_DATABASE_NAME = "flinkDatabaseName",
   /** True when the document was opened from a Flink workspace deep link. */
   FLINK_FROM_WORKSPACE = "flinkFromWorkspace",
-  /** Batch ("snapshot") vs streaming execution mode to submit the statement with. */
+  /** Snapshot vs streaming execution mode to submit the statement with. */
   FLINK_SNAPSHOT_MODE = "flinkSnapshotMode",
 }
 

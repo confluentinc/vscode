@@ -472,24 +472,24 @@ describe("commands/documents.ts toggleSnapshotModeForUriCommand()", () => {
     sinon.assert.notCalled(setFlinkDocumentMetadataStub);
   });
 
-  it("should set mode to BATCH when current mode is undefined", async () => {
+  it("should set mode to SNAPSHOT when current mode is undefined", async () => {
     await toggleSnapshotModeForUriCommand(testUri, undefined);
 
     sinon.assert.calledOnceWithExactly(setFlinkDocumentMetadataStub, testUri, {
-      snapshotMode: FlinkSnapshotMode.BATCH,
+      snapshotMode: FlinkSnapshotMode.SNAPSHOT,
     });
   });
 
-  it("should set mode to BATCH when current mode is STREAMING", async () => {
+  it("should set mode to SNAPSHOT when current mode is STREAMING", async () => {
     await toggleSnapshotModeForUriCommand(testUri, FlinkSnapshotMode.STREAMING);
 
     sinon.assert.calledOnceWithExactly(setFlinkDocumentMetadataStub, testUri, {
-      snapshotMode: FlinkSnapshotMode.BATCH,
+      snapshotMode: FlinkSnapshotMode.SNAPSHOT,
     });
   });
 
-  it("should set mode to STREAMING when current mode is BATCH", async () => {
-    await toggleSnapshotModeForUriCommand(testUri, FlinkSnapshotMode.BATCH);
+  it("should set mode to STREAMING when current mode is SNAPSHOT", async () => {
+    await toggleSnapshotModeForUriCommand(testUri, FlinkSnapshotMode.SNAPSHOT);
 
     sinon.assert.calledOnceWithExactly(setFlinkDocumentMetadataStub, testUri, {
       snapshotMode: FlinkSnapshotMode.STREAMING,

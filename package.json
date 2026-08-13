@@ -1113,6 +1113,19 @@
               "Open Flink statement results in the **bottom panel area** (show results for one executing statement at a time)."
             ],
             "description": "Default location for displaying Flink statement results."
+          },
+          "confluent.flink.defaultSubmissionMode": {
+            "type": "string",
+            "default": "streaming",
+            "enum": [
+              "streaming",
+              "snapshot"
+            ],
+            "markdownEnumDescriptions": [
+              "Statements run **continuously** against new data as it arrives.",
+              "Statements run **once** against a snapshot of the data as of submission time, then complete. See [snapshot queries](https://docs.confluent.io/cloud/current/flink/concepts/snapshot-queries.html)."
+            ],
+            "markdownDescription": "Default submission mode for Flink SQL statements. Can be overridden per document with the 'Mode:' codelens."
           }
         }
       },

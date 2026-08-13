@@ -158,7 +158,9 @@ export async function toggleSnapshotModeForUriCommand(
   }
 
   const newMode: FlinkSnapshotMode =
-    currentMode === FlinkSnapshotMode.BATCH ? FlinkSnapshotMode.STREAMING : FlinkSnapshotMode.BATCH;
+    currentMode === FlinkSnapshotMode.SNAPSHOT
+      ? FlinkSnapshotMode.STREAMING
+      : FlinkSnapshotMode.SNAPSHOT;
 
   await setFlinkDocumentMetadata(uri, { snapshotMode: newMode });
 }

@@ -261,7 +261,7 @@ describe("flinkSql/statementUtils.ts", function () {
     }> = [
       { snapshotMode: undefined, expectedProperty: undefined },
       { snapshotMode: FlinkSnapshotMode.STREAMING, expectedProperty: undefined },
-      { snapshotMode: FlinkSnapshotMode.BATCH, expectedProperty: "now" },
+      { snapshotMode: FlinkSnapshotMode.SNAPSHOT, expectedProperty: "now" },
     ];
 
     for (const { snapshotMode, expectedProperty } of snapshotModeCases) {
@@ -535,11 +535,11 @@ describe("flinkSql/statementUtils.ts", function () {
 
     it("should set the snapshot mode metadata when provided", async () => {
       await setFlinkDocumentMetadata(uri, {
-        snapshotMode: FlinkSnapshotMode.BATCH,
+        snapshotMode: FlinkSnapshotMode.SNAPSHOT,
       });
 
       sinon.assert.calledWith(rmSetUriMetadataStub, uri, {
-        [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: FlinkSnapshotMode.BATCH,
+        [UriMetadataKeys.FLINK_SNAPSHOT_MODE]: FlinkSnapshotMode.SNAPSHOT,
       });
 
       sinon.assert.calledWith(uriMetadataSetFireStub, uri);

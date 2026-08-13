@@ -51,7 +51,7 @@ export interface IFlinkStatementSubmitParameters {
   properties: FlinkSpecProperties;
 
   /**
-   * Batch ("snapshot") vs streaming execution mode to submit the statement with.
+   * Snapshot vs streaming execution mode to submit the statement with.
    * Defaults to {@link FlinkSnapshotMode.STREAMING} when omitted.
    */
   snapshotMode?: FlinkSnapshotMode;
@@ -72,7 +72,7 @@ export async function submitFlinkStatement(
   const handle = await getSidecar();
 
   const properties: Record<string, string> = params.properties.toProperties();
-  if (params.snapshotMode === FlinkSnapshotMode.BATCH) {
+  if (params.snapshotMode === FlinkSnapshotMode.SNAPSHOT) {
     properties["sql.snapshot.mode"] = "now";
   }
 
