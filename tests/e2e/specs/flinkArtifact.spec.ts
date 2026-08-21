@@ -22,7 +22,7 @@ const __dirname = path.dirname(__filename);
 test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () => {
   test.use({ connectionType: ConnectionType.Ccloud });
   test.beforeEach(async ({ connectionItem }) => {
-    await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+    await expect(connectionItem.locator).toBeExpanded();
   });
 
   test.afterEach(async ({ page }) => {

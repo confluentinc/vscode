@@ -87,7 +87,7 @@ export class View {
     if (isExpanded !== "true") {
       await this.header.click();
     }
-    await expect(this.header).toHaveAttribute("aria-expanded", "true");
+    await expect(this.header).toBeExpanded();
   }
 
   /**
