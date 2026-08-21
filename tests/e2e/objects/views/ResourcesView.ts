@@ -328,7 +328,7 @@ export class ResourcesView extends SearchableView {
     if ((await environment.getAttribute("aria-expanded")) === "false") {
       await environment.click();
     }
-    await expect(environment).toHaveAttribute("aria-expanded", "true");
+    await expect(environment).toBeExpanded();
   }
 
   /**
