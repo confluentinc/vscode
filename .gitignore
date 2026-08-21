@@ -127,3 +127,6 @@ bin/ide-sidecar-*-runner
 *.pem
 
 playwright-report/
+
+# Internal-only Claude skills (kept locally; not pushed)
+.claude/skills/learn-conventions/
