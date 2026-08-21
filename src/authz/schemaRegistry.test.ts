@@ -14,6 +14,7 @@ import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
 import type { CCloudResourceLoader } from "../loaders";
+import type { KafkaTopic } from "../models/topic";
 import type { SidecarHandle } from "../sidecar";
 import * as schemaRegistry from "./schemaRegistry";
 
@@ -52,12 +53,26 @@ describe("authz.schemaRegistry", function () {
     return new ResponseError(new Response(JSON.stringify({ error_code: 40301 }), { status: 403 }));
   }
 
+  // assert both the key and value subjects were looked up exactly once, not just that two lookups
+  // happened (a regression querying the key subject twice would satisfy a bare count check).
+  function assertKeyAndValueSubjectsLookedUp(topic: KafkaTopic): void {
+    sinon.assert.calledTwice(mockClient.lookUpSchemaUnderSubject);
+    sinon.assert.calledWith(
+      mockClient.lookUpSchemaUnderSubject,
+      sinon.match({ subject: `${topic.name}-key` }),
+    );
+    sinon.assert.calledWith(
+      mockClient.lookUpSchemaUnderSubject,
+      sinon.match({ subject: `${topic.name}-value` }),
+    );
+  }
+
   it("canAccessSchemaForTopic() should return true if both key and value access are true", async function () {
     mockClient.lookUpSchemaUnderSubject.resolves({});
 
     const result = await schemaRegistry.canAccessSchemaForTopic(TEST_CCLOUD_KAFKA_TOPIC);
 
-    sinon.assert.calledTwice(mockClient.lookUpSchemaUnderSubject);
+    assertKeyAndValueSubjectsLookedUp(TEST_CCLOUD_KAFKA_TOPIC);
     assert.strictEqual(result, true);
   });
 
@@ -73,7 +88,7 @@ describe("authz.schemaRegistry", function () {
 
     const result = await schemaRegistry.canAccessSchemaForTopic(topic);
 
-    sinon.assert.calledTwice(mockClient.lookUpSchemaUnderSubject);
+    assertKeyAndValueSubjectsLookedUp(topic);
     assert.strictEqual(result, true);
   });
 
@@ -82,7 +97,7 @@ describe("authz.schemaRegistry", function () {
 
     const result = await schemaRegistry.canAccessSchemaForTopic(TEST_CCLOUD_KAFKA_TOPIC);
 
-    sinon.assert.calledTwice(mockClient.lookUpSchemaUnderSubject);
+    assertKeyAndValueSubjectsLookedUp(TEST_CCLOUD_KAFKA_TOPIC);
     assert.strictEqual(result, false);
   });
 
