@@ -100,9 +100,12 @@ describe("authz.schemaRegistry", function () {
   });
 
   it("canAccessSchemaTypeForTopic() should return false on a 403 ResponseError", async function () {
-    const error = new ResponseError(new Response(null, { status: 403 }));
+    // determineAccessFromResponseError() can't be stubbed (bare in-module reference), so drive it
+    // with a realistic 40301 "denied Read on Subject" body that exercises its genuine denial branch.
+    const error = new ResponseError(
+      new Response(JSON.stringify({ error_code: 40301 }), { status: 403 }),
+    );
     mockClient.lookUpSchemaUnderSubject.rejects(error);
-    sandbox.stub(schemaRegistry, "determineAccessFromResponseError").resolves(false);
     const result = await schemaRegistry.canAccessSchemaTypeForTopic(TEST_CCLOUD_KAFKA_TOPIC, "key");
     assert.strictEqual(result, false);
   });
