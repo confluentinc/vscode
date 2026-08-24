@@ -3,8 +3,8 @@
     "deny": [
       "Read(**/.env)",
       "Read(**/.env.*)",
-      "Write(**/.env)",
-      "Write(**/.env.*)"
+      "Edit(**/.env)",
+      "Edit(**/.env.*)"
     ]
   },
   "hooks": {
