@@ -248,7 +248,9 @@ export async function submitFlinkStatementCommand(
     if (isResponseError(err) && err.response.status === 400) {
       // Usually a bad SQL statement.
       // The error string should be JSON, have 'errors' as an array of objs with 'details' human readable messages.
-      const objFromResponse = await extractResponseBody(err);
+      const objFromResponse = await extractResponseBody<{ errors: [{ detail: string }] } | string>(
+        err,
+      );
       let errorMessages: string;
       if (objFromResponse && typeof objFromResponse === "object" && "errors" in objFromResponse) {
         const responseErrors: { errors: [{ detail: string }] } = objFromResponse;
