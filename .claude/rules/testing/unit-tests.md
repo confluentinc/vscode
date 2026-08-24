@@ -52,34 +52,18 @@ assignment instead: `obj["methodName"] = sandbox.stub()`.
 - Unit test fixtures in `tests/fixtures/`
 - Shared stubs in `tests/stubs/`
 
-## macOS: Local Electron Test Host Won't Launch (e.g. VS Code 1.131.0)
+## macOS: Local Test Host Issues
 
 `npx gulp test` downloads a real VS Code build into `.vscode-test/vscode-darwin-arm64-<version>/`
-(gitignored cache) and spawns it via `@vscode/test-electron@2.3.9` as the Extension Development
-Host. Two independent problems show up together on newer VS Code releases (first seen with 1.131.0):
+(gitignored cache) and spawns it via `@vscode/test-electron` as the Extension Development Host.
 
-**1. `spawn .../Electron ENOENT`** — `@vscode/test-electron@2.3.9` hardcodes the launcher binary
-name as `Electron`, but this VS Code build ships it renamed to `Code`. Fix locally (never commit —
-this only touches the gitignored cache):
+The `spawn .../Contents/MacOS/Electron ENOENT` failure that older `@vscode/test-electron` (2.x) hit
+on VS Code 1.110+ — VS Code renamed its macOS launcher binary from `Electron` to `Code`, which 2.x
+hardcoded and could no longer find — is resolved by `@vscode/test-electron@^3.1.0`, which locates
+the launcher dynamically. No `Electron` symlink or ad-hoc re-signing of the `.app` bundle is needed.
+A couple of macOS-specific problems can still stop the test host from launching:
 
-```bash
-cd ".vscode-test/vscode-darwin-arm64-<version>/Visual Studio Code.app/Contents/MacOS/"
-ln -s Code Electron
-```
-
-**2. `"Visual Studio Code" is damaged and can't be opened`** — adding that symlink modifies the
-signed `.app` bundle's contents, which invalidates its code signature. macOS then refuses to launch
-it and reports it as "damaged" (this is a broken-signature error, not a Gatekeeper quarantine issue
-— no `com.apple.quarantine` xattr needs to be present for it to happen). Fix by re-signing ad hoc
-after adding the symlink:
-
-```bash
-codesign --force --deep --sign - "Visual Studio Code.app"
-```
-
-Re-run `npx gulp test` after both steps.
-
-**3. `bad option: --no-sandbox` (and every other flag), exit code 9** — the test host is being run
+**1. `bad option: --no-sandbox` (and every other flag), exit code 9** — the test host is being run
 as plain Node instead of as Electron, so it rejects all of the Chromium/VS Code flags the runner
 passes. The cause is an inherited `ELECTRON_RUN_AS_NODE=1`, which any terminal hosted inside VS Code
 (or another Electron app) exports to its child processes — including agent sessions running in the
@@ -97,7 +81,7 @@ A quick tell that this is the problem rather than a broken bundle:
 `.../Contents/MacOS/Code --version` prints a Node version (e.g. `v24.18.0`) instead of a VS Code
 version.
 
-**4. Global suite setup times out or fails with `PORT_IN_USE` on 26636** — activation starts the
+**2. Global suite setup times out or fails with `PORT_IN_USE` on 26636** — activation starts the
 sidecar, and the sidecar port is shared machine-wide. Another VS Code window running the
 marketplace-installed Confluent extension (or a second dev host) already owns it, and it re-spawns
 its own sidecar within seconds of being killed, so the test run loses the race repeatedly. Close the
