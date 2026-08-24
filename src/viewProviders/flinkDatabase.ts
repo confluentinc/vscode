@@ -389,7 +389,7 @@ export class FlinkDatabaseViewProvider extends ParentedBaseViewProvider<
       // only applies to loading artifacts, since all others are loaded via background statements
       // and won't throw HTTP response errors
       if (isResponseError(error)) {
-        const responseBody = await extractResponseBody(error);
+        const responseBody = await extractResponseBody<{ message?: string }>(error);
         errorMsg = responseBody?.message || JSON.stringify(responseBody, null, 2);
         errorLanguage = "json";
       }
