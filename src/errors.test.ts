@@ -192,29 +192,52 @@ describe("errors.ts isTransientResponseError()", () => {
 });
 
 describe("errors.ts extractResponseBody()", () => {
-  it("should return the response body as JSON if it is valid JSON", async () => {
+  it("should return a ResponseError's body as JSON if it is valid JSON", async () => {
     const embeddedObject = { message: "test" };
     const error = createResponseError(400, "Bad Request", JSON.stringify(embeddedObject));
-    const body = await extractResponseBody(error);
+
+    const body = await extractResponseBody<{ message: string }>(error);
+
     assert.deepStrictEqual(embeddedObject, body);
   });
 
-  it("should return the response body as string if it is not valid JSON", async () => {
+  it("should return a ResponseError's body as a string if it is not valid JSON", async () => {
     const textResponse = "test random not-json {";
     const error = createResponseError(400, "Bad Request", textResponse);
+
     const body = await extractResponseBody(error);
+
     assert.strictEqual(body, textResponse);
   });
 
-  it("should throw if the error is not a ResponseError", async () => {
+  it("should decode a raw Response passed directly, as JSON if it is valid JSON", async () => {
+    const embeddedObject = { message: "test" };
+    const response = new Response(JSON.stringify(embeddedObject));
+
+    const body = await extractResponseBody<{ message: string }>(response);
+
+    assert.deepStrictEqual(embeddedObject, body);
+  });
+
+  it("should decode a raw Response passed directly, as a string if it is not valid JSON", async () => {
+    const textResponse = "test random not-json {";
+    const response = new Response(textResponse);
+
+    const body = await extractResponseBody(response);
+
+    assert.strictEqual(body, textResponse);
+  });
+
+  it("should throw if given neither a ResponseError nor a Response", async () => {
     const error = new Error("test");
+
     await assert.rejects(
       async () => {
-        await extractResponseBody(error as any);
+        await extractResponseBody(error as unknown as Response);
       },
       {
         name: "Error",
-        message: "extractResponseBody() called with non-ResponseError",
+        message: "extractResponseBody() called with neither a ResponseError nor a Response",
       },
     );
   });
