@@ -286,8 +286,14 @@ export class SidecarManager {
   private async onWebsocketStateChange(event: WebsocketStateEvent) {
     if (event === WebsocketStateEvent.DISCONNECTED) {
       // Try to get a new sidecar handle, which will start a new sidecar process
-      // and reconnect websocket.
-      await this.getHandle();
+      // and reconnect websocket. getHandle() can now reject (a stalled websocket handshake
+      // rejects instead of hanging), and this runs as a fire-and-forget event listener, so
+      // catch here to avoid an unhandled promise rejection.
+      try {
+        await this.getHandle();
+      } catch (e) {
+        logError(e, "Failed to reconnect sidecar handle after websocket disconnect");
+      }
     }
   }
 

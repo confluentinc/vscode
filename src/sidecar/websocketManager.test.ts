@@ -1,6 +1,9 @@
 import assert from "assert";
 import * as sinon from "sinon";
+import type { AddressInfo } from "ws";
+import { WebSocketServer } from "ws";
 import { getSidecar } from ".";
+import { eventually } from "../../tests/eventually";
 import { GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE } from "../../tests/unit/testResources/websocketMessages";
 import type { Message, WorkspacesChangedBody } from "../ws/messageTypes";
 import { MessageType, newMessageHeaders } from "../ws/messageTypes";
@@ -103,15 +106,53 @@ describe("WebsocketManager dispose tests", () => {
   });
 
   after(async () => {
-    // getting sidecar handle should kick off websocket reconnection
+    // dispose() above closed the shared singleton's websocket; getSidecar() kicks off reconnection.
+    // Poll until it completes so a racing reconnect doesn't leave later suites disconnected.
     await getSidecar();
 
     const websocketManager = WebsocketManager.getInstance();
-    assert.equal(
-      true,
-      websocketManager.isConnected(),
+    await eventually(
+      () => assert.strictEqual(websocketManager.isConnected(), true),
+      15_000,
       "Websocket should be connected after reconnection",
     );
+  });
+});
+
+describe("WebsocketManager.connect() failure handling", () => {
+  // Swap in a fresh, unregistered singleton so a failed connect here can't disturb the real shared
+  // connection: no sidecarManager reconnect handler is wired to this throwaway instance.
+  let savedInstance: WebsocketManager | null;
+  let isolated: WebsocketManager;
+
+  beforeEach(() => {
+    savedInstance = WebsocketManager.instance;
+    WebsocketManager.instance = null;
+    isolated = WebsocketManager.getInstance();
+  });
+
+  afterEach(() => {
+    isolated.dispose();
+    WebsocketManager.instance = savedInstance;
+  });
+
+  it("rejects (rather than hanging) when the socket errors before the handshake completes", async () => {
+    // port 1 is not listening, so the socket errors immediately
+    await assert.rejects(isolated.connect("localhost:1", "test-token", 5000));
+  });
+
+  it("rejects with a timeout when the handshake stalls past the timeout", async () => {
+    // a server that accepts the socket but never replies to WORKSPACE_HELLO, so the handshake
+    // stalls and connect() must reject on its own timeout instead of hanging forever
+    const server = new WebSocketServer({ port: 0 });
+    await new Promise<void>((resolve) => server.once("listening", () => resolve()));
+    const port = (server.address() as AddressInfo).port;
+
+    try {
+      await assert.rejects(isolated.connect(`localhost:${port}`, "test-token", 300), /timed out/);
+    } finally {
+      server.close();
+    }
   });
 });
 

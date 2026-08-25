@@ -11,6 +11,14 @@ import { MessageBodyDecoders, MessageType, validateMessageBody } from "../ws/mes
 
 const logger = new Logger("websocketManager");
 
+/**
+ * How long to wait for the full websocket connect handshake (socket open + WORKSPACE_HELLO +
+ * the initial WORKSPACE_COUNT_CHANGED reply) before giving up. Without a bound, a connection that
+ * errors or stalls before completing the handshake leaves {@link WebsocketManager.connect} pending
+ * forever, and anything awaiting it (e.g. reconnection) hangs until an unrelated timeout fires.
+ */
+export const CONNECT_TIMEOUT_MS = 15_000;
+
 /** Type describing message handler callbacks to whom received messages are routed. */
 export type MessageCallback<T extends MessageType> = (message: Message<T>) => Promise<void>;
 
@@ -35,6 +43,9 @@ export class WebsocketManager extends DisposableCollection {
    */
   private messageRouter: NodeEventEmitter;
   private peerWorkspaceCount = 0;
+
+  /** Monotonic counter used only to correlate a connect attempt's log lines. */
+  private connectAttempts = 0;
 
   private constructor() {
     super();
@@ -78,23 +89,64 @@ export class WebsocketManager extends DisposableCollection {
    *
    * @param hostPortFragment The host and port fragment to connect to, e.g. "localhost:8080".
    * @param accessToken The access token to use for authorization.
+   * @param timeoutMs How long to wait for the full handshake before giving up; defaults to
+   *   {@link CONNECT_TIMEOUT_MS}.
+   * @throws if the handshake times out, the socket errors, or the socket closes before the
+   *   handshake completes.
    */
-  async connect(hostPortFragment: string, accessToken: string): Promise<void> {
-    return new Promise<void>((resolve) => {
+  async connect(
+    hostPortFragment: string,
+    accessToken: string,
+    timeoutMs: number = CONNECT_TIMEOUT_MS,
+  ): Promise<void> {
+    const attempt = ++this.connectAttempts;
+    return new Promise<void>((resolve, reject) => {
       if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-        logger.info("Websocket already connected");
+        logger.debug(`[connect #${attempt}] websocket already connected`);
         resolve();
         return;
       }
 
-      logger.info("Setting up websocket to sidecar");
+      logger.debug(`[connect #${attempt}] setting up websocket to sidecar`);
 
       const websocket = new WebSocket(`ws://${hostPortFragment}/ws`, {
         headers: { authorization: `Bearer ${accessToken}` },
       });
 
+      // Guard against settling more than once: the handshake resolves this promise, but a late
+      // error/close/timeout must not resolve-or-reject it a second time. The first outcome wins.
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        logger.error(
+          `[connect #${attempt}] handshake to sidecar timed out after ${timeoutMs}ms (readyState=${websocket.readyState}); terminating socket`,
+        );
+        // Forcibly tear down the half-open socket so it can't leak or fire a late CONNECTED.
+        try {
+          websocket.terminate();
+        } catch {
+          // best-effort teardown; ignore
+        }
+        settleReject(
+          new Error(`Websocket connect handshake to sidecar timed out after ${timeoutMs}ms`),
+        );
+      }, timeoutMs);
+
+      const settleResolve = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      };
+      const settleReject = (error: Error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(error);
+      };
+
       websocket.on("open", () => {
-        logger.info("Websocket connected to sidecar, saying hello ...");
+        logger.debug(`[connect #${attempt}] websocket opened, saying hello ...`);
 
         // send the hello message
         const helloMessage: Message<MessageType.WORKSPACE_HELLO> = {
@@ -115,14 +167,14 @@ export class WebsocketManager extends DisposableCollection {
           MessageType.WORKSPACE_COUNT_CHANGED,
           async (m: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
             logger.info(
-              "Received initial WORKSPACE_COUNT_CHANGED message, websocket now fully connected.",
+              `[connect #${attempt}] received initial WORKSPACE_COUNT_CHANGED, websocket now fully connected`,
             );
             this.websocket = websocket;
             this.peerWorkspaceCount = m.body.current_workspace_count - 1;
             // Emit an event to let the extension know the websocket has closed.
             // This will get picked up by sidecarManager, which will then attempt to reconnect.
             this.websocketStateEmitter.fire(WebsocketStateEvent.CONNECTED);
-            resolve();
+            settleResolve();
           },
         );
 
@@ -135,7 +187,7 @@ export class WebsocketManager extends DisposableCollection {
       });
 
       websocket.on("close", () => {
-        logger.info("Websocket closed");
+        logger.info(`[connect #${attempt}] websocket closed`);
 
         // do additional cleanup here
         this.websocket = null;
@@ -143,11 +195,16 @@ export class WebsocketManager extends DisposableCollection {
         // Emit an event to let the extension know the websocket has closed.
         // This will get picked up by sidecarManager, which will then attempt to reconnect.
         this.websocketStateEmitter.fire(WebsocketStateEvent.DISCONNECTED);
+
+        // If we closed before the handshake finished, reject connect() rather than leaving it
+        // pending forever. Once already settled (normal later disconnect), this is a no-op.
+        settleReject(new Error("Websocket closed before connect handshake completed"));
       });
 
       websocket.on("error", (error) => {
-        logger.error(`Websocket error: ${error}`);
-        // Go ahead and close the websocket, which will trigger the close event above.
+        logger.error(`[connect #${attempt}] websocket error: ${error}`);
+        // Go ahead and close the websocket, which will trigger the close event above (which
+        // rejects connect() if the handshake had not yet completed).
         websocket.close();
       });
 
@@ -171,9 +228,14 @@ export class WebsocketManager extends DisposableCollection {
 
       this.disposables.push({
         dispose: () => {
-          // Close the websocket when we're disposed of.
-          if (this.websocket && this.websocket.readyState !== WebSocket.CLOSED) {
-            this.websocket.close();
+          // Tear down THIS attempt on disposal. Capture the local websocket/timer rather than
+          // this.websocket, which isn't assigned until the handshake completes - otherwise
+          // disposing mid-handshake would leave the pending timer and half-open socket alive.
+          clearTimeout(timer);
+          if (websocket.readyState !== WebSocket.CLOSED) {
+            websocket.close();
+          }
+          if (this.websocket === websocket) {
             this.websocket = null;
           }
         },
