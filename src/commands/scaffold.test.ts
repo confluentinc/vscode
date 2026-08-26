@@ -7,6 +7,7 @@ import {
   TEST_CCLOUD_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import * as errors from "../errors";
 import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { KafkaTopic } from "../models/topic";
@@ -102,19 +103,23 @@ describe("commands/scaffold.ts", () => {
       );
     });
 
-    it("should show an error notification if environment for topic is not found", async () => {
+    it("should show an error notification and log to Sentry if no cluster is found for the topic", async () => {
       const showErrorNotificationWithButtonsStub = sandbox.stub(
         notifications,
         "showErrorNotificationWithButtons",
       );
+      const logErrorStub = sandbox.stub(errors, "logError");
 
-      // make a new topic with an environment ID that won't be found
-      const topicWithMissingEnv = new KafkaTopic({
+      // topic whose cluster can't be resolved within its environment
+      const topicWithMissingCluster = new KafkaTopic({
         ...TEST_CCLOUD_KAFKA_TOPIC,
         clusterId: "missing-cluster-id",
       });
+      stubbedResourceLoader.getClusterForTopic
+        .withArgs(topicWithMissingCluster)
+        .resolves(undefined);
 
-      await resourceScaffoldProjectCommand(topicWithMissingEnv);
+      await resourceScaffoldProjectCommand(topicWithMissingCluster);
 
       sinon.assert.notCalled(scaffoldProjectRequestStub);
       sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
@@ -122,12 +127,13 @@ describe("commands/scaffold.ts", () => {
         showErrorNotificationWithButtonsStub,
         `Unable to find Kafka cluster for topic "${TEST_CCLOUD_KAFKA_TOPIC.name}".`,
       );
+      sinon.assert.calledOnce(logErrorStub);
     });
 
     it("should call scaffoldProjectRequest with correct parameters for KafkaTopic", async () => {
-      stubbedResourceLoader.getKafkaClustersForEnvironmentId
-        .withArgs(TEST_CCLOUD_KAFKA_TOPIC.environmentId)
-        .resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
+      stubbedResourceLoader.getClusterForTopic
+        .withArgs(TEST_CCLOUD_KAFKA_TOPIC)
+        .resolves(TEST_CCLOUD_KAFKA_CLUSTER);
 
       await resourceScaffoldProjectCommand(TEST_CCLOUD_KAFKA_TOPIC);
 

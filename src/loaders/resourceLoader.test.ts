@@ -471,6 +471,53 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
   });
 });
 
+describe("ResourceLoader::getClusterForTopic()", () => {
+  let loaderInstance: ResourceLoader;
+  let sandbox: sinon.SinonSandbox;
+  let getKafkaClustersForEnvironmentIdStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    loaderInstance = LocalResourceLoader.getInstance();
+    getKafkaClustersForEnvironmentIdStub = sandbox.stub(
+      loaderInstance,
+      "getKafkaClustersForEnvironmentId",
+    );
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Raises error for a topic from a mismatched connection", async () => {
+    await assert.rejects(loaderInstance.getClusterForTopic(TEST_CCLOUD_KAFKA_TOPIC), (err) => {
+      return (err as Error).message.startsWith(`Mismatched connectionId ${LOCAL_CONNECTION_ID}`);
+    });
+
+    sinon.assert.notCalled(getKafkaClustersForEnvironmentIdStub);
+  });
+
+  it("Returns the cluster matching the topic's clusterId", async () => {
+    getKafkaClustersForEnvironmentIdStub
+      .withArgs(TEST_LOCAL_KAFKA_TOPIC.environmentId)
+      .resolves([TEST_LOCAL_KAFKA_CLUSTER]);
+
+    const cluster = await loaderInstance.getClusterForTopic(TEST_LOCAL_KAFKA_TOPIC);
+
+    assert.strictEqual(cluster, TEST_LOCAL_KAFKA_CLUSTER);
+  });
+
+  it("Returns undefined when no cluster in the environment matches the topic's clusterId", async () => {
+    getKafkaClustersForEnvironmentIdStub
+      .withArgs(TEST_LOCAL_KAFKA_TOPIC.environmentId)
+      .resolves([]);
+
+    const cluster = await loaderInstance.getClusterForTopic(TEST_LOCAL_KAFKA_TOPIC);
+
+    assert.strictEqual(cluster, undefined);
+  });
+});
+
 describe("ResourceLoader::getConsumerGroupsForCluster()", () => {
   let loaderInstance: LocalResourceLoader;
   let sandbox: sinon.SinonSandbox;
