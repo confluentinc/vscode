@@ -4,7 +4,10 @@ import type { AddressInfo } from "ws";
 import { WebSocketServer } from "ws";
 import { getSidecar } from ".";
 import { eventually } from "../../tests/eventually";
-import { GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE } from "../../tests/unit/testResources/websocketMessages";
+import {
+  createWorkspaceCountMessage,
+  GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE,
+} from "../../tests/unit/testResources/websocketMessages";
 import type { Message, WorkspacesChangedBody } from "../ws/messageTypes";
 import { MessageType, newMessageHeaders } from "../ws/messageTypes";
 import {
@@ -123,7 +126,18 @@ describe("WebsocketManager dispose tests", () => {
   });
 });
 
-describe("WebsocketManager.connect() failure handling", () => {
+/**
+ * Start a websocket server that accepts the socket but never replies to WORKSPACE_HELLO, so a
+ * connect() handshake against it stalls until its own timeout fires.
+ */
+async function startStallingServer(): Promise<{ port: number; close: () => void }> {
+  const server = new WebSocketServer({ port: 0 });
+  await new Promise<void>((resolve) => server.once("listening", () => resolve()));
+  const port = (server.address() as AddressInfo).port;
+  return { port, close: () => server.close() };
+}
+
+describe("WebsocketManager.connect() failure tests", () => {
   // Swap in a fresh, unregistered singleton so a failed connect here can't disturb the real shared
   // connection: no sidecarManager reconnect handler is wired to this throwaway instance.
   let savedInstance: WebsocketManager | null;
@@ -150,11 +164,7 @@ describe("WebsocketManager.connect() failure handling", () => {
   });
 
   it("rejects with a WebsocketConnectionError timeout when the handshake stalls past the timeout", async () => {
-    // a server that accepts the socket but never replies to WORKSPACE_HELLO, so the handshake
-    // stalls and connect() must reject on its own timeout instead of hanging forever
-    const server = new WebSocketServer({ port: 0 });
-    await new Promise<void>((resolve) => server.once("listening", () => resolve()));
-    const port = (server.address() as AddressInfo).port;
+    const { port, close } = await startStallingServer();
 
     try {
       await assert.rejects(
@@ -162,7 +172,7 @@ describe("WebsocketManager.connect() failure handling", () => {
         (err: unknown) => err instanceof WebsocketConnectionError && /timed out/.test(err.message),
       );
     } finally {
-      server.close();
+      close();
     }
   });
 
@@ -179,12 +189,10 @@ describe("WebsocketManager.connect() failure handling", () => {
     assert.strictEqual(disposables.length, before);
   });
 
-  it("a timed-out attempt's stale WORKSPACE_COUNT_CHANGED handler does not clobber this.websocket", async () => {
+  it("deregisters a timed-out attempt's stale WORKSPACE_COUNT_CHANGED handler", async () => {
     // a server that accepts the socket (so the once() handler is installed) but never replies, so
-    // the attempt times out and settles while its handler stays registered on the messageRouter.
-    const server = new WebSocketServer({ port: 0 });
-    await new Promise<void>((resolve) => server.once("listening", () => resolve()));
-    const port = (server.address() as AddressInfo).port;
+    // the attempt times out with its one-shot handler registered until settleReject removes it.
+    const { port, close } = await startStallingServer();
 
     try {
       await assert.rejects(
@@ -192,22 +200,27 @@ describe("WebsocketManager.connect() failure handling", () => {
         WebsocketConnectionError,
       );
 
-      // deliver the message the stale handler waits for; the guard must make it a no-op so
-      // this.websocket is not set to the dead socket.
-      const message: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
-        headers: {
-          message_type: MessageType.WORKSPACE_COUNT_CHANGED,
-          originator: "sidecar",
-          message_id: "1",
-        },
-        body: { current_workspace_count: 2 },
-      };
-      await isolated.deliverToCallbacks(message);
+      // only the durable subscriber remains; the timed-out attempt's one-shot handler was removed.
+      const router = isolated["messageRouter"];
+      assert.strictEqual(router.listenerCount(MessageType.WORKSPACE_COUNT_CHANGED), 1);
+
+      // and delivering the message it waited for must not clobber this.websocket with the dead socket.
+      await isolated.deliverToCallbacks(createWorkspaceCountMessage(2));
 
       assert.strictEqual(isolated["websocket"], null);
     } finally {
-      server.close();
+      close();
     }
+  });
+
+  it("keeps durable message routing alive across dispose()", async () => {
+    // routing has instance lifetime: dispose() must not tear down the WORKSPACE_COUNT_CHANGED
+    // handler, so a reused singleton still tracks peerWorkspaceCount (the flake this fixes).
+    isolated.dispose();
+
+    await isolated.deliverToCallbacks(createWorkspaceCountMessage(4));
+
+    assert.strictEqual(isolated.getPeerWorkspaceCount(), 3);
   });
 });
 
