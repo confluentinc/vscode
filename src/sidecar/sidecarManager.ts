@@ -15,7 +15,11 @@ import {
 } from "./constants";
 import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
-import { WebsocketManager, WebsocketStateEvent } from "./websocketManager";
+import {
+  WebsocketConnectionError,
+  WebsocketManager,
+  WebsocketStateEvent,
+} from "./websocketManager";
 
 import type { Tail } from "tail";
 import { observabilityContext } from "../context/observability";
@@ -51,6 +55,13 @@ const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
 
 /** How many loop attempts to try in startSidecar() and doHand */
 export const MAX_ATTEMPTS = 20;
+
+/**
+ * How many consecutive websocket-handshake failures to retry before giving up. Kept small (and
+ * separate from {@link MAX_ATTEMPTS}) because each attempt can burn up to the connect timeout
+ * (~15s), so a large budget would let a persistently-stalling handshake block for minutes.
+ */
+export const MAX_WEBSOCKET_CONNECT_ATTEMPTS = 3;
 
 const logger = new Logger("sidecarManager");
 
@@ -124,6 +135,7 @@ export class SidecarManager {
     }
 
     try {
+      let websocketConnectFailures = 0;
       for (let i = 0; i < MAX_ATTEMPTS; i++) {
         const logPrefix = `getHandlePromise(${callnum} attempt ${i})`;
 
@@ -179,6 +191,22 @@ export class SidecarManager {
             logger.info(`${logPrefix}: Started new sidecar, got new access token.`);
 
             // Now jump back to the top, try healthcheck / authentication again.
+            continue;
+          } else if (e instanceof WebsocketConnectionError) {
+            // The sidecar itself is healthy (healthcheck passed); only the websocket handshake
+            // stalled or failed. Retry a bounded number of times rather than treating it as an
+            // unrecoverable startup error (which would surface a fatal notification and abort).
+            websocketConnectFailures++;
+            if (websocketConnectFailures >= MAX_WEBSOCKET_CONNECT_ATTEMPTS) {
+              logger.error(
+                `${logPrefix}: websocket connect failed ${websocketConnectFailures} times, giving up`,
+              );
+              throw e;
+            }
+            logger.info(
+              `${logPrefix}: websocket connect failed, retrying (${websocketConnectFailures}/${MAX_WEBSOCKET_CONNECT_ATTEMPTS}): ${e}`,
+            );
+            await pause(MOMENTARY_PAUSE_MS);
             continue;
           } else {
             logger.error(`${logPrefix}: unhandled error`, e);
