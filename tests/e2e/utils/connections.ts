@@ -279,7 +279,7 @@ export async function setupLocalKafka(page: Page) {
   await localItem.clickStartResources();
 
   // multi-select quickpick to select which resources to start
-  const containerQuickpick = new Quickpick(page);
+  const containerQuickpick = new Quickpick(page, "Local Resources to Start");
   await expect(containerQuickpick.locator).toBeVisible();
   // local Kafka should be checked by default - if not, we'll fail the expect below
   await containerQuickpick.confirm();
@@ -312,7 +312,7 @@ export async function setupLocalSchemaRegistry(page: Page) {
   await localItem.clickStartResources();
 
   // multi-select quickpick to select which resources to start
-  const containerQuickpick = new Quickpick(page);
+  const containerQuickpick = new Quickpick(page, "Local Resources to Start");
   await expect(containerQuickpick.locator).toBeVisible();
   await containerQuickpick.selectItemByText("Schema Registry");
   await containerQuickpick.confirm();

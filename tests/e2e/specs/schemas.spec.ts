@@ -128,11 +128,11 @@ test.describe("Schema Management", { tag: [Tag.EvolveSchema] }, () => {
             // attempt to upload from the subject item (instead of the Schemas view nav action)
             await subjectItem.clickUploadSchemaForSubject();
             // select editor/file name in the first quickpick
-            const documentQuickpick = new Quickpick(page);
+            const documentQuickpick = new Quickpick(page, "Select a file");
             await expect(documentQuickpick.locator).toBeVisible();
             await documentQuickpick.selectItemByText(expectedTabName);
             // select schema type in the next quickpick
-            const uploadSchemaTypeQuickpick = new Quickpick(page);
+            const uploadSchemaTypeQuickpick = new Quickpick(page, "Choose a schema type");
             await expect(uploadSchemaTypeQuickpick.locator).toBeVisible();
             await uploadSchemaTypeQuickpick.selectItemByText(schemaType);
 
@@ -177,11 +177,11 @@ test.describe("Schema Management", { tag: [Tag.EvolveSchema] }, () => {
             // attempt to upload from the subject item (instead of the Schemas view nav action)
             await subjectItem.clickUploadSchemaForSubject();
             // select editor/file name in the first quickpick
-            const documentQuickpick = new Quickpick(page);
+            const documentQuickpick = new Quickpick(page, "Select a file");
             await expect(documentQuickpick.locator).toBeVisible();
             await documentQuickpick.selectItemByText(expectedTabName);
             // select schema type in the next quickpick
-            const uploadSchemaTypeQuickpick = new Quickpick(page);
+            const uploadSchemaTypeQuickpick = new Quickpick(page, "Choose a schema type");
             await expect(uploadSchemaTypeQuickpick.locator).toBeVisible();
             await uploadSchemaTypeQuickpick.selectItemByText(schemaType);
 

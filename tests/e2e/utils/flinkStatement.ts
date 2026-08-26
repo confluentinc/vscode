@@ -51,14 +51,14 @@ export async function submitFlinkStatement(
 
   // Select the Flink compute pool
   await codeLens.getByText("Set Compute Pool").click();
-  const computePoolQuickpick = new Quickpick(page);
+  const computePoolQuickpick = new Quickpick(page, "Select a Flink compute pool");
   await computePoolQuickpick.selectItemByText(computePoolName, { exact: true });
   await expect(codeLens.getByText(computePoolName)).toBeVisible();
 
   // Select a Kafka cluster (the quickpick auto-filters to clouds/regions matching the pool, but
   // there can still be multiple matches; pin via the configured name so we never pick the wrong one)
   await codeLens.getByText("Set Catalog & Database").click();
-  const kafkaClusterQuickpick = new Quickpick(page);
+  const kafkaClusterQuickpick = new Quickpick(page, "Select a Kafka cluster");
   await kafkaClusterQuickpick.selectItemByText(CCLOUD_KAFKA_CLUSTER_NAME, { exact: true });
 
   // Submit the Flink statement

@@ -130,7 +130,7 @@ export class FlinkDatabaseView extends SearchableView {
   private async clickClusterItemFromSelectedDB(clusterLabel?: string): Promise<void> {
     await this.clickSelectKafkaClusterAsFlinkDatabase();
 
-    const kafkaClusterQuickpick = new Quickpick(this.page);
+    const kafkaClusterQuickpick = new Quickpick(this.page, "Select a Kafka cluster");
     await expect(kafkaClusterQuickpick.locator).toBeVisible();
 
     const label = clusterLabel ?? CCLOUD_KAFKA_CLUSTER_NAME;
@@ -178,7 +178,7 @@ export class FlinkDatabaseView extends SearchableView {
   async selectKafkaClusterByProviderRegion(provider: string, region: string): Promise<void> {
     await this.clickSelectKafkaClusterAsFlinkDatabase();
 
-    const kafkaClusterQuickpick = new Quickpick(this.page);
+    const kafkaClusterQuickpick = new Quickpick(this.page, "Select a Kafka cluster");
     await expect(kafkaClusterQuickpick.locator).toBeVisible();
 
     // select by the configured cluster's unique name: the quickpick lists clusters from every
@@ -278,7 +278,7 @@ export class FlinkDatabaseView extends SearchableView {
     const containerItem = new ViewItem(this.page, container);
     await containerItem.clickInlineAction("Upload Flink Artifact to Confluent Cloud");
 
-    const quickpick = new Quickpick(this.page);
+    const quickpick = new Quickpick(this.page, "Upload Flink Artifact");
     await expect(quickpick.locator).toBeVisible();
     await expect(quickpick.items).not.toHaveCount(0);
   }
@@ -289,7 +289,7 @@ export class FlinkDatabaseView extends SearchableView {
    * @param filePath - The path to the JAR file
    */
   private async selectJarFile(electronApp: ElectronApplication, filePath: string): Promise<void> {
-    const quickpick = new Quickpick(this.page);
+    const quickpick = new Quickpick(this.page, "Upload Flink Artifact");
     const selectedJarFileItem = quickpick.items.filter({ hasText: "3. Select JAR File" }).first();
     await expect(selectedJarFileItem).toBeVisible();
 
@@ -306,7 +306,7 @@ export class FlinkDatabaseView extends SearchableView {
    * @returns The full artifact name with random suffix
    */
   private async enterArtifactName(filePath: string): Promise<string> {
-    const quickpick = new Quickpick(this.page);
+    const quickpick = new Quickpick(this.page, "Upload Flink Artifact");
     const artifactItem = quickpick.items.filter({ hasText: "4. Artifact Name" }).first();
     await expect(artifactItem).toBeVisible();
     await artifactItem.click();
@@ -326,7 +326,7 @@ export class FlinkDatabaseView extends SearchableView {
    * Confirm the artifact upload by clicking the upload action.
    */
   private async confirmUpload(): Promise<void> {
-    const quickpick = new Quickpick(this.page);
+    const quickpick = new Quickpick(this.page, "Upload Flink Artifact");
     const uploadAction = quickpick.items.filter({ hasText: "Upload Artifact" }).first();
     await expect(uploadAction).toBeVisible();
     await uploadAction.click();
@@ -375,7 +375,7 @@ export class FlinkDatabaseView extends SearchableView {
    */
   async uploadFlinkArtifactFromJAR(artifactName: string, providerRegion?: string): Promise<string> {
     // Wait for the quickpick to appear
-    const quickpick = new Quickpick(this.page);
+    const quickpick = new Quickpick(this.page, "Upload Flink Artifact");
     await expect(quickpick.locator).toBeVisible();
 
     // Step 1: Select Environment - pin to the configured env instead of `.first()`, which could

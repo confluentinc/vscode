@@ -115,7 +115,7 @@ export class SchemasView extends SearchableView {
       }
       case SelectSchemaRegistry.FromSchemasViewButton: {
         await this.clickSelectSchemaRegistry();
-        const schemaRegistryQuickpick = new Quickpick(this.page);
+        const schemaRegistryQuickpick = new Quickpick(this.page, "Select Schema Registry");
         await expect(schemaRegistryQuickpick.locator).toBeVisible();
         await expect(schemaRegistryQuickpick.items).not.toHaveCount(0);
         const registryItem = registryLabel
@@ -148,7 +148,7 @@ export class SchemasView extends SearchableView {
     await this.clickCreateNewSchema();
 
     // select initial schema type before the document opens
-    const createSchemaTypeQuickpick = new Quickpick(page);
+    const createSchemaTypeQuickpick = new Quickpick(page, "Choose a schema type");
     await expect(createSchemaTypeQuickpick.locator).toBeVisible();
     await createSchemaTypeQuickpick.selectItemByText(schemaType);
 
@@ -161,12 +161,12 @@ export class SchemasView extends SearchableView {
     await this.clickUploadSchema();
 
     // select editor/file name in the first quickpick
-    const documentQuickpick = new Quickpick(page);
+    const documentQuickpick = new Quickpick(page, "Select a file");
     await expect(documentQuickpick.locator).toBeVisible();
     await documentQuickpick.selectItemByText("Untitled");
 
     // select schema type in the next quickpick
-    const uploadSchemaTypeQuickpick = new Quickpick(page);
+    const uploadSchemaTypeQuickpick = new Quickpick(page, "Choose a schema type");
     await expect(uploadSchemaTypeQuickpick.locator).toBeVisible();
     await uploadSchemaTypeQuickpick.selectItemByText(schemaType);
 
@@ -219,7 +219,7 @@ export class SchemasView extends SearchableView {
     await subjectItem.rightClickContextMenuAction("Delete All Schemas in Subject");
 
     // select the Hard Delete option
-    const deletionQuickpick = new Quickpick(page);
+    const deletionQuickpick = new Quickpick(page, "Delete Schema Subject");
     const hardDelete = deletionQuickpick.items.filter({ hasText: "Hard Delete" });
     await expect(hardDelete).not.toHaveCount(0);
     await hardDelete.click();
