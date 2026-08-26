@@ -6,10 +6,12 @@ import * as errors from "../errors";
 import * as fsWrappers from "../utils/fsWrappers";
 import { SidecarFatalError } from "./errors";
 import * as sidecarLogging from "./logging";
-import { SidecarManager } from "./sidecarManager";
+import { SidecarHandle } from "./sidecarHandle";
+import { MAX_WEBSOCKET_CONNECT_ATTEMPTS, SidecarManager } from "./sidecarManager";
 import type { SidecarLogFormat, SidecarOutputs } from "./types";
 import { SidecarStartupFailureReason } from "./types";
 import * as utils from "./utils";
+import { WebsocketConnectionError } from "./websocketManager";
 
 describe("sidecarManager.ts", () => {
   describe("class SidecarManager", () => {
@@ -284,6 +286,67 @@ describe("sidecarManager.ts", () => {
         sinon.assert.calledOnce(disposeStub);
         // and should be dereferenced.
         assert.strictEqual(manager["logTailer"], undefined);
+      });
+    });
+
+    describe("getHandlePromise()", () => {
+      let setupWebsocketManagerStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        // sidecar is healthy and already contacted; isolate the websocket-setup step under test.
+        manager["logTailer"] = {} as unknown as Tail;
+        manager["sidecarContacted"] = true;
+        sandbox.stub(manager, "getAuthTokenFromSecretStore").resolves("token");
+        // healthcheck and setupWebsocketManager are private, so stub via bracket-notation.
+        manager["healthcheck"] = sandbox.stub().resolves(true);
+        setupWebsocketManagerStub = sandbox.stub();
+        manager["setupWebsocketManager"] = setupWebsocketManagerStub;
+      });
+
+      it("retries and returns a handle when the websocket handshake fails once", async () => {
+        // the sidecar is healthy; only the websocket handshake fails the first time.
+        setupWebsocketManagerStub
+          .onFirstCall()
+          .rejects(new WebsocketConnectionError("handshake timed out"))
+          .onSecondCall()
+          .resolves();
+
+        const handlePromise = manager["getHandlePromise"](0);
+        await clock.runAllAsync(); // let the pause() between retries elapse
+        const handle = await handlePromise;
+
+        assert.ok(handle instanceof SidecarHandle);
+        sinon.assert.calledTwice(setupWebsocketManagerStub);
+      });
+
+      it("retries across multiple consecutive websocket handshake failures", async () => {
+        setupWebsocketManagerStub
+          .onFirstCall()
+          .rejects(new WebsocketConnectionError("stall 1"))
+          .onSecondCall()
+          .rejects(new WebsocketConnectionError("stall 2"))
+          .onThirdCall()
+          .resolves();
+
+        const handlePromise = manager["getHandlePromise"](0);
+        await clock.runAllAsync();
+        const handle = await handlePromise;
+
+        assert.ok(handle instanceof SidecarHandle);
+        sinon.assert.calledThrice(setupWebsocketManagerStub);
+      });
+
+      it("gives up after MAX_WEBSOCKET_CONNECT_ATTEMPTS consecutive handshake failures", async () => {
+        const triageStub = sandbox.stub(utils, "triageSidecarStartupError").resolves();
+        setupWebsocketManagerStub.rejects(new WebsocketConnectionError("persistent stall"));
+
+        const handlePromise = manager["getHandlePromise"](0);
+        const assertion = assert.rejects(handlePromise, WebsocketConnectionError);
+        await clock.runAllAsync();
+
+        await assertion;
+        sinon.assert.callCount(setupWebsocketManagerStub, MAX_WEBSOCKET_CONNECT_ATTEMPTS);
+        sinon.assert.called(triageStub);
       });
     });
   });

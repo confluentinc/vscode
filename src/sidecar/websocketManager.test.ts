@@ -7,7 +7,11 @@ import { eventually } from "../../tests/eventually";
 import { GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE } from "../../tests/unit/testResources/websocketMessages";
 import type { Message, WorkspacesChangedBody } from "../ws/messageTypes";
 import { MessageType, newMessageHeaders } from "../ws/messageTypes";
-import { constructMessageRouter, WebsocketManager } from "./websocketManager";
+import {
+  constructMessageRouter,
+  WebsocketConnectionError,
+  WebsocketManager,
+} from "./websocketManager";
 
 // tests over WebsocketManager
 
@@ -136,12 +140,16 @@ describe("WebsocketManager.connect() failure handling", () => {
     WebsocketManager.instance = savedInstance;
   });
 
-  it("rejects (rather than hanging) when the socket errors before the handshake completes", async () => {
-    // port 1 is not listening, so the socket errors immediately
-    await assert.rejects(isolated.connect("localhost:1", "test-token", 5000));
+  it("rejects with a WebsocketConnectionError when the socket errors before the handshake completes", async () => {
+    // port 1 is not listening, so the socket errors immediately. The error type is load-bearing:
+    // sidecarManager's reconnect loop retries on WebsocketConnectionError specifically.
+    await assert.rejects(
+      isolated.connect("localhost:1", "test-token", 5000),
+      WebsocketConnectionError,
+    );
   });
 
-  it("rejects with a timeout when the handshake stalls past the timeout", async () => {
+  it("rejects with a WebsocketConnectionError timeout when the handshake stalls past the timeout", async () => {
     // a server that accepts the socket but never replies to WORKSPACE_HELLO, so the handshake
     // stalls and connect() must reject on its own timeout instead of hanging forever
     const server = new WebSocketServer({ port: 0 });
@@ -149,7 +157,54 @@ describe("WebsocketManager.connect() failure handling", () => {
     const port = (server.address() as AddressInfo).port;
 
     try {
-      await assert.rejects(isolated.connect(`localhost:${port}`, "test-token", 300), /timed out/);
+      await assert.rejects(
+        isolated.connect(`localhost:${port}`, "test-token", 300),
+        (err: unknown) => err instanceof WebsocketConnectionError && /timed out/.test(err.message),
+      );
+    } finally {
+      server.close();
+    }
+  });
+
+  it("does not accumulate connection cleanup in disposables across reconnect attempts", async () => {
+    // each connect()'s socket/timer teardown is tracked off disposables (replaced per attempt),
+    // so repeated reconnects (without an intervening dispose) must not grow this.disposables.
+    const disposables = isolated["disposables"];
+    const before = disposables.length;
+
+    await assert.rejects(isolated.connect("localhost:1", "test-token", 2000));
+    await assert.rejects(isolated.connect("localhost:1", "test-token", 2000));
+    await assert.rejects(isolated.connect("localhost:1", "test-token", 2000));
+
+    assert.strictEqual(disposables.length, before);
+  });
+
+  it("a timed-out attempt's stale WORKSPACE_COUNT_CHANGED handler does not clobber this.websocket", async () => {
+    // a server that accepts the socket (so the once() handler is installed) but never replies, so
+    // the attempt times out and settles while its handler stays registered on the messageRouter.
+    const server = new WebSocketServer({ port: 0 });
+    await new Promise<void>((resolve) => server.once("listening", () => resolve()));
+    const port = (server.address() as AddressInfo).port;
+
+    try {
+      await assert.rejects(
+        isolated.connect(`localhost:${port}`, "test-token", 300),
+        WebsocketConnectionError,
+      );
+
+      // deliver the message the stale handler waits for; the guard must make it a no-op so
+      // this.websocket is not set to the dead socket.
+      const message: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
+        headers: {
+          message_type: MessageType.WORKSPACE_COUNT_CHANGED,
+          originator: "sidecar",
+          message_id: "1",
+        },
+        body: { current_workspace_count: 2 },
+      };
+      await isolated.deliverToCallbacks(message);
+
+      assert.strictEqual(isolated["websocket"], null);
     } finally {
       server.close();
     }
