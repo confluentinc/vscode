@@ -124,7 +124,7 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
 
               await topicItem.clickSendMessages();
               // click the currently open document item in the document/URI quickpick
-              const documentQuickpick = new Quickpick(page);
+              const documentQuickpick = new Quickpick(page, "Select a file");
               await expect(documentQuickpick.locator).toBeVisible();
               const currentDocumentItem = documentQuickpick.items.filter({
                 hasText: "Untitled",
@@ -132,7 +132,10 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
               await expect(currentDocumentItem).not.toHaveCount(0);
               await currentDocumentItem.click();
               // confirm the default selection in the schema multi-select quickpick
-              const schemaQuickpick = new Quickpick(page);
+              const schemaQuickpick = new Quickpick(
+                page,
+                /^Producing to .*Select Schema Kind\(s\)/,
+              );
               await expect(schemaQuickpick.locator).toBeVisible();
               // we could check the default selection(s) here based on which schemas are used (key,
               // value, key+value, etc) but that isn't necessary for now
@@ -158,7 +161,7 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
 
               await topicItem.clickSendMessages();
               // click the currently open document item in the document/URI quickpick
-              const documentQuickpick = new Quickpick(page);
+              const documentQuickpick = new Quickpick(page, "Select a file");
               await expect(documentQuickpick.locator).toBeVisible();
               const currentDocumentItem = documentQuickpick.items.filter({
                 hasText: "Untitled",
@@ -190,7 +193,7 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
 
                 await topicItem.clickSendMessages();
                 // click the currently open document item in the document/URI quickpick
-                const documentQuickpick = new Quickpick(page);
+                const documentQuickpick = new Quickpick(page, "Select a file");
                 await expect(documentQuickpick.locator).toBeVisible();
                 const currentDocumentItem = documentQuickpick.items.filter({
                   hasText: "Untitled",
@@ -198,7 +201,10 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
                 await expect(currentDocumentItem).not.toHaveCount(0);
                 await currentDocumentItem.click();
                 // confirm the default selection in the schema multi-select quickpick
-                const schemaQuickpick = new Quickpick(page);
+                const schemaQuickpick = new Quickpick(
+                  page,
+                  /^Producing to .*Select Schema Kind\(s\)/,
+                );
                 await expect(schemaQuickpick.locator).toBeVisible();
                 // we could check the default selection(s) here based on which schemas are used (key,
                 // value, key+value, etc) but that isn't necessary for now

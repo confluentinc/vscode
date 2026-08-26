@@ -472,7 +472,7 @@ async function saveSidecarLogs(
   await executeVSCodeCommand(page, "confluent.support.saveSidecarLogs");
 
   // select the formatted log option in the quick pick
-  const formatQuickPick = new Quickpick(page);
+  const formatQuickPick = new Quickpick(page, "Choose sidecar log format");
   await expect(formatQuickPick.locator).toBeVisible({ timeout: 5000 });
   await formatQuickPick.selectItemByText("Human-readable format");
 

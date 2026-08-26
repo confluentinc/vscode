@@ -127,7 +127,7 @@ export class TopicsView extends SearchableView {
       }
       case SelectKafkaCluster.FromTopicsViewButton: {
         await this.clickSelectKafkaCluster();
-        const kafkaClusterQuickpick = new Quickpick(this.page);
+        const kafkaClusterQuickpick = new Quickpick(this.page, "Select a Kafka cluster");
         await expect(kafkaClusterQuickpick.locator).toBeVisible();
         if (effectiveLabel) {
           // CCloud: pin to the configured cluster name with an exact single-match guard
