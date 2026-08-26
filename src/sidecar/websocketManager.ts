@@ -41,8 +41,11 @@ export class WebsocketManager extends DisposableCollection {
    * Delivers received messages to registered async calbacks based on the message type.
    *  @see {@link subscribe()}, {@link once()}, and {@link deliverToCallbacks()} methods.
    */
-  private messageRouter: NodeEventEmitter;
+  private messageRouter!: NodeEventEmitter;
   private peerWorkspaceCount = 0;
+
+  /** Whether {@link messageRouter}'s durable handlers are installed; torn down by dispose(). */
+  private messageRoutingActive = false;
 
   /** Monotonic counter used only to correlate a connect attempt's log lines. */
   private connectAttempts = 0;
@@ -55,23 +58,7 @@ export class WebsocketManager extends DisposableCollection {
 
   private constructor() {
     super();
-    // Set up a NodeJS EventEmitter to route received websocket messages to the appropriate async handlers
-    // based on the message type.
-    this.messageRouter = constructMessageRouter();
-
-    // Install handler for WORKSPACE_COUNT_CHANGED messages. Will recieve one when connected, and whenever
-    // any other workspaces connect or disconnect.
-    this.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, async (message) => {
-      // The reply is inclusive of the current workspace, but we want to retain the peer count.
-      this.peerWorkspaceCount = message.body.current_workspace_count - 1;
-    });
-
-    // Deregister all message handlers when we're disposed of.
-    this.disposables.push({
-      dispose: () => {
-        this.messageRouter.removeAllListeners();
-      },
-    });
+    this.setupMessageRouting();
   }
 
   override dispose(): void {
@@ -114,6 +101,11 @@ export class WebsocketManager extends DisposableCollection {
     timeoutMs: number = CONNECT_TIMEOUT_MS,
   ): Promise<void> {
     const attempt = ++this.connectAttempts;
+    // If a prior dispose() tore down message routing (e.g. the singleton is being reused), rebuild
+    // it so this reconnect restores a fully functional instance, not one missing durable handlers.
+    if (!this.messageRoutingActive) {
+      this.setupMessageRouting();
+    }
     return new Promise<void>((resolve, reject) => {
       if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
         logger.debug(`[connect #${attempt}] websocket already connected`);
@@ -337,6 +329,33 @@ export class WebsocketManager extends DisposableCollection {
     // );
 
     this.messageRouter.emit(messageType, message);
+  }
+
+  /**
+   * (Re)create the message router and install its durable subscriptions. Re-run on reconnect when a
+   * prior dispose() tore the router down, so a reused singleton reconnects to a fully functional
+   * state rather than one silently missing its handlers.
+   */
+  private setupMessageRouting(): void {
+    // Route received websocket messages to the appropriate async handlers based on message type.
+    this.messageRouter = constructMessageRouter();
+
+    // Install handler for WORKSPACE_COUNT_CHANGED messages. Will recieve one when connected, and
+    // whenever any other workspaces connect or disconnect.
+    this.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, async (message) => {
+      // The reply is inclusive of the current workspace, but we want to retain the peer count.
+      this.peerWorkspaceCount = message.body.current_workspace_count - 1;
+    });
+
+    // Deregister all message handlers when we're disposed of.
+    this.disposables.push({
+      dispose: () => {
+        this.messageRouter.removeAllListeners();
+        this.messageRoutingActive = false;
+      },
+    });
+
+    this.messageRoutingActive = true;
   }
 
   /** Parse/deserialize a message received from websocket into a Message<T> or die trying **/

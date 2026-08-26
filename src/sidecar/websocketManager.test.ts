@@ -209,6 +209,28 @@ describe("WebsocketManager.connect() failure handling", () => {
       server.close();
     }
   });
+
+  it("reinstalls durable message routing when reconnecting after dispose", async () => {
+    // dispose() tears down the message router and its durable WORKSPACE_COUNT_CHANGED handler; a
+    // subsequent connect() must rebuild it so peerWorkspaceCount updates again, rather than leaving
+    // a reused singleton silently degraded.
+    isolated.dispose();
+
+    // the connect fails (dead port) but still reinitializes routing at its start.
+    await assert.rejects(isolated.connect("localhost:1", "test-token", 2000));
+
+    const message: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
+      headers: {
+        message_type: MessageType.WORKSPACE_COUNT_CHANGED,
+        originator: "sidecar",
+        message_id: "1",
+      },
+      body: { current_workspace_count: 4 },
+    };
+    await isolated.deliverToCallbacks(message);
+
+    assert.strictEqual(isolated.getPeerWorkspaceCount(), 3);
+  });
 });
 
 describe("WebsocketManager.parseMessage tests", () => {
