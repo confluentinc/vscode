@@ -878,15 +878,11 @@ export class ResourceManager {
   async addDirectConnection(spec: CustomConnectionSpec): Promise<void> {
     const key = SecretStorageKeys.DIRECT_CONNECTIONS;
     return await this.runWithMutex(key, async () => {
-      const connectionIds: DirectConnectionsById = await this.getDirectConnections();
-      connectionIds.set(spec.id, spec);
-      const serializedConnections = Object.fromEntries(
-        Array.from(connectionIds.entries()).map(([id, spec]) => [
-          id,
-          CustomConnectionSpecToJSON(spec),
-        ]),
-      );
-      await this.secrets.store(key, JSON.stringify(serializedConnections));
+      const connections: DirectConnectionsById = await this.getDirectConnections();
+      connections.set(spec.id, spec);
+      // getDirectConnections() re-runs CustomConnectionSpecFromJSON() on read, so it re-normalizes
+      // every field regardless of how it was written; a plain mapToString() write is enough here.
+      await this.secrets.store(key, mapToString(connections));
     });
   }
 
