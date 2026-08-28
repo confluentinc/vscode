@@ -914,6 +914,37 @@ describe("storage/resourceManager", () => {
       assert.deepStrictEqual(storedSpec, spec);
     });
 
+    it("addDirectConnection() should preserve nested Kafka and Schema Registry configs (with credentials) across the storage round-trip", async () => {
+      // the default fixture has neither config, so build one that exercises both nested shapes
+      // (and their secret credentials) to guard the mapToString() write path
+      const spec: CustomConnectionSpec = {
+        ...CustomConnectionSpecFromJSON({
+          id: TEST_DIRECT_CONNECTION_ID,
+          name: "Connection with configs",
+          type: ConnectionType.Direct,
+          kafka_cluster: {
+            bootstrap_servers: "localhost:9092",
+            credentials: { username: "kafka-user", password: "kafka-pass" },
+          },
+          schema_registry: {
+            id: "sr-1",
+            uri: "http://localhost:8081",
+            credentials: { username: "sr-user", password: "sr-pass" },
+          },
+        }),
+        id: TEST_DIRECT_CONNECTION_ID,
+        formConnectionType: "Apache Kafka",
+        specifiedConnectionType: undefined,
+      };
+
+      await rm.addDirectConnection(spec);
+
+      const storedSpec: CustomConnectionSpec | null =
+        await rm.getDirectConnection(TEST_DIRECT_CONNECTION_ID);
+      assert.ok(storedSpec);
+      assert.deepStrictEqual(storedSpec, spec);
+    });
+
     it("getDirectConnections() should return an empty map if no direct connections are found", async () => {
       // no preloading
 
