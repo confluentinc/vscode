@@ -44,10 +44,21 @@ export interface ICCloudUrlable {
   ccloudUrl: string;
 }
 
-// the connection-identity pair is the discriminator for one of our resources; we don't also probe
-// the id/searchableText IResourceBase requires, since any resource with the connection pair has them.
-export function isResource(value: any): value is IResourceBase {
-  return value.connectionId !== undefined && value.connectionType !== undefined;
+// the connection-identity pair identifies one of our resources; the id/searchableText checks keep a
+// connection-only carrier (e.g. a ResourceLoader, which no longer implements IResourceBase) from matching.
+export function isResource(value: unknown): value is IResourceBase {
+  return (
+    value != null &&
+    typeof value === "object" &&
+    "connectionId" in value &&
+    value.connectionId !== undefined &&
+    "connectionType" in value &&
+    value.connectionType !== undefined &&
+    "id" in value &&
+    typeof value.id === "string" &&
+    "searchableText" in value &&
+    typeof value.searchableText === "function"
+  );
 }
 
 /** Does this resource come from a "local" connection? */
