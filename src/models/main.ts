@@ -1,11 +1,6 @@
 import * as vscode from "vscode";
 import { IconNames } from "../icons";
 
-/** Anything with an `id` string property */
-export interface IdItem {
-  readonly id: string;
-}
-
 export type KeyValuePair = [string, string | undefined];
 export type KeyValuePairArray = KeyValuePair[];
 
