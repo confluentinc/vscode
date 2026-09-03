@@ -1,7 +1,6 @@
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import type { IconNames } from "../icons";
-import type { IdItem } from "./main";
 
 /** A uniquely-branded string-type for a connection ID. */
 export type ConnectionId = string & { readonly brand: unique symbol };
@@ -31,7 +30,9 @@ export function connectionIdToType(id: ConnectionId): ConnectionType {
   }
 }
 
-export interface IResourceBase {
+export interface IResourceBase extends ISearchable {
+  /** Unique identifier for this resource. */
+  readonly id: string;
   connectionId: ConnectionId;
   connectionType: ConnectionType;
   /** How this resource should be represented as a {@link TreeItem} or {@link QuickPickItem}. */
@@ -43,8 +44,21 @@ export interface ICCloudUrlable {
   ccloudUrl: string;
 }
 
-export function isResource(value: any): value is IResourceBase {
-  return value.connectionId !== undefined && value.connectionType !== undefined;
+// the connection-identity pair identifies one of our resources; the id/searchableText checks keep a
+// connection-only carrier (e.g. a ResourceLoader, which no longer implements IResourceBase) from matching.
+export function isResource(value: unknown): value is IResourceBase {
+  return (
+    value != null &&
+    typeof value === "object" &&
+    "connectionId" in value &&
+    value.connectionId !== undefined &&
+    "connectionType" in value &&
+    value.connectionType !== undefined &&
+    "id" in value &&
+    typeof value.id === "string" &&
+    "searchableText" in value &&
+    typeof value.searchableText === "function"
+  );
 }
 
 /** Does this resource come from a "local" connection? */
@@ -137,7 +151,7 @@ export interface ISchemaRegistryResource extends IResourceBase {
 }
 
 /** Resources with IDs which are in-place updateable given a reference to same class */
-export interface IUpdatableResource extends IResourceBase, IdItem {
+export interface IUpdatableResource extends IResourceBase {
   /** Update this resource in-place. */
   update(resource: this): void;
 }
