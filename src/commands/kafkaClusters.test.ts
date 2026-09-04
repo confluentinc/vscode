@@ -452,7 +452,7 @@ describe("commands/kafkaClusters.ts", () => {
 
     it("should fire the topicChanged event with change='deleted' after successful deletion", async () => {
       showInputBoxStub.resolves(TEST_CCLOUD_KAFKA_TOPIC.name);
-      stubbedLoader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
+      stubbedLoader.getClusterForTopic.resolves(TEST_CCLOUD_KAFKA_CLUSTER);
 
       await deleteTopicCommand(TEST_CCLOUD_KAFKA_TOPIC);
 
