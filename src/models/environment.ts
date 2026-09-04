@@ -32,7 +32,7 @@ import { CCloudSchemaRegistry, DirectSchemaRegistry, LocalSchemaRegistry } from 
  * - {@link SchemaRegistry}
  * ...more, in the future.
  */
-export abstract class Environment implements IResourceBase, ISearchable, IUpdatableResource {
+export abstract class Environment implements IResourceBase, IUpdatableResource {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
   abstract iconName: IconNames;
