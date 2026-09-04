@@ -10,7 +10,6 @@ import type * as sidecar from "../src/sidecar";
 import type { WebviewStorage } from "../src/webview/comms/comms";
 import type { ResultsViewerStorageState } from "../src/webview/flink-statement-results";
 import { FlinkStatementResultsViewModel } from "../src/webview/flink-statement-results";
-import { eventually } from "./eventually";
 import { loadFixtureFromFile } from "./fixtures/utils";
 import { getSidecarStub } from "./stubs/sidecar";
 
@@ -45,13 +44,12 @@ export interface FlinkStatementResultsManagerTestContext {
  * to process them.
  *
  * The manager is set up with:
- * - A polling interval of 0 for immediate testing
- * - A refresh interval of 100ms
  * - Mock APIs that return the fixture data
  * - Stubs for refreshing statement status
  *
- * After initialization, the manager will have processed 10 total result rows that can be retrieved
- * via GetResults/GetResultsCount messages.
+ * The manager is deliberately left un-started (its polling/refresh timers never run); the fixture
+ * pages are applied by calling {@linkcode FlinkStatementResultsManager.fetchResults} directly, once
+ * per page, leaving 10 total result rows retrievable via GetResults/GetResultsCount messages.
  *
  * @returns Initialized FlinkStatementResultsViewModel and FlinkStatementResultsManager with processed results
  */
@@ -115,22 +113,27 @@ export async function createTestResultsManagerContext(
     resourceLoader,
   );
 
-  // Wait for results to be processed, it should eventually become 10
-  await eventually(() => {
-    assert.equal(manager.handleMessage("GetResultsCount", {}).total, 10);
+  // Drive result processing deterministically by fetching every fixture page rather than relying on
+  // the polling interval (the manager is left un-started so its setInterval never runs here). Each
+  // fetchResults() consumes one page; the last pages carry changelog updates that shape the final
+  // 10-row state, so all pages must be applied, not just enough to first reach 10 rows.
+  for (let i = 0; i < stmtResults.length; i++) {
+    await manager.fetchResults();
+  }
 
-    const results = manager.handleMessage("GetResults", {
-      page: 0,
-      pageSize: DEFAULT_RESULTS_LIMIT,
-    });
+  assert.equal(manager.handleMessage("GetResultsCount", {}).total, 10);
 
-    // Verify the results match expected format
-    const expected: string = loadFixtureFromFile(
-      "flink-statement-results-processing/expected-parsed-results.json",
-    );
-    const expectedParsedResults = JSON.parse(expected);
-    assert.deepStrictEqual(results, { results: expectedParsedResults });
-  }, 10_000);
+  const results = manager.handleMessage("GetResults", {
+    page: 0,
+    pageSize: DEFAULT_RESULTS_LIMIT,
+  });
+
+  // Verify the results match expected format
+  const expected: string = loadFixtureFromFile(
+    "flink-statement-results-processing/expected-parsed-results.json",
+  );
+  const expectedParsedResults = JSON.parse(expected);
+  assert.deepStrictEqual(results, { results: expectedParsedResults });
 
   const storage = new FakeWebviewStorage<ResultsViewerStorageState>();
   const timestamp = os.produce(Date.now(), (ts) => {
