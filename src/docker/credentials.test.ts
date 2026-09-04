@@ -1,8 +1,14 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import {
+  getStubbedSecretStorage,
+  type StubbedSecretStorage,
+} from "../../tests/stubs/extensionStorage";
 import type { AuthConfig } from "../clients/docker";
+import { SecretStorageKeys } from "../storage/constants";
 import * as fsWrappers from "../utils/fsWrappers";
 import {
+  getDockerCredentials,
   getDockerCredsStore,
   isValidCredsStoreName,
   validateDockerCredentials,
@@ -176,4 +182,126 @@ describe("docker/credentials.ts validateDockerCredentials()", function () {
       });
     });
   }
+});
+
+describe("docker/credentials.ts getDockerCredentials()", function () {
+  let sandbox: sinon.SinonSandbox;
+  let secretStorage: StubbedSecretStorage;
+  let readFileSyncStub: sinon.SinonStub;
+  let execSyncStub: sinon.SinonStub;
+
+  // a `~/.docker/config.json` pointing at a valid credential store
+  const DOCKER_CONFIG_JSON = JSON.stringify({ credsStore: "desktop" });
+  // valid output from the `docker-credential-<store> get` command
+  const VALID_CREDS_OUTPUT = JSON.stringify({ Username: "testuser", Secret: "testpass" });
+  const EXPECTED_AUTH_CONFIG: AuthConfig = {
+    username: "testuser",
+    password: "testpass",
+    serveraddress: "https://index.docker.io/v1/",
+  };
+
+  beforeEach(function () {
+    sandbox = sinon.createSandbox();
+    secretStorage = getStubbedSecretStorage(sandbox);
+    readFileSyncStub = sandbox.stub(fsWrappers, "readFileSync");
+    execSyncStub = sandbox.stub(fsWrappers, "execSync");
+  });
+
+  afterEach(function () {
+    sandbox.restore();
+  });
+
+  it("should return cached credentials without invoking the credential store", async function () {
+    secretStorage.get.resolves("cached-creds");
+
+    const result: string | undefined = await getDockerCredentials();
+
+    assert.strictEqual(result, "cached-creds");
+    sinon.assert.notCalled(execSyncStub);
+    sinon.assert.notCalled(secretStorage.store);
+  });
+
+  it("should return undefined when no credsStore is configured", async function () {
+    // no cache, and the Docker config has no credsStore
+    readFileSyncStub.returns(JSON.stringify({}));
+
+    const result: string | undefined = await getDockerCredentials();
+
+    assert.strictEqual(result, undefined);
+    sinon.assert.notCalled(execSyncStub);
+  });
+
+  it("should return undefined when the Docker config cannot be read", async function () {
+    // e.g. a user with no `~/.docker/config.json` at all, the most common real-world state
+    readFileSyncStub.throws(new Error("ENOENT"));
+
+    const result: string | undefined = await getDockerCredentials();
+
+    assert.strictEqual(result, undefined);
+    sinon.assert.notCalled(execSyncStub);
+  });
+
+  it("should query the credential store, then cache and return the encoded credentials", async function () {
+    readFileSyncStub.returns(DOCKER_CONFIG_JSON);
+    execSyncStub.returns(VALID_CREDS_OUTPUT);
+
+    const result: string | undefined = await getDockerCredentials();
+
+    // the returned value should be a base64-encoding of the validated auth config
+    assert.ok(result);
+    const decoded = JSON.parse(Buffer.from(result, "base64").toString("utf-8"));
+    assert.deepStrictEqual(decoded, EXPECTED_AUTH_CONFIG);
+    // the "desktop" store should be queried via its `docker-credential-` command, with the Docker
+    // Hub registry URL piped in on stdin (how the credential helper protocol receives the lookup)
+    sinon.assert.calledOnce(execSyncStub);
+    assert.strictEqual(execSyncStub.firstCall.args[0], "docker-credential-desktop get");
+    assert.strictEqual(execSyncStub.firstCall.args[1].input, "https://index.docker.io/v1/");
+    // and the encoded credentials should be cached for future lookups
+    sinon.assert.calledOnceWithExactly(
+      secretStorage.store,
+      SecretStorageKeys.DOCKER_CREDS_SECRET_KEY,
+      result,
+    );
+  });
+
+  it("should not double-prefix a credsStore that already starts with `docker-credential-`", async function () {
+    readFileSyncStub.returns(JSON.stringify({ credsStore: "docker-credential-desktop" }));
+    execSyncStub.returns(VALID_CREDS_OUTPUT);
+
+    await getDockerCredentials();
+
+    assert.strictEqual(execSyncStub.firstCall.args[0], "docker-credential-desktop get");
+  });
+
+  it("should return undefined when the credential store command fails", async function () {
+    readFileSyncStub.returns(DOCKER_CONFIG_JSON);
+    execSyncStub.throws(new Error("command not found"));
+
+    const result: string | undefined = await getDockerCredentials();
+
+    assert.strictEqual(result, undefined);
+    sinon.assert.notCalled(secretStorage.store);
+  });
+
+  it("should return undefined and not cache when the credential store returns invalid credentials", async function () {
+    readFileSyncStub.returns(DOCKER_CONFIG_JSON);
+    // missing the required `Secret` field, so validation fails
+    execSyncStub.returns(JSON.stringify({ Username: "testuser" }));
+
+    const result: string | undefined = await getDockerCredentials();
+
+    assert.strictEqual(result, undefined);
+    sinon.assert.notCalled(secretStorage.store);
+  });
+
+  it("should return undefined when the credential store emits non-JSON output", async function () {
+    readFileSyncStub.returns(DOCKER_CONFIG_JSON);
+    // some credential helpers print a plain-text error to stdout instead of JSON
+    execSyncStub.returns("credentials not found in native keychain");
+
+    const result: string | undefined = await getDockerCredentials();
+
+    assert.strictEqual(result, undefined);
+    sinon.assert.notCalled(secretStorage.store);
+  });
 });
