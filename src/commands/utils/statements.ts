@@ -75,6 +75,7 @@ async function openFlinkStatementResultsInEditor(statement: FlinkStatement) {
     notifyUI,
     DEFAULT_RESULT_LIMIT,
   );
+  resultsManager.start();
 
   // Handle messages from the webview and delegate to the results manager
   const handler = handleWebviewMessage(panel.webview, (...args) => {

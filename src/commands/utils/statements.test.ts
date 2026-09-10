@@ -79,6 +79,8 @@ describe("src/commands/utils/statements.ts", () => {
       // openFlinkStatementResultsInEditor is called, so the panel cache is accessed
       sinon.assert.calledOnce(getPanelForStatementStub);
       sinon.assert.calledOnceWithExactly(getPanelForStatementStub, TEST_CCLOUD_FLINK_STATEMENT);
+      // the newly-created results manager must be started, since construction no longer polls
+      sinon.assert.calledOnce(stubbedFlinkStatementResultsManager.start);
       // openFlinkStatementResultsInPanel isn't called, so the panel provider isn't accessed
       sinon.assert.notCalled(stubbedPanelProvider.showStatementResults);
     });

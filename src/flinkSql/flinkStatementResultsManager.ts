@@ -206,6 +206,7 @@ export class FlinkStatementResultsManager {
   private readonly _flinkStatementsSqlApi: StatementsSqlV1Api;
 
   private _fetchResultsLocked = false;
+  private _started = false;
 
   constructor(
     private os: Scope,
@@ -235,10 +236,29 @@ export class FlinkStatementResultsManager {
 
     this._viewMode = this.os.signal<ViewMode>("table");
 
-    this.setupPolling();
+    // Watch for results full state. This reactive subscription is independent of the polling
+    // timers, so it is wired up at construction rather than in start().
+    this.os.watch(() => {
+      if (this._isResultsFull()) {
+        this._state("completed");
+      }
+    });
   }
 
-  private setupPolling() {
+  /**
+   * Begins polling for results and periodically refreshing the statement.
+   *
+   * Construction no longer starts the timers, so callers must invoke this once the manager is
+   * ready to poll. Calling this more than once is a no-op: the existing intervals are left in place.
+   */
+  start(): void {
+    // Guard on a dedicated flag rather than the interval handle: fetchResults() clears
+    // _pollingInterval when it self-destructs, so the handle is not a reliable "started" signal.
+    if (this._started) {
+      return;
+    }
+    this._started = true;
+
     this._pollingInterval = setInterval(
       this.fetchResults.bind(this),
       this.resultsPollingIntervalMs,
@@ -248,13 +268,6 @@ export class FlinkStatementResultsManager {
       this.refreshStatement.bind(this),
       this.statementRefreshIntervalMs,
     );
-
-    // Watch for results full state
-    this.os.watch(() => {
-      if (this._isResultsFull()) {
-        this._state("completed");
-      }
-    });
   }
 
   private async refreshStatement() {
