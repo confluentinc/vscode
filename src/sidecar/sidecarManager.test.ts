@@ -11,7 +11,7 @@ import { MAX_WEBSOCKET_CONNECT_ATTEMPTS, SidecarManager } from "./sidecarManager
 import type { SidecarLogFormat, SidecarOutputs } from "./types";
 import { SidecarStartupFailureReason } from "./types";
 import * as utils from "./utils";
-import { WebsocketConnectionError } from "./websocketManager";
+import { WebsocketConnectionError, WebsocketStateEvent } from "./websocketManager";
 
 describe("sidecarManager.ts", () => {
   describe("class SidecarManager", () => {
@@ -347,6 +347,54 @@ describe("sidecarManager.ts", () => {
         await assertion;
         sinon.assert.callCount(setupWebsocketManagerStub, MAX_WEBSOCKET_CONNECT_ATTEMPTS);
         sinon.assert.called(triageStub);
+      });
+    });
+
+    describe("onWebsocketStateChange()", () => {
+      it("reconnects via getHandle() on DISCONNECTED", async () => {
+        const getHandleStub = sandbox.stub(manager, "getHandle").resolves();
+
+        await manager["onWebsocketStateChange"](WebsocketStateEvent.DISCONNECTED);
+
+        sinon.assert.calledOnce(getHandleStub);
+      });
+
+      it("logs and does not rethrow when the reconnect handshake keeps failing", async () => {
+        // getHandle() now rejects (a stalled handshake rejects instead of hanging); this
+        // fire-and-forget listener must swallow it rather than raise an unhandled rejection.
+        const reconnectError = new WebsocketConnectionError("reconnect exhausted");
+        sandbox.stub(manager, "getHandle").rejects(reconnectError);
+
+        await manager["onWebsocketStateChange"](WebsocketStateEvent.DISCONNECTED);
+
+        sinon.assert.calledOnceWithExactly(
+          logErrorStub,
+          reconnectError,
+          "Failed to reconnect sidecar handle after websocket disconnect",
+        );
+      });
+
+      it("reuses an in-flight reconnect instead of starting a second one", async () => {
+        // a reconnect is already in flight, so getHandle() must hand back the pending promise rather
+        // than kick off a second getHandlePromise - the single-flight dedup the DISCONNECTED path
+        // relies on to avoid overlapping reconnects.
+        const getHandlePromiseStub = sandbox.stub();
+        manager["getHandlePromise"] = getHandlePromiseStub;
+        manager["pendingHandlePromise"] = Promise.resolve(
+          sandbox.createStubInstance(SidecarHandle),
+        );
+
+        await manager["onWebsocketStateChange"](WebsocketStateEvent.DISCONNECTED);
+
+        sinon.assert.notCalled(getHandlePromiseStub);
+      });
+
+      it("does nothing on CONNECTED", async () => {
+        const getHandleStub = sandbox.stub(manager, "getHandle");
+
+        await manager["onWebsocketStateChange"](WebsocketStateEvent.CONNECTED);
+
+        sinon.assert.notCalled(getHandleStub);
       });
     });
   });
