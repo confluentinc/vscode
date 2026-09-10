@@ -12,8 +12,7 @@ import type { ContextValues } from "../../context/values";
 import { setContextValue } from "../../context/values";
 import { ExtensionContextNotSetError } from "../../errors";
 import { Logger } from "../../logging";
-import type { IdItem } from "../../models/main";
-import type { IResourceBase, ISearchable } from "../../models/resource";
+import type { IResourceBase } from "../../models/resource";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { titleCase } from "../../utils";
 import { DisposableCollection } from "../../utils/disposables";
@@ -27,7 +26,7 @@ export interface RefreshableTreeViewProvider {
 }
 
 /** Requirement interfaces for BaseViewProvider data elements */
-export type BaseViewProviderData = IResourceBase & IdItem & ISearchable;
+export type BaseViewProviderData = IResourceBase;
 
 /**
  * Base class for all tree view providers handling a primary resource type.
