@@ -57,9 +57,10 @@ const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
 export const MAX_ATTEMPTS = 20;
 
 /**
- * How many consecutive websocket-handshake failures to retry before giving up. Kept small (and
- * separate from {@link MAX_ATTEMPTS}) because each attempt can burn up to the connect timeout
- * (~15s), so a large budget would let a persistently-stalling handshake block for minutes.
+ * How many websocket-handshake failures to tolerate within a single getHandle() cycle before giving
+ * up. Kept small (and separate from {@link MAX_ATTEMPTS}) because each attempt can burn up to the
+ * connect timeout (~15s), so a large budget would let a persistently-stalling handshake block for
+ * minutes.
  */
 export const MAX_WEBSOCKET_CONNECT_ATTEMPTS = 3;
 
