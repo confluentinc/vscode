@@ -3,12 +3,14 @@ import * as sinon from "sinon";
 import type { Uri } from "vscode";
 import { window } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
+import { ResponseError } from "../clients/docker";
 import * as dockerConfigs from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
 import { MedusaWorkflow } from "../docker/workflows/medusa";
+import * as errors from "../errors";
 import { LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";
 import * as notifications from "../notifications";
 import * as quickpicks from "../quickpicks/localResources";
@@ -18,6 +20,7 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
   let sandbox: sinon.SinonSandbox;
 
   let showErrorNotificationStub: sinon.SinonStub;
+  let logErrorStub: sinon.SinonStub;
 
   // Docker+workflow stubs
   let isDockerAvailableStub: sinon.SinonStub;
@@ -37,6 +40,8 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
     showErrorNotificationStub = sandbox
       .stub(notifications, "showErrorNotificationWithButtons")
       .resolves();
+
+    logErrorStub = sandbox.stub(errors, "logError");
 
     // default to Docker being available for majority of tests
     isDockerAvailableStub = sandbox.stub(dockerConfigs, "isDockerAvailable").resolves(true);
@@ -117,6 +122,30 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
 
     sinon.assert.calledOnce(stubKafkaWorkflow.start);
     sinon.assert.notCalled(stubKafkaWorkflow.stop);
+    sinon.assert.calledOnce(showErrorNotificationStub);
+  });
+
+  it("should route a failed workflow through logError() so a ResponseError's body reaches Sentry", async () => {
+    const fakeError = new ResponseError(
+      new Response("no such image", { status: 404, statusText: "Not Found" }),
+    );
+    stubKafkaWorkflow.start.rejects(fakeError);
+
+    await runWorkflowWithProgress();
+
+    // logError extracts the ResponseError status/body into the Sentry event; the tags carry the
+    // workflow context for that event
+    sinon.assert.calledOnceWithMatch(
+      logErrorStub,
+      fakeError,
+      sinon.match(/running .* workflow/),
+      sinon.match({
+        tags: sinon.match
+          .has("dockerImage")
+          .and(sinon.match.has("localResourceKind"))
+          .and(sinon.match({ extensionUserFlow: "Local Resource Management" })),
+      }),
+    );
     sinon.assert.calledOnce(showErrorNotificationStub);
   });
 
