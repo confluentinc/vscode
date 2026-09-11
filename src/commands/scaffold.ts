@@ -2,6 +2,7 @@
 
 import type * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
+import { logError } from "../errors";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import type { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -52,9 +53,15 @@ export async function resourceScaffoldProjectCommand(
       telemetrySource = "cluster";
     } else {
       // KafkaTopic
-      const clusters = environment.kafkaClusters;
-      const cluster = clusters.find((c) => c.id === item.clusterId);
+      const cluster = await loader.getClusterForTopic(item);
       if (!cluster) {
+        // a topic should always resolve to a cluster in its environment; log to Sentry so we
+        // learn if this unexpected condition happens in the wild.
+        logError(
+          new Error("Unable to find Kafka cluster for topic during project scaffolding"),
+          "Kafka cluster not found for topic during project scaffolding",
+          { extra: { clusterId: item.clusterId, environmentId: item.environmentId } },
+        );
         void showErrorNotificationWithButtons(
           `Unable to find Kafka cluster for topic "${item.name}".`,
         );
