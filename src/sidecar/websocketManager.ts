@@ -11,6 +11,16 @@ import { MessageBodyDecoders, MessageType, validateMessageBody } from "../ws/mes
 
 const logger = new Logger("websocketManager");
 
+/**
+ * How long to wait for the full websocket connect handshake (socket open + WORKSPACE_HELLO +
+ * the initial WORKSPACE_COUNT_CHANGED reply) before giving up. Without a bound, a connection that
+ * errors or stalls before completing the handshake leaves {@link WebsocketManager.connect} pending
+ * forever, and anything awaiting it (e.g. reconnection) hangs until an unrelated timeout fires.
+ * A conservative default: a localhost handshake to an already-health-checked sidecar completes in
+ * well under a second, so this is headroom, not an expected duration.
+ */
+export const CONNECT_TIMEOUT_MS = 15_000;
+
 /** Type describing message handler callbacks to whom received messages are routed. */
 export type MessageCallback<T extends MessageType> = (message: Message<T>) => Promise<void>;
 
@@ -36,25 +46,40 @@ export class WebsocketManager extends DisposableCollection {
   private messageRouter: NodeEventEmitter;
   private peerWorkspaceCount = 0;
 
+  /** Monotonic counter used only to correlate a connect attempt's log lines. */
+  private connectAttempts = 0;
+
+  /**
+   * Teardown for the current connect attempt's socket + timer, tracked so each new attempt can
+   * replace (rather than accumulate) it in {@link disposables} across reconnects.
+   */
+  private activeConnectionCleanup: Disposable | null = null;
+
   private constructor() {
     super();
-    // Set up a NodeJS EventEmitter to route received websocket messages to the appropriate async handlers
-    // based on the message type.
+    // The message router and its durable subscriptions have instance lifetime, not connection
+    // lifetime: they are set up once here and deliberately survive websocket disconnect/reconnect
+    // (and dispose()). Tearing them down on disconnect would drop this instance's own
+    // WORKSPACE_COUNT_CHANGED handler and any external subscriber (e.g. ConnectionStateWatcher's
+    // CONNECTION_EVENT), leaving a reconnected singleton silently missing handlers.
     this.messageRouter = constructMessageRouter();
 
-    // Install handler for WORKSPACE_COUNT_CHANGED messages. Will recieve one when connected, and whenever
-    // any other workspaces connect or disconnect.
+    // Install handler for WORKSPACE_COUNT_CHANGED messages. Will receive one when connected, and
+    // whenever any other workspaces connect or disconnect.
     this.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, async (message) => {
       // The reply is inclusive of the current workspace, but we want to retain the peer count.
       this.peerWorkspaceCount = message.body.current_workspace_count - 1;
     });
 
-    // Deregister all message handlers when we're disposed of.
-    this.disposables.push({
-      dispose: () => {
-        this.messageRouter.removeAllListeners();
-      },
-    });
+    this.disposables.push(this.websocketStateEmitter);
+  }
+
+  override dispose(): void {
+    // The current connect attempt's socket/timer cleanup is tracked off {@link disposables} (it is
+    // replaced per attempt to avoid accumulation), so tear it down explicitly here.
+    this.activeConnectionCleanup?.dispose();
+    this.activeConnectionCleanup = null;
+    super.dispose();
   }
 
   /** Are we currently connected to sidecar via websocket? */
@@ -78,23 +103,75 @@ export class WebsocketManager extends DisposableCollection {
    *
    * @param hostPortFragment The host and port fragment to connect to, e.g. "localhost:8080".
    * @param accessToken The access token to use for authorization.
+   * @param timeoutMs How long to wait for the full handshake before giving up; defaults to
+   *   {@link CONNECT_TIMEOUT_MS}.
+   * @throws {WebsocketConnectionError} if the handshake times out, the socket errors, or the socket
+   *   closes before the handshake completes.
    */
-  async connect(hostPortFragment: string, accessToken: string): Promise<void> {
-    return new Promise<void>((resolve) => {
+  async connect(
+    hostPortFragment: string,
+    accessToken: string,
+    timeoutMs: number = CONNECT_TIMEOUT_MS,
+  ): Promise<void> {
+    const attempt = ++this.connectAttempts;
+    return new Promise<void>((resolve, reject) => {
       if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-        logger.info("Websocket already connected");
+        logger.debug(`[connect #${attempt}] websocket already connected`);
         resolve();
         return;
       }
 
-      logger.info("Setting up websocket to sidecar");
+      logger.debug(`[connect #${attempt}] setting up websocket to sidecar`);
 
       const websocket = new WebSocket(`ws://${hostPortFragment}/ws`, {
         headers: { authorization: `Bearer ${accessToken}` },
       });
 
+      // Guard against settling more than once: the handshake resolves this promise, but a late
+      // error/close/timeout must not resolve-or-reject it a second time. The first outcome wins.
+      let settled = false;
+      // This attempt's one-shot WORKSPACE_COUNT_CHANGED handler, captured so a failed attempt can
+      // deregister it (see settleReject) instead of leaving it on the shared messageRouter until an
+      // unrelated broadcast reaps it.
+      let onInitialCountChanged: MessageCallback<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        logger.error(
+          `[connect #${attempt}] handshake to sidecar timed out after ${timeoutMs}ms (readyState=${websocket.readyState}); terminating socket`,
+        );
+        // Forcibly tear down the half-open socket so it can't leak or fire a late CONNECTED.
+        try {
+          websocket.terminate();
+        } catch {
+          // best-effort teardown; ignore
+        }
+        settleReject(
+          new WebsocketConnectionError(
+            `Websocket connect handshake to sidecar timed out after ${timeoutMs}ms`,
+          ),
+        );
+      }, timeoutMs);
+
+      const settleResolve = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      };
+      const settleReject = (error: Error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        // Deregister this attempt's one-shot handler so it can't linger on the shared router.
+        if (onInitialCountChanged) {
+          this.messageRouter.off(MessageType.WORKSPACE_COUNT_CHANGED, onInitialCountChanged);
+          onInitialCountChanged = null;
+        }
+        reject(error);
+      };
+
       websocket.on("open", () => {
-        logger.info("Websocket connected to sidecar, saying hello ...");
+        logger.debug(`[connect #${attempt}] websocket opened, saying hello ...`);
 
         // send the hello message
         const helloMessage: Message<MessageType.WORKSPACE_HELLO> = {
@@ -109,22 +186,22 @@ export class WebsocketManager extends DisposableCollection {
         };
 
         // Resolve when we have gotten the first WORKSPACE_COUNT_CHANGED message. Will be sent
-        // when any connect/disconnect happens, even ours.
-        // Install a one-time handler for this message type.
-        this.once(
-          MessageType.WORKSPACE_COUNT_CHANGED,
-          async (m: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
-            logger.info(
-              "Received initial WORKSPACE_COUNT_CHANGED message, websocket now fully connected.",
-            );
-            this.websocket = websocket;
-            this.peerWorkspaceCount = m.body.current_workspace_count - 1;
-            // Emit an event to let the extension know the websocket has closed.
-            // This will get picked up by sidecarManager, which will then attempt to reconnect.
-            this.websocketStateEmitter.fire(WebsocketStateEvent.CONNECTED);
-            resolve();
-          },
-        );
+        // when any connect/disconnect happens, even ours. A failed attempt deregisters this handler
+        // in settleReject; the settled guard is a backstop for a broadcast already in flight when
+        // this attempt settles.
+        onInitialCountChanged = async (m: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
+          if (settled) return;
+          logger.info(
+            `[connect #${attempt}] received initial WORKSPACE_COUNT_CHANGED, websocket now fully connected`,
+          );
+          this.websocket = websocket;
+          this.peerWorkspaceCount = m.body.current_workspace_count - 1;
+          // Emit an event to let the extension know the websocket is up, which sidecarManager uses
+          // to track connection state.
+          this.websocketStateEmitter.fire(WebsocketStateEvent.CONNECTED);
+          settleResolve();
+        };
+        this.messageRouter.once(MessageType.WORKSPACE_COUNT_CHANGED, onInitialCountChanged);
 
         // Now send the hello message (after the handler is installed)
         // (this.websocket isn't assigned yet, so explicitly pass it to send())
@@ -135,19 +212,28 @@ export class WebsocketManager extends DisposableCollection {
       });
 
       websocket.on("close", () => {
-        logger.info("Websocket closed");
+        logger.info(`[connect #${attempt}] websocket closed`);
 
-        // do additional cleanup here
-        this.websocket = null;
+        // Only react if this socket is (or was) the live connection. A superseded attempt's late
+        // close must not null out a newer connection or fire a spurious DISCONNECTED - a
+        // never-established attempt is driven back to reconnect by the rejection below instead.
+        if (this.websocket === websocket) {
+          this.websocket = null;
+          // sidecarManager picks up DISCONNECTED and attempts to reconnect.
+          this.websocketStateEmitter.fire(WebsocketStateEvent.DISCONNECTED);
+        }
 
-        // Emit an event to let the extension know the websocket has closed.
-        // This will get picked up by sidecarManager, which will then attempt to reconnect.
-        this.websocketStateEmitter.fire(WebsocketStateEvent.DISCONNECTED);
+        // If we closed before the handshake finished, reject connect() rather than leaving it
+        // pending forever. Once already settled (normal later disconnect), this is a no-op.
+        settleReject(
+          new WebsocketConnectionError("Websocket closed before connect handshake completed"),
+        );
       });
 
       websocket.on("error", (error) => {
-        logger.error(`Websocket error: ${error}`);
-        // Go ahead and close the websocket, which will trigger the close event above.
+        logger.error(`[connect #${attempt}] websocket error: ${error}`);
+        // Go ahead and close the websocket, which will trigger the close event above (which
+        // rejects connect() if the handshake had not yet completed).
         websocket.close();
       });
 
@@ -169,15 +255,23 @@ export class WebsocketManager extends DisposableCollection {
         });
       });
 
-      this.disposables.push({
+      // Tear down THIS attempt's socket + timer. Capture the local websocket/timer rather than
+      // this.websocket, which isn't assigned until the handshake completes - otherwise disposing
+      // mid-handshake would leave the pending timer and half-open socket alive. Dispose (and
+      // replace) the prior attempt's cleanup so repeated reconnects don't accumulate; the manager's
+      // dispose() override runs the current one.
+      this.activeConnectionCleanup?.dispose();
+      this.activeConnectionCleanup = {
         dispose: () => {
-          // Close the websocket when we're disposed of.
-          if (this.websocket && this.websocket.readyState !== WebSocket.CLOSED) {
-            this.websocket.close();
+          clearTimeout(timer);
+          if (websocket.readyState !== WebSocket.CLOSED) {
+            websocket.close();
+          }
+          if (this.websocket === websocket) {
             this.websocket = null;
           }
         },
-      });
+      };
     });
   }
 
@@ -326,6 +420,19 @@ class WebsocketClosedError extends Error {
   constructor() {
     super("Websocket closed");
     this.name = "WebsocketClosedError";
+  }
+}
+
+/**
+ * Thrown by {@link WebsocketManager.connect} when the handshake fails to complete: a timeout, a
+ * socket error, or the socket closing before the handshake finishes. Distinguishes a recoverable
+ * websocket failure (the sidecar itself may be healthy) from an unrecoverable sidecar startup
+ * error, so callers can retry rather than surfacing a fatal error.
+ */
+export class WebsocketConnectionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "WebsocketConnectionError";
   }
 }
 
