@@ -14,6 +14,7 @@ import {
   constructMessageRouter,
   WebsocketConnectionError,
   WebsocketManager,
+  WebsocketStateEvent,
 } from "./websocketManager";
 
 // tests over WebsocketManager
@@ -221,6 +222,18 @@ describe("WebsocketManager.connect() failure tests", () => {
     await isolated.deliverToCallbacks(createWorkspaceCountMessage(4));
 
     assert.strictEqual(isolated.getPeerWorkspaceCount(), 3);
+  });
+
+  it("keeps the state-change emitter alive across dispose() so reconnect still notifies", () => {
+    // sidecarManager registers its reconnect listener only once, so disposing the emitter on a
+    // reused singleton would strip it and silently stop auto-reconnection.
+    const events: WebsocketStateEvent[] = [];
+    isolated.registerStateChangeHandler((event) => events.push(event));
+
+    isolated.dispose();
+    isolated["websocketStateEmitter"].fire(WebsocketStateEvent.DISCONNECTED);
+
+    assert.deepStrictEqual(events, [WebsocketStateEvent.DISCONNECTED]);
   });
 });
 

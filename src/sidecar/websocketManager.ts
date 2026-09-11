@@ -70,8 +70,10 @@ export class WebsocketManager extends DisposableCollection {
       // The reply is inclusive of the current workspace, but we want to retain the peer count.
       this.peerWorkspaceCount = message.body.current_workspace_count - 1;
     });
-
-    this.disposables.push(this.websocketStateEmitter);
+    // websocketStateEmitter is deliberately NOT registered for disposal: like the message router it
+    // has instance lifetime. sidecarManager registers its reconnect listener exactly once (guarded
+    // by `if (!this.websocketManager)`), so disposing the emitter on a reused singleton would strip
+    // that listener for good and silently stop automatic reconnection.
   }
 
   override dispose(): void {
@@ -171,6 +173,9 @@ export class WebsocketManager extends DisposableCollection {
       };
 
       websocket.on("open", () => {
+        // A late open after this attempt already settled (e.g. it timed out and was terminated) must
+        // not install a one-shot handler or send() on the now-dead socket.
+        if (settled) return;
         logger.debug(`[connect #${attempt}] websocket opened, saying hello ...`);
 
         // send the hello message
