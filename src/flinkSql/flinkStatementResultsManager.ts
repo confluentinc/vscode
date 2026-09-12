@@ -354,7 +354,7 @@ export class FlinkStatementResultsManager {
 
         if (isResponseError(error)) {
           // clone before reading, so logError() below can still read the body for Sentry
-          const payload = await extractResponseBody(error);
+          const payload = await extractResponseBody<{ aborted?: boolean }>(error);
           if (!payload?.aborted) {
             const status = error.response.status;
             shouldComplete = status >= 400;
