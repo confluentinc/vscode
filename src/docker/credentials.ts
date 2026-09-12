@@ -1,4 +1,3 @@
-import { execSync } from "child_process";
 import { homedir } from "os";
 import { join } from "path";
 import type { SecretStorage } from "vscode";
@@ -6,7 +5,7 @@ import type { AuthConfig } from "../clients/docker";
 import { Logger } from "../logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getSecretStorage } from "../storage/utils";
-import { readFileSync } from "../utils/fsWrappers";
+import { execSync, readFileSync } from "../utils/fsWrappers";
 
 const logger = new Logger("docker.credentials");
 
@@ -70,26 +69,25 @@ export async function getDockerCredentials(): Promise<string | undefined> {
     return;
   }
 
-  let credsString: string | undefined;
+  // parsing happens inside the try since a credential helper can emit non-JSON on stdout, and a
+  // JSON.parse() throw should be handled the same as a failed command: log and bail, not propagate
+  let credentialHeaders: AuthConfig | undefined;
   try {
     // unfortunately, there isn't a way to get the credentials directly from the store, so we have
     // to try calling the `docker-credential-<store> get` command and parse the output
     const command: string = credsStore.startsWith("docker-credential-")
       ? credsStore
       : `docker-credential-${credsStore}`;
-    credsString = execSync(`${command} get`, {
+    const credsString: string = execSync(`${command} get`, {
       input: "https://index.docker.io/v1/",
-      encoding: "utf-8",
       timeout: 10000,
     });
+    credentialHeaders = validateDockerCredentials(JSON.parse(credsString));
   } catch (error) {
     logger.debug("failed to load Docker credentials:", error);
     return;
   }
 
-  const credentialHeaders: AuthConfig | undefined = validateDockerCredentials(
-    JSON.parse(credsString),
-  );
   if (!credentialHeaders) {
     logger.debug("invalid Docker credentials, not storing");
     return;
