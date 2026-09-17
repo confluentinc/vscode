@@ -343,6 +343,66 @@ describe("sidecarHandle sandbox tests", () => {
           sinon.assert.notCalled(showWarningNotificationWithButtonsStub);
         });
       }
+
+      // A failed query whose error carries no usable `message` must still surface the underlying
+      // cause (the serialized error), not an empty "GraphQL query failed: " tail.
+      const noUsableMessageCases = [
+        {
+          name: "error has no message",
+          error: { extensions: { code: "FORBIDDEN" } },
+          expected: "FORBIDDEN",
+        },
+        { name: "error message is empty", error: { message: "" }, expected: '{"message":""}' },
+      ];
+      for (const { name, error, expected } of noUsableMessageCases) {
+        it(`should surface serialized error detail when a failed query's ${name}`, async () => {
+          const responseWithOnlyErrors: GraphQLResponse = { data: null, errors: [error] };
+
+          fetchStub.resolves({
+            ok: true,
+            json: async () => responseWithOnlyErrors,
+          } as Response);
+
+          await assert.rejects(
+            handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, { id: "123" }),
+            (err) => {
+              const message = (err as Error).message;
+              assert.ok(
+                message.includes(expected),
+                `expected serialized error detail, got: ${message}`,
+              );
+              return true;
+            },
+          );
+          sinon.assert.notCalled(showWarningNotificationWithButtonsStub);
+        });
+      }
+
+      it("should surface serialized error detail in the partial-errors warning when a message is empty", async () => {
+        const responseWithErrors: GraphQLResponse = {
+          data: {
+            ccloudConnectionById: { organizations: [{ id: "123", name: "foo", current: true }] },
+          },
+          errors: [{ extensions: { code: "FORBIDDEN" } }],
+        };
+
+        fetchStub.resolves({
+          ok: true,
+          json: async () => responseWithErrors,
+        } as Response);
+
+        const result = await handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, {
+          id: "123",
+        });
+
+        assert.deepStrictEqual(result, responseWithErrors.data);
+        sinon.assert.calledOnce(showWarningNotificationWithButtonsStub);
+        const warning = showWarningNotificationWithButtonsStub.firstCall.args[0] as string;
+        assert.ok(
+          warning.includes("FORBIDDEN"),
+          `expected serialized error detail, got: ${warning}`,
+        );
+      });
     });
     it("should call fetch and de-json successfully with single in-flight query", async () => {
       const result = await handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, {
