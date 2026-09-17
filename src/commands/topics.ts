@@ -31,6 +31,11 @@ import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   showErrorNotificationWithButtons,
 } from "../notifications";
+import {
+  produceControlFieldMultiSelect,
+  stripDeselectedControlFields,
+} from "../quickpicks/produceMessage";
+import type { ControlFieldSelection } from "../quickpicks/produceMessage";
 import type { SchemaKindSelection } from "../quickpicks/schemas";
 import { schemaKindMultiSelect } from "../quickpicks/schemas";
 import { uriQuickpick } from "../quickpicks/uris";
@@ -278,6 +283,25 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
     uriScheme: messageUri.scheme,
   });
 
+  // always treat producing as a "bulk" action, even if there's only one message
+  const contents: ProduceMessage[] = [];
+  const msgContent = JSON.parse(content);
+  if (Array.isArray(msgContent)) {
+    contents.push(...msgContent);
+  } else {
+    contents.push(msgContent);
+  }
+
+  // if any record specifies the optional `partition_id`/`timestamp` control fields, let the user
+  // opt out of sending them before choosing schema(s), then strip any they deselected
+  const controlFieldSelection: ControlFieldSelection | undefined =
+    await produceControlFieldMultiSelect(contents);
+  if (!controlFieldSelection) {
+    // user exited the control-field quickpick
+    return;
+  }
+  stripDeselectedControlFields(contents, controlFieldSelection);
+
   // ask the user if they want to use a schema for the key and/or value
   const selectResult: SchemaKindSelection | undefined = await schemaKindMultiSelect(topic);
   if (!selectResult) {
@@ -317,15 +341,6 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
     keySubjectNameStrategy,
     valueSubjectNameStrategy: valueSubjectNameStrategy,
   };
-
-  // always treat producing as a "bulk" action, even if there's only one message
-  const contents: any[] = [];
-  const msgContent: any = JSON.parse(content);
-  if (Array.isArray(msgContent)) {
-    contents.push(...msgContent);
-  } else {
-    contents.push(msgContent);
-  }
 
   // TODO: bump this number up?
   if (contents.length === 1) {
