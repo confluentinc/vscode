@@ -10,6 +10,12 @@ All notable changes to this extension will be documented in this file.
   right after a statement is submitted. The Results Viewer now retries before giving up, waiting as
   long as Confluent Cloud asks when it sends a rate-limit delay, instead of showing "Failed to load
   results."
+- When Docker is running but its socket can't be accessed (on Linux, typically because the user
+  isn't in the `docker` group), the "Docker is not available" notification now explains the
+  permissions problem and links to Docker's post-install guide, instead of unhelpfully telling the
+  user to install Docker. It also flags an absent or empty `~/.docker/config.json` (which a fresh
+  install often leaves needing at least `{}`) as a further thing to fix.
+  ([#1722](https://github.com/confluentinc/vscode/issues/1722))
 
 ### Added
 
