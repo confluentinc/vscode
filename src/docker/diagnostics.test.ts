@@ -134,6 +134,14 @@ describe("docker/diagnostics.ts checkDockerConfigFile()", function () {
     assert.strictEqual(status, DockerConfigStatus.INVALID);
   });
 
+  it("should return INVALID when the config file parses to a JSON array", function () {
+    readFileSyncStub.returns("[]");
+
+    const status = checkDockerConfigFile();
+
+    assert.strictEqual(status, DockerConfigStatus.INVALID);
+  });
+
   it("should return INVALID when the config file cannot be read (non-ENOENT)", function () {
     readFileSyncStub.throws(errnoError("EACCES"));
 

@@ -75,7 +75,8 @@ export function checkDockerConfigFile(): DockerConfigStatus {
   }
   try {
     const parsed: unknown = JSON.parse(contents);
-    if (parsed === null || typeof parsed !== "object") {
+    // a Docker config must be a JSON object; null and arrays are also `typeof "object"`.
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
       return DockerConfigStatus.INVALID;
     }
   } catch {
