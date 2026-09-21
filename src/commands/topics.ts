@@ -285,7 +285,9 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
 
   // always treat producing as a "bulk" action, even if there's only one message
   const contents: ProduceMessage[] = [];
-  const msgContent = JSON.parse(content);
+  // the document passed base JSON validation above; parse into the expected shape rather than the
+  // `any` JSON.parse returns, so the pushes below stay type-checked against `ProduceMessage[]`.
+  const msgContent: ProduceMessage | ProduceMessage[] = JSON.parse(content);
   if (Array.isArray(msgContent)) {
     contents.push(...msgContent);
   } else {
