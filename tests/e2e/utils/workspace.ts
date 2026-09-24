@@ -71,7 +71,7 @@ export async function openConfluentSidebar(page: Page): Promise<void> {
 
   const resourcesView = new ResourcesView(page);
   // the Resources should be visible and expanded by default
-  await expect(resourcesView.header).toHaveAttribute("aria-expanded", "true");
+  await expect(resourcesView.header).toBeExpanded();
   // and should show the "Confluent Cloud" placeholder item (not "No resources found")
   await expect(resourcesView.confluentCloudItem).toBeVisible();
   // we don't check for the "Local" item here in the event the Confluent Cloud item has children

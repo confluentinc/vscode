@@ -72,7 +72,7 @@ test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] 
 
             test.beforeEach(async ({ page, connectionItem, topic: topicName }) => {
               // ensure connection tree item has resources available to work with
-              await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+              await expect(connectionItem.locator).toBeExpanded();
 
               const topicsView = new TopicsView(page);
               // click a Kafka cluster from the Resources view to open and populate the Topics view

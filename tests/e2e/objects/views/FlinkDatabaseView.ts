@@ -204,7 +204,7 @@ export class FlinkDatabaseView extends SearchableView {
     // containers are always Collapsed by default, so we don't need to check for null here
     if (isExpanded === "false") {
       await container.click();
-      await expect(container).toHaveAttribute("aria-expanded", "true");
+      await expect(container).toBeExpanded();
     }
   }
 

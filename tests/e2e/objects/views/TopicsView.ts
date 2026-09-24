@@ -142,7 +142,7 @@ export class TopicsView extends SearchableView {
       default:
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);
     }
-    await expect(this.header).toHaveAttribute("aria-expanded", "true");
+    await expect(this.header).toBeExpanded();
     await expect(this.body).toBeVisible();
     await expect(this.progressIndicator).toBeHidden();
     await this.waitForContainerLoaded(this.topicsContainer);

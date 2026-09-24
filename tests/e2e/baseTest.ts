@@ -7,6 +7,8 @@ import { tmpdir } from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import { DEBUG_LOGGING_ENABLED } from "./constants";
+// registers the `toBeExpanded` custom matcher on Playwright's shared `expect`
+import "./matchers";
 import { NotificationArea } from "./objects/notifications/NotificationArea";
 import { Quickpick } from "./objects/quickInputs/Quickpick";
 import { FlinkDatabaseView, SelectFlinkDatabase } from "./objects/views/FlinkDatabaseView";
@@ -305,7 +307,7 @@ export const test = testBase.extend<VSCodeFixtures>({
     }
 
     // ensure connection has resources available to work with
-    await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+    await expect(connectionItem.locator).toBeExpanded();
 
     const topicName = e2eResourceName(topicConfig.name);
 
@@ -361,7 +363,7 @@ export const test = testBase.extend<VSCodeFixtures>({
       throw new Error("artifactConfig must be set, like `test.use({ artifactConfig: {} })`");
     }
 
-    await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+    await expect(connectionItem.locator).toBeExpanded();
 
     const entrypoint = artifactConfig.entrypoint ?? SelectFlinkDatabase.FromDatabaseViewButton;
     const jarPath =
