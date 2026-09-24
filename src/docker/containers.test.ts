@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as dockerClients from "../clients/docker";
+import * as errors from "../errors";
 import { MANAGED_CONTAINER_LABEL } from "./constants";
 import {
   createContainer,
@@ -28,8 +29,12 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
   let containerStopStub: sinon.SinonStub;
   let containerInspectStub: sinon.SinonStub;
 
+  let logErrorStub: sinon.SinonStub;
+
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+
+    logErrorStub = sandbox.stub(errors, "logError");
 
     imageExistsStub = sandbox.stub(dockerImages, "imageExists");
     pullImageStub = sandbox.stub(dockerImages, "pullImage");
@@ -59,12 +64,13 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     sinon.assert.calledOnce(containerListStub);
   });
 
-  it("getContainersForImage() should re-throw any error from .containerList", async () => {
+  it("getContainersForImage() should log via logError() and re-throw any error from .containerList", async () => {
     const fakeError = new Error("Error listing containers");
     containerListStub.rejects(fakeError);
 
     await assert.rejects(getContainersForImage({}), fakeError);
     sinon.assert.calledOnce(containerListStub);
+    sinon.assert.calledOnceWithExactly(logErrorStub, fakeError, "listing containers");
   });
 
   it("createContainer() should return a ContainerCreateResponse after successfully creating a container", async () => {
@@ -110,13 +116,14 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     });
   });
 
-  it("createContainer() should re-throw any error from .containerCreate", async () => {
+  it("createContainer() should log via logError() and re-throw any error from .containerCreate", async () => {
     imageExistsStub.resolves(true);
     const fakeError = new Error("Error creating container");
     containerCreateStub.rejects(fakeError);
 
     await assert.rejects(createContainer("repo", "tag", { body: {} }), fakeError);
     sinon.assert.calledOnce(containerCreateStub);
+    sinon.assert.calledOnceWithExactly(logErrorStub, fakeError, "creating container");
   });
 
   it("startContainer() should return nothing after successfully starting a container", async () => {
@@ -128,12 +135,13 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     sinon.assert.calledOnce(containerStartStub);
   });
 
-  it("startContainer() should re-throw any error from .containerStart", async () => {
+  it("startContainer() should log via logError() and re-throw any error from .containerStart", async () => {
     const fakeError = new Error("Error starting container");
     containerStartStub.rejects(fakeError);
 
     await assert.rejects(startContainer("1"), fakeError);
     sinon.assert.calledOnce(containerStartStub);
+    sinon.assert.calledOnceWithExactly(logErrorStub, fakeError, "starting container");
   });
 
   it("getContainer() should return a ContainerInspectResponse from a successful request", async () => {
@@ -155,20 +163,22 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     sinon.assert.calledOnce(containerStopStub);
   });
 
-  it("stopContainer() should re-throw any error from .containerStop", async () => {
+  it("stopContainer() should log via logError() and re-throw any error from .containerStop", async () => {
     const fakeError = new Error("Error stopping container");
     containerStopStub.rejects(fakeError);
 
     await assert.rejects(stopContainer("1"), fakeError);
     sinon.assert.calledOnce(containerStopStub);
+    sinon.assert.calledOnceWithExactly(logErrorStub, fakeError, "stopping container");
   });
 
-  it("getContainer() should re-throw any error from .containerInspect", async () => {
+  it("getContainer() should log via logError() and re-throw any error from .containerInspect", async () => {
     const fakeError = new Error("Error inspecting container");
     containerInspectStub.rejects(fakeError);
 
     await assert.rejects(getContainer("1"), fakeError);
     sinon.assert.calledOnce(containerInspectStub);
+    sinon.assert.calledOnceWithExactly(logErrorStub, fakeError, "inspecting container");
   });
 });
 

@@ -5,7 +5,8 @@ import type {
   ContainerListRequest,
   ContainerSummary,
 } from "../clients/docker";
-import { ContainerApi, ResponseError } from "../clients/docker";
+import { ContainerApi } from "../clients/docker";
+import { logError } from "../errors";
 import { Logger } from "../logging";
 import { defaultRequestInit } from "./configs";
 import { MANAGED_CONTAINER_LABEL } from "./constants";
@@ -28,15 +29,7 @@ export async function getContainersForImage(
     logger.debug("Containers listed successfully:", JSON.stringify(containerIdsAndNames));
     return response;
   } catch (error) {
-    if (error instanceof ResponseError) {
-      logger.error("Error response listing containers:", {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        body: await error.response.clone().json(),
-      });
-    } else {
-      logger.error("Error listing containers:", error);
-    }
+    logError(error, "listing containers");
     throw error;
   }
 }
@@ -62,15 +55,7 @@ export async function createContainer(
     logger.info("Container created successfully:", response);
     return response;
   } catch (error) {
-    if (error instanceof ResponseError) {
-      logger.error("Container creation returned error response:", {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        body: await error.response.clone().json(),
-      });
-    } else {
-      logger.error("Error creating container:", error);
-    }
+    logError(error, "creating container");
     throw error;
   }
 }
@@ -82,15 +67,7 @@ export async function startContainer(containerId: string): Promise<void> {
   try {
     await client.containerStart({ id: containerId }, init);
   } catch (error) {
-    if (error instanceof ResponseError) {
-      logger.error("Error response starting container:", {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        body: await error.response.clone().text(),
-      });
-    } else {
-      logger.error("Error starting container:", error);
-    }
+    logError(error, "starting container");
     throw error;
   }
 }
@@ -103,15 +80,7 @@ export async function stopContainer(id: string): Promise<void> {
     logger.debug("Stopping container", { id });
     await client.containerStop({ id }, init);
   } catch (error) {
-    if (error instanceof ResponseError) {
-      logger.error("Error response stopping container:", {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        body: await error.response.clone().json(),
-      });
-    } else {
-      logger.error("Error stopping container:", error);
-    }
+    logError(error, "stopping container");
     throw error;
   }
 }
@@ -128,15 +97,7 @@ export async function getContainer(id: string): Promise<ContainerInspectResponse
   try {
     return await client.containerInspect({ id }, init);
   } catch (error) {
-    if (error instanceof ResponseError) {
-      logger.error("Error response inspecting container:", {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        body: await error.response.clone().text(),
-      });
-    } else {
-      logger.error("Error inspecting container:", error);
-    }
+    logError(error, "inspecting container");
     throw error;
   }
 }
