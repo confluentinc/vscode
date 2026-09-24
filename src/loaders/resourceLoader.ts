@@ -31,7 +31,11 @@ const logger = new Logger("resourceLoader");
  *
  * Generic class over the concrete {@link EnvironmentType}
  */
-export abstract class ResourceLoader extends DisposableCollection implements IResourceBase {
+// a loader only carries the connection-identity pair, not the id/searchableText of a full resource
+export abstract class ResourceLoader
+  extends DisposableCollection
+  implements Pick<IResourceBase, "connectionId" | "connectionType">
+{
   /** The connectionId for this resource loader. */
   public abstract connectionId: ConnectionId;
   /** The parent connectionType for this resource loader. */

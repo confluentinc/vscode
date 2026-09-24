@@ -3,16 +3,10 @@ import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, UTM_SOURCE_VSCODE } from "../constants";
 import { IconNames } from "../icons";
 import { CustomMarkdownString } from "./main";
-import type {
-  ConnectionId,
-  EnvironmentId,
-  IEnvProviderRegion,
-  IResourceBase,
-  ISearchable,
-} from "./resource";
+import type { ConnectionId, EnvironmentId, IEnvProviderRegion, IResourceBase } from "./resource";
 import { isCCloud } from "./resource";
 
-export abstract class FlinkComputePool implements IResourceBase, ISearchable {
+export abstract class FlinkComputePool implements IResourceBase {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
   iconName: IconNames = IconNames.FLINK_COMPUTE_POOL;
