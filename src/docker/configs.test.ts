@@ -8,14 +8,28 @@ import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfig
 import { ResponseError, SystemApi } from "../clients/docker";
 import { LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";
 import * as configs from "./configs";
+import * as diagnostics from "./diagnostics";
+import { DockerConfigStatus, DockerSocketStatus } from "./diagnostics";
 
 describe("docker/configs functions", function () {
   let sandbox: sinon.SinonSandbox;
   let showErrorMessageStub: sinon.SinonStub;
+  let checkSocketAccessStub: sinon.SinonStub;
+  let checkConfigFileStub: sinon.SinonStub;
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
+    // default to an accessible socket so the non-ResponseError tests fall through to the
+    // install/fetchAdditionalSupport handling; the socket-permission tests override this.
+    checkSocketAccessStub = sandbox
+      .stub(diagnostics, "checkDockerSocketAccess")
+      .returns(DockerSocketStatus.ACCESSIBLE);
+    // default to a healthy config file so notification messages stay deterministic; the
+    // config-hint test overrides this.
+    checkConfigFileStub = sandbox
+      .stub(diagnostics, "checkDockerConfigFile")
+      .returns(DockerConfigStatus.VALID);
   });
 
   afterEach(function () {
@@ -138,5 +152,80 @@ describe("docker/configs functions", function () {
       "Open Logs",
       "Update Settings",
     );
+  });
+
+  it("showDockerUnavailableErrorNotification() should surface a permissions hint when the socket exists but is inaccessible", async () => {
+    sandbox.stub(process, "platform").value("linux");
+    checkSocketAccessStub.returns(DockerSocketStatus.PERMISSION_DENIED);
+    const stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+    stubbedConfigs.stubGet(LOCAL_DOCKER_SOCKET_PATH, "/var/run/docker.sock");
+    const error = new Error("connect EACCES /var/run/docker.sock");
+
+    await configs.showDockerUnavailableErrorNotification(error);
+
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      `Docker is not available: The Docker socket at "/var/run/docker.sock" exists but isn't accessible. Ensure your user has permission to use it (on Linux, add your user to the "docker" group and restart your session).`,
+      "View Docs",
+      "Open Logs",
+      "",
+    );
+  });
+
+  it("showDockerUnavailableErrorNotification() should append a config-file hint when the socket is inaccessible and the Docker config is empty/missing", async () => {
+    sandbox.stub(process, "platform").value("linux");
+    checkSocketAccessStub.returns(DockerSocketStatus.PERMISSION_DENIED);
+    checkConfigFileStub.returns(DockerConfigStatus.EMPTY);
+    const stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+    stubbedConfigs.stubGet(LOCAL_DOCKER_SOCKET_PATH, "/var/run/docker.sock");
+    const error = new Error("connect EACCES /var/run/docker.sock");
+
+    await configs.showDockerUnavailableErrorNotification(error);
+
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      `Docker is not available: The Docker socket at "/var/run/docker.sock" exists but isn't accessible. Ensure your user has permission to use it (on Linux, add your user to the "docker" group and restart your session). Also ensure "~/.docker/config.json" exists and contains at least "{}".`,
+      "View Docs",
+      "Open Logs",
+      "",
+    );
+  });
+
+  it("showDockerUnavailableErrorNotification() should not append the config-file hint when the config is present but unreadable/malformed", async () => {
+    sandbox.stub(process, "platform").value("linux");
+    checkSocketAccessStub.returns(DockerSocketStatus.PERMISSION_DENIED);
+    checkConfigFileStub.returns(DockerConfigStatus.INVALID);
+    const stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+    stubbedConfigs.stubGet(LOCAL_DOCKER_SOCKET_PATH, "/var/run/docker.sock");
+    const error = new Error("connect EACCES /var/run/docker.sock");
+
+    await configs.showDockerUnavailableErrorNotification(error);
+
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      `Docker is not available: The Docker socket at "/var/run/docker.sock" exists but isn't accessible. Ensure your user has permission to use it (on Linux, add your user to the "docker" group and restart your session).`,
+      "View Docs",
+      "Open Logs",
+      "",
+    );
+  });
+
+  it("showDockerUnavailableErrorNotification() should not treat a permission-denied socket as a permissions issue on Windows", async () => {
+    sandbox.stub(process, "platform").value("win32");
+    checkSocketAccessStub.returns(DockerSocketStatus.PERMISSION_DENIED);
+    const stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+    stubbedConfigs.get.withArgs("http.fetchAdditionalSupport").returns(false);
+    const error = new Error("connect EACCES //./pipe/docker_engine");
+
+    await configs.showDockerUnavailableErrorNotification(error);
+
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      "Docker is not available: Please install Docker and try again once it's running.",
+      "Install Docker",
+      "Open Logs",
+      "",
+    );
+    sinon.assert.notCalled(checkSocketAccessStub);
   });
 });
