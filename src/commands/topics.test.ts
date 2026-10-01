@@ -24,6 +24,7 @@ import * as queryResourceValidation from "../flinkSql/queryResourceValidation";
 import * as statementUtils from "../flinkSql/statementUtils";
 import { CCloudEnvironment } from "../models/environment";
 import { KafkaTopic } from "../models/topic";
+import * as produceQuickPicks from "../quickpicks/produceMessage";
 import * as schemaQuickPicks from "../quickpicks/schemas";
 import * as uriQuickpicks from "../quickpicks/uris";
 import * as schemaSubjectUtils from "../quickpicks/utils/schemaSubjects";
@@ -57,6 +58,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
 
   let uriQuickpickStub: sinon.SinonStub;
   let getEditorOrFileContents: sinon.SinonStub;
+  let produceControlFieldMultiSelectStub: sinon.SinonStub;
 
   let clientStub: sinon.SinonStubbedInstance<RecordsV3Api>;
 
@@ -66,6 +68,12 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
     showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage");
     showInfoMessageStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
     executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
+
+    // default to keeping any control fields the record(s) specify; overridden per-test to
+    // exercise deselection/cancellation
+    produceControlFieldMultiSelectStub = sandbox
+      .stub(produceQuickPicks, "produceControlFieldMultiSelect")
+      .resolves({ partitionId: true, timestamp: true });
 
     // stub the quickpick for file/editor URI and the resulting content
     uriQuickpickStub = sandbox
@@ -184,6 +192,34 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
     const requestArg: ProduceRecordRequest = clientStub.produceRecord.firstCall.args[0];
     assert.strictEqual(requestArg.ProduceRequest!.partition_id, partition_id);
     assert.strictEqual(requestArg.ProduceRequest!.timestamp, undefined);
+  });
+
+  it("should strip control fields the user deselected in the control-field quickpick", async function () {
+    const partition_id = 123;
+    const timestamp = 1234567890;
+    getEditorOrFileContents.resolves({
+      content: JSON.stringify({ ...fakeMessage, partition_id, timestamp }),
+    });
+    // user kept `partition_id` but deselected `timestamp`
+    produceControlFieldMultiSelectStub.resolves({ partitionId: true, timestamp: false });
+
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+
+    sinon.assert.calledOnce(clientStub.produceRecord);
+    const requestArg: ProduceRecordRequest = clientStub.produceRecord.firstCall.args[0];
+    assert.strictEqual(requestArg.ProduceRequest!.partition_id, partition_id);
+    assert.strictEqual(requestArg.ProduceRequest!.timestamp, undefined);
+  });
+
+  it("should exit early if the control-field quickpick is cancelled", async function () {
+    getEditorOrFileContents.resolves({
+      content: JSON.stringify({ ...fakeMessage, partition_id: 123 }),
+    });
+    produceControlFieldMultiSelectStub.resolves(undefined);
+
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+
+    sinon.assert.notCalled(clientStub.produceRecord);
   });
 
   // `key` is an object that won't serialize to a string cleanly
