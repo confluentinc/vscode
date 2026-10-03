@@ -1,35 +1,33 @@
 name: vscode
 lang: node
-lang_version: "22"
+lang_version: '22'
 git:
   enable: true
   hooks:
     enable: true
-github:
-  enable: true
 codeowners:
   enable: true
 semaphore:
   enable: true
   status_level: block
   pipeline_enable: false
-  triggers: ["branches", "pull_requests"]
+  triggers: [branches, pull_requests]
   tasks:
     - name: release-version
       branch: main
-      pipeline_file: ".semaphore/release-version.yml"
+      pipeline_file: .semaphore/release-version.yml
       parameters:
         - name: IS_PRERELEASE
           required: true
           options:
-            - "true"
-            - "false"
-          default_value: "true"
+            - 'true'
+            - 'false'
+          default_value: 'true'
           description: |
             Whether the release is a pre-release (true/false)
         - name: TARGET_BRANCH
           required: true
-          default_value: "main"
+          default_value: main
           description: The target branch to create the release from, must be a valid branch.
         - name: RELEASE_NAME
           required: true
@@ -45,31 +43,30 @@ semaphore:
             The previous release tag (e.g., 'v1.2.2') to compare against when generating release notes. If not provided, will use the latest (non-prerelease) GitHub Release.
     - name: run-playwright-e2e-tests
       branch: main
-      pipeline_file: ".semaphore/playwright-e2e.yml"
+      pipeline_file: .semaphore/playwright-e2e.yml
       parameters:
         - name: VSCODE_VERSION
           required: true
           description: The version of VS Code to test against (e.g., 'stable', 'insiders', or a specific version like '1.100.0').
-          default_value: "stable"
+          default_value: stable
         - name: TEST_SUITE
           required: false
           description: The test name or tag(s) (pipe-separated, e.g. `@ccloud|@direct`) to run. If not specified, will run all E2E tests.
-          default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts|@flink-udfs"
+          default_value: '@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts|@flink-udfs'
         - name: PLATFORM
           required: true
           options:
-            - "all"
-            - "linux"
-            - "windows"
-          default_value: "all"
+            - all
+            - linux
+            - windows
+          default_value: all
           description: |
             Which platform(s) to run E2E tests on. 'linux' runs only the Linux block(s);
             'windows' runs only the Windows block(s); 'all' runs everything.
     - name: scheduled-ccloud-auth-smoketests-prod
       branch: main
-      pipeline_file: ".semaphore/ccloud-auth-smoketests.yml"
-      scheduled: true
-      at: "0 * * * *" # Every hour
+      pipeline_file: .semaphore/ccloud-auth-smoketests.yml
+      at: 0 * * * *   # Every hour
       parameters:
         - name: CCLOUD_BASE_PATH
           default_value: confluent.cloud
@@ -77,9 +74,8 @@ semaphore:
           required: true
     - name: scheduled-ccloud-auth-smoketests-stag
       branch: main
-      pipeline_file: ".semaphore/ccloud-auth-smoketests.yml"
-      scheduled: true
-      at: "0 4 * * *" # Every day at 04:00 UTC
+      pipeline_file: .semaphore/ccloud-auth-smoketests.yml
+      at: 0 4 * * *   # Every day at 04:00 UTC
       parameters:
         - name: CCLOUD_BASE_PATH
           default_value: stag.cpdev.cloud
@@ -91,48 +87,44 @@ semaphore:
       # the last run
       # NOTE: no parameters are used here because they wouldn't survive the promotion boundary to
       # `release-version`; use `release-version` directly instead to override default parameters
-      pipeline_file: ".semaphore/release-version-precheck.yml"
-      scheduled: true
-      at: "10 4 * * *" # Every day at 04:10 UTC
+      pipeline_file: .semaphore/release-version-precheck.yml
+      at: 10 4 * * *   # Every day at 04:10 UTC
     - name: scheduled-run-playwright-e2e-tests
       branch: main
-      pipeline_file: ".semaphore/playwright-e2e.yml"
-      scheduled: true
-      at: "0 5 * * *" # Every day at 05:00 UTC
+      pipeline_file: .semaphore/playwright-e2e.yml
+      at: 0 5 * * *   # Every day at 05:00 UTC
       parameters:
         - name: VSCODE_VERSION
           required: true
           description: The version of VS Code to test against (e.g., 'stable', 'insiders', or a specific version like '1.100.0').
-          default_value: "stable"
+          default_value: stable
         - name: TEST_SUITE
           required: true
           description: The test tag(s) (pipe-separated, e.g. `@smoke|@topic-message-viewer`) to run. By default, runs the smoke tests and critical user flow tests.
-          default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts|@flink-udfs"
+          default_value: '@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud|@flink-artifacts|@flink-udfs'
         - name: PLATFORM
           required: true
           options:
-            - "all"
-            - "linux"
-            - "windows"
-          default_value: "all"
+            - all
+            - linux
+            - windows
+          default_value: all
           description: |
             Which platform(s) to run E2E tests on. 'linux' runs only the Linux block(s);
             'windows' runs only the Windows block(s); 'all' runs everything.
     - name: scheduled-npm-audit
       branch: main
       pipeline_file: .semaphore/npm-audit.yml
-      scheduled: true
-      at: '0 6 * * *' # Daily at 06:00 UTC
+      at: 0 6 * * *   # Daily at 06:00 UTC
       parameters:
         - name: TARGET_BRANCH
           required: false
-          default_value: 'main'
-          description: 'The branch to audit and base the PR against. Defaults to main; override for release branches like v1.2.x.'
+          default_value: main
+          description: The branch to audit and base the PR against. Defaults to main; override for release branches like v1.2.x.
     - name: scheduled-release-e2e-smoketests
       branch: main
-      pipeline_file: ".semaphore/release-e2e-smoketests.yml"
-      scheduled: true
-      at: "*/15 * * * *"
+      pipeline_file: .semaphore/release-e2e-smoketests.yml
+      at: '*/15 * * * *'
   managed_sections:
     - version
     - name
@@ -144,17 +136,17 @@ sonarqube:
     - javascript
     - typescript
   coverage_sources:
-    - "src"
+    - src
   # only affects sonar.exclusions in sonar-project.properties
-  coverage_exclusions:
-    - "src/testing.ts"
-    - "src/**/*.test.ts"
-    - "src/clients/**/*"
-    - "src/**/*.spec.ts"
   coverage_reports:
-    - "coverage/lcov-functional.info"
-    - "coverage/lcov.info"
+    - coverage/lcov-functional.info
+    - coverage/lcov.info
   main_branch: main
+  analysis_exclusions:
+    - src/testing.ts
+    - src/**/*.test.ts
+    - src/clients/**/*
+    - src/**/*.spec.ts
 make:
   enable: false
 renovatebot:
