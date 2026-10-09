@@ -5,11 +5,22 @@ import { expect } from "@playwright/test";
  * Object representing a VS Code {@link https://code.visualstudio.com/api/ux-guidelines/quick-picks quickpick}.
  */
 export class Quickpick {
-  constructor(public readonly page: Page) {}
+  constructor(
+    public readonly page: Page,
+    /** Optional pattern to filter quickpicks by their `title` text. */
+    public readonly titlePattern?: string | RegExp,
+  ) {}
 
   /** The main quickpick widget locator. */
   get locator(): Locator {
-    return this.page.locator(".quick-input-widget");
+    const baseLocator = this.page.locator(".quick-input-widget");
+    if (!this.titlePattern) {
+      return baseLocator;
+    }
+
+    return baseLocator.filter({
+      has: this.page.locator(".quick-input-title", { hasText: this.titlePattern }),
+    });
   }
 
   /** The quickpick header container. */
@@ -17,16 +28,23 @@ export class Quickpick {
     return this.locator.locator(".quick-input-header");
   }
 
+  /** Wait for the quickpick widget to be visible before interacting with it. */
+  async waitForVisible(): Promise<void> {
+    await expect(this.locator).toBeVisible();
+  }
+
   /**
    * Press Enter to confirm the current selection(s). This is mainly done with multi-select
    * quickpicks since clicking a single item in a regular quickpick will automatically confirm it.
    */
   async confirm(): Promise<void> {
+    await this.waitForVisible();
     await this.locator.press("Enter");
   }
 
   /** Press Escape to cancel the input. */
   async cancel(): Promise<void> {
+    await this.waitForVisible();
     await this.locator.press("Escape");
   }
 
@@ -48,6 +66,7 @@ export class Quickpick {
    * one matches before clicking, so a stale/prefix name can't silently select the wrong item.
    */
   async selectItemByText(text: string, options: { exact?: boolean } = {}): Promise<void> {
+    await this.waitForVisible();
     await this.textInput.fill(text);
     // `hasText` is a substring match; `exact` instead requires a label that equals `text` so a
     // prefix/stale name (e.g. "env" against "env-2") resolves to 0 items and the guard below fires
