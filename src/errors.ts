@@ -64,23 +64,35 @@ export function isTransientResponseError(error: unknown): error is AnyResponseEr
 }
 
 /**
- * If error is a response error, try to decode its response body
- * from JSON and return the resulting object.
+ * Decode the body of a {@link Response}, whether passed directly (e.g. from a raw `fetch()`) or
+ * wrapped in one of our client {@link AnyResponseError}s.
  *
- * If the response body is not JSON, return the text instead.
+ * The body is decoded as JSON; if it is not valid JSON, the raw text is returned instead.
  *
- * If the error is not a response error, raise an error.
+ * The caller supplies the expected body shape via the type parameter (defaulting to `unknown`), so
+ * downstream code has some idea what to expect rather than an untyped `any`.
+ *
+ * @throws if given something that is neither a {@link Response} nor an {@link AnyResponseError}.
  */
-export async function extractResponseBody(error: AnyResponseError): Promise<any> {
-  if (!isResponseError(error)) {
-    throw new Error("extractResponseBody() called with non-ResponseError");
+export async function extractResponseBody<T = unknown>(
+  errorOrResponse: AnyResponseError | Response,
+): Promise<T> {
+  let response: Response;
+  if (isResponseError(errorOrResponse)) {
+    response = errorOrResponse.response;
+  } else if (errorOrResponse instanceof Response) {
+    response = errorOrResponse;
+  } else {
+    throw new Error("extractResponseBody() called with neither a ResponseError nor a Response");
   }
 
   // Attempt to parse the response body as JSON, falling back to text if it fails
   try {
-    return await error.response.clone().json();
+    const json: unknown = await response.clone().json();
+    return json as T;
   } catch {
-    return await error.response.clone().text();
+    const text: unknown = await response.clone().text();
+    return text as T;
   }
 }
 

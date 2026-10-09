@@ -239,13 +239,13 @@ export function validateUdfInput(
 export async function buildUploadErrorMessage(err: unknown, base: string): Promise<string> {
   let errorMessage = base;
   if (isResponseError(err)) {
-    const resp = await extractResponseBody(err);
+    const resp = await extractResponseBody<{ errors?: { detail: string }[] }>(err);
 
     if (err.response.status === 400) {
       // Bad request - a validation error we couldn't prevent. Only log to Sentry if unparseable.
       if (resp && typeof resp === "object" && "errors" in resp) {
         // Gather the detail(s) from all error(s)
-        const errors: Array<{ detail: string }> = resp.errors;
+        const errors = resp.errors ?? [];
         errorMessage = `${errorMessage} ${errors.map((e) => e.detail).join("\n")}`;
       } else {
         // Unexpected - log to Sentry for investigation
