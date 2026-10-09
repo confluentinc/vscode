@@ -5,13 +5,13 @@ import { ResponseError } from "../clients/docker";
 import { isDockerAvailable } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
+import { logError } from "../errors";
 import { LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { ConnectionLabel } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { localResourcesQuickPick } from "../quickpicks/localResources";
 import { UserEvent } from "../telemetry/events";
-import { sentryCaptureException } from "../telemetry/sentryClient";
 
 const logger = new Logger("commands.docker");
 
@@ -132,19 +132,18 @@ export async function runWorkflowWithProgress(
             start,
           });
         } catch (error) {
-          logger.error(`error running ${workflow.resourceKind} workflow`, error);
           if (error instanceof Error) {
             workflow.sendTelemetryEvent(UserEvent.LocalDockerAction, {
               status: "workflow failed",
               start,
             });
-            sentryCaptureException(error, {
-              captureContext: {
-                tags: {
-                  dockerImage: workflow.imageRepoTag,
-                  extensionUserFlow: "Local Resource Management",
-                  localResourceKind: workflow.resourceKind,
-                },
+            // logError extracts a Docker engine API ResponseError's status/body into the Sentry
+            // event; the tags supply the workflow context
+            logError(error, `running ${workflow.resourceKind} workflow`, {
+              tags: {
+                dockerImage: workflow.imageRepoTag,
+                extensionUserFlow: "Local Resource Management",
+                localResourceKind: workflow.resourceKind,
               },
             });
             let errorMsg: string = "";
@@ -161,6 +160,10 @@ export async function runWorkflowWithProgress(
             void showErrorNotificationWithButtons(
               `Error ${start ? "starting" : "stopping"} ${workflow.resourceKind}: ${errorMsg}`,
             );
+          } else {
+            // logError() discards its message for non-Error throwables, so log directly to keep
+            // the workflow context
+            logger.error(`running ${workflow.resourceKind} workflow`, error);
           }
         }
       }

@@ -1,5 +1,6 @@
 import type { ImageSummary } from "../clients/docker";
-import { ImageApi, ResponseError } from "../clients/docker";
+import { ImageApi } from "../clients/docker";
+import { logError } from "../errors";
 import { Logger } from "../logging";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { defaultRequestInit } from "./configs";
@@ -19,15 +20,7 @@ export async function imageExists(repo: string, tag: string): Promise<boolean> {
     logger.debug(`"${repoTag}" image exists:`, !!matchingImage);
     return !!matchingImage;
   } catch (error) {
-    if (error instanceof ResponseError) {
-      logger.error("Error response listing images:", {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        body: await error.response.clone().text(),
-      });
-    } else {
-      logger.error("Error inspecting image:", error);
-    }
+    logError(error, "listing images");
   }
   return false;
 }
@@ -53,15 +46,7 @@ export async function pullImage(repo: string, tag: string): Promise<void> {
       dockerImage: repoTag,
     });
   } catch (error) {
-    if (error instanceof ResponseError) {
-      logger.error("Error response pulling image:", {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        body: await error.response.clone().text(),
-      });
-    } else {
-      logger.error("Error pulling image:", error);
-    }
+    logError(error, "pulling image");
     throw error;
   }
 }
