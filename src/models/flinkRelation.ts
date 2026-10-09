@@ -9,9 +9,8 @@ import { formatFlinkTypeForDisplay, formatSqlType } from "../utils/flinkTypes";
 import { FlinkTypeNode } from "./flinkTypeNode";
 import type { FlinkType } from "./flinkTypes";
 import { FlinkTypeKind, isFlinkTypeExpandable } from "./flinkTypes";
-import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
-import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
+import type { ConnectionId, EnvironmentId, IResourceBase } from "./resource";
 
 /**
  * Represents a column of a Flink relation (table or view).
@@ -269,7 +268,7 @@ export enum FlinkRelationType {
  * Represents a Flink relation (base table or view) within the system catalog.
  * Immutable data holder with light convenience getters, mirroring the style of FlinkUdf and Column.
  */
-export class FlinkRelation implements IResourceBase, IdItem, ISearchable {
+export class FlinkRelation implements IResourceBase {
   /** What CCloud environment this relation came from (from the Kafka Cluster) */
   environmentId: EnvironmentId;
   /** What cloud provider hosts the parent Kafka Cluster? */
