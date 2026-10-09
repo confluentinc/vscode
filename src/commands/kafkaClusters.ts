@@ -152,8 +152,7 @@ export async function deleteTopicCommand(topic: KafkaTopic) {
 
         // look up the parent Kafka cluster in order to fire the topicChanged event
         const loader = ResourceLoader.getInstance(topic.connectionId);
-        const clusters = await loader.getKafkaClustersForEnvironmentId(topic.environmentId);
-        const cluster = clusters.find((c) => c.id === topic.clusterId);
+        const cluster = await loader.getClusterForTopic(topic);
         if (cluster) {
           topicChanged.fire({ change: "deleted", cluster });
         }
