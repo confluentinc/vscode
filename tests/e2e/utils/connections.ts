@@ -160,7 +160,7 @@ export async function setupCCloudConnection(
   }
 
   await expect(ccloudItem.locator).not.toContainText(NOT_CONNECTED_TEXT);
-  await expect(ccloudItem.locator).toHaveAttribute("aria-expanded", "true");
+  await expect(ccloudItem.locator).toBeExpanded();
   return ccloudItem;
 }
 
@@ -229,7 +229,7 @@ export async function setupDirectConnection(
     if ((await connectionItem.locator.getAttribute("aria-expanded")) === "false") {
       await connectionItem.locator.click();
     }
-    await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+    await expect(connectionItem.locator).toBeExpanded();
   }
 
   return connectionItem;
@@ -299,7 +299,7 @@ export async function setupLocalKafka(page: Page) {
     // broker input did not appear within 5s — continue without confirming
   }
 
-  await expect(localItem.locator).toHaveAttribute("aria-expanded", "true");
+  await expect(localItem.locator).toBeExpanded();
   await expect(resourcesView.localKafkaClusters).not.toHaveCount(0);
   return localItem;
 }
@@ -317,7 +317,7 @@ export async function setupLocalSchemaRegistry(page: Page) {
   await containerQuickpick.selectItemByText("Schema Registry");
   await containerQuickpick.confirm();
 
-  await expect(localItem.locator).toHaveAttribute("aria-expanded", "true");
+  await expect(localItem.locator).toBeExpanded();
   // local SR requires local Kafka, so we should always see local Kafka appear
   await expect(resourcesView.localKafkaClusters).not.toHaveCount(0);
   await expect(resourcesView.localSchemaRegistries).not.toHaveCount(0, { timeout: 60_000 });

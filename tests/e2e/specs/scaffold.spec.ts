@@ -62,7 +62,7 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
 
     test.beforeEach(async ({ connectionItem }) => {
       // ensure connection tree item has resources available to work with
-      await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+      await expect(connectionItem.locator).toBeExpanded();
     });
 
     test(`should apply Flink Table API In Java For Confluent Cloud template from Flink compute pool`, async ({
@@ -163,7 +163,7 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
 
         test.beforeEach(async ({ connectionItem }) => {
           // ensure connection tree item has resources available to work with
-          await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+          await expect(connectionItem.locator).toBeExpanded();
         });
 
         test(

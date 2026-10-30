@@ -153,7 +153,7 @@ To create a new E2E test:
      test.beforeEach(async ({ connectionItem }) => {
        // The connectionItem fixture ensures the connection is set up and expanded in the Resources
        // view, and handles teardown automatically after the test completes.
-       await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+       await expect(connectionItem.locator).toBeExpanded();
      });
 
      test("should open message viewer from a topic", async ({ page }) => {
