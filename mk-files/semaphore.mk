@@ -10,8 +10,6 @@ current_time := $(shell date +"%s")
 os_name := $(shell uname -s)
 export PLATFORM := $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')")
 export ARCH := $(shell uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/')
-# v2: older entries hold every VS Code build ever downloaded (8+ GB), so stop restoring them
-VSCODE_TEST_CACHE_KEY = $(PLATFORM)_$(ARCH)_vscode_test_cache_v2_$${VSCODE_VERSION:-stable}
 
 .PHONY: store-test-results-to-semaphore
 store-test-results-to-semaphore:
@@ -63,8 +61,6 @@ ifneq ($(SEMAPHORE_GIT_REF_TYPE),pull-request)
 # Cache packages installed by `npx playwright install`
 	[[ $(os_name) == "Darwin" ]] && $(MAKE) sem-cache-store-entry SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_playwright_cache SEM_CACHE_PATH=$(HOME)/Library/Caches/ms-playwright || true
 	[[ $(os_name) == "Linux" ]] && $(MAKE) sem-cache-store-entry SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_playwright_cache SEM_CACHE_PATH=$(HOME)/.cache/ms-playwright || true
-# Also cache VS Code binaries downloaded by @vscode/test-electron if present
-	[[ -d $(CURDIR)/.vscode-test ]] && $(MAKE) sem-cache-store-entry SEM_CACHE_KEY=$(VSCODE_TEST_CACHE_KEY) SEM_CACHE_PATH=$(CURDIR)/.vscode-test || true
 endif
 
 # cache restore allows fuzzy matching. When it finds multiple matches, it will select the most recent cache archive.
@@ -94,7 +90,6 @@ ci-bin-sem-cache-restore:
 	@echo "Restoring semaphore caches"
 	cache restore $(PLATFORM)_$(ARCH)_npm_cache
 	cache restore $(PLATFORM)_$(ARCH)_playwright_cache || true
-	cache restore $(VSCODE_TEST_CACHE_KEY) || true
 
 # Merge per-job blob reports into one HTML report by test job:
 # - Each job's blob reporter will write a report zip to `blob-report/`, so we'll have multiple files
