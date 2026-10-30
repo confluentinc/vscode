@@ -145,6 +145,28 @@ export abstract class ResourceLoader extends DisposableCollection implements IRe
     forceRefresh?: boolean,
   ): Promise<ConsumerGroup[]>;
 
+  /**
+   * Get the {@link KafkaCluster} that a given {@link KafkaTopic} belongs to.
+   *
+   * Connection-aware (implemented atop {@link getKafkaClustersForEnvironmentId}), so unlike a
+   * raw cluster-id lookup it resolves correctly for direct-connection topics.
+   *
+   * @param topic The topic to resolve. Must belong to the same connection as this loader.
+   * @returns The topic's {@link KafkaCluster}, or `undefined` if no cluster in the topic's
+   *   environment matches its {@linkcode KafkaTopic.clusterId}.
+   * @throws Error if the topic is not from the same connection as this loader.
+   */
+  public async getClusterForTopic(topic: KafkaTopic): Promise<KafkaCluster | undefined> {
+    if (topic.connectionId !== this.connectionId) {
+      throw new Error(
+        `Mismatched connectionId ${this.connectionId} for topic ${topic.name} (${topic.connectionId})`,
+      );
+    }
+
+    const clusters = await this.getKafkaClustersForEnvironmentId(topic.environmentId);
+    return clusters.find((cluster) => cluster.id === topic.clusterId);
+  }
+
   // Schema registry methods.
 
   /**
