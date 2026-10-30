@@ -6,7 +6,7 @@ import virtual from "@rollup/plugin-virtual";
 import { createFilter } from "@rollup/pluginutils";
 import { sentryRollupPlugin } from "@sentry/rollup-plugin";
 import { FontAssetType, OtherAssetType, generateFonts } from "@twbs/fantasticon";
-import { runTests } from "@vscode/test-electron";
+import { downloadAndUnzipVSCode, runTests } from "@vscode/test-electron";
 import { configDotenv } from "dotenv";
 import { ESLint } from "eslint";
 import { globSync } from "glob";
@@ -26,14 +26,17 @@ import { rollup, watch } from "rollup";
 import copy from "rollup-plugin-copy";
 import esbuild from "rollup-plugin-esbuild";
 import ts from "typescript";
+import { pruneVSCodeBuilds } from "./scripts/pruneVSCodeBuilds.js";
 configDotenv();
 const DESTINATION = "out";
+// where @vscode/test-electron downloads VS Code builds; CI caches this whole directory
+const VSCODE_TEST_CACHE_PATH = resolve(".vscode-test");
 
 const IS_CI = process.env.CI != null;
 const IS_WINDOWS = process.platform === "win32";
 
 export const ci = parallel(check, build, lint);
-export const test = series(clean, testBuild, testRun);
+export const test = series(clean, testBuild, scriptsTestRun, testRun);
 export const liveTest = series(clean, build, testBuild);
 liveTest.description =
   "Rebuild the out/ directory after codebase or test suite changes for live breakpoint debugging.";
@@ -786,7 +789,7 @@ export async function testRun() {
 
   try {
     await runTests({
-      version: vscodeVersion,
+      vscodeExecutablePath: await downloadVSCodeForTests(vscodeVersion),
       extensionDevelopmentPath: resolve(DESTINATION),
       extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
       extensionTestsEnv: {
@@ -825,6 +828,17 @@ export async function testRun() {
   }
   // runTests() will throw an error if tests failed, otherwise report happy execution
   return 0;
+}
+
+scriptsTestRun.description = "Run node:test tests for the build helpers in scripts/.";
+export function scriptsTestRun(done) {
+  const testFiles = globSync("scripts/**/*.test.js");
+  // with no file arguments, `node --test` would search the whole repo instead
+  if (testFiles.length === 0) throw new Error("No test files found under scripts/");
+  const result = spawnSync(process.execPath, ["--test", ...testFiles], { stdio: "inherit" });
+  if (result.error) throw result.error;
+  // status is null when the process was killed by a signal
+  return done(result.status ?? 1);
 }
 
 /**
@@ -933,7 +947,10 @@ export async function pullSchemaRegistryImage(done) {
   return done(0);
 }
 
-export function e2eRun(done) {
+export async function e2eRun(done) {
+  // tests/e2e/global.setup.ts resolves the same version, so its download becomes a cache hit
+  await downloadVSCodeForTests(process.env.VSCODE_VERSION || "stable");
+
   // set env var so extension knows it's in E2E test mode, which is mainly used for CCloud auth:
   // - the auth provider will store the sign-in URL to a temp file for easier test handling of the
   //   browser-based sign-in flow through Playwright
@@ -963,6 +980,34 @@ export function e2eRun(done) {
   });
   if (result.error) throw result.error;
   return done(result.status);
+}
+
+/**
+ * Downloads (or reuses) the VS Code build for `version` and removes other release builds from
+ * `.vscode-test`. Returns the VS Code executable path.
+ */
+async function downloadVSCodeForTests(version) {
+  const executablePath = await downloadAndUnzipVSCode({
+    version,
+    cachePath: VSCODE_TEST_CACHE_PATH,
+  });
+  // a failed cleanup only costs disk space, so warn instead of failing the test run
+  try {
+    const { removed, failed } = pruneVSCodeBuilds(VSCODE_TEST_CACHE_PATH, executablePath);
+    if (removed.length > 0) {
+      console.info(`Removed old VS Code builds from .vscode-test: ${removed.join(", ")}`);
+    }
+    for (const { name, error } of failed) {
+      console.warn(
+        `Failed to remove old VS Code build "${name}" from .vscode-test; delete it manually, ` +
+          "since CI caches this directory:",
+        error,
+      );
+    }
+  } catch (error) {
+    console.warn("Skipped removing old VS Code builds from .vscode-test:", error);
+  }
+  return executablePath;
 }
 
 async function applyOpenAPISpecPatches(patchDir) {
