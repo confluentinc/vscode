@@ -15,6 +15,7 @@ import {
 import type { Connection } from "../clients/sidecar";
 import { ConnectedState, ConnectionFromJSON } from "../clients/sidecar";
 import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
+import * as contextValues from "../context/values";
 import { ccloudAuthCallback, ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
 import * as errors from "../errors";
 import * as notifications from "../notifications";
@@ -702,6 +703,31 @@ describe("authn/ccloudProvider.ts", () => {
         const session: vscode.AuthenticationSession = authProvider.convertToAuthSession(connection);
 
         assert.deepStrictEqual(session, TEST_CCLOUD_AUTH_SESSION);
+      });
+    });
+
+    describe("dispose()", () => {
+      it("should stop handling ccloudAuthSessionInvalidated so a replaced instance handles the event only once", async () => {
+        // a discarded-but-undisposed instance keeps its process-global emitter subscription,
+        // so a single fire invokes clearCurrentCCloudResources() once per surviving instance
+        getStubbedSecretStorage(sandbox);
+        // keep handleSessionRemoved()'s awaits synchronous so the assertion is deterministic
+        sandbox.stub(contextValues, "setContextValue").resolves();
+
+        authProvider.dispose();
+        ConfluentCloudAuthProvider["instance"] = null;
+        const replacement: ConfluentCloudAuthProvider = ConfluentCloudAuthProvider.getInstance();
+
+        try {
+          ccloudAuthSessionInvalidated.fire();
+          // setImmediate (a macrotask) flushes the listener's multi-await chain
+          await new Promise((resolve) => setImmediate(resolve));
+
+          // only the live replacement should handle the event, not the disposed instance
+          sinon.assert.calledOnce(clearCurrentCCloudResourcesStub);
+        } finally {
+          replacement.dispose();
+        }
       });
     });
   });
