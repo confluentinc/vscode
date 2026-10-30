@@ -2,9 +2,8 @@ import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH } from "../constants";
 import { IconNames } from "../icons";
-import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
-import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
+import type { ConnectionId, EnvironmentId, IResourceBase } from "./resource";
 
 /**
  * Consumer group states as returned by the Kafka REST API.
@@ -26,7 +25,7 @@ const INACTIVE_STATES: readonly ConsumerGroupState[] = [
 ];
 
 /** Main class representing a Kafka consumer group. */
-export class ConsumerGroup implements IResourceBase, ISearchable, IdItem {
+export class ConsumerGroup implements IResourceBase {
   connectionId: ConnectionId;
   connectionType: ConnectionType;
   environmentId: EnvironmentId;
@@ -105,7 +104,7 @@ export class ConsumerGroup implements IResourceBase, ISearchable, IdItem {
 }
 
 /** A member (consumer instance) of a {@link ConsumerGroup}. */
-export class Consumer implements IResourceBase, ISearchable, IdItem {
+export class Consumer implements IResourceBase {
   connectionId: ConnectionId;
   connectionType: ConnectionType;
   environmentId: EnvironmentId;
