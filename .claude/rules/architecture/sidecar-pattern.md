@@ -13,8 +13,8 @@ WebSocket APIs). The sidecar is a shared backend also consumed by the IntelliJ p
 - **SidecarManager** (`src/sidecar/sidecarManager.ts`): singleton managing the sidecar process
   lifecycle (start, stop, health checks)
 - **SidecarHandle** (`src/sidecar/sidecarHandle.ts`): short-lived client for individual operations
-- **WebsocketManager** (`src/sidecar/websocketManager.ts`): persistent WebSocket connection for
-  real-time updates (topic messages, Flink statement results, etc.)
+- **WebsocketManager** (`src/sidecar/websocketManager.ts`): persistent `/ws` connection for
+  workspace and connection events only (`src/ws/messageTypes.ts`)
 
 ## Critical Pattern
 
@@ -34,4 +34,6 @@ this.sidecar = await getSidecar(); // don't do this
 
 - **REST**: OpenAPI-generated clients in `src/clients/` (auto-generated, never edit)
 - **GraphQL**: `gql.tada` typed queries, schema at `src/graphql/sidecar.graphql`
-- **WebSocket**: streaming data (topic consumption, Flink results) via WebsocketManager
+- **WebSocket**: `/ws` via WebsocketManager for workspace and connection events. The Flink SQL
+  language client opens its own `/flsp` socket. Topic consumption and Flink statement results use
+  the REST clients, not a websocket.
