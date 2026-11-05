@@ -127,7 +127,12 @@ export class FlinkStatementResultsPanelProvider
     const os = ObservableScope();
     this.observableScope = os;
     const panelActive = os.produce(true, (value, signal) => {
-      const changedState = this.view!.onDidChangeVisibility(() => value(this.view!.visible));
+      const changedState = this.view!.onDidChangeVisibility(() => {
+        value(this.view!.visible);
+        // the webview is retained while hidden but skips notifications, and the manager stops
+        // refreshing once the statement is terminal, so catch it up on reveal
+        if (this.view!.visible) notifyUI();
+      });
       signal.onabort = () => changedState.dispose();
     });
     const notifyUI = () => {
