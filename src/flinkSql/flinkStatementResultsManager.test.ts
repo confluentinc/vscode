@@ -298,6 +298,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
   });
 
   it("should report snapshot mode in GetStatementMeta for a snapshot-mode statement", async () => {
+    ctx.manager.start();
     const snapshotStatement = new FlinkStatement({
       ...ctx.statement,
       spec: {
@@ -321,6 +322,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
   });
 
   it("should report end time and durations in GetStatementMeta once the statement is terminal", async () => {
+    ctx.manager.start();
     const createdAt: Date = ctx.statement.createdAt!;
     const endTime = new Date(createdAt.getTime() + 90_000);
     const completedStatement = new FlinkStatement({
@@ -345,6 +347,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
   });
 
   it("should stop polling when statement is not results viewable", async () => {
+    ctx.manager.start();
     assert.ok(ctx.manager["_pollingInterval"] as NodeJS.Timeout);
 
     const nonViewableStatement = new FlinkStatement({
@@ -373,17 +376,52 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     assert.equal(ctx.flinkSqlStatementsApi.updateSqlv1Statement.callCount, 1);
   });
 
+  describe("start()", () => {
+    it("should not begin polling until start() is called", () => {
+      assert.strictEqual(ctx.manager["_pollingInterval"], undefined);
+      assert.strictEqual(ctx.manager["_statementRefreshInterval"], undefined);
+    });
+
+    it("should begin polling once start() is called", () => {
+      ctx.manager.start();
+
+      assert.ok(ctx.manager["_pollingInterval"]);
+      assert.ok(ctx.manager["_statementRefreshInterval"]);
+    });
+
+    it("should be a no-op when start() is called more than once", () => {
+      ctx.manager.start();
+      const pollingInterval = ctx.manager["_pollingInterval"];
+      const refreshInterval = ctx.manager["_statementRefreshInterval"];
+
+      ctx.manager.start();
+
+      assert.strictEqual(ctx.manager["_pollingInterval"], pollingInterval);
+      assert.strictEqual(ctx.manager["_statementRefreshInterval"], refreshInterval);
+    });
+
+    it("should not restart polling after fetchResults() has self-destructed the interval", () => {
+      ctx.manager.start();
+      // Simulate fetchResults() self-destructing the poll interval once results are exhausted.
+      clearInterval(ctx.manager["_pollingInterval"]);
+      ctx.manager["_pollingInterval"] = undefined;
+
+      ctx.manager.start();
+
+      assert.strictEqual(ctx.manager["_pollingInterval"], undefined);
+    });
+  });
+
   describe("with fetchResults not running in a setInterval", () => {
     let clock: sinon.SinonFakeTimers;
 
     beforeEach(() => {
-      clearInterval(ctx.manager["_pollingInterval"]);
-      ctx.manager["_pollingInterval"] = undefined;
+      // The manager is left un-started by the shared factory, so no polling interval is running to
+      // clear here; these tests drive fetchResults() directly.
       ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.resetHistory();
 
-      // Eventually, the idea would be to move this fake timer up to
-      // the top-level describe's beforeEach.
-      // See https://github.com/confluentinc/vscode/issues/1807
+      // Fake timers stay scoped to this block rather than the top-level describe because those tests
+      // rely on eventually(), which polls its assertion on real timers.
       clock = sinon.useFakeTimers({ shouldClearNativeTimers: true });
     });
 

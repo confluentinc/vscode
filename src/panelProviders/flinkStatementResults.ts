@@ -145,6 +145,7 @@ export class FlinkStatementResultsPanelProvider
       notifyUI,
       DEFAULT_RESULT_LIMIT,
     );
+    this.resultsManager.start();
     // Handle messages from the webview and delegate to the results manager
     const handler = handleWebviewMessage(this.view.webview, (...args) => {
       let result;
