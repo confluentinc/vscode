@@ -1,10 +1,12 @@
+import * as childProcess from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as vscode from "vscode";
 
 /**
- * Very thin wrappers around {@link vscode.workspace.fs} and {@link fs} related methods and functions which cannot
- * be stubbed directly in tests due to implementation directly in C, not JS.
+ * Very thin wrappers around {@link vscode.workspace.fs}, {@link fs}, and other native (C-backed)
+ * methods and functions which cannot be stubbed directly in tests due to implementation directly in
+ * C, not JS.
  */
 
 /**
@@ -107,4 +109,15 @@ export function statSync(path: fs.PathLike): fs.Stats {
 /** Wrapper for {@link fs.unlinkSync} */
 export function unlinkSync(path: fs.PathLike): void {
   fs.unlinkSync(path);
+}
+
+/**
+ * Wrapper for {@link childProcess.execSync}. Always decodes as UTF-8 so the result is a string
+ * rather than a {@link Buffer}; `encoding` is therefore not a caller-overridable option.
+ */
+export function execSync(
+  command: string,
+  options?: Omit<childProcess.ExecSyncOptions, "encoding">,
+): string {
+  return childProcess.execSync(command, { ...options, encoding: "utf-8" });
 }
