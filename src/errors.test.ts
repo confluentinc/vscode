@@ -206,6 +206,16 @@ describe("errors.ts extractResponseBody()", () => {
     assert.strictEqual(body, textResponse);
   });
 
+  it("should return an empty string for an empty response body", async () => {
+    // an empty body makes `JSON.parse("")` throw `Unexpected end of JSON input`; the helper must
+    // swallow that and fall back to the (empty) text body rather than propagating the SyntaxError.
+    const error = createResponseError(500, "Internal Server Error", "");
+
+    const body = await extractResponseBody(error);
+
+    assert.strictEqual(body, "");
+  });
+
   it("should throw if the error is not a ResponseError", async () => {
     const error = new Error("test");
     await assert.rejects(
