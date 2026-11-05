@@ -1,4 +1,5 @@
 import { NetworkApi, ResponseError } from "../clients/docker";
+import { logError } from "../errors";
 import { Logger } from "../logging";
 import { defaultRequestInit } from "./configs";
 
@@ -17,16 +18,9 @@ export async function createNetwork(name: string, driver: string = "bridge"): Pr
         // this is fine, no need to re-throw the error
         logger.debug(`Network "${name}" with ${driver} driver already exists`);
         return;
-      } else {
-        logger.error("Error response creating network:", {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          body: body,
-        });
       }
-    } else {
-      logger.error("Error creating network:", error);
     }
+    logError(error, "creating network");
     throw error;
   }
 }
