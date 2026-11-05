@@ -62,7 +62,7 @@ test.describe("Schema Management", { tag: [Tag.EvolveSchema] }, () => {
 
       test.beforeEach(async ({ page, connectionItem }) => {
         // ensure connection tree item has resources available to work with
-        await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+        await expect(connectionItem.locator).toBeExpanded();
 
         const schemasView = new SchemasView(page);
         await schemasView.loadSchemaSubjects(
