@@ -258,10 +258,34 @@ export class FlinkStatementResultsManager {
   }
 
   private async refreshStatement() {
-    const refreshedStatement = await this.resourceLoader.refreshFlinkStatement(this.statement);
+    let refreshedStatement: FlinkStatement | null;
+    try {
+      refreshedStatement = await this.resourceLoader.refreshFlinkStatement(this.statement);
+    } catch (error) {
+      // leave the interval running, since the next refresh may succeed
+      logError(error, `refreshing Flink statement "${this.statement.name}" for its results panel`);
+      return;
+    }
+    // a slow refresh can land after an earlier one already stopped the interval (or after
+    // dispose), and with no later tick to correct it, applying it would pin a stale phase
+    if (!this._statementRefreshInterval) {
+      return;
+    }
+
     if (refreshedStatement) {
       this.statement = refreshedStatement;
       this.notifyUI();
+    }
+    // a 404 comes back as null; neither a deleted statement nor a terminal one will change again
+    if (!refreshedStatement || refreshedStatement.isTerminal) {
+      this.clearStatementRefreshInterval();
+    }
+  }
+
+  private clearStatementRefreshInterval() {
+    if (this._statementRefreshInterval) {
+      clearInterval(this._statementRefreshInterval);
+      this._statementRefreshInterval = undefined;
     }
   }
 
@@ -701,10 +725,7 @@ export class FlinkStatementResultsManager {
       clearInterval(this._pollingInterval);
       this._pollingInterval = undefined;
     }
-    if (this._statementRefreshInterval) {
-      clearInterval(this._statementRefreshInterval);
-      this._statementRefreshInterval = undefined;
-    }
+    this.clearStatementRefreshInterval();
     // Abort any in-flight requests
     this._getResultsAbortController.abort();
   }
