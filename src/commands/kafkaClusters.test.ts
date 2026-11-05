@@ -452,7 +452,7 @@ describe("commands/kafkaClusters.ts", () => {
 
     it("should fire the topicChanged event with change='deleted' after successful deletion", async () => {
       showInputBoxStub.resolves(TEST_CCLOUD_KAFKA_TOPIC.name);
-      stubbedLoader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
+      stubbedLoader.getClusterForTopic.resolves(TEST_CCLOUD_KAFKA_CLUSTER);
 
       await deleteTopicCommand(TEST_CCLOUD_KAFKA_TOPIC);
 
@@ -517,7 +517,7 @@ describe("commands/kafkaClusters.ts", () => {
     // rare edge case since we shouldn't lose track of a cluster if we just used it to delete a topic
     it("should not fire the topicChanged event if the cluster is not found after deletion", async () => {
       showInputBoxStub.resolves(TEST_CCLOUD_KAFKA_TOPIC.name);
-      stubbedLoader.getKafkaClustersForEnvironmentId.resolves([]);
+      stubbedLoader.getClusterForTopic.resolves(undefined);
 
       await deleteTopicCommand(TEST_CCLOUD_KAFKA_TOPIC);
 
