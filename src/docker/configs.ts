@@ -8,6 +8,12 @@ import { logError } from "../errors";
 import { LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { getDockerCredentials } from "./credentials";
+import {
+  checkDockerConfigFile,
+  checkDockerSocketAccess,
+  DockerConfigStatus,
+  DockerSocketStatus,
+} from "./diagnostics";
 
 const logger = new Logger("docker.configs");
 
@@ -103,6 +109,24 @@ export async function showDockerUnavailableErrorNotification(error: unknown): Pr
     primaryButton = "Open Logs";
     secondaryButton = "File Issue";
     notificationMessage = `Error ${error.response.status}: ${errorMessage}`;
+  } else if (
+    process.platform !== "win32" &&
+    checkDockerSocketAccess(getSocketPath()) === DockerSocketStatus.PERMISSION_DENIED
+  ) {
+    // the socket file exists but this user can't read/write it, commonly because they aren't in the
+    // `docker` group on Linux. "Install Docker" would be misleading here, so point at the
+    // permissions fix instead. Skipped on Windows, where the socket is a named pipe and this
+    // group-membership guidance wouldn't apply.
+    primaryButton = "View Docs";
+    secondaryButton = "Open Logs";
+    notificationMessage = `The Docker socket at "${getSocketPath()}" exists but isn't accessible. Ensure your user has permission to use it (on Linux, add your user to the "docker" group and restart your session).`;
+    // a fresh Docker install on Linux often also leaves ~/.docker/config.json absent or empty,
+    // which our credential lookup can't use; surface that fix too. Only for missing/empty, where
+    // "add {}" is the actual remedy - an unreadable or malformed file is a different problem.
+    const configStatus: DockerConfigStatus = checkDockerConfigFile();
+    if (configStatus === DockerConfigStatus.MISSING || configStatus === DockerConfigStatus.EMPTY) {
+      notificationMessage += ` Also ensure "~/.docker/config.json" exists and contains at least "{}".`;
+    }
   } else {
     // likely FetchError->TypeError: connect ENOENT <socket path> but not a lot else we can do here
     primaryButton = "Install Docker";
@@ -129,6 +153,12 @@ export async function showDockerUnavailableErrorNotification(error: unknown): Pr
       switch (selection) {
         case "Install Docker": {
           const uri = Uri.parse("https://docs.docker.com/engine/install/");
+          env.openExternal(uri);
+          break;
+        }
+        case "View Docs": {
+          // Docker's "Manage Docker as a non-root user" post-install guide
+          const uri = Uri.parse("https://docs.docker.com/engine/install/linux-postinstall/");
           env.openExternal(uri);
           break;
         }

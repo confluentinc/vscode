@@ -104,6 +104,11 @@ export function statSync(path: fs.PathLike): fs.Stats {
   return fs.statSync(path);
 }
 
+/** Wrapper for {@link fs.accessSync} (throws an {@link NodeJS.ErrnoException} when inaccessible). */
+export function accessSync(path: fs.PathLike, mode?: number): void {
+  fs.accessSync(path, mode);
+}
+
 /** Wrapper for {@link fs.unlinkSync} */
 export function unlinkSync(path: fs.PathLike): void {
   fs.unlinkSync(path);
