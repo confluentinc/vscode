@@ -12,7 +12,6 @@ import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, UTM_SOURCE_VSCODE } from "../co
 import type { SqlV1StatementWarning } from "../clients/flinkSql";
 import { extractWarnings } from "../flinkSql/warningParser";
 import { IconNames } from "../icons";
-import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
 import { formatDurationMillis, formatIsoDuration } from "../utils/durations";
 import type {
@@ -21,7 +20,6 @@ import type {
   IEnvProviderRegion,
   IProviderRegion,
   IResourceBase,
-  ISearchable,
   OrganizationId,
 } from "./resource";
 
@@ -61,7 +59,7 @@ export const UNSTOPPABLE_PHASES = [
 /**
  * Model for a Flink statement.
  */
-export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvProviderRegion {
+export class FlinkStatement implements IResourceBase, IEnvProviderRegion {
   // Immutable foreign reference properties
   readonly connectionId!: ConnectionId;
   readonly connectionType!: ConnectionType;

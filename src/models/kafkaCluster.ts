@@ -13,18 +13,12 @@ import { localTimezoneOffset } from "../utils/timezone";
 import type { CCloudFlinkComputePool } from "./flinkComputePool";
 import { FlinkSpecProperties } from "./flinkStatement";
 import { CustomMarkdownString } from "./main";
-import type {
-  ConnectionId,
-  EnvironmentId,
-  IEnvProviderRegion,
-  IResourceBase,
-  ISearchable,
-} from "./resource";
+import type { ConnectionId, EnvironmentId, IEnvProviderRegion, IResourceBase } from "./resource";
 import { connectionIdToType, isCCloud } from "./resource";
 import type { KafkaTopic } from "./topic";
 
 /** Base class for all KafkaClusters */
-export abstract class KafkaCluster extends Data implements IResourceBase, ISearchable {
+export abstract class KafkaCluster extends Data implements IResourceBase {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
 

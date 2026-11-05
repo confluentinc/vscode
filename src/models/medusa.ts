@@ -5,9 +5,9 @@ import { ConnectionType } from "../clients/sidecar";
 import { LOCAL_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
 import { CustomMarkdownString } from "./main";
-import type { ConnectionId, IResourceBase, ISearchable } from "./resource";
+import type { ConnectionId, IResourceBase } from "./resource";
 
-export class LocalMedusa extends Data implements IResourceBase, ISearchable {
+export class LocalMedusa extends Data implements IResourceBase {
   connectionId: ConnectionId = LOCAL_CONNECTION_ID;
   connectionType: ConnectionType = ConnectionType.Local;
   iconName: IconNames = IconNames.CONFLUENT_LOGO; //todo update this to Medusa icon

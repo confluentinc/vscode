@@ -14,13 +14,12 @@ import type {
   EnvironmentId,
   IResourceBase,
   ISchemaRegistryResource,
-  ISearchable,
 } from "./resource";
 import { connectionIdToType, isCCloud } from "./resource";
 
 export abstract class SchemaRegistry
   extends Data
-  implements IResourceBase, ISearchable, ISchemaRegistryResource
+  implements IResourceBase, ISchemaRegistryResource
 {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;

@@ -3,9 +3,8 @@ import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
 import { formatSqlType } from "../utils/flinkTypes";
-import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
-import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
+import type { ConnectionId, EnvironmentId, IResourceBase } from "./resource";
 
 /** Class representing a parameter for a Flink UDF. */
 export class FlinkUdfParameter {
@@ -25,7 +24,7 @@ export class FlinkUdfParameter {
 /**
  * Represents a Flink UDF.
  */
-export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
+export class FlinkUdf implements IResourceBase {
   /** What CCloud environment this UDF came from (from the Kafka Cluster) */
   environmentId: EnvironmentId;
   /** What cloud provider hosts the parent Kafka Cluster? */

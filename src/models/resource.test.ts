@@ -98,16 +98,20 @@ describe("isResource", () => {
     const value = {
       connectionId: "abc123" as ConnectionId,
       connectionType: ConnectionType.Direct,
+      id: "abc123",
+      searchableText: () => "",
     };
 
     assert.strictEqual(isResource(value), true);
   });
 
-  for (const missingField of ["connectionId", "connectionType"]) {
+  for (const missingField of ["connectionId", "connectionType", "id", "searchableText"]) {
     it(`should return false for values missing "${missingField}"`, () => {
       const value: any = {
         connectionId: "abc123" as ConnectionId,
         connectionType: ConnectionType.Direct,
+        id: "abc123",
+        searchableText: () => "",
       };
       delete value[missingField];
 

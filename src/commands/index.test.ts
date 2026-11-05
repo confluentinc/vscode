@@ -104,16 +104,19 @@ describe("commands/index.ts", () => {
       assert.deepStrictEqual(result, {});
     });
 
-    it("should include 'resourceConnectionType' when the first arg implements IResourceBase", () => {
+    it("should include 'resourceConnectionType' and 'resourceId' when the first arg implements IResourceBase", () => {
       const fakeResource: IResourceBase = {
+        id: "abc123",
         connectionId: "abc123" as ConnectionId,
         connectionType: ConnectionType.Direct,
+        searchableText: () => "",
       };
 
       const result = getCommandArgsContext([fakeResource]);
 
       assert.deepStrictEqual(result, {
         resourceConnectionType: fakeResource.connectionType,
+        resourceId: fakeResource.id,
       });
     });
 
