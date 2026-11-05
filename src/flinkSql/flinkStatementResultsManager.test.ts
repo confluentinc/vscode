@@ -16,11 +16,13 @@ import {
   GetSqlv1StatementResult200ResponseKindEnum,
 } from "../clients/flinkSql";
 import * as messageUtils from "../documentProviders/message";
+import * as errors from "../errors";
 import {
   FlinkSnapshotMode,
   flinkSnapshotModeDescription,
   FlinkStatement,
   Phase,
+  TERMINAL_PHASES,
 } from "../models/flinkStatement";
 import type { WebviewStorage } from "../webview/comms/comms";
 import type {
@@ -360,6 +362,69 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     // Verify polling was stopped
     await eventually(() => {
       assert.equal(ctx.manager["_pollingInterval"], undefined);
+    });
+  });
+
+  describe("statement status refresh", () => {
+    /** Copy of the shared mock statement, moved to the given phase. */
+    function statementInPhase(phase: Phase): FlinkStatement {
+      return new FlinkStatement({ ...statement, status: { ...statement.status, phase } });
+    }
+
+    const stopCases: { description: string; refreshed: FlinkStatement | null }[] = [
+      ...TERMINAL_PHASES.map((phase) => ({
+        description: `reaches the terminal ${phase} phase`,
+        refreshed: statementInPhase(phase),
+      })),
+      // refreshFlinkStatement() maps a 404 to null
+      { description: "no longer exists (404)", refreshed: null },
+    ];
+
+    for (const { description, refreshed } of stopCases) {
+      it(`should stop refreshing the statement once it ${description}`, async () => {
+        assert.ok(ctx.manager["_statementRefreshInterval"]);
+        ctx.refreshFlinkStatementStub.resolves(refreshed);
+
+        await ctx.manager["refreshStatement"]();
+
+        assert.strictEqual(ctx.manager["_statementRefreshInterval"], undefined);
+      });
+    }
+
+    it("should keep refreshing a statement that is still running", async () => {
+      assert.ok(ctx.manager["_statementRefreshInterval"]);
+      ctx.refreshFlinkStatementStub.resolves(statementInPhase(Phase.RUNNING));
+
+      await ctx.manager["refreshStatement"]();
+
+      assert.ok(ctx.manager["_statementRefreshInterval"]);
+    });
+
+    it("should log a failed refresh with logError() and keep refreshing", async () => {
+      assert.ok(ctx.manager["_statementRefreshInterval"]);
+      const logErrorStub = sandbox.stub(errors, "logError");
+      const refreshError = new Error("sidecar unavailable");
+      ctx.refreshFlinkStatementStub.rejects(refreshError);
+
+      await ctx.manager["refreshStatement"]();
+
+      sinon.assert.calledWith(logErrorStub, refreshError);
+      assert.ok(ctx.manager["_statementRefreshInterval"]);
+    });
+
+    it("should ignore a refresh that resolves after refreshing has stopped", async () => {
+      const statementBefore: FlinkStatement = ctx.manager["statement"];
+      let resolveRefresh!: (refreshed: FlinkStatement) => void;
+      ctx.refreshFlinkStatementStub.returns(
+        new Promise<FlinkStatement>((resolve) => (resolveRefresh = resolve)),
+      );
+      const inFlightRefresh = ctx.manager["refreshStatement"]();
+
+      ctx.manager.dispose();
+      resolveRefresh(statementInPhase(Phase.RUNNING));
+      await inFlightRefresh;
+
+      assert.strictEqual(ctx.manager["statement"], statementBefore);
     });
   });
 
