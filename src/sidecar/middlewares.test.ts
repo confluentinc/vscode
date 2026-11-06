@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
+import { hungFetch } from "../../tests/unit/testUtils";
 import type { RequestContext } from "../clients/sidecar";
 import {
   Configuration,
@@ -14,8 +15,9 @@ import { SecretStorageKeys } from "../storage/constants";
 import type { ResourceManager } from "../storage/resourceManager";
 import { getResourceManager } from "../storage/resourceManager";
 import * as storageUtils from "../storage/utils";
+import { RequestTimeoutError } from "../utils/timing";
 import { CCLOUD_RECONNECT_TIMEOUT_MS, SIDECAR_CONNECTION_ID_HEADER } from "./constants";
-import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "./errors";
+import { CCloudReconnectTimeoutError } from "./errors";
 import {
   CCloudAuthStatusMiddleware,
   ErrorResponseMiddleware,
@@ -276,17 +278,6 @@ describe("TimeoutMiddleware", () => {
     sandbox.restore();
   });
 
-  /** A fetch that never answers, rejecting only once its signal aborts. */
-  function hungFetch(_url: string | URL | Request, init?: RequestInit): Promise<Response> {
-    return new Promise((_resolve, reject) => {
-      const signal = init?.signal;
-      if (signal?.aborted) {
-        reject(signal.reason);
-      }
-      signal?.addEventListener("abort", () => reject(signal.reason));
-    });
-  }
-
   function preferencesApi(fetchApi: typeof fetch = hungFetch): PreferencesResourceApi {
     return new PreferencesResourceApi(
       new Configuration({
@@ -297,14 +288,14 @@ describe("TimeoutMiddleware", () => {
     );
   }
 
-  it("should fail a hung request with a SidecarRequestTimeoutError once its budget is spent", async () => {
+  it("should fail a hung request with a RequestTimeoutError once its budget is spent", async () => {
     let settled = false;
     const request = preferencesApi()
       .gatewayV1PreferencesGet()
       .finally(() => (settled = true));
     const rejected = assert.rejects(
       request,
-      (err) => err instanceof SidecarRequestTimeoutError && /timed out after 30s/.test(err.message),
+      (err) => err instanceof RequestTimeoutError && /timed out after 30s/.test(err.message),
     );
 
     await clock.tickAsync(29_999);
@@ -336,7 +327,7 @@ describe("TimeoutMiddleware", () => {
     assert.strictEqual(clock.countTimers(), timersBefore);
   });
 
-  it("should fail with a SidecarRequestTimeoutError when an error body stalls past its budget", async () => {
+  it("should fail with a RequestTimeoutError when an error body stalls past its budget", async () => {
     /** Error headers at once, then a body that never finishes until the signal aborts. */
     const stalledErrorFetch = async (_url: string | URL | Request, init?: RequestInit) =>
       new Response(
@@ -358,7 +349,7 @@ describe("TimeoutMiddleware", () => {
 
     const rejected = assert.rejects(
       api.gatewayV1PreferencesGet(),
-      (err) => err instanceof SidecarRequestTimeoutError && err.message.includes("(HTTP 500)"),
+      (err) => err instanceof RequestTimeoutError && err.message.includes("(HTTP 500)"),
     );
     await clock.tickAsync(30_000);
 
