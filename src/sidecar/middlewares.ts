@@ -13,9 +13,9 @@ import { Logger } from "../logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
-import { isTimeoutReason, timeoutSignal } from "../utils/timing";
+import { isTimeoutReason, RequestTimeoutError, timeoutSignal } from "../utils/timing";
 import { CCLOUD_RECONNECT_TIMEOUT_MS, SIDECAR_CONNECTION_ID_HEADER } from "./constants";
-import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "./errors";
+import { CCloudReconnectTimeoutError } from "./errors";
 
 const logger = new Logger("sidecar.middlewares");
 
@@ -266,7 +266,11 @@ export class TimeoutMiddleware implements Middleware {
   /** Per-request cleanup, keyed by the `init` that `pre` hands to `fetch` and later hooks. */
   private readonly pending = new WeakMap<RequestInit, () => void>();
 
-  constructor(readonly timeoutMs: number) {}
+  constructor(
+    readonly timeoutMs: number,
+    /** Who didn't answer, for the error message. */
+    private readonly target: string = "the sidecar",
+  ) {}
 
   async pre(context: RequestContext): Promise<FetchParams> {
     const { signal, clear } = timeoutSignal(this.timeoutMs, context.init.signal);
@@ -293,8 +297,8 @@ export class TimeoutMiddleware implements Middleware {
     if (isTimeoutReason(context.init.signal?.reason)) {
       // a response whose body stalled still says which status the sidecar sent
       const answered = status ? ` (HTTP ${status})` : "";
-      throw new SidecarRequestTimeoutError(
-        `Request to the sidecar (${context.init.method ?? "GET"} ${context.url})${answered}`,
+      throw new RequestTimeoutError(
+        `Request to ${this.target} (${context.init.method ?? "GET"} ${context.url})${answered}`,
         this.timeoutMs,
         cause,
       );

@@ -8,6 +8,7 @@ import {
   TemplatesScaffoldV1Api,
 } from "../clients/scaffoldingService";
 import type { SidecarHandle } from "../sidecar";
+import { SCAFFOLDING_LIST_TIMEOUT_MS } from "../sidecar/constants";
 import {
   filterSensitiveKeys,
   getTemplatesList,
@@ -113,6 +114,10 @@ describe("templates.ts", () => {
       assert.strictEqual(result.length, 2);
       assert.strictEqual(result[0].spec?.name, "java-client");
       assert.strictEqual(result[1].spec?.name, "python-client");
+      sinon.assert.calledOnceWithExactly(
+        stubbedSidecar.getTemplatesApi,
+        SCAFFOLDING_LIST_TIMEOUT_MS,
+      );
     });
   });
 
