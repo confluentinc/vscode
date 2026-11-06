@@ -1,10 +1,21 @@
 import assert from "assert";
 import * as sinon from "sinon";
+import type { AddressInfo } from "ws";
+import { WebSocketServer } from "ws";
 import { getSidecar } from ".";
-import { GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE } from "../../tests/unit/testResources/websocketMessages";
+import { eventually } from "../../tests/eventually";
+import {
+  createWorkspaceCountMessage,
+  GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE,
+} from "../../tests/unit/testResources/websocketMessages";
 import type { Message, WorkspacesChangedBody } from "../ws/messageTypes";
 import { MessageType, newMessageHeaders } from "../ws/messageTypes";
-import { constructMessageRouter, WebsocketManager } from "./websocketManager";
+import {
+  constructMessageRouter,
+  WebsocketConnectionError,
+  WebsocketManager,
+  WebsocketStateEvent,
+} from "./websocketManager";
 
 // tests over WebsocketManager
 
@@ -103,15 +114,126 @@ describe("WebsocketManager dispose tests", () => {
   });
 
   after(async () => {
-    // getting sidecar handle should kick off websocket reconnection
+    // dispose() above closed the shared singleton's websocket; getSidecar() kicks off reconnection.
+    // Poll until it completes so a racing reconnect doesn't leave later suites disconnected.
     await getSidecar();
 
     const websocketManager = WebsocketManager.getInstance();
-    assert.equal(
-      true,
-      websocketManager.isConnected(),
+    await eventually(
+      () => assert.strictEqual(websocketManager.isConnected(), true),
+      15_000,
       "Websocket should be connected after reconnection",
     );
+  });
+});
+
+/**
+ * Start a websocket server that accepts the socket but never replies to WORKSPACE_HELLO, so a
+ * connect() handshake against it stalls until its own timeout fires.
+ */
+async function startStallingServer(): Promise<{ port: number; close: () => void }> {
+  const server = new WebSocketServer({ port: 0 });
+  await new Promise<void>((resolve) => server.once("listening", () => resolve()));
+  const port = (server.address() as AddressInfo).port;
+  return { port, close: () => server.close() };
+}
+
+describe("WebsocketManager.connect() failure tests", () => {
+  // Swap in a fresh, unregistered singleton so a failed connect here can't disturb the real shared
+  // connection: no sidecarManager reconnect handler is wired to this throwaway instance.
+  let savedInstance: WebsocketManager | null;
+  let isolated: WebsocketManager;
+
+  beforeEach(() => {
+    savedInstance = WebsocketManager.instance;
+    WebsocketManager.instance = null;
+    isolated = WebsocketManager.getInstance();
+  });
+
+  afterEach(() => {
+    isolated.dispose();
+    WebsocketManager.instance = savedInstance;
+  });
+
+  it("rejects with a WebsocketConnectionError when the socket errors before the handshake completes", async () => {
+    // port 1 is not listening, so the socket errors immediately. The error type is load-bearing:
+    // sidecarManager's reconnect loop retries on WebsocketConnectionError specifically.
+    await assert.rejects(
+      isolated.connect("localhost:1", "test-token", 5000),
+      WebsocketConnectionError,
+    );
+  });
+
+  it("rejects with a WebsocketConnectionError timeout when the handshake stalls past the timeout", async () => {
+    const { port, close } = await startStallingServer();
+
+    try {
+      await assert.rejects(
+        isolated.connect(`localhost:${port}`, "test-token", 300),
+        (err: unknown) => err instanceof WebsocketConnectionError && /timed out/.test(err.message),
+      );
+    } finally {
+      close();
+    }
+  });
+
+  it("does not accumulate connection cleanup in disposables across reconnect attempts", async () => {
+    // each connect()'s socket/timer teardown is tracked off disposables (replaced per attempt),
+    // so repeated reconnects (without an intervening dispose) must not grow this.disposables.
+    const disposables = isolated["disposables"];
+    const before = disposables.length;
+
+    await assert.rejects(isolated.connect("localhost:1", "test-token", 2000));
+    await assert.rejects(isolated.connect("localhost:1", "test-token", 2000));
+    await assert.rejects(isolated.connect("localhost:1", "test-token", 2000));
+
+    assert.strictEqual(disposables.length, before);
+  });
+
+  it("deregisters a timed-out attempt's stale WORKSPACE_COUNT_CHANGED handler", async () => {
+    // a server that accepts the socket (so the once() handler is installed) but never replies, so
+    // the attempt times out with its one-shot handler registered until settleReject removes it.
+    const { port, close } = await startStallingServer();
+
+    try {
+      await assert.rejects(
+        isolated.connect(`localhost:${port}`, "test-token", 300),
+        WebsocketConnectionError,
+      );
+
+      // only the durable subscriber remains; the timed-out attempt's one-shot handler was removed.
+      const router = isolated["messageRouter"];
+      assert.strictEqual(router.listenerCount(MessageType.WORKSPACE_COUNT_CHANGED), 1);
+
+      // and delivering the message it waited for must not clobber this.websocket with the dead socket.
+      await isolated.deliverToCallbacks(createWorkspaceCountMessage(2));
+
+      assert.strictEqual(isolated["websocket"], null);
+    } finally {
+      close();
+    }
+  });
+
+  it("keeps durable message routing alive across dispose()", async () => {
+    // routing has instance lifetime: dispose() must not tear down the WORKSPACE_COUNT_CHANGED
+    // handler, so a reused singleton still tracks peerWorkspaceCount (the flake this fixes).
+    isolated.dispose();
+
+    await isolated.deliverToCallbacks(createWorkspaceCountMessage(4));
+
+    assert.strictEqual(isolated.getPeerWorkspaceCount(), 3);
+  });
+
+  it("keeps the state-change emitter alive across dispose() so reconnect still notifies", () => {
+    // sidecarManager registers its reconnect listener only once, so disposing the emitter on a
+    // reused singleton would strip it and silently stop auto-reconnection.
+    const events: WebsocketStateEvent[] = [];
+    isolated.registerStateChangeHandler((event) => events.push(event));
+
+    isolated.dispose();
+    isolated["websocketStateEmitter"].fire(WebsocketStateEvent.DISCONNECTED);
+
+    assert.deepStrictEqual(events, [WebsocketStateEvent.DISCONNECTED]);
   });
 });
 

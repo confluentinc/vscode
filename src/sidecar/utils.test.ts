@@ -9,6 +9,7 @@ import { MOMENTARY_PAUSE_MS } from "./constants";
 import { SidecarFatalError } from "./errors";
 import { getSidecarLogfilePath } from "./logging";
 import { SidecarStartupFailureReason } from "./types";
+import { WebsocketConnectionError } from "./websocketManager";
 import {
   constructSidecarEnv,
   isProcessRunning,
@@ -304,6 +305,7 @@ describe("sidecar/utils.ts", () => {
     let sandbox: sinon.SinonSandbox;
 
     let showErrorNotificationWithButtonsStub: sinon.SinonStub;
+    let showWarningNotificationWithButtonsStub: sinon.SinonStub;
     let logErrorStub: sinon.SinonStub;
     let logUsageStub: sinon.SinonStub;
 
@@ -312,6 +314,10 @@ describe("sidecar/utils.ts", () => {
       showErrorNotificationWithButtonsStub = sandbox.stub(
         notifications,
         "showErrorNotificationWithButtons",
+      );
+      showWarningNotificationWithButtonsStub = sandbox.stub(
+        notifications,
+        "showWarningNotificationWithButtons",
       );
       logErrorStub = sandbox.stub(errorsModule, "logError");
       logUsageStub = sandbox.stub(eventsModule, "logUsage");
@@ -485,6 +491,29 @@ describe("sidecar/utils.ts", () => {
       assert.deepStrictEqual(logErrorArgs[2], { extra: { reason: "Unknown" } });
       // will not have sent to Segment.
       sinon.assert.notCalled(logUsageStub);
+    });
+
+    it("shows a non-fatal warning (not a startup error) when the websocket connect fails after retries", async () => {
+      // the sidecar is healthy; only its websocket event stream could not be (re)established, so
+      // this is a recoverable degradation, not a startup failure.
+      const error = new WebsocketConnectionError("handshake timed out");
+
+      await triageSidecarStartupError(error);
+
+      // a warning with a retry action, not the fatal "Sidecar failed to start" error notification.
+      sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+      sinon.assert.calledOnce(showWarningNotificationWithButtonsStub);
+      const message = showWarningNotificationWithButtonsStub.getCall(0).args[0];
+      assert.strictEqual(/event stream/.test(message), true, `Message: ${message}`);
+      const buttons: NotificationButtons =
+        showWarningNotificationWithButtonsStub.getCall(0).args[1];
+      assert.strictEqual(buttons["Reload Window"] !== undefined, true);
+
+      // bucketed under its own Sentry reason, not the catch-all "Unknown".
+      sinon.assert.calledOnce(logErrorStub);
+      assert.deepStrictEqual(logErrorStub.getCall(0).args[2], {
+        extra: { reason: "WebsocketConnectFailed" },
+      });
     });
   });
 });

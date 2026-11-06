@@ -5,6 +5,20 @@ import { CCLOUD_AUTH_CALLBACK_URI } from "../../../src/constants";
 import type { Message } from "../../../src/ws/messageTypes";
 import { ConnectionEventAction, MessageType } from "../../../src/ws/messageTypes";
 
+/** Build a WORKSPACE_COUNT_CHANGED message reporting the given total workspace count. */
+export function createWorkspaceCountMessage(
+  count: number,
+): Message<MessageType.WORKSPACE_COUNT_CHANGED> {
+  return {
+    headers: {
+      message_type: MessageType.WORKSPACE_COUNT_CHANGED,
+      originator: "sidecar",
+      message_id: "1",
+    },
+    body: { current_workspace_count: count },
+  };
+}
+
 export const GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE: Message<MessageType.CONNECTION_EVENT> = {
   headers: {
     message_type: MessageType.CONNECTION_EVENT,
