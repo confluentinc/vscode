@@ -165,9 +165,10 @@ export class SidecarHandle {
   /**
    * Creates and returns a (Scaffolding Service OpenAPI spec) {@link TemplatesApi} client instance
    * with a preconfigured {@link ScaffoldingServiceConfiguration}, whose requests fail after
-   * `timeoutMs`.
+   * `timeoutMs`. Omit it only when the caller passes its own signal covering the whole request,
+   * since that timeout stops once headers arrive and can't cover a slow body.
    */
-  public getTemplatesApi(timeoutMs: number): TemplatesScaffoldV1Api {
+  public getTemplatesApi(timeoutMs?: number): TemplatesScaffoldV1Api {
     const config = new ScaffoldingServiceConfiguration({
       basePath: SCAFFOLDING_SERVICE_BASE_PATH.replace("confluent.cloud", CCLOUD_BASE_PATH),
       headers: {
@@ -175,7 +176,7 @@ export class SidecarHandle {
         // For example, the service returns a ZIP file for the `POST .../apply` endpoint
         Accept: "application/*",
       },
-      middleware: [new TimeoutMiddleware(timeoutMs, "the Scaffolding service")],
+      middleware: timeoutMs ? [new TimeoutMiddleware(timeoutMs, "the Scaffolding service")] : [],
     });
     return new TemplatesScaffoldV1Api(config);
   }
