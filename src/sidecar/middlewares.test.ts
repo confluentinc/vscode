@@ -1,12 +1,22 @@
+import * as assert from "assert";
 import sinon from "sinon";
+import * as vscode from "vscode";
 import type { RequestContext } from "../clients/sidecar";
-import { ConnectedState } from "../clients/sidecar";
+import {
+  Configuration,
+  ConnectedState,
+  FetchError,
+  PreferencesResourceApi,
+} from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated } from "../emitters";
+import { SecretStorageKeys } from "../storage/constants";
 import type { ResourceManager } from "../storage/resourceManager";
 import { getResourceManager } from "../storage/resourceManager";
-import { SIDECAR_CONNECTION_ID_HEADER } from "./constants";
-import { CCloudAuthStatusMiddleware } from "./middlewares";
+import * as storageUtils from "../storage/utils";
+import { CCLOUD_RECONNECT_TIMEOUT_MS, SIDECAR_CONNECTION_ID_HEADER } from "./constants";
+import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "./errors";
+import { CCloudAuthStatusMiddleware, TimeoutMiddleware } from "./middlewares";
 
 function fakeRequestWithHeader(key: string, value: string): RequestContext {
   return {
@@ -118,5 +128,142 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
     sinon.assert.calledOnce(handleCCloudAuthStatusSpy);
     sinon.assert.notCalled(handleProblematicStatusStub);
     sinon.assert.notCalled(ccloudAuthSessionInvalidatedStub);
+  });
+});
+
+describe("CCloudAuthStatusMiddleware.handleProblematicStatus() deadline", () => {
+  let sandbox: sinon.SinonSandbox;
+  let clock: sinon.SinonFakeTimers;
+  let disposeSpy: sinon.SinonSpy;
+  let secretListener: (e: vscode.SecretStorageChangeEvent) => Promise<void>;
+  let getSecretStorageStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    clock = sandbox.useFakeTimers();
+    disposeSpy = sandbox.spy();
+    const onDidChange = sandbox.stub().callsFake((listener) => {
+      secretListener = listener;
+      return { dispose: disposeSpy };
+    });
+    getSecretStorageStub = sandbox
+      .stub(storageUtils, "getSecretStorage")
+      .returns({ onDidChange } as unknown as vscode.SecretStorage);
+    sandbox.stub(vscode.window, "withProgress").resolves();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should reject a request still waiting when the deadline passes", async () => {
+    const waiting = new CCloudAuthStatusMiddleware().handleProblematicStatus();
+    const rejected = assert.rejects(waiting, CCloudReconnectTimeoutError);
+
+    await clock.tickAsync(CCLOUD_RECONNECT_TIMEOUT_MS);
+
+    await rejected;
+    sinon.assert.calledOnce(disposeSpy);
+  });
+
+  it("should pass on a failure to watch the connection state, not report a timeout", async () => {
+    const watchFailure = new Error("secret storage unavailable");
+    getSecretStorageStub.returns({
+      onDidChange: () => {
+        throw watchFailure;
+      },
+    } as unknown as vscode.SecretStorage);
+
+    await assert.rejects(
+      new CCloudAuthStatusMiddleware().handleProblematicStatus(),
+      (err) => err === watchFailure,
+    );
+  });
+
+  it("should unblock on a connection state change and clear its deadline", async () => {
+    const waiting = new CCloudAuthStatusMiddleware().handleProblematicStatus();
+    await clock.tickAsync(0);
+    // other modules may hold timers of their own, so count relative to now
+    const timersWhileWaiting = clock.countTimers();
+
+    await secretListener({ key: SecretStorageKeys.CCLOUD_STATE });
+    await waiting;
+
+    assert.strictEqual(clock.countTimers(), timersWhileWaiting - 1);
+    sinon.assert.calledOnce(disposeSpy);
+  });
+});
+
+describe("TimeoutMiddleware", () => {
+  let sandbox: sinon.SinonSandbox;
+  let clock: sinon.SinonFakeTimers;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    clock = sandbox.useFakeTimers();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  /** A fetch that never answers, rejecting only once its signal aborts. */
+  function hungFetch(_url: string | URL | Request, init?: RequestInit): Promise<Response> {
+    return new Promise((_resolve, reject) => {
+      const signal = init?.signal;
+      if (signal?.aborted) {
+        reject(signal.reason);
+      }
+      signal?.addEventListener("abort", () => reject(signal.reason));
+    });
+  }
+
+  function preferencesApi(fetchApi: typeof fetch = hungFetch): PreferencesResourceApi {
+    return new PreferencesResourceApi(
+      new Configuration({
+        basePath: "http://sidecar.test",
+        fetchApi,
+        middleware: [new TimeoutMiddleware(30_000)],
+      }),
+    );
+  }
+
+  it("should fail a hung request with a SidecarRequestTimeoutError once its budget is spent", async () => {
+    let settled = false;
+    const request = preferencesApi()
+      .gatewayV1PreferencesGet()
+      .finally(() => (settled = true));
+    const rejected = assert.rejects(
+      request,
+      (err) => err instanceof SidecarRequestTimeoutError && /timed out after 30s/.test(err.message),
+    );
+
+    await clock.tickAsync(29_999);
+    assert.strictEqual(settled, false);
+    await clock.tickAsync(1);
+
+    await rejected;
+  });
+
+  it("should let a caller's own abort through unchanged", async () => {
+    const caller = new AbortController();
+    const request = preferencesApi().gatewayV1PreferencesGet({ signal: caller.signal });
+    const rejected = assert.rejects(
+      request,
+      (err) => err instanceof FetchError && err.cause.name === "AbortError",
+    );
+
+    caller.abort();
+
+    await rejected;
+  });
+
+  it("should clear its timer once the response arrives", async () => {
+    const timersBefore = clock.countTimers();
+    const api = preferencesApi(async () => Response.json({}));
+
+    await api.gatewayV1PreferencesGet();
+
+    assert.strictEqual(clock.countTimers(), timersBefore);
   });
 });
