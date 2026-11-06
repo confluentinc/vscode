@@ -30,6 +30,7 @@ import type {
   ResultsViewerStorageState,
 } from "../webview/flink-statement-results";
 import type { StatementMeta } from "./flinkStatementResultsManager";
+import { SidecarRequestTimeoutError } from "../sidecar/errors";
 
 /** A successful results response carrying no rows. */
 const EMPTY_RESULTS_RESPONSE: GetSqlv1StatementResult200Response = {
@@ -773,6 +774,19 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
       // 4 transient calls + the 409s' full 60-attempt budget, untouched by them
       sinon.assert.callCount(stub, 64);
+    });
+
+    it("should tell the user a results fetch timed out", async () => {
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(
+        new SidecarRequestTimeoutError("Request to the sidecar", 60_000, new Error("timeout")),
+      );
+
+      await ctx.manager.fetchResults();
+
+      assert.deepStrictEqual(ctx.manager["_latestError"](), {
+        message: "Timed out waiting for results.",
+      });
+      assert.equal(ctx.manager["_state"](), "completed");
     });
 
     it("should leave the error response body readable for logging", async () => {
