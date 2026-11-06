@@ -206,10 +206,8 @@ export async function applyTemplate(
   manifestOptionValues: { [key: string]: unknown },
   telemetrySource?: string,
 ): Promise<PostResponse> {
-  // applying builds the project server-side and returns it as a ZIP, so it gets longer than listing
-  const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi(
-    SCAFFOLDING_APPLY_TIMEOUT_MS,
-  );
+  // no client timeout: the signal below covers the whole apply, ZIP download included
+  const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
 
   const stringifiedOptions = Object.fromEntries(
     Object.entries(manifestOptionValues).map(([k, v]) => [k, String(v)]),
@@ -226,7 +224,7 @@ export async function applyTemplate(
   let stage: string = "";
   try {
     stage = "performing scaffold service apply operation";
-    // the client's own timeout ends once headers arrive, so this one also covers the ZIP download
+    // applying builds the project server-side and returns it as a ZIP, so it gets longer than listing
     const timeout = timeoutSignal(SCAFFOLDING_APPLY_TIMEOUT_MS);
     let arrayBuffer: ArrayBuffer;
     try {
