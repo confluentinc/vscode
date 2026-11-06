@@ -12,7 +12,7 @@ export { SidecarHandle } from "./sidecarHandle";
   Expected usage from codepaths needing to make requests to the sidecar:
 
     const sidecar = await getSidecar();
-    const client: TemplatesApi = sidecar.getTemplatesApi();
+    const client: TemplatesApi = sidecar.getTemplatesApi(SCAFFOLDING_LIST_TIMEOUT_MS);
     // Now start to make requests to the sidecar using the TemplatesService client methods (or any other OpenAPI generated client).
 
   Or, for GraphQL;

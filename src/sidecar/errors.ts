@@ -30,14 +30,6 @@ export class WrongAuthSecretError extends Error {
   }
 }
 
-/** A request to the sidecar got no answer within its time budget. */
-export class SidecarRequestTimeoutError extends Error {
-  constructor(what: string, timeoutMs: number, cause: unknown) {
-    super(`${what} timed out after ${timeoutMs / 1000}s`, { cause });
-    this.name = "SidecarRequestTimeoutError";
-  }
-}
-
 /** A request gave up waiting for an expired Confluent Cloud session to reconnect. */
 export class CCloudReconnectTimeoutError extends Error {
   constructor(message: string) {
