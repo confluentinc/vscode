@@ -895,6 +895,50 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       sinon.assert.callCount(stubbedSchemasV1Api.getVersions, 3);
     });
 
+    it("should back off between 404 retries, starting at 100ms", async function () {
+      const clock = sandbox.useFakeTimers();
+      // pin jitter to the bottom of each window
+      sandbox.stub(Math, "random").returns(0);
+      const errorResponse = new ResponseError(new Response("Not found", { status: 404 }));
+      stubbedSchemasV1Api.getVersions
+        .onCall(0)
+        .rejects(errorResponse)
+        .onCall(1)
+        .rejects(errorResponse)
+        .onCall(2)
+        .resolves(subjectVersionPairs);
+
+      const promise = getNewlyRegisteredVersion(stubbedSchemasV1Api, testSubjectName, testSchemaId);
+      await clock.tickAsync(100);
+      sinon.assert.calledTwice(stubbedSchemasV1Api.getVersions);
+      await clock.tickAsync(159);
+      sinon.assert.calledTwice(stubbedSchemasV1Api.getVersions);
+      await clock.tickAsync(1);
+
+      assert.strictEqual(await promise, testSchemaVersion);
+      sinon.assert.calledThrice(stubbedSchemasV1Api.getVersions);
+    });
+
+    it("should give up after 4 retries of 404", async function () {
+      const clock = sandbox.useFakeTimers();
+      stubbedSchemasV1Api.getVersions.rejects(
+        new ResponseError(new Response("Not found", { status: 404 })),
+      );
+
+      const promise = getNewlyRegisteredVersion(stubbedSchemasV1Api, testSubjectName, testSchemaId);
+      const rejected = assert.rejects(
+        promise,
+        (error) =>
+          error instanceof Error &&
+          error.message ===
+            `Could not find subject "${testSubjectName}" in the list of bindings for schema id ${testSchemaId}`,
+      );
+      await clock.tickAsync(5000);
+
+      await rejected;
+      sinon.assert.callCount(stubbedSchemasV1Api.getVersions, 5);
+    });
+
     it("should throw an error if subject is not found after retries", async function () {
       stubbedSchemasV1Api.getVersions.resolves([{ subject: "other-subject", version: 1 }]);
 
