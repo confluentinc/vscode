@@ -5,10 +5,12 @@ import { Logger } from "../logging";
 import {
   backoffWindow,
   IntervalPoller,
+  isTimeoutReason,
   pauseWithJitter,
   raceWithTimeout,
   retryWithBackoff,
   serverRequestedDelayMs,
+  timeoutSignal,
 } from "./timing";
 
 describe("utils/timing", () => {
@@ -348,6 +350,41 @@ describe("utils/timing", () => {
 
         await rejected;
         sinon.assert.calledOnce(op);
+      });
+    });
+
+    describe("timeoutSignal", () => {
+      it("should abort with a TimeoutError once the time is up", async () => {
+        const { signal } = timeoutSignal(1000);
+
+        await clock.tickAsync(999);
+        assert.strictEqual(signal.aborted, false);
+        await clock.tickAsync(1);
+
+        assert.ok(isTimeoutReason(signal.reason));
+      });
+
+      it("should abort with the caller's reason when the caller aborts first", () => {
+        const caller = new AbortController();
+        const { signal } = timeoutSignal(1000, caller.signal);
+
+        caller.abort();
+
+        assert.strictEqual(signal.reason, caller.signal.reason);
+        assert.ok(!isTimeoutReason(signal.reason));
+      });
+
+      it("should stop its timer and stop following the caller once cleared", async () => {
+        const caller = new AbortController();
+        const timersBefore = clock.countTimers();
+        const { signal, clear } = timeoutSignal(1000, caller.signal);
+
+        clear();
+        caller.abort();
+        await clock.tickAsync(1000);
+
+        assert.strictEqual(clock.countTimers(), timersBefore);
+        assert.strictEqual(signal.aborted, false);
       });
     });
 
