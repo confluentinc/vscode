@@ -5,6 +5,7 @@ import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import { createResponseError, ResponseErrorSource } from "../../../tests/unit/testUtils";
 import { TemplatesScaffoldV1Api } from "../../clients/scaffoldingService";
 import * as templatesModule from "../../projectGeneration/templates";
+import { SCAFFOLDING_APPLY_TIMEOUT_MS } from "../../sidecar/constants";
 import { WebviewPanelCache } from "../../webview-cache";
 import * as webviewCommsModule from "../../webview/comms/comms";
 
@@ -181,6 +182,39 @@ describe("scaffoldUtils", () => {
 
       sinon.assert.match(result.success, false);
       sinon.assert.match(result.message, sinon.match(/Network connection failed/));
+    });
+
+    it("should give up applying after its timeout and show the error", async () => {
+      const clock = sandbox.useFakeTimers();
+      stubbedTemplatesApi.applyScaffoldV1Template.callsFake(
+        (_request, init) =>
+          new Promise((_resolve, reject) => {
+            const signal = (init as RequestInit).signal!;
+            signal.addEventListener("abort", () => reject(signal.reason));
+          }),
+      );
+      const template = {
+        spec: {
+          name: TEST_TEMPLATE_NAME,
+          display_name: "Test Template",
+          template_collection: { id: TEST_TEMPLATE_COLLECTION },
+        },
+      } as any;
+
+      const { applyTemplate } = await import("./scaffoldUtils");
+      const pending = applyTemplate(template, {}, "test");
+      await clock.tickAsync(SCAFFOLDING_APPLY_TIMEOUT_MS);
+      const result = await pending;
+
+      sinon.assert.calledOnceWithExactly(
+        stubbedSidecar.getTemplatesApi,
+        SCAFFOLDING_APPLY_TIMEOUT_MS,
+      );
+      sinon.assert.match(result.success, false);
+      sinon.assert.match(
+        result.message,
+        sinon.match(`timed out after ${SCAFFOLDING_APPLY_TIMEOUT_MS / 1000}s`),
+      );
     });
 
     it("should handle errors during zip extraction", async () => {
