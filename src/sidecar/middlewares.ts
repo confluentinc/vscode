@@ -1,5 +1,11 @@
 import * as vscode from "vscode";
-import type { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
+import type {
+  ErrorContext,
+  FetchParams,
+  Middleware,
+  RequestContext,
+  ResponseContext,
+} from "../clients/sidecar";
 import { ConnectedState } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated, stableCCloudConnectedState } from "../emitters";
@@ -7,7 +13,9 @@ import { Logger } from "../logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
-import { SIDECAR_CONNECTION_ID_HEADER } from "./constants";
+import { isTimeoutReason, timeoutSignal } from "../utils/timing";
+import { CCLOUD_RECONNECT_TIMEOUT_MS, SIDECAR_CONNECTION_ID_HEADER } from "./constants";
+import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "./errors";
 
 const logger = new Logger("sidecar.middlewares");
 
@@ -195,18 +203,32 @@ export class CCloudAuthStatusMiddleware implements Middleware {
       );
     }
 
-    // block the request that got us into this flow until the connected state "secret" changes
-    await new Promise((resolve) => {
-      const secretSubscriber: vscode.Disposable = getSecretStorage().onDidChange(
-        async ({ key }: vscode.SecretStorageChangeEvent) => {
-          // any change (other state or the "secret" being deleted entirely) will resolve and unblock requests
-          if (key === SecretStorageKeys.CCLOUD_STATE) {
-            secretSubscriber.dispose();
-            resolve(void 0);
-          }
-        },
-      );
-    });
+    // block the request that got us into this flow until the connected state "secret" changes, or
+    // fail it once the deadline passes; the notification above is left to the state-change event
+    let secretSubscriber: vscode.Disposable | undefined;
+    const deadline = timeoutSignal(CCLOUD_RECONNECT_TIMEOUT_MS);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        deadline.signal.addEventListener("abort", () =>
+          reject(
+            new CCloudReconnectTimeoutError(
+              `Timed out after ${CCLOUD_RECONNECT_TIMEOUT_MS / 1000}s waiting to reconnect to Confluent Cloud.`,
+            ),
+          ),
+        );
+        secretSubscriber = getSecretStorage().onDidChange(
+          async ({ key }: vscode.SecretStorageChangeEvent) => {
+            // any change (other state or the "secret" being deleted entirely) will resolve and unblock requests
+            if (key === SecretStorageKeys.CCLOUD_STATE) {
+              resolve();
+            }
+          },
+        );
+      });
+    } finally {
+      deadline.clear();
+      secretSubscriber?.dispose();
+    }
   }
 }
 
@@ -222,4 +244,46 @@ function hasCCloudConnectionIdHeader(headers: HeadersInit | Headers | undefined)
     headers.has(SIDECAR_CONNECTION_ID_HEADER) &&
     headers.get(SIDECAR_CONNECTION_ID_HEADER) === CCLOUD_CONNECTION_ID
   );
+}
+
+/**
+ * Fail a sidecar request that gets no answer within {@linkcode timeoutMs}, combined with any signal
+ * the caller passed. Belongs last in the middleware list, so its timer starts after earlier `pre`
+ * hooks (like the CCloud reconnect wait) and its throwing `onError` can't skip theirs.
+ */
+export class TimeoutMiddleware implements Middleware {
+  /** Per-request cleanup, keyed by the `init` that `pre` hands to `fetch` and later hooks. */
+  private readonly pending = new WeakMap<RequestInit, () => void>();
+
+  constructor(readonly timeoutMs: number) {}
+
+  async pre(context: RequestContext): Promise<FetchParams> {
+    const { signal, clear } = timeoutSignal(this.timeoutMs, context.init.signal);
+    const init = { ...context.init, signal };
+    this.pending.set(init, clear);
+    return { url: context.url, init };
+  }
+
+  async post(context: ResponseContext): Promise<void> {
+    // headers are in; release the timer and the caller's signal rather than pile listeners onto a
+    // long-lived caller signal, at the cost of leaving the (short) body read uncovered
+    this.settle(context.init);
+  }
+
+  async onError(context: ErrorContext): Promise<Response | void> {
+    this.settle(context.init);
+    // a caller's own abort carries an AbortError reason, and passes through as before
+    if (isTimeoutReason(context.init.signal?.reason)) {
+      throw new SidecarRequestTimeoutError(
+        `Request to the sidecar (${context.init.method ?? "GET"} ${context.url})`,
+        this.timeoutMs,
+        context.error,
+      );
+    }
+  }
+
+  private settle(init: RequestInit): void {
+    this.pending.get(init)?.();
+    this.pending.delete(init);
+  }
 }

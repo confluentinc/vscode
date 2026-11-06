@@ -8,6 +8,7 @@ import {
   showNoSchemaAccessWarningNotification,
 } from "./authz/schemaRegistry";
 import {
+  type KafkaConsumeResourceApi,
   ResponseError,
   type PartitionConsumeRecord,
   type PartitionOffset,
@@ -29,8 +30,10 @@ import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
 import { topicQuickPick } from "./quickpicks/topics";
 import { scheduler } from "./scheduler";
 import { getSidecar, type SidecarHandle } from "./sidecar";
+import { CONSUME_TIMEOUT_MS } from "./sidecar/constants";
 import { BitSet, includesSubstring, Stream } from "./stream/stream";
 import { hashed, logUsage, UserEvent } from "./telemetry/events";
+import { isTimeoutReason, timeoutSignal } from "./utils/timing";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/message-viewer";
@@ -204,6 +207,34 @@ const DEFAULT_CONSUME_PARAMS = {
   fetch_max_bytes: 40 * 1024 * 1024,
 };
 
+/**
+ * One consume call, failing after {@link CONSUME_TIMEOUT_MS} if the caller's signal hasn't ended it.
+ * Consume replaces the default middleware, so it times out here rather than in `TimeoutMiddleware`.
+ */
+export async function consumeMessages(
+  service: KafkaConsumeResourceApi,
+  topic: KafkaTopic,
+  request: SimpleConsumeMultiPartitionRequest,
+  signal: AbortSignal,
+): Promise<SimpleConsumeMultiPartitionResponse> {
+  const timeout = timeoutSignal(CONSUME_TIMEOUT_MS, signal);
+  try {
+    const response =
+      await service.gatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePostRaw(
+        {
+          cluster_id: topic.clusterId,
+          topic_name: topic.name,
+          x_connection_id: topic.connectionId,
+          SimpleConsumeMultiPartitionRequest: request,
+        },
+        { signal: timeout.signal },
+      );
+    return await response.raw.json();
+  } finally {
+    timeout.clear();
+  }
+}
+
 function messageViewerStartPollingCommand(
   panel: WebviewPanel,
   config: MessageViewerConfig,
@@ -215,22 +246,8 @@ function messageViewerStartPollingCommand(
   const service = sidecar.getKafkaConsumeApi(topic.connectionId);
   const partitionApi = sidecar.getPartitionV3Api(topic.clusterId, topic.connectionId);
 
-  const consume = async (
-    request: SimpleConsumeMultiPartitionRequest,
-    signal: AbortSignal,
-  ): Promise<SimpleConsumeMultiPartitionResponse> => {
-    const response =
-      await service.gatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePostRaw(
-        {
-          cluster_id: topic.clusterId,
-          topic_name: topic.name,
-          x_connection_id: topic.connectionId,
-          SimpleConsumeMultiPartitionRequest: request,
-        },
-        { signal },
-      );
-    return response.raw.json();
-  };
+  const consume = (request: SimpleConsumeMultiPartitionRequest, signal: AbortSignal) =>
+    consumeMessages(service, topic, request, signal);
 
   const os = ObservableScope();
 
@@ -503,10 +520,19 @@ function messageViewerStartPollingCommand(
       if (error instanceof Error && error.name === "AbortError") return;
       /* In case of network issue, the current assumption is that the user is
       going to see auth related error alerts. Logging and error displays is WIP. */
-      if (error instanceof ResponseError) {
+      if (isTimeoutReason(error)) {
+        // timed out mid-body, after the consume middleware's 504 mapping had its chance
+        shouldPause = true;
+        reportable = { message: "Timed out waiting for messages. Try again." };
+        logError(error, "message viewer consume timed out");
+      } else if (error instanceof ResponseError) {
         const payload = await error.response.json();
         // FIXME: this response error coming from the middleware that has to be present to avoid openapi error about missing middlewares
-        if (!payload?.aborted) {
+        if (payload?.timedOut) {
+          shouldPause = true;
+          reportable = { message: "Timed out waiting for messages. Try again." };
+          logError(error, "message viewer consume timed out");
+        } else if (!payload?.aborted) {
           const status = error.response.status;
           shouldPause = status >= 400;
           switch (status) {
