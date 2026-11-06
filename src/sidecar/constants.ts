@@ -33,3 +33,13 @@ export const SIDECAR_LOGFILE_NAME = "vscode-confluent-sidecar.log";
 export const SIDECAR_FORMATTED_LOGFILE_NAME = "vscode-confluent-sidecar-formatted.log";
 
 export const MOMENTARY_PAUSE_MS = 500; // half a second.
+
+/** Per-attempt budget for a sidecar REST call, above the sidecar's own ~20s upstream timeout. */
+export const SIDECAR_REQUEST_TIMEOUT_MS = 30_000;
+export const FLINK_RESULTS_TIMEOUT_MS = 60_000;
+/** Above the sidecar's 60s CCloud consume hold, plus its follow-up schema fetches. */
+export const CONSUME_TIMEOUT_MS = 120_000;
+/** The sidecar may page through several upstream calls to answer one query. */
+export const GRAPHQL_TIMEOUT_MS = 90_000;
+/** How long a request waits for an expired CCloud session to reconnect before failing. */
+export const CCLOUD_RECONNECT_TIMEOUT_MS = 60_000;
