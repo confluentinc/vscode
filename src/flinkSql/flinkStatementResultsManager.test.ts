@@ -30,7 +30,7 @@ import type {
   ResultsViewerStorageState,
 } from "../webview/flink-statement-results";
 import type { StatementMeta } from "./flinkStatementResultsManager";
-import { SidecarRequestTimeoutError } from "../sidecar/errors";
+import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "../sidecar/errors";
 
 /** A successful results response carrying no rows. */
 const EMPTY_RESULTS_RESPONSE: GetSqlv1StatementResult200Response = {
@@ -785,6 +785,20 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
       assert.deepStrictEqual(ctx.manager["_latestError"](), {
         message: "Timed out waiting for results.",
+      });
+      assert.equal(ctx.manager["_state"](), "completed");
+    });
+
+    it("should tell the user to sign in again when a results fetch gives up on reconnecting", async () => {
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(
+        new CCloudReconnectTimeoutError("Timed out after 60s waiting to reconnect"),
+      );
+
+      await ctx.manager.fetchResults();
+
+      assert.deepStrictEqual(ctx.manager["_latestError"](), {
+        message:
+          "Timed out reconnecting to Confluent Cloud. Sign in again, then reopen the results.",
       });
       assert.equal(ctx.manager["_state"](), "completed");
     });

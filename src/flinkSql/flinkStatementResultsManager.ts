@@ -26,7 +26,7 @@ import {
 } from "../models/flinkStatement";
 import { showErrorNotificationWithButtons } from "../notifications";
 import type { SidecarHandle } from "../sidecar";
-import { SidecarRequestTimeoutError } from "../sidecar/errors";
+import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "../sidecar/errors";
 import type { ViewMode } from "./flinkStatementResultColumns";
 import type { StatementResultsRow } from "./flinkStatementResults";
 import { parseResults } from "./flinkStatementResults";
@@ -430,6 +430,13 @@ export class FlinkStatementResultsManager {
               `An error occurred during statement results fetching. Status ${error.response.status}`,
             );
           }
+        } else if (error instanceof CCloudReconnectTimeoutError) {
+          logError(error, "flink statement results gave up reconnecting");
+          reportable = {
+            message:
+              "Timed out reconnecting to Confluent Cloud. Sign in again, then reopen the results.",
+          };
+          shouldComplete = true;
         } else if (error instanceof SidecarRequestTimeoutError) {
           logError(error, "flink statement results timed out");
           reportable = { message: "Timed out waiting for results." };
