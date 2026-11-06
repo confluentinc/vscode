@@ -56,7 +56,7 @@ import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
 import type { ConnectionId, IEnvProviderRegion } from "../models/resource";
 import { showWarningNotificationWithButtons } from "../notifications";
-import { isTimeoutReason, timeoutSignal } from "../utils/timing";
+import { isTimeoutReason, RequestTimeoutError, timeoutSignal } from "../utils/timing";
 import type { Message, MessageType } from "../ws/messageTypes";
 import {
   CCLOUD_ENV_ID_HEADER,
@@ -71,7 +71,6 @@ import {
   SIDECAR_PROCESS_ID_HEADER,
   SIDECAR_REQUEST_TIMEOUT_MS,
 } from "./constants";
-import { SidecarRequestTimeoutError } from "./errors";
 import {
   CCloudAuthStatusMiddleware,
   DebugRequestResponseMiddleware,
@@ -165,9 +164,11 @@ export class SidecarHandle {
 
   /**
    * Creates and returns a (Scaffolding Service OpenAPI spec) {@link TemplatesApi} client instance
-   * with a preconfigured {@link ScaffoldingServiceConfiguration}.
+   * with a preconfigured {@link ScaffoldingServiceConfiguration}, whose requests fail after
+   * `timeoutMs`. Omit it only when the caller passes its own signal covering the whole request,
+   * since that timeout stops once headers arrive and can't cover a slow body.
    */
-  public getTemplatesApi(): TemplatesScaffoldV1Api {
+  public getTemplatesApi(timeoutMs?: number): TemplatesScaffoldV1Api {
     const config = new ScaffoldingServiceConfiguration({
       basePath: SCAFFOLDING_SERVICE_BASE_PATH.replace("confluent.cloud", CCLOUD_BASE_PATH),
       headers: {
@@ -175,6 +176,7 @@ export class SidecarHandle {
         // For example, the service returns a ZIP file for the `POST .../apply` endpoint
         Accept: "application/*",
       },
+      middleware: timeoutMs ? [new TimeoutMiddleware(timeoutMs, "the Scaffolding service")] : [],
     });
     return new TemplatesScaffoldV1Api(config);
   }
@@ -519,11 +521,7 @@ export class SidecarHandle {
           return (await response.json()) as GraphQLResponse;
         } catch (e) {
           if (isTimeoutReason(signal.reason)) {
-            throw new SidecarRequestTimeoutError(
-              "GraphQL request to the sidecar",
-              GRAPHQL_TIMEOUT_MS,
-              e,
-            );
+            throw new RequestTimeoutError("GraphQL request to the sidecar", GRAPHQL_TIMEOUT_MS, e);
           }
           throw e;
         } finally {
