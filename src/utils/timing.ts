@@ -221,6 +221,14 @@ export function timeoutSignal(
   };
 }
 
+/** A request got no answer within its time budget. */
+export class RequestTimeoutError extends Error {
+  constructor(what: string, timeoutMs: number, cause: unknown) {
+    super(`${what} timed out after ${timeoutMs / 1000}s`, { cause });
+    this.name = "RequestTimeoutError";
+  }
+}
+
 /** Whether an abort reason came from a timeout rather than a caller's own abort. */
 export function isTimeoutReason(reason: unknown): boolean {
   return reason instanceof DOMException && reason.name === "TimeoutError";
