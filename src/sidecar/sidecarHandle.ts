@@ -56,6 +56,7 @@ import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
 import type { ConnectionId, IEnvProviderRegion } from "../models/resource";
 import { showWarningNotificationWithButtons } from "../notifications";
+import { isTimeoutReason, timeoutSignal } from "../utils/timing";
 import type { Message, MessageType } from "../ws/messageTypes";
 import {
   CCLOUD_ENV_ID_HEADER,
@@ -63,15 +64,20 @@ import {
   CCLOUD_REGION_HEADER,
   CLUSTER_ID_HEADER,
   ENABLE_REQUEST_RESPONSE_LOGGING,
+  FLINK_RESULTS_TIMEOUT_MS,
+  GRAPHQL_TIMEOUT_MS,
   SIDECAR_BASE_URL,
   SIDECAR_CONNECTION_ID_HEADER,
   SIDECAR_PROCESS_ID_HEADER,
+  SIDECAR_REQUEST_TIMEOUT_MS,
 } from "./constants";
+import { SidecarRequestTimeoutError } from "./errors";
 import {
   CCloudAuthStatusMiddleware,
   DebugRequestResponseMiddleware,
   ErrorResponseMiddleware,
   setDebugOutputChannel,
+  TimeoutMiddleware,
 } from "./middlewares";
 import { WebsocketManager } from "./websocketManager";
 
@@ -114,20 +120,10 @@ export class SidecarHandle {
       Authorization: `Bearer ${this.auth_secret}`,
     };
 
-    let middleware: Middleware[] = [
-      new ErrorResponseMiddleware(),
-      new CCloudAuthStatusMiddleware(),
-    ];
-    if (ENABLE_REQUEST_RESPONSE_LOGGING) {
-      // Add middleware to log request and response details; disabled by default
-      setDebugOutputChannel();
-      middleware.unshift(new DebugRequestResponseMiddleware());
-    }
-
     this.defaultClientConfigParams = {
       basePath: SIDECAR_BASE_URL,
       headers: this.defaultHeaders,
-      middleware: middleware,
+      middleware: buildDefaultMiddleware(SIDECAR_REQUEST_TIMEOUT_MS),
     };
   }
 
@@ -209,15 +205,19 @@ export class SidecarHandle {
       middleware: [
         {
           async onError(context) {
-            if (context.error instanceof DOMException) {
-              switch (context.error.name) {
-                case "TimeoutError":
-                case "AbortError":
-                  return new Response(
-                    JSON.stringify({ message: context.error.message, aborted: true }),
-                    { status: 504, headers: { "Content-Type": "application/json" } },
-                  );
-              }
+            if (
+              context.error instanceof DOMException &&
+              (context.error.name === "AbortError" || isTimeoutReason(context.error))
+            ) {
+              // a timeout, unlike a caller's abort, is shown to the user
+              const flag = isTimeoutReason(context.error) ? "timedOut" : "aborted";
+              return new Response(
+                JSON.stringify({ message: context.error.message, [flag]: true }),
+                {
+                  status: 504,
+                  headers: { "Content-Type": "application/json" },
+                },
+              );
             }
             if (context.error instanceof Error) {
               return new Response(JSON.stringify({ message: context.error.message }), {
@@ -437,6 +437,7 @@ export class SidecarHandle {
     const config = new FlinkSqlConfiguration({
       ...this.defaultClientConfigParams,
       headers: this.constructFlinkDataPlaneClientHeaders(providerRegion),
+      middleware: buildDefaultMiddleware(FLINK_RESULTS_TIMEOUT_MS),
     });
     return new StatementResultsSqlV1Api(config);
   }
@@ -504,14 +505,30 @@ export class SidecarHandle {
 
       /** Construct a single new promise to make the query, then parse the json response. */
       const fetchAndExtractResponsePayload = async (): Promise<GraphQLResponse> => {
-        const response = await fetch(`${SIDECAR_BASE_URL}/gateway/v1/graphql`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ query: print(query), variables }),
-        });
+        // made per request, not taken from a caller, since concurrent callers share this promise
+        const { signal, clear } = timeoutSignal(GRAPHQL_TIMEOUT_MS);
+        try {
+          const response = await fetch(`${SIDECAR_BASE_URL}/gateway/v1/graphql`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ query: print(query), variables }),
+            signal,
+          });
 
-        // Consume the response body to extract the JSON payload exactly once.
-        return (await response.json()) as GraphQLResponse;
+          // Consume the response body to extract the JSON payload exactly once.
+          return (await response.json()) as GraphQLResponse;
+        } catch (e) {
+          if (isTimeoutReason(signal.reason)) {
+            throw new SidecarRequestTimeoutError(
+              "GraphQL request to the sidecar",
+              GRAPHQL_TIMEOUT_MS,
+              e,
+            );
+          }
+          throw e;
+        } finally {
+          clear();
+        }
       };
 
       fetchAndExtractPromise = fetchAndExtractResponsePayload();
@@ -638,4 +655,22 @@ export class SidecarHandle {
     logger.error("getSidecarPid(): Failed to get sidecar PID: unexpected error");
     throw new Error("Failed to get sidecar PID: unexpected error");
   }
+}
+
+/**
+ * The middleware every default-config client runs, ending with a {@link TimeoutMiddleware} of
+ * `timeoutMs`. The timeout goes last, so the CCloud reconnect wait doesn't spend its budget.
+ */
+function buildDefaultMiddleware(timeoutMs: number): Middleware[] {
+  const middleware: Middleware[] = [
+    new ErrorResponseMiddleware(),
+    new CCloudAuthStatusMiddleware(),
+    new TimeoutMiddleware(timeoutMs),
+  ];
+  if (ENABLE_REQUEST_RESPONSE_LOGGING) {
+    // Add middleware to log request and response details; disabled by default
+    setDebugOutputChannel();
+    middleware.unshift(new DebugRequestResponseMiddleware());
+  }
+  return middleware;
 }
