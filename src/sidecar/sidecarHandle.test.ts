@@ -665,6 +665,12 @@ describe("sidecarHandle sandbox tests", () => {
         assert.strictEqual(timeout.timeoutMs, SCAFFOLDING_APPLY_TIMEOUT_MS);
       });
 
+      it("should leave timing to the caller when no budget is given", () => {
+        const api = handle.getTemplatesApi();
+
+        assert.deepStrictEqual(api["configuration"].middleware, []);
+      });
+
       it("should fail a hung request with a timeout error naming the Scaffolding service", async () => {
         const clock = sandbox.useFakeTimers();
         sandbox.stub(global, "fetch").callsFake(hungFetch);
