@@ -26,12 +26,12 @@ import {
 } from "../models/flinkStatement";
 import { showErrorNotificationWithButtons } from "../notifications";
 import type { SidecarHandle } from "../sidecar";
-import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "../sidecar/errors";
+import { CCloudReconnectTimeoutError } from "../sidecar/errors";
 import type { ViewMode } from "./flinkStatementResultColumns";
 import type { StatementResultsRow } from "./flinkStatementResults";
 import { parseResults } from "./flinkStatementResults";
 import { extractPageToken } from "./utils";
-import { retryWithBackoff } from "../utils/timing";
+import { RequestTimeoutError, retryWithBackoff } from "../utils/timing";
 import { estimateJsonBytes } from "../utils/bytes";
 import type { SqlV1StatementWarning } from "../clients/flinkSql";
 
@@ -420,7 +420,7 @@ export class FlinkStatementResultsManager {
               "Timed out reconnecting to Confluent Cloud. Sign in again, then reopen the results.",
           };
           shouldComplete = true;
-        } else if (error instanceof SidecarRequestTimeoutError) {
+        } else if (error instanceof RequestTimeoutError) {
           logError(error, "flink statement results timed out");
           reportable = { message: "Timed out waiting for results." };
           shouldComplete = true;

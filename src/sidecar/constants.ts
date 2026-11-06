@@ -43,3 +43,7 @@ export const CONSUME_TIMEOUT_MS = 120_000;
 export const GRAPHQL_TIMEOUT_MS = 90_000;
 /** How long a request waits for an expired CCloud session to reconnect before failing. */
 export const CCLOUD_RECONNECT_TIMEOUT_MS = 60_000;
+/** The Scaffolding service's template listing (direct to Confluent Cloud, not via the sidecar). */
+export const SCAFFOLDING_LIST_TIMEOUT_MS = 15_000;
+/** Applying a template, which builds and returns the project as a ZIP. */
+export const SCAFFOLDING_APPLY_TIMEOUT_MS = 60_000;
