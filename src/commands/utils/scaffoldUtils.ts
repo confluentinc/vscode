@@ -19,7 +19,7 @@ import { getSidecar } from "../../sidecar";
 import { SCAFFOLDING_APPLY_TIMEOUT_MS } from "../../sidecar/constants";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { fileUriExists } from "../../utils/file";
-import { isTimeoutReason, RequestTimeoutError, timeoutSignal } from "../../utils/timing";
+import { withRequestTimeout } from "../../utils/timing";
 import { WebviewPanelCache } from "../../webview-cache";
 import { handleWebviewMessage } from "../../webview/comms/comms";
 import type { post, PostResponse } from "../../webview/scaffold-form";
@@ -225,23 +225,18 @@ export async function applyTemplate(
   try {
     stage = "performing scaffold service apply operation";
     // applying builds the project server-side and returns it as a ZIP, so it gets longer than listing
-    const timeout = timeoutSignal(SCAFFOLDING_APPLY_TIMEOUT_MS);
-    let arrayBuffer: ArrayBuffer;
-    try {
-      const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request, {
-        signal: timeout.signal,
-      });
+    const arrayBuffer = await withRequestTimeout(
+      "Applying the template",
+      SCAFFOLDING_APPLY_TIMEOUT_MS,
+      async (signal) => {
+        const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request, {
+          signal,
+        });
 
-      stage = "downloading template files";
-      arrayBuffer = await applyTemplateResponse.arrayBuffer();
-    } catch (e) {
-      if (isTimeoutReason(timeout.signal.reason)) {
-        throw new RequestTimeoutError("Applying the template", SCAFFOLDING_APPLY_TIMEOUT_MS, e);
-      }
-      throw e;
-    } finally {
-      timeout.clear();
-    }
+        stage = "downloading template files";
+        return await applyTemplateResponse.arrayBuffer();
+      },
+    );
 
     stage = "requesting a save location";
     const SAVE_LABEL = "Save to directory";
