@@ -3,6 +3,7 @@ import type { ScaffoldV1Template, ScaffoldV1TemplateSpec } from "../clients/scaf
 import type { QuickPickItemWithValue } from "../quickpicks/types";
 import { getSidecar } from "../sidecar";
 import { SCAFFOLDING_LIST_TIMEOUT_MS } from "../sidecar/constants";
+import { withRequestTimeout } from "../utils/timing";
 
 export function filterSensitiveKeys<T>(obj: Record<string, T>): Record<string, T> {
   return Object.fromEntries(
@@ -31,10 +32,16 @@ export async function getTemplatesList(
   collection?: string,
   sanitizeOptions: boolean = false,
 ): Promise<ScaffoldV1Template[]> {
-  const client = (await getSidecar()).getTemplatesApi(SCAFFOLDING_LIST_TIMEOUT_MS);
-  const response = await client.listScaffoldV1Templates({
-    template_collection_name: collection ?? "vscode",
-  });
+  const client = (await getSidecar()).getTemplatesApi();
+  const response = await withRequestTimeout(
+    "Listing project templates",
+    SCAFFOLDING_LIST_TIMEOUT_MS,
+    (signal) =>
+      client.listScaffoldV1Templates(
+        { template_collection_name: collection ?? "vscode" },
+        { signal },
+      ),
+  );
 
   const templates = Array.from(response.data) as ScaffoldV1Template[];
   return sanitizeOptions ? templates.map(sanitizeTemplateOptions) : templates;
