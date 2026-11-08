@@ -266,11 +266,7 @@ export class TimeoutMiddleware implements Middleware {
   /** Per-request cleanup, keyed by the `init` that `pre` hands to `fetch` and later hooks. */
   private readonly pending = new WeakMap<RequestInit, () => void>();
 
-  constructor(
-    readonly timeoutMs: number,
-    /** Who didn't answer, for the error message. */
-    private readonly target: string = "the sidecar",
-  ) {}
+  constructor(readonly timeoutMs: number) {}
 
   async pre(context: RequestContext): Promise<FetchParams> {
     const { signal, clear } = timeoutSignal(this.timeoutMs, context.init.signal);
@@ -290,7 +286,7 @@ export class TimeoutMiddleware implements Middleware {
     // a caller's own abort carries an AbortError reason, and passes through as before
     if (isTimeoutReason(context.init.signal?.reason)) {
       throw new RequestTimeoutError(
-        `Request to ${this.target} (${context.init.method ?? "GET"} ${context.url})`,
+        `Request to the sidecar (${context.init.method ?? "GET"} ${context.url})`,
         this.timeoutMs,
         context.error,
       );
