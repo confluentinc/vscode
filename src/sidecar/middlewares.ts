@@ -266,11 +266,7 @@ export class TimeoutMiddleware implements Middleware {
   /** Per-request cleanup, keyed by the `init` that `pre` hands to `fetch` and later hooks. */
   private readonly pending = new WeakMap<RequestInit, () => void>();
 
-  constructor(
-    readonly timeoutMs: number,
-    /** Who didn't answer, for the error message. */
-    private readonly target: string = "the sidecar",
-  ) {}
+  constructor(readonly timeoutMs: number) {}
 
   async pre(context: RequestContext): Promise<FetchParams> {
     const { signal, clear } = timeoutSignal(this.timeoutMs, context.init.signal);
@@ -298,7 +294,7 @@ export class TimeoutMiddleware implements Middleware {
       // a response whose body stalled still says which status the sidecar sent
       const answered = status ? ` (HTTP ${status})` : "";
       throw new RequestTimeoutError(
-        `Request to ${this.target} (${context.init.method ?? "GET"} ${context.url})${answered}`,
+        `Request to the sidecar (${context.init.method ?? "GET"} ${context.url})${answered}`,
         this.timeoutMs,
         cause,
       );
