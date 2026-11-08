@@ -18,8 +18,6 @@ import {
   CONSUME_TIMEOUT_MS,
   FLINK_RESULTS_TIMEOUT_MS,
   GRAPHQL_TIMEOUT_MS,
-  SCAFFOLDING_APPLY_TIMEOUT_MS,
-  SCAFFOLDING_LIST_TIMEOUT_MS,
   SIDECAR_PROCESS_ID_HEADER,
   SIDECAR_REQUEST_TIMEOUT_MS,
 } from "./constants";
@@ -641,13 +639,13 @@ describe("sidecarHandle sandbox tests", () => {
   describe("Scaffolding Service class methods", () => {
     describe("getTemplatesApi()", () => {
       it("should return a TemplatesScaffoldV1Api instance", () => {
-        const api = handle.getTemplatesApi(SCAFFOLDING_LIST_TIMEOUT_MS);
+        const api = handle.getTemplatesApi();
 
         assert.strictEqual(api.constructor.name, "TemplatesScaffoldV1Api");
       });
 
       it("should include basePath in its configuration", () => {
-        const api = handle.getTemplatesApi(SCAFFOLDING_LIST_TIMEOUT_MS);
+        const api = handle.getTemplatesApi();
 
         assert.strictEqual(
           api["configuration"].basePath,
@@ -655,41 +653,11 @@ describe("sidecarHandle sandbox tests", () => {
         );
       });
 
-      it("should time out after the given budget", () => {
-        const api = handle.getTemplatesApi(SCAFFOLDING_APPLY_TIMEOUT_MS);
-
-        const timeout = api["configuration"].middleware.at(-1);
-
-        assert.ok(timeout instanceof TimeoutMiddleware);
-        assert.strictEqual(timeout.timeoutMs, SCAFFOLDING_APPLY_TIMEOUT_MS);
-      });
-
-      it("should leave timing to the caller when no budget is given", () => {
-        const api = handle.getTemplatesApi();
-
-        assert.deepStrictEqual(api["configuration"].middleware, []);
-      });
-
-      it("should fail a hung request with a timeout error naming the Scaffolding service", async () => {
-        const clock = sandbox.useFakeTimers();
-        sandbox.stub(global, "fetch").callsFake(hungFetch);
-        const api = handle.getTemplatesApi(SCAFFOLDING_LIST_TIMEOUT_MS);
-
-        const listing = api.listScaffoldV1Templates({ template_collection_name: "vscode" });
-        const rejected = assert.rejects(
-          listing,
-          (err) => err instanceof RequestTimeoutError && /Scaffolding service/.test(err.message),
-        );
-        await clock.tickAsync(SCAFFOLDING_LIST_TIMEOUT_MS);
-
-        await rejected;
-      });
-
       it("should update the basePath if IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH is set to a non-default value", () => {
         const newBasePath = "test.cloud";
         sandbox.stub(constants, "CCLOUD_BASE_PATH").value(newBasePath);
 
-        const api = handle.getTemplatesApi(SCAFFOLDING_LIST_TIMEOUT_MS);
+        const api = handle.getTemplatesApi();
 
         assert.strictEqual(
           api["configuration"].basePath,
