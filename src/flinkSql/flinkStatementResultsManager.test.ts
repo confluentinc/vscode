@@ -30,7 +30,8 @@ import type {
   ResultsViewerStorageState,
 } from "../webview/flink-statement-results";
 import type { StatementMeta } from "./flinkStatementResultsManager";
-import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "../sidecar/errors";
+import { CCloudReconnectTimeoutError } from "../sidecar/errors";
+import { RequestTimeoutError } from "../utils/timing";
 
 /** A successful results response carrying no rows. */
 const EMPTY_RESULTS_RESPONSE: GetSqlv1StatementResult200Response = {
@@ -750,7 +751,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
     it("should tell the user a results fetch timed out", async () => {
       ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(
-        new SidecarRequestTimeoutError("Request to the sidecar", 60_000, new Error("timeout")),
+        new RequestTimeoutError("Request to the sidecar", 60_000, new Error("timeout")),
       );
 
       await ctx.manager.fetchResults();

@@ -4,12 +4,14 @@ import "mocha";
 import sinon from "sinon";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_KAFKA_TOPIC } from "../../tests/unit/testResources/topic";
+import { hungFetch } from "../../tests/unit/testUtils";
 import { BASE_PATH as SCAFFOLDING_SERVICE_BASE_PATH } from "../clients/scaffoldingService";
 import { MicroProfileHealthApi, ResponseError } from "../clients/sidecar";
 import { consumeMessages } from "../consume";
 import * as constants from "../constants";
 import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
+import { RequestTimeoutError } from "../utils/timing";
 import type { Message } from "../ws/messageTypes";
 import { MessageType, newMessageHeaders } from "../ws/messageTypes";
 import {
@@ -19,7 +21,6 @@ import {
   SIDECAR_PROCESS_ID_HEADER,
   SIDECAR_REQUEST_TIMEOUT_MS,
 } from "./constants";
-import { SidecarRequestTimeoutError } from "./errors";
 import { CCloudAuthStatusMiddleware, TimeoutMiddleware } from "./middlewares";
 import type { GraphQLResponse } from "./sidecarHandle";
 import { WebsocketManager } from "./websocketManager";
@@ -255,14 +256,7 @@ describe("sidecarHandle sandbox tests", () => {
 
     it("should fail a hung consume with a 504 marked as timed out", async () => {
       const clock = sandbox.useFakeTimers();
-      sandbox
-        .stub(global, "fetch")
-        .callsFake(
-          (_url: string | URL | Request, init?: RequestInit) =>
-            new Promise((_resolve, reject) =>
-              init?.signal?.addEventListener("abort", () => reject(init.signal!.reason)),
-            ),
-        );
+      sandbox.stub(global, "fetch").callsFake(hungFetch);
       const api = handle.getKafkaConsumeApi(constants.CCLOUD_CONNECTION_ID);
 
       const consume = consumeMessages(
@@ -527,19 +521,14 @@ describe("sidecarHandle sandbox tests", () => {
       assert.strictEqual(handle["graphQlQueryPromises"].size, 0); // cache should be empty after queries resolve
     });
 
-    it("should fail a hung query with a SidecarRequestTimeoutError and clear the cache", async () => {
+    it("should fail a hung query with a RequestTimeoutError and clear the cache", async () => {
       const clock = sandbox.useFakeTimers();
-      fetchStub.callsFake(
-        (_url: string, init: RequestInit) =>
-          new Promise((_resolve, reject) =>
-            init.signal?.addEventListener("abort", () => reject(init.signal!.reason)),
-          ),
-      );
+      fetchStub.callsFake(hungFetch);
 
       const query = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, {
         id: "123",
       });
-      const rejected = assert.rejects(query, SidecarRequestTimeoutError);
+      const rejected = assert.rejects(query, RequestTimeoutError);
       await clock.tickAsync(GRAPHQL_TIMEOUT_MS);
 
       await rejected;
