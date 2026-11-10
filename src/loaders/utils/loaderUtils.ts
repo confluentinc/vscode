@@ -11,7 +11,7 @@ import type {
   TopicV3Api,
 } from "../../clients/kafkaRest";
 import type { Schema as ResponseSchema, SubjectsV1Api } from "../../clients/schemaRegistryRest";
-import { isResponseError } from "../../errors";
+import { extractResponseBody, isResponseError } from "../../errors";
 import type { IFlinkStatementSubmitParameters } from "../../flinkSql/statementUtils";
 import { Logger } from "../../logging";
 import { ConsumerGroupState } from "../../models/consumerGroup";
@@ -21,6 +21,7 @@ import { Schema, SchemaType, Subject, subjectMatchesTopicName } from "../../mode
 import type { SchemaRegistry } from "../../models/schemaRegistry";
 import { KafkaTopic } from "../../models/topic";
 import { getSidecar } from "../../sidecar";
+import { sidecarTimeoutMessage } from "../../sidecar/errors";
 import {
   containsPrivateNetworkPattern,
   showPrivateNetworkingHelpNotification,
@@ -72,11 +73,15 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
         });
         return [];
       }
-      const body = await error.response.json();
-
-      throw new TopicFetchError(JSON.stringify(body));
+      const body = await extractResponseBody(error);
+      const timeoutMessage = sidecarTimeoutMessage(
+        error.response.status,
+        body,
+        "the Kafka cluster",
+      );
+      throw new TopicFetchError(timeoutMessage ?? JSON.stringify(body));
     } else {
-      throw new TopicFetchError(JSON.stringify(error));
+      throw new TopicFetchError(error instanceof Error ? error.message : String(error));
     }
   }
 

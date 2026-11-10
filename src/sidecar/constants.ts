@@ -39,7 +39,10 @@ export const SIDECAR_REQUEST_TIMEOUT_MS = 30_000;
 export const FLINK_RESULTS_TIMEOUT_MS = 60_000;
 /** Above the sidecar's 60s CCloud consume hold, plus its follow-up schema fetches. */
 export const CONSUME_TIMEOUT_MS = 120_000;
-/** The sidecar may page through several upstream calls to answer one query. */
+/** The sidecar may run two 40s-capped fetches in a row to answer one query, so up to 80s. */
 export const GRAPHQL_TIMEOUT_MS = 90_000;
-/** How long a request waits for an expired CCloud session to reconnect before failing. */
-export const CCLOUD_RECONNECT_TIMEOUT_MS = 60_000;
+/**
+ * How long a request waits for an expired CCloud session to reconnect before failing. Long enough
+ * for one more sidecar token refresh: up to 5s of backoff, its 90s deadline, then a 5s status check.
+ */
+export const CCLOUD_RECONNECT_TIMEOUT_MS = 120_000;
