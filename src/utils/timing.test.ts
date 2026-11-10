@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import "mocha";
 import * as sinon from "sinon";
+import { Logger } from "../logging";
 import {
   backoffWindow,
   IntervalPoller,
@@ -186,6 +187,7 @@ describe("utils/timing", () => {
         const last = failure(503);
         const op = sandbox.stub().rejects(failure(500));
         op.onCall(2).rejects(last);
+        const warn = sandbox.stub(Logger.prototype, "warn");
 
         const promise = retryWithBackoff(op, { ...baseOptions, maxRetries: 2 });
         const rejected = assert.rejects(promise, (err) => err === last);
@@ -193,6 +195,7 @@ describe("utils/timing", () => {
 
         await rejected;
         sinon.assert.calledThrice(op);
+        sinon.assert.calledOnceWithMatch(warn, sinon.match(/after 2 retries/));
       });
 
       it("should not retry an error shouldRetry rejects", async () => {
@@ -286,10 +289,12 @@ describe("utils/timing", () => {
       it("should fail with the error instead of retrying early when the server asks for more than capMs", async () => {
         const tooLong = failure(429, { "retry-after": "600" });
         const op = sandbox.stub().rejects(tooLong);
+        const warn = sandbox.stub(Logger.prototype, "warn");
 
         await assert.rejects(retryWithBackoff(op, baseOptions), (err) => err === tooLong);
 
         sinon.assert.calledOnce(op);
+        sinon.assert.calledOnceWithMatch(warn, sinon.match(/over the 30000ms cap/));
       });
 
       it("should fail immediately for a far-future Retry-After date", async () => {
@@ -299,6 +304,36 @@ describe("utils/timing", () => {
         await assert.rejects(retryWithBackoff(op, baseOptions));
 
         sinon.assert.calledOnce(op);
+      });
+
+      it("should give up instead of starting a wait that would end past deadlineMs", async () => {
+        const last = failure(503);
+        const op = sandbox.stub().rejects(failure(503));
+        op.onSecondCall().rejects(last);
+        const warn = sandbox.stub(Logger.prototype, "warn");
+
+        // the first wait (1s) ends inside the 2.5s deadline, the second (1.6s) would not
+        const promise = retryWithBackoff(op, { ...baseOptions, deadlineMs: 2500 });
+        const rejected = assert.rejects(promise, (err) => err === last);
+        await clock.tickAsync(1000);
+
+        await rejected;
+        sinon.assert.calledTwice(op);
+        sinon.assert.calledOnceWithMatch(warn, sinon.match(/2500ms deadline/));
+      });
+
+      it("should cut a jittered wait short so the retry still starts inside deadlineMs", async () => {
+        // jitter at the top of the 1000-1200ms window, with only 1100ms of budget left
+        (Math.random as sinon.SinonStub).returns(0.999);
+        const op = sandbox.stub();
+        op.onFirstCall().rejects(failure(503));
+        op.onSecondCall().resolves("ok");
+
+        const promise = retryWithBackoff(op, { ...baseOptions, deadlineMs: 1100 });
+        await clock.tickAsync(1100);
+
+        sinon.assert.calledTwice(op);
+        assert.strictEqual(await promise, "ok");
       });
 
       it("should rethrow the original error when aborted mid-wait", async () => {
