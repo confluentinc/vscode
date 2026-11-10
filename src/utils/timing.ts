@@ -47,7 +47,8 @@ export async function pauseWithJitter(
 export interface BackoffOptions {
   /**
    * Ceiling on the exponential delay, and the longest server-requested wait the caller will
-   * honor. A longer server wait ends the retry with the error rather than retrying early.
+   * honor. A longer server wait ends the retry with the error rather than retrying early. Jitter
+   * can still add up to 20% on top of either.
    */
   capMs: number;
   /** First delay. Defaults to {@linkcode BACKOFF_BASE_MS}. */
