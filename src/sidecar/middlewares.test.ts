@@ -166,6 +166,21 @@ describe("CCloudAuthStatusMiddleware.handleProblematicStatus() deadline", () => 
     sinon.assert.calledOnce(disposeSpy);
   });
 
+  it("should keep waiting long enough for the sidecar to retry a token refresh", async () => {
+    let settled = false;
+    const waiting = new CCloudAuthStatusMiddleware()
+      .handleProblematicStatus()
+      .finally(() => (settled = true));
+    const rejected = assert.rejects(waiting, CCloudReconnectTimeoutError);
+
+    // one more sidecar refresh attempt can take about 100s
+    await clock.tickAsync(100_000);
+    assert.strictEqual(settled, false);
+    await clock.tickAsync(CCLOUD_RECONNECT_TIMEOUT_MS - 100_000);
+
+    await rejected;
+  });
+
   it("should pass on a failure to watch the connection state, not report a timeout", async () => {
     const watchFailure = new Error("secret storage unavailable");
     getSecretStorageStub.returns({
