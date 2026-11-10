@@ -34,8 +34,8 @@ import type { Schema } from "../../models/schema";
 import { SchemaType, Subject } from "../../models/schema";
 import type * as sidecar from "../../sidecar";
 import { SIDECAR_REQUEST_TIMEOUT_MS } from "../../sidecar/constants";
-import { SidecarRequestTimeoutError } from "../../sidecar/errors";
 import * as privateNetworking from "../../utils/privateNetworking";
+import { RequestTimeoutError } from "../../utils/timing";
 import * as loaderUtils from "./loaderUtils";
 
 // as from fetchTopics() result.
@@ -343,7 +343,7 @@ describe("loaderUtils.ts", () => {
       });
 
       it("fetchTopics should name the Kafka cluster, not the sidecar URL, for a client-side timeout", async () => {
-        const timeout = new SidecarRequestTimeoutError(
+        const timeout = new RequestTimeoutError(
           "Request to the sidecar (GET http://127.0.0.1:26636/kafka/v3/clusters/c/topics)",
           SIDECAR_REQUEST_TIMEOUT_MS,
           new Error("timeout"),
