@@ -535,26 +535,35 @@ export async function getNewlyRegisteredVersion(
 ): Promise<number> {
   // Try to read back the schema we just registered to get the version number bound to the subject we just bound it to.
   // (may take a few times / pauses if the request is served by a read replica that doesn't yet know about the schema we just registered, sigh.)
-  const subjectVersionPairs: SubjectVersion[] = await retryWithBackoff(
-    () =>
-      schemasApi.getVersions({
-        id: schemaId,
-        subject: subject, // disambiguate when custom contexts are in use
-      }),
-    {
-      operationName: "read back registered schema version",
-      // read-replica lag is short, so start well below the house 1s base
-      baseMs: READ_BACK_BASE_BACKOFF_MS,
-      capMs: READ_BACK_BACKOFF_CAP_MS,
-      maxRetries: MAX_READ_BACK_RETRIES,
-      shouldRetry: (e) => isResponseErrorWithStatus(e, 404),
-    },
-  ).catch((e) => {
-    // keep the cause for diagnosis; the error below covers both a replica that never caught up
-    // and an outright failure
+  let subjectVersionPairs: SubjectVersion[];
+  try {
+    subjectVersionPairs = await retryWithBackoff(
+      () =>
+        schemasApi.getVersions({
+          id: schemaId,
+          subject: subject, // disambiguate when custom contexts are in use
+        }),
+      {
+        operationName: "read back registered schema version",
+        // read-replica lag is short, so start well below the house 1s base
+        baseMs: READ_BACK_BASE_BACKOFF_MS,
+        capMs: READ_BACK_BACKOFF_CAP_MS,
+        maxRetries: MAX_READ_BACK_RETRIES,
+        shouldRetry: (e) => isResponseErrorWithStatus(e, 404),
+      },
+    );
+  } catch (e) {
     logError(e, "schema version read-back", { extra: { subject, schemaId: String(schemaId) } });
-    return [];
-  });
+    // only a replica that never caught up means "not found"; anything else is its own failure
+    if (!isResponseErrorWithStatus(e, 404)) {
+      reportReadBackFailure(subject);
+      throw new Error(
+        `Could not read back the version of schema id ${schemaId} for subject "${subject}"`,
+        { cause: e },
+      );
+    }
+    subjectVersionPairs = [];
+  }
 
   // This is the version number used for the subject we just bound it to.
   const version = subjectVersionPairs.find((pair) => pair.subject === subject)?.version;
@@ -565,7 +574,15 @@ export async function getNewlyRegisteredVersion(
   // If we didn't get it after the retries, log and raise an error.
   const message = `Could not find subject "${subject}" in the list of bindings for schema id ${schemaId}`;
   logger.error(message);
+  reportReadBackFailure(subject);
   throw new Error(message);
+}
+
+/** Tell the user the schema was registered even though its version couldn't be confirmed. */
+function reportReadBackFailure(subject: string): void {
+  void showErrorNotificationWithButtons(
+    `The schema was registered to subject "${subject}", but its new version couldn't be read back.`,
+  );
 }
 
 /**
