@@ -9,7 +9,11 @@ import {
 } from "../../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION_ID } from "../../../tests/unit/testResources/organization";
-import { createResponseError, createTestTopicData } from "../../../tests/unit/testUtils";
+import {
+  createResponseError,
+  createTestTopicData,
+  proxyTimeoutBody,
+} from "../../../tests/unit/testUtils";
 import { ConsumerGroupV3Api, TopicV3Api } from "../../clients/kafkaRest";
 import type {
   ConsumerData,
@@ -324,12 +328,24 @@ describe("loaderUtils.ts", () => {
         sinon.assert.notCalled(showPrivateNetworkingHelpNotificationStub);
       });
 
-      it("fetchTopics should throw TopicFetchError when not a ResponseError", async () => {
+      it("fetchTopics should say which host timed out for a sidecar proxy timeout", async () => {
+        const title = "pkc-123.confluent.cloud didn't respond within 20s";
+        mockClient.listKafkaTopics.rejects(
+          createResponseError(504, "Gateway Timeout", JSON.stringify(proxyTimeoutBody(title))),
+        );
+
+        await assert.rejects(
+          loaderUtils.fetchTopics(TEST_CCLOUD_KAFKA_CLUSTER),
+          (err) => err instanceof loaderUtils.TopicFetchError && err.message === title,
+        );
+      });
+
+      it("fetchTopics should throw TopicFetchError with the original message when not a ResponseError", async () => {
         mockClient.listKafkaTopics.rejects(new Error("Some other error"));
 
         await assert.rejects(
           loaderUtils.fetchTopics(TEST_CCLOUD_KAFKA_CLUSTER),
-          loaderUtils.TopicFetchError,
+          (err) => err instanceof loaderUtils.TopicFetchError && err.message === "Some other error",
         );
 
         sinon.assert.notCalled(showPrivateNetworkingHelpNotificationStub);

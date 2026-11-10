@@ -26,7 +26,11 @@ import {
 } from "../models/flinkStatement";
 import { showErrorNotificationWithButtons } from "../notifications";
 import type { SidecarHandle } from "../sidecar";
-import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "../sidecar/errors";
+import {
+  CCloudReconnectTimeoutError,
+  SidecarRequestTimeoutError,
+  sidecarTimeoutMessage,
+} from "../sidecar/errors";
 import type { ViewMode } from "./flinkStatementResultColumns";
 import type { StatementResultsRow } from "./flinkStatementResults";
 import { parseResults } from "./flinkStatementResults";
@@ -48,6 +52,8 @@ const MAX_TRANSIENT_RETRIES = 4;
  * reporting the error instead.
  */
 const TRANSIENT_BACKOFF_CAP_MS = 30_000;
+/** No transient retry starts after this long, so a failing fetch gives up in about a minute. */
+export const TRANSIENT_RETRY_DEADLINE_MS = 60_000;
 
 export type ResultCount = { total: number; filter: number | null };
 export type StreamState = "running" | "completed";
@@ -398,6 +404,12 @@ export class FlinkStatementResultsManager {
                 reportable = { message: "Too many requests. Try again later." };
                 break;
               }
+              case 504: {
+                const timeoutMessage = sidecarTimeoutMessage(status, payload, "Confluent Cloud");
+                reportable = { message: `${timeoutMessage}.` };
+                logError(error, "flink statement results timed out");
+                break;
+              }
               default: {
                 reportable = { message: "Something went wrong." };
                 logError(error, "flink statement results", {
@@ -516,6 +528,7 @@ export class FlinkStatementResultsManager {
       maxRetries: MAX_TRANSIENT_RETRIES,
       shouldRetry: isTransientResponseError,
       signal: this._getResultsAbortController.signal,
+      deadlineMs: TRANSIENT_RETRY_DEADLINE_MS,
     });
   }
 
