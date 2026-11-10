@@ -30,7 +30,7 @@ import type { ViewMode } from "./flinkStatementResultColumns";
 import type { StatementResultsRow } from "./flinkStatementResults";
 import { parseResults } from "./flinkStatementResults";
 import { extractPageToken } from "./utils";
-import { pauseWithJitter } from "../utils/timing";
+import { retryWithBackoff } from "../utils/timing";
 import { estimateJsonBytes } from "../utils/bytes";
 import type { SqlV1StatementWarning } from "../clients/flinkSql";
 
@@ -42,10 +42,11 @@ const MAX_CONFLICT_RETRIES = 60;
 const CONFLICT_BACKOFF_MS = 500;
 /** Retries allowed per transient response, on top of the initial attempt. */
 const MAX_TRANSIENT_RETRIES = 4;
-/** First transient backoff delay; doubles each retry, so 500/1000/2000/4000ms. */
-const TRANSIENT_BASE_BACKOFF_MS = 500;
-/** Ceiling on any transient backoff, so an outsized `Retry-After` can't stall the viewer. */
-const MAX_TRANSIENT_BACKOFF_MS = 8_000;
+/**
+ * Ceiling on the transient backoff, and the longest `Retry-After` the viewer will wait out before
+ * reporting the error instead.
+ */
+const TRANSIENT_BACKOFF_CAP_MS = 30_000;
 
 export type ResultCount = { total: number; filter: number | null };
 export type StreamState = "running" | "completed";
@@ -96,9 +97,6 @@ export type StatementMeta = {
   isForeground: boolean;
   warnings: SqlV1StatementWarning[];
 };
-
-/** Retry attempts already spent, per class of failure. */
-type RetryBudget = { conflict: number; transient: number };
 
 export type MessageType =
   | "GetResults"
@@ -467,30 +465,46 @@ export class FlinkStatementResultsManager {
    * delay of {@linkcode CONFLICT_BACKOFF_MS}. Nothing fancy.
    *
    * When {@linkcode retryTransient} is set, statuses that may clear on their own (429 and 5xx) also
-   * get up to {@linkcode MAX_TRANSIENT_RETRIES} attempts on a separate backoff budget, delegated to
-   * {@linkcode transientBackoffWindow}. Only safe for idempotent operations.
+   * get up to {@linkcode MAX_TRANSIENT_RETRIES} attempts through {@linkcode retryWithBackoff}, which
+   * wraps the 409 loop and stops waiting when the results fetch is aborted. Only safe for idempotent
+   * operations.
    */
   private async retry<T>(
     operation: () => Promise<T>,
     operationName: string,
     retryTransient: boolean = false,
   ): Promise<T> {
-    let lastErr: Error | undefined;
-    const spent: RetryBudget = { conflict: 0, transient: 0 };
-    // each budget is bounded by its own counter, so this ceiling should never be what stops us;
-    // it is here only so the loop is self-evidently finite
-    for (let i = 0; i <= MAX_CONFLICT_RETRIES + MAX_TRANSIENT_RETRIES; i++) {
-      try {
-        return await operation();
-      } catch (err) {
-        lastErr = err as Error;
-        if (!(await this.backOffBeforeRetry(err, operationName, retryTransient, spent))) {
-          break;
+    // shared across transient retries, so neither budget resets the other
+    let conflicts = 0;
+    const withConflictRetries = async (): Promise<T> => {
+      for (;;) {
+        try {
+          return await operation();
+        } catch (err) {
+          if (!isResponseErrorWithStatus(err, 409) || conflicts >= MAX_CONFLICT_RETRIES - 1) {
+            throw err;
+          }
+          conflicts++;
+          logger.debug(
+            `Retrying ${operationName} after 409 conflict. Attempt ${conflicts}/${MAX_CONFLICT_RETRIES}. Waiting ${CONFLICT_BACKOFF_MS}ms`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, CONFLICT_BACKOFF_MS));
         }
       }
-    }
+    };
 
-    throw lastErr;
+    if (!retryTransient) {
+      return await withConflictRetries();
+    }
+    // only the results fetch retries transient errors, so only it watches the results abort signal;
+    // `stopStatement()` aborts that signal before its own retries and must not be cut short
+    return await retryWithBackoff(withConflictRetries, {
+      operationName,
+      capMs: TRANSIENT_BACKOFF_CAP_MS,
+      maxRetries: MAX_TRANSIENT_RETRIES,
+      shouldRetry: isTransientResponseError,
+      signal: this._getResultsAbortController.signal,
+    });
   }
 
   /**
@@ -503,72 +517,6 @@ export class FlinkStatementResultsManager {
       this._getResultsAbortController.signal.aborted ||
       (error instanceof FetchError && error?.cause?.name === "AbortError")
     );
-  }
-
-  /**
-   * Wait out a retryable failure, charging it to the matching budget in {@linkcode spent}. Returns
-   * false when the error isn't retryable, its budget is spent, or the fetch was aborted while
-   * waiting, all of which mean {@linkcode retry} should give up.
-   */
-  private async backOffBeforeRetry(
-    err: unknown,
-    operationName: string,
-    retryTransient: boolean,
-    spent: RetryBudget,
-  ): Promise<boolean> {
-    if (isResponseErrorWithStatus(err, 409)) {
-      if (spent.conflict >= MAX_CONFLICT_RETRIES - 1) {
-        return false;
-      }
-      spent.conflict++;
-      logger.debug(
-        `Retrying ${operationName} after 409 conflict. Attempt ${spent.conflict}/${MAX_CONFLICT_RETRIES}. Waiting ${CONFLICT_BACKOFF_MS}ms`,
-      );
-      await new Promise((resolve) => setTimeout(resolve, CONFLICT_BACKOFF_MS));
-      return true;
-    }
-
-    if (
-      retryTransient &&
-      isTransientResponseError(err) &&
-      spent.transient < MAX_TRANSIENT_RETRIES
-    ) {
-      const { minMs, maxMs } = transientBackoffWindow(err.response, spent.transient);
-      spent.transient++;
-      logger.debug(
-        `Retrying ${operationName} after status ${err.response.status}. Transient attempt ${spent.transient}/${MAX_TRANSIENT_RETRIES}`,
-      );
-      await this.pauseUnlessAborted(minMs, maxMs);
-      return !this._getResultsAbortController.signal.aborted;
-    }
-
-    return false;
-  }
-
-  /**
-   * Sleep for a jittered interval, returning as soon as the results fetch is aborted so a backoff
-   * can't outlive {@linkcode dispose}. Only the results fetch opts into transient retries, so this
-   * deliberately watches that controller; `stopStatement()` aborts it before its own retries and
-   * must not be cut short.
-   */
-  private async pauseUnlessAborted(minMs: number, maxMs: number): Promise<void> {
-    const { signal } = this._getResultsAbortController;
-    if (signal.aborted) {
-      return;
-    }
-
-    let stopWatchingAbort = () => {};
-    const abortedEarly = new Promise<void>((resolve) => {
-      const onAbort = () => resolve();
-      signal.addEventListener("abort", onAbort, { once: true });
-      stopWatchingAbort = () => signal.removeEventListener("abort", onAbort);
-    });
-
-    try {
-      await Promise.race([pauseWithJitter(minMs, maxMs), abortedEarly]);
-    } finally {
-      stopWatchingAbort();
-    }
   }
 
   private async stopStatement(): Promise<void> {
@@ -729,38 +677,4 @@ export class FlinkStatementResultsManager {
     // Abort any in-flight requests
     this._getResultsAbortController.abort();
   }
-}
-
-/**
- * Pick the backoff window for a transient response, preferring a delay Confluent Cloud asked for
- * over a locally-guessed exponential one.
- *
- * `Retry-After` is only sent once a rate limit is actually hit, so `X-RateLimit-Reset` (which rides
- * along on every response) covers a 429 that omits it. A server-requested delay is only ever
- * extended by jitter, never shortened, since retrying before the window resets just earns another
- * 429. The exponential fallback covers 5xx responses, which carry neither header.
- */
-export function transientBackoffWindow(
-  response: Response,
-  attempt: number,
-): { minMs: number; maxMs: number } {
-  const serverDelaySeconds =
-    relativeSeconds(response.headers?.get("retry-after")) ??
-    relativeSeconds(response.headers?.get("x-ratelimit-reset"));
-  if (serverDelaySeconds !== undefined) {
-    const minMs = Math.min(serverDelaySeconds * 1000, MAX_TRANSIENT_BACKOFF_MS);
-    return { minMs, maxMs: minMs + TRANSIENT_BASE_BACKOFF_MS };
-  }
-
-  const maxMs = Math.min(TRANSIENT_BASE_BACKOFF_MS * 2 ** attempt, MAX_TRANSIENT_BACKOFF_MS);
-  return { minMs: maxMs / 2, maxMs };
-}
-
-/**
- * Read a header carrying a positive number of seconds, ignoring absent values and the HTTP-date
- * form of `Retry-After` that RFC 7231 also permits.
- */
-function relativeSeconds(header: string | null | undefined): number | undefined {
-  const seconds = Number(header);
-  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
 }
