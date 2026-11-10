@@ -34,8 +34,12 @@ export const SIDECAR_FORMATTED_LOGFILE_NAME = "vscode-confluent-sidecar-formatte
 
 export const MOMENTARY_PAUSE_MS = 500; // half a second.
 
-/** Per-attempt budget for a sidecar REST call, above the sidecar's own ~20s upstream timeout. */
+/**
+ * Per-attempt budget for a sidecar REST call to return its response headers, above the sidecar's
+ * own ~20s upstream timeout. Reading the body afterwards isn't covered.
+ */
 export const SIDECAR_REQUEST_TIMEOUT_MS = 30_000;
+/** {@link SIDECAR_REQUEST_TIMEOUT_MS} for a Flink results page, which can take longer to build. */
 export const FLINK_RESULTS_TIMEOUT_MS = 60_000;
 /** Above the sidecar's 60s CCloud consume hold, plus its follow-up schema fetches. */
 export const CONSUME_TIMEOUT_MS = 120_000;

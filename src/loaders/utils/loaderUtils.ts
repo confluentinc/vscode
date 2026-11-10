@@ -21,7 +21,11 @@ import { Schema, SchemaType, Subject, subjectMatchesTopicName } from "../../mode
 import type { SchemaRegistry } from "../../models/schemaRegistry";
 import { KafkaTopic } from "../../models/topic";
 import { getSidecar } from "../../sidecar";
-import { sidecarTimeoutMessage } from "../../sidecar/errors";
+import {
+  SidecarRequestTimeoutError,
+  sidecarTimeoutMessage,
+  timedOutWaitingFor,
+} from "../../sidecar/errors";
 import {
   containsPrivateNetworkPattern,
   showPrivateNetworkingHelpNotification,
@@ -35,8 +39,8 @@ const logger = new Logger("loaderUtils");
  */
 
 export class TopicFetchError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, cause?: unknown) {
+    super(message, { cause });
     this.name = "TopicFetchError";
   }
 }
@@ -79,9 +83,12 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
         body,
         "the Kafka cluster",
       );
-      throw new TopicFetchError(timeoutMessage ?? JSON.stringify(body));
+      throw new TopicFetchError(timeoutMessage ?? JSON.stringify(body), error);
+    } else if (error instanceof SidecarRequestTimeoutError) {
+      // its message is a diagnostic with the sidecar URL, so name the cluster instead
+      throw new TopicFetchError(timedOutWaitingFor("the Kafka cluster"), error);
     } else {
-      throw new TopicFetchError(error instanceof Error ? error.message : String(error));
+      throw new TopicFetchError(error instanceof Error ? error.message : String(error), error);
     }
   }
 
