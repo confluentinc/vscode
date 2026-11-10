@@ -791,7 +791,9 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       await clock.tickAsync(11_200);
       await fetchPromise;
 
-      assert.deepStrictEqual(ctx.manager["_latestError"](), { message: `${title}.` });
+      assert.deepStrictEqual(ctx.manager["_latestError"](), {
+        message: `${title}. Reopen the results to try again.`,
+      });
       assert.equal(ctx.manager["_state"](), "completed");
     });
 
@@ -823,7 +825,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       await ctx.manager.fetchResults();
 
       assert.deepStrictEqual(ctx.manager["_latestError"](), {
-        message: "Timed out waiting for results.",
+        message: "Timed out waiting for results. Reopen the results to try again.",
       });
       assert.equal(ctx.manager["_state"](), "completed");
     });

@@ -9,7 +9,7 @@ import {
   PreferencesResourceApi,
 } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { ccloudAuthSessionInvalidated } from "../emitters";
+import { ccloudAuthSessionInvalidated, stableCCloudConnectedState } from "../emitters";
 import { SecretStorageKeys } from "../storage/constants";
 import type { ResourceManager } from "../storage/resourceManager";
 import { getResourceManager } from "../storage/resourceManager";
@@ -164,6 +164,56 @@ describe("CCloudAuthStatusMiddleware.handleProblematicStatus() deadline", () => 
 
     await rejected;
     sinon.assert.calledOnce(disposeSpy);
+  });
+
+  it("should tell the user to sign in again when the deadline passes", async () => {
+    const waiting = new CCloudAuthStatusMiddleware().handleProblematicStatus();
+    const rejected = assert.rejects(
+      waiting,
+      (err) => err instanceof CCloudReconnectTimeoutError && err.message.endsWith("Sign in again."),
+    );
+
+    await clock.tickAsync(CCLOUD_RECONNECT_TIMEOUT_MS);
+
+    await rejected;
+  });
+
+  it("should close the reconnect notification when the deadline passes, so it can show again", async () => {
+    const notificationClosed = sandbox.spy();
+    const subscription = stableCCloudConnectedState.event(notificationClosed);
+    const middleware = new CCloudAuthStatusMiddleware();
+    const firstWait = assert.rejects(middleware.handleProblematicStatus());
+    await clock.tickAsync(CCLOUD_RECONNECT_TIMEOUT_MS);
+    await firstWait;
+    const withProgressStub = vscode.window.withProgress as sinon.SinonStub;
+    const notificationsShown = withProgressStub.callCount;
+
+    const secondWait = assert.rejects(middleware.handleProblematicStatus());
+    await clock.tickAsync(CCLOUD_RECONNECT_TIMEOUT_MS);
+    await secondWait;
+    subscription.dispose();
+
+    sinon.assert.calledTwice(notificationClosed);
+    assert.strictEqual(withProgressStub.callCount, notificationsShown + 1);
+  });
+
+  it("should keep the reconnect notification open until the last waiting request times out", async () => {
+    const notificationClosed = sandbox.spy();
+    const subscription = stableCCloudConnectedState.event(notificationClosed);
+    const middleware = new CCloudAuthStatusMiddleware();
+    const firstWait = assert.rejects(middleware.handleProblematicStatus());
+    await clock.tickAsync(50_000);
+    const secondWait = assert.rejects(middleware.handleProblematicStatus());
+
+    await clock.tickAsync(CCLOUD_RECONNECT_TIMEOUT_MS - 50_000);
+    await firstWait;
+    const closedAfterFirstDeadline = notificationClosed.callCount;
+    await clock.tickAsync(50_000);
+    await secondWait;
+    subscription.dispose();
+
+    assert.strictEqual(closedAfterFirstDeadline, 0);
+    sinon.assert.calledOnce(notificationClosed);
   });
 
   it("should keep waiting long enough for the sidecar to retry a token refresh", async () => {
