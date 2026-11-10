@@ -200,6 +200,36 @@ export function timeoutSignal(
   };
 }
 
+/** A request got no answer within its time budget. */
+export class RequestTimeoutError extends Error {
+  constructor(what: string, timeoutMs: number, cause: unknown) {
+    super(`${what} timed out after ${timeoutMs / 1000}s`, { cause });
+    this.name = "RequestTimeoutError";
+  }
+}
+
+/**
+ * Run `request` with a signal that aborts after `timeoutMs`, turning that timeout into a
+ * {@link RequestTimeoutError} naming `what`. Read the body inside `request` so the timeout covers it.
+ */
+export async function withRequestTimeout<T>(
+  what: string,
+  timeoutMs: number,
+  request: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const { signal, clear } = timeoutSignal(timeoutMs);
+  try {
+    return await request(signal);
+  } catch (e) {
+    if (isTimeoutReason(signal.reason)) {
+      throw new RequestTimeoutError(what, timeoutMs, e);
+    }
+    throw e;
+  } finally {
+    clear();
+  }
+}
+
 /** Whether an abort reason came from a timeout rather than a caller's own abort. */
 export function isTimeoutReason(reason: unknown): boolean {
   return reason instanceof DOMException && reason.name === "TimeoutError";
