@@ -8,6 +8,7 @@ import {
   showNoSchemaAccessWarningNotification,
 } from "./authz/schemaRegistry";
 import {
+  type KafkaConsumeResourceApi,
   ResponseError,
   type PartitionConsumeRecord,
   type PartitionOffset,
@@ -18,7 +19,7 @@ import { registerCommandWithLogging } from "./commands";
 import { LOCAL_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context/extension";
 import { showJsonPreview } from "./documentProviders/message";
-import { logError } from "./errors";
+import { extractResponseBody, logError } from "./errors";
 import type { ResourceLoader } from "./loaders";
 import { CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader } from "./loaders";
 import { Logger } from "./logging";
@@ -29,8 +30,11 @@ import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
 import { topicQuickPick } from "./quickpicks/topics";
 import { scheduler } from "./scheduler";
 import { getSidecar, type SidecarHandle } from "./sidecar";
+import { CONSUME_TIMEOUT_MS } from "./sidecar/constants";
 import { BitSet, includesSubstring, Stream } from "./stream/stream";
 import { hashed, logUsage, UserEvent } from "./telemetry/events";
+import { sidecarTimeoutMessage } from "./sidecar/errors";
+import { isTimeoutReason, timeoutSignal } from "./utils/timing";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/message-viewer";
@@ -204,6 +208,34 @@ const DEFAULT_CONSUME_PARAMS = {
   fetch_max_bytes: 40 * 1024 * 1024,
 };
 
+/**
+ * One consume call, failing after {@link CONSUME_TIMEOUT_MS} if the caller's signal hasn't ended it.
+ * Consume replaces the default middleware, so it times out here rather than in `TimeoutMiddleware`.
+ */
+export async function consumeMessages(
+  service: KafkaConsumeResourceApi,
+  topic: KafkaTopic,
+  request: SimpleConsumeMultiPartitionRequest,
+  signal: AbortSignal,
+): Promise<SimpleConsumeMultiPartitionResponse> {
+  const timeout = timeoutSignal(CONSUME_TIMEOUT_MS, signal);
+  try {
+    const response =
+      await service.gatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePostRaw(
+        {
+          cluster_id: topic.clusterId,
+          topic_name: topic.name,
+          x_connection_id: topic.connectionId,
+          SimpleConsumeMultiPartitionRequest: request,
+        },
+        { signal: timeout.signal },
+      );
+    return await response.raw.json();
+  } finally {
+    timeout.clear();
+  }
+}
+
 function messageViewerStartPollingCommand(
   panel: WebviewPanel,
   config: MessageViewerConfig,
@@ -215,22 +247,8 @@ function messageViewerStartPollingCommand(
   const service = sidecar.getKafkaConsumeApi(topic.connectionId);
   const partitionApi = sidecar.getPartitionV3Api(topic.clusterId, topic.connectionId);
 
-  const consume = async (
-    request: SimpleConsumeMultiPartitionRequest,
-    signal: AbortSignal,
-  ): Promise<SimpleConsumeMultiPartitionResponse> => {
-    const response =
-      await service.gatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePostRaw(
-        {
-          cluster_id: topic.clusterId,
-          topic_name: topic.name,
-          x_connection_id: topic.connectionId,
-          SimpleConsumeMultiPartitionRequest: request,
-        },
-        { signal },
-      );
-    return response.raw.json();
-  };
+  const consume = (request: SimpleConsumeMultiPartitionRequest, signal: AbortSignal) =>
+    consumeMessages(service, topic, request, signal);
 
   const os = ObservableScope();
 
@@ -503,41 +521,34 @@ function messageViewerStartPollingCommand(
       if (error instanceof Error && error.name === "AbortError") return;
       /* In case of network issue, the current assumption is that the user is
       going to see auth related error alerts. Logging and error displays is WIP. */
-      if (error instanceof ResponseError) {
-        const payload = await error.response.json();
+      if (isTimeoutReason(error)) {
+        // timed out mid-body, after the consume middleware's 504 mapping had its chance
+        shouldPause = true;
+        reportable = { message: "Timed out waiting for messages. Try again." };
+        logError(error, "message viewer consume timed out");
+      } else if (error instanceof ResponseError) {
+        // clone before reading, so logError() below can still read the body
+        const payload = await extractResponseBody(error);
         // FIXME: this response error coming from the middleware that has to be present to avoid openapi error about missing middlewares
-        if (!payload?.aborted) {
+        if (payload?.timedOut) {
+          shouldPause = true;
+          reportable = { message: "Timed out waiting for messages. Try again." };
+          logError(error, "message viewer consume timed out");
+        } else if (!payload?.aborted) {
           const status = error.response.status;
           shouldPause = status >= 400;
-          switch (status) {
-            case 401: {
-              reportable = { message: "Authentication required." };
-              break;
+          const message = consumeErrorMessage(status, payload);
+          if (message) {
+            reportable = { message };
+            if (status === 504) {
+              logError(error, "message viewer consume timed out");
             }
-            case 403: {
-              reportable = { message: "Insufficient permissions to read from topic." };
-              break;
-            }
-            case 404: {
-              if (String(payload?.title).startsWith("Error fetching the messages")) {
-                reportable = { message: "Topic not found." };
-              } else {
-                reportable = { message: "Unable to connect to the server." };
-              }
-              break;
-            }
-            case 429: {
-              reportable = { message: "Too many requests. Try again later." };
-              break;
-            }
-            default: {
-              reportable = { message: "Something went wrong." };
-              logError(error, "message viewer", {
-                extra: { status: status.toString(), payload },
-              });
-              void showErrorNotificationWithButtons("Error response while consuming messages.");
-              break;
-            }
+          } else {
+            reportable = { message: "Something went wrong." };
+            logError(error, "message viewer", {
+              extra: { status: status.toString(), payload },
+            });
+            void showErrorNotificationWithButtons("Error response while consuming messages.");
           }
           logger.error(
             `An error occurred during messages consumption. Status ${error.response.status}`,
@@ -902,6 +913,32 @@ function prepare(
   const { partition_id, offset, timestamp, headers, metadata } = message;
 
   return { partition_id, offset, timestamp, headers, key, value, metadata };
+}
+
+/**
+ * The message viewer's message for an error status from the consume API, or undefined for a
+ * status it doesn't expect.
+ */
+export function consumeErrorMessage(status: number, payload: unknown): string | undefined {
+  switch (status) {
+    case 401:
+      return "Authentication required.";
+    case 403:
+      return "Insufficient permissions to read from topic.";
+    case 404: {
+      const title =
+        typeof payload === "object" && payload !== null && "title" in payload
+          ? payload.title
+          : undefined;
+      return String(title).startsWith("Error fetching the messages")
+        ? "Topic not found."
+        : "Unable to connect to the server.";
+    }
+    case 429:
+      return "Too many requests. Try again later.";
+    case 504:
+      return `${sidecarTimeoutMessage(status, payload, "the Kafka cluster")}. Try again.`;
+  }
 }
 
 /**
