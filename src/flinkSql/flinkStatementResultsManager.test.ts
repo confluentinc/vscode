@@ -412,6 +412,34 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       assert.ok(ctx.manager["_statementRefreshInterval"]);
     });
 
+    it("should skip a refresh while the previous one is still in flight", async () => {
+      let resolveRefresh!: (refreshed: FlinkStatement) => void;
+      ctx.refreshFlinkStatementStub.returns(
+        new Promise<FlinkStatement>((resolve) => (resolveRefresh = resolve)),
+      );
+      const firstRefresh = ctx.manager["refreshStatement"]();
+
+      const secondRefresh = ctx.manager["refreshStatement"]();
+      resolveRefresh(statementInPhase(Phase.RUNNING));
+      await Promise.all([firstRefresh, secondRefresh]);
+
+      sinon.assert.calledOnce(ctx.refreshFlinkStatementStub);
+    });
+
+    it("should log only the first failure in a run of failed refreshes", async () => {
+      const logErrorStub = sandbox.stub(errors, "logError");
+      ctx.refreshFlinkStatementStub.rejects(new Error("sidecar unavailable"));
+
+      await ctx.manager["refreshStatement"]();
+      await ctx.manager["refreshStatement"]();
+      ctx.refreshFlinkStatementStub.resolves(statementInPhase(Phase.RUNNING));
+      await ctx.manager["refreshStatement"]();
+      ctx.refreshFlinkStatementStub.rejects(new Error("sidecar unavailable again"));
+      await ctx.manager["refreshStatement"]();
+
+      sinon.assert.calledTwice(logErrorStub);
+    });
+
     it("should ignore a refresh that resolves after refreshing has stopped", async () => {
       const statementBefore: FlinkStatement = ctx.manager["statement"];
       let resolveRefresh!: (refreshed: FlinkStatement) => void;
