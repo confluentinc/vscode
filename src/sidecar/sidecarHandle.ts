@@ -165,6 +165,10 @@ export class SidecarHandle {
   /**
    * Creates and returns a (Scaffolding Service OpenAPI spec) {@link TemplatesApi} client instance
    * with a preconfigured {@link ScaffoldingServiceConfiguration}.
+   *
+   * The client has no timeout of its own, so callers wrap each call in
+   * {@linkcode withRequestTimeout}. A {@link TimeoutMiddleware} here would stop covering the request once
+   * headers arrive, leaving a slow ZIP download unbounded.
    */
   public getTemplatesApi(): TemplatesScaffoldV1Api {
     const config = new ScaffoldingServiceConfiguration({
