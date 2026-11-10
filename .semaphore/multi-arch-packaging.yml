@@ -19,7 +19,24 @@ global_job_config:
   prologue:
     commands:
       - checkout
-      - . vault-setup --version v3 --role vscode      
+      - . vault-setup --version v3 --role vscode
+      # The promotion fires on every passing release-branch push, so only the commit that
+      # `make release-current-version` tagged packages and uploads anything. A failed tag lookup
+      # fails the job rather than skip a real release.
+      - |
+        RELEASE_TAG="v$(jq -r .version package.json)"
+        rc=0
+        TAG_REFS=$(git ls-remote --exit-code origin "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}") || rc=$?
+        # the last line is the peeled commit when the tag is annotated
+        TAG_COMMIT=$(printf '%s\n' "$TAG_REFS" | tail -n 1 | cut -f1)
+        if [ "$rc" -eq 0 ] && [ "$TAG_COMMIT" = "$(git rev-parse HEAD)" ]; then
+          export IS_RELEASE=true
+        elif [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ]; then
+          echo "$(git rev-parse --short HEAD) isn't the $RELEASE_TAG release commit. Skipping packaging and upload."
+        else
+          echo "Couldn't look up tag $RELEASE_TAG (git ls-remote exit $rc)." >&2
+          false
+        fi
   env_vars:
     - name: NODE_ENV
       value: "production"
@@ -30,7 +47,7 @@ blocks:
     task:
       prologue:
         commands:
-          - make install-dependencies
+          - '[ -z "$IS_RELEASE" ] || make install-dependencies'
       jobs:
         - name: "Package VSIX Files"
           matrix:
@@ -43,28 +60,30 @@ blocks:
                 - win32-x64
           commands:
             - |
-              case "$TARGET" in
-                darwin-x64)  export SIDECAR_OS_ARCH=macos-amd64 ;;
-                darwin-arm64) export SIDECAR_OS_ARCH=macos-arm64 ;;
-                linux-x64)   export SIDECAR_OS_ARCH=linux-amd64 ;;
-                linux-arm64) export SIDECAR_OS_ARCH=linux-arm64 ;;
-                win32-x64)   export SIDECAR_OS_ARCH=windows-x64 ;;
-                *) echo "Unknown TARGET: $TARGET" && exit 1 ;;
-              esac
-            - make download-sidecar-executable
-            - make download-third-party-notices-sidecar || true
-            - npx gulp bundle
-            - VSIX_FILE=$(find out/ -name "*.vsix")
-            - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename ${VSIX_FILE}) --force
+              if [ -n "$IS_RELEASE" ]; then
+                case "$TARGET" in
+                  darwin-x64)  export SIDECAR_OS_ARCH=macos-amd64 ;;
+                  darwin-arm64) export SIDECAR_OS_ARCH=macos-arm64 ;;
+                  linux-x64)   export SIDECAR_OS_ARCH=linux-amd64 ;;
+                  linux-arm64) export SIDECAR_OS_ARCH=linux-arm64 ;;
+                  win32-x64)   export SIDECAR_OS_ARCH=windows-x64 ;;
+                  *) echo "Unknown TARGET: $TARGET" && exit 1 ;;
+                esac
+                make download-sidecar-executable &&
+                  { make download-third-party-notices-sidecar || true; } &&
+                  npx gulp bundle &&
+                  VSIX_FILE=$(find out/ -name "*.vsix") &&
+                  artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename ${VSIX_FILE}) --force
+              fi
 
   - name: "Upload VSIX files to GitHub"
-    run:
-      when: "branch =~ '.*' and change_in('/release.svg', {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     dependencies:
       - "Package VSIX Files"
     task:
       jobs:
         - name: "Upload VSIX files to GitHub"
           commands:
-            - artifact pull workflow packaged-vsix-files/
-            - make upload-vsix-files-to-gh-releases
+            - |
+              if [ -n "$IS_RELEASE" ]; then
+                artifact pull workflow packaged-vsix-files/ && make upload-vsix-files-to-gh-releases
+              fi
