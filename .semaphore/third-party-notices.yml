@@ -32,4 +32,15 @@ blocks:
       jobs:
         - name: "Update third party notices PR"
           commands:
-            - make update-third-party-notices-pr
+            # on a release branch the promotion's `change_in` matches every push since the branch was cut,
+            # so check this push's own commits, and run whenever that's unclear since the update is idempotent
+            - |
+              rc=0
+              if [[ "$SEMAPHORE_GIT_BRANCH" =~ ^v[0-9]+\.[0-9]+\.x$ ]]; then
+                .semaphore/scripts/changed-in-push.sh package.json NOTICE.txt scripts/notices/NOTICE-vsix_PREAMBLE.txt || rc=$?
+              fi
+              if [ "$rc" -ne 1 ]; then
+                make update-third-party-notices-pr
+              else
+                echo "This push didn't change package.json or the notices files. Skipping."
+              fi
