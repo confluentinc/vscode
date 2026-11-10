@@ -340,9 +340,17 @@ blocks:
         - name: "Bump microversion and commit (no tag)"
           commands:
             - |
-              if [[ "$SEMAPHORE_GIT_BRANCH" =~ ^v[0-9]+\.[0-9]+\.x$ ]] \
-                && .semaphore/scripts/changed-in-push.sh release.svg .versions/next.txt; then
+              rc=1
+              if [[ "$SEMAPHORE_GIT_BRANCH" =~ ^v[0-9]+\.[0-9]+\.x$ ]]; then
+                rc=0
+                .semaphore/scripts/changed-in-push.sh release.svg .versions/next.txt || rc=$?
+              fi
+              if [ "$rc" -eq 0 ]; then
                 echo "This push on $SEMAPHORE_GIT_BRANCH is a release, which bumps its own microversion. Skipping."
+              elif [ "$rc" -eq 2 ]; then
+                # the release block fails on this push too, so don't move the version past it
+                echo "Can't tell whether this push is a release. Check the push, then rerun." >&2
+                false
               else
                 make bump-microversion
               fi
