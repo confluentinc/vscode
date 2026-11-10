@@ -54,6 +54,12 @@ const PROXY_TIMEOUT_CODE = "proxy_timeout";
  * error. A proxy timeout (`errors[0].code` of `proxy_timeout`) keeps the sidecar's title, which
  * names the host. A bare 504 names `target` instead.
  */
+export function sidecarTimeoutMessage(status: 504, body: unknown, target: string): string;
+export function sidecarTimeoutMessage(
+  status: number,
+  body: unknown,
+  target: string,
+): string | undefined;
 export function sidecarTimeoutMessage(
   status: number,
   body: unknown,
@@ -68,6 +74,11 @@ export function sidecarTimeoutMessage(
   if (isProxyTimeout && typeof failure.title === "string" && failure.title) {
     return failure.title;
   }
+  return timedOutWaitingFor(target);
+}
+
+/** The user-facing message for a timeout that names only what was being waited on. */
+export function timedOutWaitingFor(target: string): string {
   return `Timed out waiting for ${target}`;
 }
 
