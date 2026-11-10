@@ -9,6 +9,7 @@ import {
   getStubbedLocalResourceLoader,
 } from "../../../../tests/stubs/resourceLoaders";
 import { getSidecarStub } from "../../../../tests/stubs/sidecar";
+import { proxyTimeoutBody } from "../../../../tests/unit/testUtils";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
@@ -798,6 +799,20 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
         showErrorStub,
         `Error ${errorStatus} uploading schema: ${errorMessage}`,
       );
+    });
+
+    it("should say the upload timed out for a sidecar proxy timeout", async function () {
+      const title = "Schema Registry didn't respond within 20s";
+      stubbedSubjectsV1Api.register.rejects(
+        new ResponseError(new Response(JSON.stringify(proxyTimeoutBody(title)), { status: 504 })),
+      );
+
+      await assert.rejects(
+        registerSchema(stubbedSubjectsV1Api, "test-subject", SchemaType.Avro, "{}", true),
+        ResponseError,
+      );
+
+      sinon.assert.calledOnceWithExactly(showErrorStub, `Error uploading schema: ${title}`);
     });
 
     it("should show an error notification for non-ResponseErrors", async function () {
