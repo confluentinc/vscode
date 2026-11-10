@@ -232,6 +232,7 @@ describe("sidecarHandle sandbox tests", () => {
       assert.strictEqual(api.constructor.name, "RegionsFcpmV2Api");
     });
   });
+
   describe("request timeouts", () => {
     it("should time out default-config requests, after the CCloud auth status wait", () => {
       const middleware = handle.defaultClientConfigParams.middleware!;
