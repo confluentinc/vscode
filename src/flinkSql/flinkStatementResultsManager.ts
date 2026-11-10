@@ -200,6 +200,8 @@ export class FlinkStatementResultsManager {
   private readonly _filteredResults: Signal<any[]>;
   private _fetchCount = 0;
   private _statementRefreshInterval: NodeJS.Timeout | undefined;
+  private _statementRefreshInFlight = false;
+  private _statementRefreshFailing = false;
   private readonly _viewMode: Signal<ViewMode>;
 
   private readonly _flinkStatementResultsSqlApi: StatementResultsSqlV1Api;
@@ -258,14 +260,29 @@ export class FlinkStatementResultsManager {
   }
 
   private async refreshStatement() {
+    // a slow sidecar can take longer than the interval, and the refresh can't be cancelled
+    if (this._statementRefreshInFlight) {
+      return;
+    }
+    this._statementRefreshInFlight = true;
     let refreshedStatement: FlinkStatement | null;
     try {
       refreshedStatement = await this.resourceLoader.refreshFlinkStatement(this.statement);
     } catch (error) {
-      // leave the interval running, since the next refresh may succeed
-      logError(error, `refreshing Flink statement "${this.statement.name}" for its results panel`);
+      // leave the interval running, since the next refresh may succeed, but log a run of
+      // failures once instead of on every tick
+      if (!this._statementRefreshFailing) {
+        logError(
+          error,
+          `refreshing Flink statement "${this.statement.name}" for its results panel`,
+        );
+      }
+      this._statementRefreshFailing = true;
       return;
+    } finally {
+      this._statementRefreshInFlight = false;
     }
+    this._statementRefreshFailing = false;
     // a slow refresh can land after an earlier one already stopped the interval (or after
     // dispose), and with no later tick to correct it, applying it would pin a stale phase
     if (!this._statementRefreshInterval) {
