@@ -18,7 +18,11 @@ import { type KafkaTopic } from "../../../models/topic";
 import { showErrorNotificationWithButtons } from "../../../notifications";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../../../quickpicks/schemas";
 import { getSidecar } from "../../../sidecar";
-import { sidecarTimeoutMessage } from "../../../sidecar/errors";
+import {
+  SidecarRequestTimeoutError,
+  sidecarTimeoutMessage,
+  timedOutWaitingFor,
+} from "../../../sidecar/errors";
 import { hashed, logUsage, UserEvent } from "../../../telemetry/events";
 import { fileUriExists } from "../../../utils/file";
 import { retryWithBackoff } from "../../../utils/timing";
@@ -512,11 +516,22 @@ export async function registerSchema(
       }
 
       if (!message) {
-        message = `Error ${http_code} uploading schema: ${body.message}`;
+        // a non-JSON body (such as a proxy's HTML error page) has no message field
+        const detail =
+          typeof body?.message === "string"
+            ? body.message
+            : e.response.statusText || "unexpected response";
+        message = `Error ${http_code} uploading schema: ${detail}`;
       }
 
       logger.error(message);
       vscode.window.showErrorMessage(message);
+    } else if (e instanceof SidecarRequestTimeoutError) {
+      // its message is a diagnostic with the sidecar URL, so name Schema Registry instead
+      logger.error("Error uploading schema", e);
+      vscode.window.showErrorMessage(
+        `Error uploading schema: ${timedOutWaitingFor("Schema Registry")}`,
+      );
     } else {
       // non-http-related error!
       // TODO log these in sentry

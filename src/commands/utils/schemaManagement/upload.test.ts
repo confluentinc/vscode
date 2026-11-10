@@ -42,6 +42,7 @@ import { KafkaTopic } from "../../../models/topic";
 import * as notifications from "../../../notifications";
 import * as quickPicksSchemas from "../../../quickpicks/schemas";
 import type { SidecarHandle } from "../../../sidecar";
+import { SidecarRequestTimeoutError } from "../../../sidecar/errors";
 import { getSchemasViewProvider } from "../../../viewProviders/schemas";
 import {
   chooseSubject,
@@ -814,6 +815,41 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       );
 
       sinon.assert.calledOnceWithExactly(showErrorStub, `Error uploading schema: ${title}`);
+    });
+
+    it("should name Schema Registry, not the sidecar URL, for a client-side timeout", async function () {
+      stubbedSubjectsV1Api.register.rejects(
+        new SidecarRequestTimeoutError(
+          "Request to the sidecar (POST http://127.0.0.1:26636/subjects/s/versions)",
+          30_000,
+          new Error("timeout"),
+        ),
+      );
+
+      await assert.rejects(
+        registerSchema(stubbedSubjectsV1Api, "test-subject", SchemaType.Avro, "{}", true),
+        SidecarRequestTimeoutError,
+      );
+
+      sinon.assert.calledOnceWithExactly(
+        showErrorStub,
+        "Error uploading schema: Timed out waiting for Schema Registry",
+      );
+    });
+
+    it("should fall back to the HTTP status text for a non-JSON error body", async function () {
+      stubbedSubjectsV1Api.register.rejects(
+        new ResponseError(
+          new Response("<html>Bad Gateway</html>", { status: 502, statusText: "Bad Gateway" }),
+        ),
+      );
+
+      await assert.rejects(
+        registerSchema(stubbedSubjectsV1Api, "test-subject", SchemaType.Avro, "{}", true),
+        ResponseError,
+      );
+
+      sinon.assert.calledOnceWithExactly(showErrorStub, "Error 502 uploading schema: Bad Gateway");
     });
 
     it("should show an error notification for non-ResponseErrors", async function () {

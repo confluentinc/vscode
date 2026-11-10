@@ -423,7 +423,7 @@ export class FlinkStatementResultsManager {
               }
               case 504: {
                 const timeoutMessage = sidecarTimeoutMessage(status, payload, "Confluent Cloud");
-                reportable = { message: `${timeoutMessage}.` };
+                reportable = { message: `${timeoutMessage}. Reopen the results to try again.` };
                 logError(error, "flink statement results timed out");
                 break;
               }
@@ -451,7 +451,9 @@ export class FlinkStatementResultsManager {
           shouldComplete = true;
         } else if (error instanceof SidecarRequestTimeoutError) {
           logError(error, "flink statement results timed out");
-          reportable = { message: "Timed out waiting for results." };
+          reportable = {
+            message: "Timed out waiting for results. Reopen the results to try again.",
+          };
           shouldComplete = true;
         } else if (error instanceof Error) {
           logger.error(error.message);

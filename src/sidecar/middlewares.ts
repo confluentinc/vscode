@@ -138,6 +138,8 @@ export class ErrorResponseMiddleware implements Middleware {
 
 /** Used to prevent multiple instances of the `EXPIRED` progress notification stacking up. */
 let problematicStateNotificationOpen: boolean = false;
+/** Requests still blocked in the reconnect wait, which share the one progress notification. */
+let reconnectWaiters = 0;
 
 /** Check if a request is for Confluent Cloud handle different connected state scenarios. */
 export class CCloudAuthStatusMiddleware implements Middleware {
@@ -204,18 +206,21 @@ export class CCloudAuthStatusMiddleware implements Middleware {
     }
 
     // block the request that got us into this flow until the connected state "secret" changes, or
-    // fail it once the deadline passes; the notification above is left to the state-change event
+    // fail it once the deadline passes
     let secretSubscriber: vscode.Disposable | undefined;
+    let timedOut = false;
     const deadline = timeoutSignal(CCLOUD_RECONNECT_TIMEOUT_MS);
+    reconnectWaiters++;
     try {
       await new Promise<void>((resolve, reject) => {
-        deadline.signal.addEventListener("abort", () =>
+        deadline.signal.addEventListener("abort", () => {
+          timedOut = true;
           reject(
             new CCloudReconnectTimeoutError(
-              `Timed out after ${CCLOUD_RECONNECT_TIMEOUT_MS / 1000}s waiting to reconnect to Confluent Cloud.`,
+              `Timed out after ${CCLOUD_RECONNECT_TIMEOUT_MS / 1000}s waiting to reconnect to Confluent Cloud. Sign in again.`,
             ),
-          ),
-        );
+          );
+        });
         secretSubscriber = getSecretStorage().onDidChange(
           async ({ key }: vscode.SecretStorageChangeEvent) => {
             // any change (other state or the "secret" being deleted entirely) will resolve and unblock requests
@@ -226,8 +231,14 @@ export class CCloudAuthStatusMiddleware implements Middleware {
         );
       });
     } finally {
+      reconnectWaiters--;
       deadline.clear();
       secretSubscriber?.dispose();
+      if (timedOut && reconnectWaiters === 0) {
+        // stop claiming a reconnect is underway, and let a later EXPIRED state show it again
+        stableCCloudConnectedState.fire();
+        problematicStateNotificationOpen = false;
+      }
     }
   }
 }
