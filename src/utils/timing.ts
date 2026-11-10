@@ -63,38 +63,56 @@ export interface RetryWithBackoffOptions extends BackoffOptions {
   shouldRetry: (err: unknown) => boolean;
   /** Aborting ends a pending wait early and rethrows the failure that started it. */
   signal?: AbortSignal;
+  /**
+   * Budget in ms, counted from the first attempt, for starting retries. A wait that would end past
+   * it rethrows the failure instead. It doesn't cut short an attempt already running.
+   */
+  deadlineMs?: number;
 }
 
 /**
  * Run an operation, retrying failures that {@linkcode RetryWithBackoffOptions.shouldRetry} accepts
  * on the house backoff curve. A server-requested delay is a floor that is never shortened; when it
- * is longer than `capMs`, the failure is rethrown instead.
+ * is longer than `capMs`, or a wait would pass `deadlineMs`, the failure is rethrown instead.
  */
 export async function retryWithBackoff<T>(
   operation: () => Promise<T>,
   options: RetryWithBackoffOptions,
 ): Promise<T> {
-  const { operationName, maxRetries, shouldRetry, signal } = options;
+  const { operationName, maxRetries, shouldRetry, signal, deadlineMs } = options;
+  const startedAt = Date.now();
   for (let attempt = 0; ; attempt++) {
     try {
       return await operation();
     } catch (err) {
-      if (attempt >= maxRetries || !shouldRetry(err)) {
+      if (!shouldRetry(err)) {
+        throw err;
+      }
+      if (attempt >= maxRetries) {
+        logger.warn(`Giving up on ${operationName} after ${maxRetries} retries`);
         throw err;
       }
       const response = responseOf(err);
       const serverDelayMs = response ? serverRequestedDelayMs(response) : undefined;
       if (serverDelayMs !== undefined && serverDelayMs > options.capMs) {
-        logger.info(
-          `Not retrying ${operationName}: server asked for ${serverDelayMs}ms, over the ${options.capMs}ms cap`,
+        logger.warn(
+          `Giving up on ${operationName}: server asked for ${serverDelayMs}ms, over the ${options.capMs}ms cap`,
         );
         throw err;
       }
       const { minMs, maxMs } = backoffWindow(attempt, options, serverDelayMs);
+      const remainingMs =
+        deadlineMs === undefined ? Infinity : deadlineMs - (Date.now() - startedAt);
+      if (minMs >= remainingMs) {
+        logger.warn(
+          `Giving up on ${operationName}: the next ${minMs}ms wait would pass its ${deadlineMs}ms deadline`,
+        );
+        throw err;
+      }
       logger.debug(
         `Retrying ${operationName} after status ${response?.status ?? "n/a"}. Attempt ${attempt + 1}/${maxRetries}, waiting ${minMs}-${maxMs}ms`,
       );
-      await pauseWithJitter(minMs, maxMs, signal);
+      await pauseWithJitter(minMs, Math.min(maxMs, remainingMs), signal);
       if (signal?.aborted) {
         throw err;
       }
