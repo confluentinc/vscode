@@ -22,6 +22,11 @@ fi
 # handles both `a...b` and `a..b`
 before="${range%%..*}"
 after="${range##*..}"
+# git reports a new branch's missing "before" as all zeros
+if [[ "$before" =~ ^0+$ ]]; then
+  echo "No earlier commit in range $range (first push of a branch?)" >&2
+  exit 3
+fi
 for sha in "$before" "$after"; do
   if ! git cat-file -e "${sha}^{commit}" 2>/dev/null &&
     ! git fetch -q --no-tags --depth=1 origin "$sha"; then

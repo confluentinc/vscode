@@ -349,7 +349,7 @@ blocks:
                 echo "This push on $SEMAPHORE_GIT_BRANCH is a release, which bumps its own microversion. Skipping."
               elif [ "$rc" -eq 2 ]; then
                 # the release block fails on this push too, so don't move the version past it
-                echo "Can't tell whether this push is a release. Check the push, then rerun." >&2
+                echo "Can't tell whether this push is a release. If it isn't, run make bump-microversion by hand." >&2
                 false
               else
                 make bump-microversion
@@ -386,16 +386,23 @@ blocks:
           commands:
             - |
               rc=0
-              .semaphore/scripts/changed-in-push.sh .versions/next.txt || rc=$?
-              if [ "$rc" -eq 0 ]; then
-                # Release the current version, then prepare for the next version under development
-                make release-current-version && make bump-microversion
-              elif [ "$rc" -eq 2 ]; then
-                # fail loudly rather than let a release-PR merge pass without releasing
-                echo "Can't tell whether this push changed .versions/next.txt. Check the push, then rerun or release by hand." >&2
-                false
+              # PR pipelines see the PR's target as their branch, so a release PR matches the `when` above.
+              # The guard lives here because a `pull_request !~ '.*'` condition is false on pushes too.
+              if [ -n "${SEMAPHORE_GIT_PR_NUMBER:-}" ]; then
+                echo "PR pipeline. Releases run only on pushes to a release branch."
               else
-                echo "This push didn't change .versions/next.txt. Nothing to release."
+                .semaphore/scripts/changed-in-push.sh .versions/next.txt || rc=$?
+                if [ "$rc" -eq 0 ]; then
+                  # Release the current version, then prepare for the next version under development
+                  make release-current-version && make bump-microversion
+                elif [ "$rc" -eq 2 ]; then
+                  # fail loudly rather than let a release-PR merge pass without releasing (a rerun reads
+                  # the same range, so it would fail the same way)
+                  echo "Can't tell whether this push changed .versions/next.txt. Check the push, and release by hand if it did." >&2
+                  false
+                else
+                  echo "This push didn't change .versions/next.txt. Nothing to release."
+                fi
               fi
 
   - name: "Validate Release PR"
