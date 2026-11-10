@@ -29,3 +29,48 @@ export class WrongAuthSecretError extends Error {
     this.sidecar_process_id = sidecar_process_id;
   }
 }
+
+/** A request to the sidecar got no answer within its time budget. */
+export class SidecarRequestTimeoutError extends Error {
+  constructor(what: string, timeoutMs: number, cause: unknown) {
+    super(`${what} timed out after ${timeoutMs / 1000}s`, { cause });
+    this.name = "SidecarRequestTimeoutError";
+  }
+}
+
+/** A request gave up waiting for an expired Confluent Cloud session to reconnect. */
+export class CCloudReconnectTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CCloudReconnectTimeoutError";
+  }
+}
+
+/** The sidecar's `errors[].code` for an upstream request that timed out. */
+const PROXY_TIMEOUT_CODE = "proxy_timeout";
+
+/**
+ * A readable message for a sidecar response that reports a timeout, or undefined for any other
+ * error. A proxy timeout (`errors[0].code` of `proxy_timeout`) keeps the sidecar's title, which
+ * names the host. A bare 504 names `target` instead.
+ */
+export function sidecarTimeoutMessage(
+  status: number,
+  body: unknown,
+  target: string,
+): string | undefined {
+  const failure = isRecord(body) ? body : {};
+  const firstError = Array.isArray(failure.errors) ? failure.errors[0] : undefined;
+  const isProxyTimeout = isRecord(firstError) && firstError.code === PROXY_TIMEOUT_CODE;
+  if (!isProxyTimeout && status !== 504) {
+    return undefined;
+  }
+  if (isProxyTimeout && typeof failure.title === "string" && failure.title) {
+    return failure.title;
+  }
+  return `Timed out waiting for ${target}`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
