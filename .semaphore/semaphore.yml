@@ -28,8 +28,9 @@ blocks:
   # --- Static Analysis ---
   - name: "Static Analysis (TypeScript & ESLint)"
     dependencies: []
+    # Skip on main when the push is a release merge (see the stable tests' skip below)
     skip:
-      when: "change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+      when: "branch = 'main' and change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', default_branch: 'main'})"
     task:
       agent:
         machine:
@@ -52,11 +53,13 @@ blocks:
   # --- Build & Test (multi-platform/-arch) for VS Code (stable) ---
   - name: "Linux x64 Stable: Tests"
     dependencies: ["Static Analysis (TypeScript & ESLint)"]
-    # Skip when:
+    # Skip on main when:
     # - change in the release.svg file, signaling a `chore: none version bump vN.N.N` commit.
     # - change in the .versions/next.txt file, signaling a release PR merge commit.
+    # Release branches run these too, since `change_in` there would match every push since the
+    # branch was cut (see the release block below).
     skip: &build-test-skip-stable
-      when: "change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+      when: "branch = 'main' and change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', default_branch: 'main'})"
     task:
       agent:
         machine:
@@ -277,8 +280,10 @@ blocks:
   # --- Build & Test (multi-platform/-arch) for VS Code (insiders) ---
   - name: "Linux x64 Insiders: Tests"
     dependencies: ["Static Analysis (TypeScript & ESLint)"]
+    # Skip on release branches, so an Insiders failure can't hold up release packaging
     skip: &build-test-skip-insiders
-      when: "branch != 'main' AND change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+      when: >
+        branch =~ '^v[0-9]+\.[0-9]+\.x$'
     task:
       agent:
         machine:
@@ -324,16 +329,23 @@ blocks:
       #                       to set the next version under development)
       # For release branches: Skip bumping microversion on `chore: none version bump vN.N.N` commits (release commits)
       #                       and on merge commits that bump `next.txt` file (releases current version and prepares for next version).
+      #                       The job makes that check itself, since `change_in` can't limit it to this push's commits
+      #                       (see the release block below).
       # For pull requests:    Skips on all pull requests.
       when: >
-        (branch =~ '^v[0-9]+\.[0-9]+\.x$' and change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'}))
-        or (branch = 'main' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', default_branch: 'main'}))
+        (branch = 'main' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', default_branch: 'main'}))
         or pull_request =~ '.*'
     task:
       jobs:
         - name: "Bump microversion and commit (no tag)"
           commands:
-            - make bump-microversion
+            - |
+              if [[ "$SEMAPHORE_GIT_BRANCH" =~ ^v[0-9]+\.[0-9]+\.x$ ]] \
+                && .semaphore/scripts/changed-in-push.sh release.svg .versions/next.txt; then
+                echo "This push on $SEMAPHORE_GIT_BRANCH is a release, which bumps its own microversion. Skipping."
+              else
+                make bump-microversion
+              fi
 
   - name: "Set next version under development"
     dependencies:
@@ -351,21 +363,32 @@ blocks:
   - name: "[Release branch] Release current version and prepare for next version"
     dependencies: []
     run:
-      # IMPORTANT: We must set the branch_range to $SEMAPHORE_GIT_COMMIT_RANGE to ensure that the change_in function
-      #            examines only the commit(s) within the push that triggered the pipeline. We do this because the default
-      #            behavior for change_in on non-main branches is to examine commits up to the common ancestor of the
-      #            branch and the main branch. This may erroneously detect changes in the next.txt file that are not
-      #            part of the current push, but instead were part of a previous push.
-      #            Reference: https://docs.semaphoreci.com/reference/conditions-reference/#change_in
-      when: "branch =~ '^v[0-9]+.[0-9]+.x$' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+      # IMPORTANT: The job checks that this push changed next.txt, using only the commit(s) in the push that
+      #            triggered the pipeline (.semaphore/scripts/changed-in-push.sh). `change_in` can't do that here:
+      #            on non-main branches it examines commits back to the common ancestor with main, so it would
+      #            match a next.txt change from a previous push and release again. Its per-push range option
+      #            used to fix that, but spc now fails every PR pipeline at initialization when any `change_in`
+      #            sets it (https://github.com/semaphoreci/spc/pull/62).
+      #            Reference: https://docs.semaphore.io/reference/conditions-dsl
+      when: >
+        branch =~ '^v[0-9]+\.[0-9]+\.x$'
     task:
       jobs:
         - name: "Release current version and prepare for next version"
           commands:
-            # Release the current version
-            - make release-current-version
-            # Prepare for the next version under development
-            - make bump-microversion
+            - |
+              rc=0
+              .semaphore/scripts/changed-in-push.sh .versions/next.txt || rc=$?
+              if [ "$rc" -eq 0 ]; then
+                # Release the current version, then prepare for the next version under development
+                make release-current-version && make bump-microversion
+              elif [ "$rc" -eq 2 ]; then
+                # fail loudly rather than let a release-PR merge pass without releasing
+                echo "Can't tell whether this push changed .versions/next.txt. Check the push, then rerun or release by hand." >&2
+                false
+              else
+                echo "This push didn't change .versions/next.txt. Nothing to release."
+              fi
 
   - name: "Validate Release PR"
     dependencies: []
@@ -391,15 +414,21 @@ promotions:
   - name: Multi-Arch VSIX Packaging and Upload
     pipeline_file: multi-arch-packaging.yml
     auto_promote:
-      when: "result = 'passed' and branch =~ '.*' and change_in('/release.svg', {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+      # multi-arch-packaging.yml only packages and uploads when this commit is a tagged release
+      when: >
+        result = 'passed' and branch =~ '^v[0-9]+\.[0-9]+\.x$'
   - name: Third Party Notices
     pipeline_file: third-party-notices.yml
     auto_promote:
-      when: "branch =~ '.*' and change_in(['/package.json', '/NOTICE.txt', '/scripts/notices/NOTICE-vsix_PREAMBLE.txt'], {default_branch: 'main', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
+      # on release branches this matches every push since the branch was cut, so
+      # third-party-notices.yml also checks the push's own commits
+      when: "branch =~ '.*' and change_in(['/package.json', '/NOTICE.txt', '/scripts/notices/NOTICE-vsix_PREAMBLE.txt'], {default_branch: 'main', pipeline_file: 'ignore'})"
   - name: Validate Sidecar Version
     pipeline_file: validate-sidecar-version.yml
     auto_promote:
-      when: "result = 'passed' and change_in(['/.versions/ide-sidecar.txt', '/src/clients/sidecar-openapi-specs/sidecar.openapi.yaml'], {default_branch: 'main', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
+      # on release branches this matches every push since the branch was cut, which is fine for a
+      # read-only check
+      when: "result = 'passed' and change_in(['/.versions/ide-sidecar.txt', '/src/clients/sidecar-openapi-specs/sidecar.openapi.yaml'], {default_branch: 'main', pipeline_file: 'ignore'})"
   - name: Run Playwright E2E Tests
     pipeline_file: playwright-e2e.yml
     parameters:
