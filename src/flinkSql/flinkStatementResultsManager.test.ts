@@ -30,7 +30,6 @@ import type {
   ResultsViewerStorageState,
 } from "../webview/flink-statement-results";
 import type { StatementMeta } from "./flinkStatementResultsManager";
-import { transientBackoffWindow } from "./flinkStatementResultsManager";
 
 /** A successful results response carrying no rows. */
 const EMPTY_RESULTS_RESPONSE: GetSqlv1StatementResult200Response = {
@@ -640,8 +639,8 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
       const fetchPromise = ctx.manager.fetchResults();
 
-      // backoff doubles from 500ms and is jittered, so tick past the two maximums
-      await clock.tickAsync(500 + 1000);
+      // 1000ms then 1600ms, each with up to 20% jitter on top, so tick past both maximums
+      await clock.tickAsync(1200 + 1920);
 
       await fetchPromise;
 
@@ -662,15 +661,51 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       const fetchPromise = ctx.manager.fetchResults();
 
       // the exponential curve would have retried by now, but the server asked for 2s
-      await clock.tickAsync(1000);
+      await clock.tickAsync(1999);
       sinon.assert.calledOnce(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult);
 
-      // 2s as requested, plus up to one base delay of jitter on top
-      await clock.tickAsync(1500);
+      // the rest of the 2s, plus up to 20% jitter on top
+      await clock.tickAsync(1 + 400);
       await fetchPromise;
 
       sinon.assert.calledTwice(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult);
       assert.equal(ctx.manager["_latestError"](), null);
+    });
+
+    it("should wait out a Retry-After longer than the exponential curve's ceiling", async () => {
+      const stub = ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult;
+      stub.onFirstCall().rejects(
+        createResponseError(429, "Too Many Requests", "{}", ResponseErrorSource.Sidecar, {
+          "retry-after": "20",
+        }),
+      );
+      stub.onSecondCall().resolves(EMPTY_RESULTS_RESPONSE);
+
+      const fetchPromise = ctx.manager.fetchResults();
+      await clock.tickAsync(19_999);
+      sinon.assert.calledOnce(stub);
+      // the rest of the 20s, plus up to 20% jitter on top
+      await clock.tickAsync(1 + 4000);
+      await fetchPromise;
+
+      sinon.assert.calledTwice(stub);
+      assert.equal(ctx.manager["_latestError"](), null);
+    });
+
+    it("should report a Retry-After beyond the 30s cap instead of retrying early", async () => {
+      const stub = ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult;
+      stub.rejects(
+        createResponseError(429, "Too Many Requests", "{}", ResponseErrorSource.Sidecar, {
+          "retry-after": "45",
+        }),
+      );
+
+      const fetchPromise = ctx.manager.fetchResults();
+      await clock.tickAsync(10_000);
+      await fetchPromise;
+
+      sinon.assert.calledOnce(stub);
+      assert.ok(ctx.manager["_latestError"]());
     });
 
     it("should complete the stream after exhausting transient retries", async () => {
@@ -680,8 +715,8 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
       const fetchPromise = ctx.manager.fetchResults();
 
-      // 4 transient retries at up to 500/1000/2000/4000ms
-      await clock.tickAsync(7500);
+      // 4 transient retries at up to 1200/1920/3072/4915ms
+      await clock.tickAsync(11_200);
 
       await fetchPromise;
 
@@ -731,8 +766,8 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
       const fetchPromise = ctx.manager.fetchResults();
 
-      // 7500ms covers the transient backoffs, then the 409 waits with a little margin
-      await clock.tickAsync(7500 + 61 * 500);
+      // 11200ms covers the transient backoffs, then the 409 waits with a little margin
+      await clock.tickAsync(11_200 + 61 * 500);
 
       await fetchPromise;
 
@@ -1131,67 +1166,5 @@ describe("FlinkStatementResultsViewModel execution duration display", () => {
     await eventually(() => {
       assert.strictEqual(streamingVm.executionDurationDisplay(), "1m 15s");
     });
-  });
-});
-
-describe("flinkStatementResultsManager.ts transientBackoffWindow()", () => {
-  function responseWithHeaders(headers: Record<string, string>): Response {
-    return new Response("{}", { status: 429, headers });
-  }
-
-  it("should honor a Retry-After the server sends, never shortening it", () => {
-    const { minMs, maxMs } = transientBackoffWindow(responseWithHeaders({ "retry-after": "2" }), 0);
-
-    assert.equal(minMs, 2000);
-    assert.ok(maxMs > minMs, "jitter should only extend a server-requested delay");
-  });
-
-  it("should cap an outsized Retry-After", () => {
-    const { minMs } = transientBackoffWindow(responseWithHeaders({ "retry-after": "600" }), 0);
-
-    assert.equal(minMs, 8000);
-  });
-
-  it("should fall back to X-RateLimit-Reset when a 429 omits Retry-After", () => {
-    const { minMs } = transientBackoffWindow(
-      responseWithHeaders({ "x-ratelimit-limit": "5", "x-ratelimit-reset": "3" }),
-      0,
-    );
-
-    assert.equal(minMs, 3000);
-  });
-
-  it("should prefer Retry-After over X-RateLimit-Reset when both are present", () => {
-    const { minMs } = transientBackoffWindow(
-      responseWithHeaders({ "retry-after": "1", "x-ratelimit-reset": "3" }),
-      0,
-    );
-
-    assert.equal(minMs, 1000);
-  });
-
-  it("should fall back to an exponential curve without either header", () => {
-    const windows = [0, 1, 2, 3].map((attempt) =>
-      transientBackoffWindow(responseWithHeaders({}), attempt),
-    );
-
-    assert.deepEqual(
-      windows.map((w) => w.maxMs),
-      [500, 1000, 2000, 4000],
-    );
-    assert.deepEqual(
-      windows.map((w) => w.minMs),
-      [250, 500, 1000, 2000],
-    );
-  });
-
-  it("should fall back to the curve for a non-numeric Retry-After", () => {
-    // RFC 7231 also permits an HTTP-date, which we don't parse
-    const { maxMs } = transientBackoffWindow(
-      responseWithHeaders({ "retry-after": "Wed, 21 Oct 2015 07:28:00 GMT" }),
-      0,
-    );
-
-    assert.equal(maxMs, 500);
   });
 });
