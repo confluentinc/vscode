@@ -56,7 +56,7 @@ import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
 import type { ConnectionId, IEnvProviderRegion } from "../models/resource";
 import { showWarningNotificationWithButtons } from "../notifications";
-import { isTimeoutReason, timeoutSignal } from "../utils/timing";
+import { isTimeoutReason, withRequestTimeout } from "../utils/timing";
 import type { Message, MessageType } from "../ws/messageTypes";
 import {
   CCLOUD_ENV_ID_HEADER,
@@ -71,7 +71,6 @@ import {
   SIDECAR_PROCESS_ID_HEADER,
   SIDECAR_REQUEST_TIMEOUT_MS,
 } from "./constants";
-import { SidecarRequestTimeoutError } from "./errors";
 import {
   CCloudAuthStatusMiddleware,
   DebugRequestResponseMiddleware,
@@ -166,6 +165,10 @@ export class SidecarHandle {
   /**
    * Creates and returns a (Scaffolding Service OpenAPI spec) {@link TemplatesApi} client instance
    * with a preconfigured {@link ScaffoldingServiceConfiguration}.
+   *
+   * The client has no timeout of its own, so callers wrap each call in
+   * {@linkcode withRequestTimeout}. A {@link TimeoutMiddleware} here would stop covering the request once
+   * headers arrive, leaving a slow ZIP download unbounded.
    */
   public getTemplatesApi(): TemplatesScaffoldV1Api {
     const config = new ScaffoldingServiceConfiguration({
@@ -506,29 +509,21 @@ export class SidecarHandle {
       /** Construct a single new promise to make the query, then parse the json response. */
       const fetchAndExtractResponsePayload = async (): Promise<GraphQLResponse> => {
         // made per request, not taken from a caller, since concurrent callers share this promise
-        const { signal, clear } = timeoutSignal(GRAPHQL_TIMEOUT_MS);
-        try {
-          const response = await fetch(`${SIDECAR_BASE_URL}/gateway/v1/graphql`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ query: print(query), variables }),
-            signal,
-          });
+        return await withRequestTimeout(
+          "GraphQL request to the sidecar",
+          GRAPHQL_TIMEOUT_MS,
+          async (signal) => {
+            const response = await fetch(`${SIDECAR_BASE_URL}/gateway/v1/graphql`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ query: print(query), variables }),
+              signal,
+            });
 
-          // Consume the response body to extract the JSON payload exactly once.
-          return (await response.json()) as GraphQLResponse;
-        } catch (e) {
-          if (isTimeoutReason(signal.reason)) {
-            throw new SidecarRequestTimeoutError(
-              "GraphQL request to the sidecar",
-              GRAPHQL_TIMEOUT_MS,
-              e,
-            );
-          }
-          throw e;
-        } finally {
-          clear();
-        }
+            // Consume the response body to extract the JSON payload exactly once.
+            return (await response.json()) as GraphQLResponse;
+          },
+        );
       };
 
       fetchAndExtractPromise = fetchAndExtractResponsePayload();

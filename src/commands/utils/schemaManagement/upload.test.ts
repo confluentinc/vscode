@@ -42,7 +42,7 @@ import { KafkaTopic } from "../../../models/topic";
 import * as notifications from "../../../notifications";
 import * as quickPicksSchemas from "../../../quickpicks/schemas";
 import type { SidecarHandle } from "../../../sidecar";
-import { SidecarRequestTimeoutError } from "../../../sidecar/errors";
+import { RequestTimeoutError } from "../../../utils/timing";
 import { getSchemasViewProvider } from "../../../viewProviders/schemas";
 import {
   chooseSubject,
@@ -819,7 +819,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
 
     it("should name Schema Registry, not the sidecar URL, for a client-side timeout", async function () {
       stubbedSubjectsV1Api.register.rejects(
-        new SidecarRequestTimeoutError(
+        new RequestTimeoutError(
           "Request to the sidecar (POST http://127.0.0.1:26636/subjects/s/versions)",
           30_000,
           new Error("timeout"),
@@ -828,7 +828,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
 
       await assert.rejects(
         registerSchema(stubbedSubjectsV1Api, "test-subject", SchemaType.Avro, "{}", true),
-        SidecarRequestTimeoutError,
+        RequestTimeoutError,
       );
 
       sinon.assert.calledOnceWithExactly(
