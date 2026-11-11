@@ -8,7 +8,7 @@ import {
   type SubjectVersion,
 } from "../../../clients/schemaRegistryRest";
 import { schemaSubjectChanged, schemaVersionsChanged } from "../../../emitters";
-import { isResponseErrorWithStatus, logError } from "../../../errors";
+import { extractResponseBody, isResponseErrorWithStatus, logError } from "../../../errors";
 import { ResourceLoader } from "../../../loaders";
 import { Logger } from "../../../logging";
 import type { Subject } from "../../../models/schema";
@@ -18,6 +18,11 @@ import { type KafkaTopic } from "../../../models/topic";
 import { showErrorNotificationWithButtons } from "../../../notifications";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../../../quickpicks/schemas";
 import { getSidecar } from "../../../sidecar";
+import {
+  SidecarRequestTimeoutError,
+  sidecarTimeoutMessage,
+  timedOutWaitingFor,
+} from "../../../sidecar/errors";
 import { hashed, logUsage, UserEvent } from "../../../telemetry/events";
 import { fileUriExists } from "../../../utils/file";
 import { retryWithBackoff } from "../../../utils/timing";
@@ -482,7 +487,8 @@ export async function registerSchema(
   } catch (e) {
     if (e instanceof ResponseError) {
       const http_code = e.response.status;
-      const body = await e.response.json();
+      // falls back to text for a non-JSON body, such as a 504 from a proxy in between
+      const body = await extractResponseBody(e);
 
       let message: string | undefined;
       switch (http_code) {
@@ -496,6 +502,9 @@ export async function registerSchema(
           // surprising inconsistencies).
           message = `Conflict with prior schema version: ${parseConflictMessage(schemaType, body.message)}`;
           break;
+        case 504:
+          message = `Error uploading schema: ${sidecarTimeoutMessage(http_code, body, "Schema Registry")}`;
+          break;
         case 422:
           if (body.error_code === 42201) {
             // the schema was invalid / bad syntax. Most of these will end with
@@ -507,11 +516,22 @@ export async function registerSchema(
       }
 
       if (!message) {
-        message = `Error ${http_code} uploading schema: ${body.message}`;
+        // a non-JSON body (such as a proxy's HTML error page) has no message field
+        const detail =
+          typeof body?.message === "string"
+            ? body.message
+            : e.response.statusText || "unexpected response";
+        message = `Error ${http_code} uploading schema: ${detail}`;
       }
 
       logger.error(message);
       vscode.window.showErrorMessage(message);
+    } else if (e instanceof SidecarRequestTimeoutError) {
+      // its message is a diagnostic with the sidecar URL, so name Schema Registry instead
+      logger.error("Error uploading schema", e);
+      vscode.window.showErrorMessage(
+        `Error uploading schema: ${timedOutWaitingFor("Schema Registry")}`,
+      );
     } else {
       // non-http-related error!
       // TODO log these in sentry
