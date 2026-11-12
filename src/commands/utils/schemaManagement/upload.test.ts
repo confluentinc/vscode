@@ -727,7 +727,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
     });
 
     it("should fail on a timeout, naming Schema Registry, instead of treating the subject as new", async function () {
-      const timeout = new SidecarRequestTimeoutError("GET /subjects", 30_000, undefined);
+      const timeout = new RequestTimeoutError("GET /subjects", 30_000, undefined);
       mockSchemaSubjectsApi.listVersions.rejects(timeout);
 
       await assert.rejects(

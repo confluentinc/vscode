@@ -433,7 +433,7 @@ export async function getHighestRegisteredVersion(
   } catch (e) {
     // a 404 means the subject doesn't exist yet, so leave existingVersion undefined; anything
     // else means we can't tell, so fail the upload
-    if (e instanceof SidecarRequestTimeoutError) {
+    if (e instanceof RequestTimeoutError) {
       // its message is a diagnostic with the sidecar URL, so name Schema Registry instead
       throw new Error(timedOutWaitingFor("Schema Registry"), { cause: e });
     }
