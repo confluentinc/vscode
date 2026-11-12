@@ -356,7 +356,10 @@ describe("TimeoutMiddleware", () => {
       }),
     );
 
-    const rejected = assert.rejects(api.gatewayV1PreferencesGet(), SidecarRequestTimeoutError);
+    const rejected = assert.rejects(
+      api.gatewayV1PreferencesGet(),
+      (err) => err instanceof SidecarRequestTimeoutError && err.message.includes("(HTTP 500)"),
+    );
     await clock.tickAsync(30_000);
 
     await rejected;
