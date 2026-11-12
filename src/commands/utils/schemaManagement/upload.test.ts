@@ -738,6 +738,20 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
           error.cause === timeout,
       );
     });
+
+    it("should fail on a sidecar 504, naming the host that didn't respond", async function () {
+      const title = "Schema Registry didn't respond within 20s";
+      const proxyTimeout = new ResponseError(
+        new Response(JSON.stringify(proxyTimeoutBody(title)), { status: 504 }),
+      );
+      mockSchemaSubjectsApi.listVersions.rejects(proxyTimeout);
+
+      await assert.rejects(
+        getHighestRegisteredVersion(mockSchemaSubjectsApi, "test-subject"),
+        (error) =>
+          error instanceof Error && error.message === title && error.cause === proxyTimeout,
+      );
+    });
   });
 
   describe("registerSchema()", function () {

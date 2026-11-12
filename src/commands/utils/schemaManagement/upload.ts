@@ -441,6 +441,11 @@ export async function getHighestRegisteredVersion(
       // its message is a diagnostic with the sidecar URL, so name Schema Registry instead
       throw new Error(timedOutWaitingFor("Schema Registry"), { cause: e });
     }
+    if (isResponseErrorWithStatus(e, 504)) {
+      // the sidecar's timeout body names the host that didn't respond
+      const body = await extractResponseBody(e);
+      throw new Error(sidecarTimeoutMessage(504, body, "Schema Registry"), { cause: e });
+    }
     if (!(e instanceof ResponseError && e.response.status === 404)) {
       throw e;
     }
