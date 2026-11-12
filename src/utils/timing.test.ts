@@ -140,6 +140,14 @@ describe("utils/timing", () => {
         assert.strictEqual(delay, undefined);
       });
 
+      it("should fall back to X-RateLimit-Reset when Retry-After is malformed", () => {
+        const delay = serverRequestedDelayMs(
+          headers({ "retry-after": "soon", "x-ratelimit-reset": "20" }),
+        );
+
+        assert.strictEqual(delay, 20_000);
+      });
+
       it("should return undefined without a usable header", () => {
         assert.strictEqual(serverRequestedDelayMs(headers({})), undefined);
         assert.strictEqual(serverRequestedDelayMs(headers({ "retry-after": "0" })), undefined);
@@ -334,6 +342,24 @@ describe("utils/timing", () => {
 
         sinon.assert.calledTwice(op);
         assert.strictEqual(await promise, "ok");
+      });
+
+      it("should give up when a late timer ends the wait past deadlineMs", async () => {
+        (Math.random as sinon.SinonStub).returns(0);
+        const original = failure(503);
+        const op = sandbox.stub();
+        op.onFirstCall().rejects(original);
+        op.onSecondCall().resolves("ok");
+
+        const promise = retryWithBackoff(op, { ...baseOptions, deadlineMs: 1100 });
+        const rejected = assert.rejects(promise, (err) => err === original);
+        await clock.tickAsync(0);
+        // the event loop stalls for 200ms mid-wait, so the 1000ms timer fires at 1200ms
+        clock.setSystemTime(Date.now() + 200);
+        await clock.tickAsync(1000);
+
+        await rejected;
+        sinon.assert.calledOnce(op);
       });
 
       it("should rethrow the original error when aborted mid-wait", async () => {

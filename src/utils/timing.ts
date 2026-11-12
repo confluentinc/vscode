@@ -117,6 +117,13 @@ export async function retryWithBackoff<T>(
       if (signal?.aborted) {
         throw err;
       }
+      // a timer can fire late when the event loop is busy
+      if (deadlineMs !== undefined && Date.now() - startedAt > deadlineMs) {
+        logger.warn(
+          `Giving up on ${operationName}: its wait ended past its ${deadlineMs}ms deadline`,
+        );
+        throw err;
+      }
     }
   }
 }
@@ -142,10 +149,10 @@ export function backoffWindow(
  * the rate limit window resets. Undefined when the header in use holds no delay in the future.
  */
 export function serverRequestedDelayMs(response: Response): number | undefined {
-  const retryAfter = response.headers.get("retry-after");
-  if (retryAfter !== null) {
+  const retryAfterMs = retryAfterToMs(response.headers.get("retry-after"));
+  if (retryAfterMs !== undefined) {
     // a zero or past Retry-After means "retry now", so it still outranks X-RateLimit-Reset
-    return secondsToMs(retryAfter) ?? untilDateMs(retryAfter);
+    return retryAfterMs > 0 ? retryAfterMs : undefined;
   }
   // CCloud sends X-RateLimit-Reset on every response, so it only explains a wait on a 429
   return response.status === 429
@@ -167,9 +174,18 @@ function secondsToMs(header: string | null): number | undefined {
   return header && Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : undefined;
 }
 
-function untilDateMs(header: string | null): number | undefined {
-  const delayMs = header ? Date.parse(header) - Date.now() : NaN;
-  return delayMs > 0 ? delayMs : undefined;
+/** A `Retry-After` value as ms from now (zero or less means now), or undefined if malformed. */
+function retryAfterToMs(header: string | null): number | undefined {
+  const value = header?.trim();
+  if (!value) {
+    return undefined;
+  }
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) {
+    return seconds * 1000;
+  }
+  const date = Date.parse(value);
+  return Number.isNaN(date) ? undefined : date - Date.now();
 }
 
 /**
