@@ -1,6 +1,8 @@
 import * as assert from "assert";
 import "mocha";
 import * as sinon from "sinon";
+import { stalledBodyFetch } from "../../tests/unit/testUtils";
+import { ResponseError } from "../clients/scaffoldingService";
 import { Logger } from "../logging";
 import {
   backoffWindow,
@@ -464,6 +466,29 @@ describe("utils/timing", () => {
         });
 
         await assert.rejects(pending, (err) => err === failure);
+      });
+
+      it("should keep timing a failed response's body, which callers read for the error", async () => {
+        const pending = withRequestTimeout("Test request", 1000, async (signal) => {
+          const response = await stalledBodyFetch("application/json", 500)("test", { signal });
+          throw new ResponseError(response);
+        });
+        const rejected = assert.rejects(pending, RequestTimeoutError);
+
+        await clock.tickAsync(1000);
+
+        await rejected;
+      });
+
+      it("should leave a failed response's body readable for the caller", async () => {
+        const failure = new ResponseError(new Response('{"message":"boom"}', { status: 500 }));
+
+        const pending = withRequestTimeout("Test request", 1000, async () => {
+          throw failure;
+        });
+
+        await assert.rejects(pending, (err) => err === failure);
+        assert.deepStrictEqual(await failure.response.json(), { message: "boom" });
       });
 
       it("should stop its timer once the request settles", async () => {
