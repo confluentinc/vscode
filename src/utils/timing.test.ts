@@ -140,13 +140,15 @@ describe("utils/timing", () => {
         assert.strictEqual(delay, undefined);
       });
 
-      it("should fall back to X-RateLimit-Reset when Retry-After is malformed", () => {
-        const delay = serverRequestedDelayMs(
-          headers({ "retry-after": "soon", "x-ratelimit-reset": "20" }),
-        );
+      for (const malformed of ["soon", "-5", "1.5", "1e3", "garbage 99"]) {
+        it(`should fall back to X-RateLimit-Reset when Retry-After is malformed ("${malformed}")`, () => {
+          const delay = serverRequestedDelayMs(
+            headers({ "retry-after": malformed, "x-ratelimit-reset": "20" }),
+          );
 
-        assert.strictEqual(delay, 20_000);
-      });
+          assert.strictEqual(delay, 20_000);
+        });
+      }
 
       it("should return undefined without a usable header", () => {
         assert.strictEqual(serverRequestedDelayMs(headers({})), undefined);
@@ -338,6 +340,23 @@ describe("utils/timing", () => {
         op.onSecondCall().resolves("ok");
 
         const promise = retryWithBackoff(op, { ...baseOptions, deadlineMs: 1100 });
+        await clock.tickAsync(1100);
+
+        sinon.assert.calledTwice(op);
+        assert.strictEqual(await promise, "ok");
+      });
+
+      it("should still retry when a wait cut short to the deadline fires a few ms late", async () => {
+        // jitter at the top of the 1000-1200ms window, so the wait is cut to the 1100ms deadline
+        (Math.random as sinon.SinonStub).returns(0.999);
+        const op = sandbox.stub();
+        op.onFirstCall().rejects(failure(503));
+        op.onSecondCall().resolves("ok");
+
+        const promise = retryWithBackoff(op, { ...baseOptions, deadlineMs: 1100 });
+        await clock.tickAsync(0);
+        // ordinary timer lateness
+        clock.setSystemTime(Date.now() + 5);
         await clock.tickAsync(1100);
 
         sinon.assert.calledTwice(op);
