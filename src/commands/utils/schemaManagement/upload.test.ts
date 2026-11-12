@@ -728,7 +728,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
     });
 
     it("should fail on a timeout, naming Schema Registry, instead of treating the subject as new", async function () {
-      const timeout = new SidecarRequestTimeoutError(
+      const timeout = new RequestTimeoutError(
         "GET /subjects",
         SIDECAR_REQUEST_TIMEOUT_MS,
         undefined,
