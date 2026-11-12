@@ -210,7 +210,7 @@ export function hungFetch(_url: string | URL | Request, init?: RequestInit): Pro
 }
 
 /** A `fetch` stand-in whose headers arrive at once but whose body never finishes until aborted. */
-export function stalledBodyFetch(contentType: string) {
+export function stalledBodyFetch(contentType: string, status: number = 200) {
   return async (_url: string | URL | Request, init?: RequestInit): Promise<Response> =>
     new Response(
       new ReadableStream({
@@ -218,6 +218,6 @@ export function stalledBodyFetch(contentType: string) {
           init?.signal?.addEventListener("abort", () => controller.error(init.signal!.reason));
         },
       }),
-      { status: 200, headers: { "Content-Type": contentType } },
+      { status, headers: { "Content-Type": contentType } },
     );
 }
