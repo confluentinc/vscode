@@ -473,7 +473,12 @@ describe("utils/timing", () => {
           const response = await stalledBodyFetch("application/json", 500)("test", { signal });
           throw new ResponseError(response);
         });
-        const rejected = assert.rejects(pending, RequestTimeoutError);
+        const rejected = assert.rejects(
+          pending,
+          (err) =>
+            err instanceof RequestTimeoutError &&
+            err.message === "Test request (HTTP 500) timed out after 1s",
+        );
 
         await clock.tickAsync(1000);
 

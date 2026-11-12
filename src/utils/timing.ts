@@ -232,7 +232,8 @@ export class RequestTimeoutError extends Error {
 /**
  * Run `request` with a signal that aborts after `timeoutMs`, turning that timeout into a
  * {@link RequestTimeoutError} naming `what`. Read the body inside `request` so the timeout covers it.
- * A failed response's body is buffered within the budget before the error is rethrown.
+ * A failed response's body is buffered within the budget before the error is rethrown, so `request`
+ * must pass `signal` to its fetch for a stalled body to be cut off.
  */
 export async function withRequestTimeout<T>(
   what: string,
@@ -251,7 +252,9 @@ export async function withRequestTimeout<T>(
     }
   } catch (e) {
     if (isTimeoutReason(signal.reason)) {
-      throw new RequestTimeoutError(what, timeoutMs, e);
+      // a failed response whose body stalled still says which error the server sent
+      const status = responseOf(e)?.status;
+      throw new RequestTimeoutError(status ? `${what} (HTTP ${status})` : what, timeoutMs, e);
     }
     throw e;
   } finally {
