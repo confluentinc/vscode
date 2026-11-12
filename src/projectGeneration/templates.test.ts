@@ -2,12 +2,16 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
+import { stalledBodyFetch } from "../../tests/unit/testUtils";
 import type { ScaffoldV1Template, ScaffoldV1TemplateList } from "../clients/scaffoldingService";
 import {
+  Configuration as ScaffoldingConfiguration,
   ScaffoldV1TemplateListFromJSON,
   TemplatesScaffoldV1Api,
 } from "../clients/scaffoldingService";
 import type { SidecarHandle } from "../sidecar";
+import { SCAFFOLDING_LIST_TIMEOUT_MS } from "../sidecar/constants";
+import { RequestTimeoutError } from "../utils/timing";
 import {
   filterSensitiveKeys,
   getTemplatesList,
@@ -113,6 +117,30 @@ describe("templates.ts", () => {
       assert.strictEqual(result.length, 2);
       assert.strictEqual(result[0].spec?.name, "java-client");
       assert.strictEqual(result[1].spec?.name, "python-client");
+      sinon.assert.calledOnceWithExactly(
+        stubbedTemplatesApi.listScaffoldV1Templates,
+        { template_collection_name: "my-collection" },
+        sinon.match({ signal: sinon.match.instanceOf(AbortSignal) }),
+      );
+    });
+
+    it("should give up when the template list stalls after its headers", async () => {
+      const clock = sandbox.useFakeTimers();
+      const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
+      stubbedSidecar.getTemplatesApi.returns(
+        new TemplatesScaffoldV1Api(
+          new ScaffoldingConfiguration({
+            basePath: "http://scaffolding.test",
+            fetchApi: stalledBodyFetch("application/json"),
+          }),
+        ),
+      );
+
+      const listing = getTemplatesList();
+      const rejected = assert.rejects(listing, RequestTimeoutError);
+      await clock.tickAsync(SCAFFOLDING_LIST_TIMEOUT_MS);
+
+      await rejected;
     });
   });
 
