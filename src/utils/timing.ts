@@ -8,6 +8,11 @@ const BACKOFF_BASE_MS = 1000;
 const BACKOFF_FACTOR = 1.6;
 /** Jitter added on top of each delay, as a fraction of it. Additive, so it never shortens a wait. */
 const BACKOFF_JITTER_RATIO = 0.2;
+/** How late a wait's timer may fire and still start its retry, since timers rarely fire on time. */
+const LATE_TIMER_GRACE_MS = 50;
+/** `Retry-After` as delay-seconds or an IMF-fixdate, per RFC 9110 section 10.2.3. */
+const RETRY_AFTER_SECONDS = /^\d+$/;
+const RETRY_AFTER_DATE = /^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/;
 
 const logger = new Logger("utils.timing");
 
@@ -117,8 +122,8 @@ export async function retryWithBackoff<T>(
       if (signal?.aborted) {
         throw err;
       }
-      // a timer can fire late when the event loop is busy
-      if (deadlineMs !== undefined && Date.now() - startedAt > deadlineMs) {
+      // a timer can fire well past its delay when the event loop is busy
+      if (deadlineMs !== undefined && Date.now() - startedAt > deadlineMs + LATE_TIMER_GRACE_MS) {
         logger.warn(
           `Giving up on ${operationName}: its wait ended past its ${deadlineMs}ms deadline`,
         );
@@ -180,12 +185,11 @@ function retryAfterToMs(header: string | null): number | undefined {
   if (!value) {
     return undefined;
   }
-  const seconds = Number(value);
-  if (Number.isFinite(seconds)) {
-    return seconds * 1000;
+  if (RETRY_AFTER_SECONDS.test(value)) {
+    return Number(value) * 1000;
   }
-  const date = Date.parse(value);
-  return Number.isNaN(date) ? undefined : date - Date.now();
+  // Date.parse accepts nearly anything, so check the shape first
+  return RETRY_AFTER_DATE.test(value) ? Date.parse(value) - Date.now() : undefined;
 }
 
 /**
