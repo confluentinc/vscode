@@ -435,15 +435,10 @@ export async function getHighestRegisteredVersion(
       existingVersion = existingVersions[existingVersions.length - 1];
     }
   } catch (e) {
-    if (e instanceof ResponseError) {
-      const http_code = e.response.status;
-      if (http_code === 404) {
-        // This is fine, it means the subject doesn't exist yet.
-        // Leave existingVersion as undefined.
-      } else {
-        // Some other error, so re-throw.
-        throw e;
-      }
+    // a 404 means the subject doesn't exist yet, so leave existingVersion undefined; anything
+    // else (including a timeout) means we can't tell, so re-throw
+    if (!(e instanceof ResponseError && e.response.status === 404)) {
+      throw e;
     }
   }
 
