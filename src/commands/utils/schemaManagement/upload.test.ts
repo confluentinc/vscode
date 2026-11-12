@@ -38,6 +38,7 @@ import type {
   LocalSchemaRegistry,
 } from "../../../models/schemaRegistry";
 import { KafkaTopic } from "../../../models/topic";
+import * as notifications from "../../../notifications";
 import * as quickPicksSchemas from "../../../quickpicks/schemas";
 import type { SidecarHandle } from "../../../sidecar";
 import { getSchemasViewProvider } from "../../../viewProviders/schemas";
@@ -895,6 +896,50 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       sinon.assert.callCount(stubbedSchemasV1Api.getVersions, 3);
     });
 
+    it("should back off between 404 retries, starting at 100ms", async function () {
+      const clock = sandbox.useFakeTimers();
+      // pin jitter to the bottom of each window
+      sandbox.stub(Math, "random").returns(0);
+      const errorResponse = new ResponseError(new Response("Not found", { status: 404 }));
+      stubbedSchemasV1Api.getVersions
+        .onCall(0)
+        .rejects(errorResponse)
+        .onCall(1)
+        .rejects(errorResponse)
+        .onCall(2)
+        .resolves(subjectVersionPairs);
+
+      const promise = getNewlyRegisteredVersion(stubbedSchemasV1Api, testSubjectName, testSchemaId);
+      await clock.tickAsync(100);
+      sinon.assert.calledTwice(stubbedSchemasV1Api.getVersions);
+      await clock.tickAsync(159);
+      sinon.assert.calledTwice(stubbedSchemasV1Api.getVersions);
+      await clock.tickAsync(1);
+
+      assert.strictEqual(await promise, testSchemaVersion);
+      sinon.assert.calledThrice(stubbedSchemasV1Api.getVersions);
+    });
+
+    it("should give up after 4 retries of 404", async function () {
+      const clock = sandbox.useFakeTimers();
+      stubbedSchemasV1Api.getVersions.rejects(
+        new ResponseError(new Response("Not found", { status: 404 })),
+      );
+
+      const promise = getNewlyRegisteredVersion(stubbedSchemasV1Api, testSubjectName, testSchemaId);
+      const rejected = assert.rejects(
+        promise,
+        (error) =>
+          error instanceof Error &&
+          error.message ===
+            `Could not find subject "${testSubjectName}" in the list of bindings for schema id ${testSchemaId}`,
+      );
+      await clock.tickAsync(5000);
+
+      await rejected;
+      sinon.assert.callCount(stubbedSchemasV1Api.getVersions, 5);
+    });
+
     it("should throw an error if subject is not found after retries", async function () {
       stubbedSchemasV1Api.getVersions.resolves([{ subject: "other-subject", version: 1 }]);
 
@@ -908,10 +953,9 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       );
     });
 
-    it("should throw an error if getVersions throws non-404 error", async function () {
-      stubbedSchemasV1Api.getVersions.rejects(
-        new ResponseError(new Response("Server error", { status: 500 })),
-      );
+    it("should rethrow a non-404 failure with its cause instead of reporting the subject missing", async function () {
+      const serverError = new ResponseError(new Response("Server error", { status: 500 }));
+      stubbedSchemasV1Api.getVersions.rejects(serverError);
 
       await assert.rejects(
         async () =>
@@ -919,9 +963,38 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
         (error) =>
           error instanceof Error &&
           error.message ===
-            `Could not find subject "${testSubjectName}" in the list of bindings for schema id ${testSchemaId}`,
+            `Could not read back the version of schema id ${testSchemaId} for subject "${testSubjectName}"` &&
+          error.cause === serverError,
       );
     });
+
+    for (const { description, arrange } of [
+      {
+        description: "the subject isn't among the schema's bindings",
+        arrange: () => stubbedSchemasV1Api.getVersions.resolves([]),
+      },
+      {
+        description: "the read-back fails",
+        arrange: () =>
+          stubbedSchemasV1Api.getVersions.rejects(
+            new ResponseError(new Response("Server error", { status: 500 })),
+          ),
+      },
+    ]) {
+      it(`should tell the user the schema was registered when ${description}`, async function () {
+        const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+        arrange();
+
+        await assert.rejects(
+          getNewlyRegisteredVersion(stubbedSchemasV1Api, testSubjectName, testSchemaId),
+        );
+
+        sinon.assert.calledOnceWithExactly(
+          showErrorStub,
+          `The schema was registered to subject "${testSubjectName}", but its new version couldn't be read back.`,
+        );
+      });
+    }
   });
 
   for (const connectionType of Object.values(ConnectionType)) {

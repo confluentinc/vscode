@@ -1,7 +1,15 @@
 import * as assert from "assert";
 import "mocha";
 import * as sinon from "sinon";
-import { IntervalPoller, pauseWithJitter, raceWithTimeout } from "./timing";
+import { Logger } from "../logging";
+import {
+  backoffWindow,
+  IntervalPoller,
+  pauseWithJitter,
+  raceWithTimeout,
+  retryWithBackoff,
+  serverRequestedDelayMs,
+} from "./timing";
 
 describe("utils/timing", () => {
   let sandbox: sinon.SinonSandbox;
@@ -64,6 +72,328 @@ describe("utils/timing", () => {
           await pauseWithJitter(100, 99);
         });
       });
+
+      it("should return early and clear its timer when the signal aborts", async () => {
+        const controller = new AbortController();
+        const promise = pauseWithJitter(10_000, 10_000, controller.signal);
+        await clock.tickAsync(100);
+        // other modules (e.g. logging) may hold timers of their own, so count relative to now
+        const timersWhilePaused = clock.countTimers();
+
+        controller.abort();
+        await promise;
+
+        assert.strictEqual(clock.countTimers(), timersWhilePaused - 1);
+      });
+
+      it("should not wait at all on an already-aborted signal", async () => {
+        const controller = new AbortController();
+        controller.abort();
+
+        await pauseWithJitter(10_000, 10_000, controller.signal);
+
+        assert.strictEqual(clock.countTimers(), 0);
+      });
+    });
+
+    describe("serverRequestedDelayMs", () => {
+      function headers(h: Record<string, string>): Response {
+        return new Response("", { status: 429, headers: h });
+      }
+
+      it("should read Retry-After in seconds", () => {
+        assert.strictEqual(serverRequestedDelayMs(headers({ "retry-after": "2" })), 2000);
+      });
+
+      it("should read Retry-After as an HTTP-date relative to now", () => {
+        const inFiveSeconds = new Date(Date.now() + 5000).toUTCString();
+
+        const delay = serverRequestedDelayMs(headers({ "retry-after": inFiveSeconds }));
+
+        // HTTP-dates have whole-second resolution, so up to 1s of the wait can be rounded away
+        assert.ok(delay !== undefined && delay > 4000 && delay <= 5000, `got ${delay}`);
+      });
+
+      it("should ignore a Retry-After date in the past", () => {
+        const past = new Date(Date.now() - 5000).toUTCString();
+
+        assert.strictEqual(serverRequestedDelayMs(headers({ "retry-after": past })), undefined);
+      });
+
+      it("should fall back to X-RateLimit-Reset when Retry-After is absent", () => {
+        assert.strictEqual(serverRequestedDelayMs(headers({ "x-ratelimit-reset": "3" })), 3000);
+      });
+
+      it("should prefer Retry-After over X-RateLimit-Reset", () => {
+        const delay = serverRequestedDelayMs(
+          headers({ "retry-after": "1", "x-ratelimit-reset": "3" }),
+        );
+
+        assert.strictEqual(delay, 1000);
+      });
+
+      it("should not fall back to X-RateLimit-Reset when Retry-After says retry now", () => {
+        const delay = serverRequestedDelayMs(
+          headers({ "retry-after": "0", "x-ratelimit-reset": "30" }),
+        );
+
+        assert.strictEqual(delay, undefined);
+      });
+
+      for (const malformed of ["soon", "-5", "1.5", "1e3", "garbage 99"]) {
+        it(`should fall back to X-RateLimit-Reset when Retry-After is malformed ("${malformed}")`, () => {
+          const delay = serverRequestedDelayMs(
+            headers({ "retry-after": malformed, "x-ratelimit-reset": "20" }),
+          );
+
+          assert.strictEqual(delay, 20_000);
+        });
+      }
+
+      it("should return undefined without a usable header", () => {
+        assert.strictEqual(serverRequestedDelayMs(headers({})), undefined);
+        assert.strictEqual(serverRequestedDelayMs(headers({ "retry-after": "0" })), undefined);
+        assert.strictEqual(serverRequestedDelayMs(headers({ "retry-after": "soon" })), undefined);
+      });
+    });
+
+    describe("retryWithBackoff", () => {
+      /** An error carrying a response, the way generated-client `ResponseError`s do. */
+      class FakeResponseError extends Error {
+        constructor(readonly response: Response) {
+          super(`status ${response.status}`);
+        }
+      }
+
+      function failure(status: number, h: Record<string, string> = {}): FakeResponseError {
+        return new FakeResponseError(new Response("", { status, headers: h }));
+      }
+
+      const baseOptions = {
+        operationName: "test",
+        capMs: 30_000,
+        maxRetries: 4,
+        shouldRetry: (err: unknown) => err instanceof FakeResponseError,
+      };
+
+      beforeEach(() => {
+        // pin jitter to the bottom of each window, so the shortest possible wait is what's tested
+        sandbox.stub(Math, "random").returns(0);
+      });
+
+      it("should retry until the operation succeeds", async () => {
+        const op = sandbox.stub();
+        op.onFirstCall().rejects(failure(503));
+        op.onSecondCall().resolves("ok");
+
+        const promise = retryWithBackoff(op, baseOptions);
+        await clock.tickAsync(1000);
+
+        assert.strictEqual(await promise, "ok");
+        sinon.assert.calledTwice(op);
+      });
+
+      it("should rethrow the last error once maxRetries is spent", async () => {
+        const last = failure(503);
+        const op = sandbox.stub().rejects(failure(500));
+        op.onCall(2).rejects(last);
+        const warn = sandbox.stub(Logger.prototype, "warn");
+
+        const promise = retryWithBackoff(op, { ...baseOptions, maxRetries: 2 });
+        const rejected = assert.rejects(promise, (err) => err === last);
+        await clock.tickAsync(60_000);
+
+        await rejected;
+        sinon.assert.calledThrice(op);
+        sinon.assert.calledOnceWithMatch(warn, sinon.match(/after 2 retries/));
+      });
+
+      it("should not retry an error shouldRetry rejects", async () => {
+        const op = sandbox.stub().rejects(new Error("nope"));
+
+        await assert.rejects(retryWithBackoff(op, baseOptions), /nope/);
+
+        sinon.assert.calledOnce(op);
+      });
+
+      it("should never retry sooner than a Retry-After in seconds", async () => {
+        const op = sandbox.stub();
+        op.onFirstCall().rejects(failure(429, { "retry-after": "7" }));
+        op.onSecondCall().resolves("ok");
+
+        const promise = retryWithBackoff(op, baseOptions);
+        await clock.tickAsync(6999);
+        sinon.assert.calledOnce(op);
+        await clock.tickAsync(1);
+
+        assert.strictEqual(await promise, "ok");
+        sinon.assert.calledTwice(op);
+      });
+
+      it("should never retry sooner than a Retry-After HTTP-date", async () => {
+        // start on a whole second so the date header loses nothing to rounding
+        clock.setSystemTime(Math.ceil(Date.now() / 1000) * 1000);
+        const retryAt = new Date(Date.now() + 12_000).toUTCString();
+        const op = sandbox.stub();
+        op.onFirstCall().rejects(failure(429, { "retry-after": retryAt }));
+        op.onSecondCall().resolves("ok");
+
+        const promise = retryWithBackoff(op, baseOptions);
+        await clock.tickAsync(11_999);
+        sinon.assert.calledOnce(op);
+        await clock.tickAsync(1);
+
+        assert.strictEqual(await promise, "ok");
+      });
+
+      it("should keep a Retry-After that exceeds the first backoff step", async () => {
+        // 20s is well above the 1s first step, and must not be clamped down to it
+        const op = sandbox.stub();
+        op.onFirstCall().rejects(failure(429, { "retry-after": "20" }));
+        op.onSecondCall().resolves("ok");
+
+        const promise = retryWithBackoff(op, baseOptions);
+        await clock.tickAsync(19_999);
+        sinon.assert.calledOnce(op);
+        await clock.tickAsync(1);
+
+        assert.strictEqual(await promise, "ok");
+      });
+
+      it("should wait for X-RateLimit-Reset when Retry-After is absent", async () => {
+        const op = sandbox.stub();
+        op.onFirstCall().rejects(failure(429, { "x-ratelimit-reset": "5" }));
+        op.onSecondCall().resolves("ok");
+
+        const promise = retryWithBackoff(op, baseOptions);
+        await clock.tickAsync(4999);
+        sinon.assert.calledOnce(op);
+        await clock.tickAsync(1);
+
+        assert.strictEqual(await promise, "ok");
+      });
+
+      it("should ignore X-RateLimit-Reset on a response that isn't a 429", async () => {
+        // CCloud sends the header on every response, so it says nothing about when a 503 clears
+        const op = sandbox.stub();
+        op.onFirstCall().rejects(failure(503, { "x-ratelimit-reset": "45" }));
+        op.onSecondCall().resolves("ok");
+
+        const promise = retryWithBackoff(op, baseOptions);
+        await clock.tickAsync(1000);
+
+        assert.strictEqual(await promise, "ok");
+      });
+
+      it("should retry on the curve for a retryable error that carries no response", async () => {
+        const op = sandbox.stub();
+        op.onFirstCall().rejects(new Error("connection reset"));
+        op.onSecondCall().resolves("ok");
+
+        const promise = retryWithBackoff(op, { ...baseOptions, shouldRetry: () => true });
+        await clock.tickAsync(1000);
+
+        assert.strictEqual(await promise, "ok");
+      });
+
+      it("should fail with the error instead of retrying early when the server asks for more than capMs", async () => {
+        const tooLong = failure(429, { "retry-after": "600" });
+        const op = sandbox.stub().rejects(tooLong);
+        const warn = sandbox.stub(Logger.prototype, "warn");
+
+        await assert.rejects(retryWithBackoff(op, baseOptions), (err) => err === tooLong);
+
+        sinon.assert.calledOnce(op);
+        sinon.assert.calledOnceWithMatch(warn, sinon.match(/over the 30000ms cap/));
+      });
+
+      it("should fail immediately for a far-future Retry-After date", async () => {
+        const inAnHour = new Date(Date.now() + 60 * 60 * 1000).toUTCString();
+        const op = sandbox.stub().rejects(failure(429, { "retry-after": inAnHour }));
+
+        await assert.rejects(retryWithBackoff(op, baseOptions));
+
+        sinon.assert.calledOnce(op);
+      });
+
+      it("should give up instead of starting a wait that would end past deadlineMs", async () => {
+        const last = failure(503);
+        const op = sandbox.stub().rejects(failure(503));
+        op.onSecondCall().rejects(last);
+        const warn = sandbox.stub(Logger.prototype, "warn");
+
+        // the first wait (1s) ends inside the 2.5s deadline, the second (1.6s) would not
+        const promise = retryWithBackoff(op, { ...baseOptions, deadlineMs: 2500 });
+        const rejected = assert.rejects(promise, (err) => err === last);
+        await clock.tickAsync(1000);
+
+        await rejected;
+        sinon.assert.calledTwice(op);
+        sinon.assert.calledOnceWithMatch(warn, sinon.match(/2500ms deadline/));
+      });
+
+      it("should cut a jittered wait short so the retry still starts inside deadlineMs", async () => {
+        // jitter at the top of the 1000-1200ms window, with only 1100ms of budget left
+        (Math.random as sinon.SinonStub).returns(0.999);
+        const op = sandbox.stub();
+        op.onFirstCall().rejects(failure(503));
+        op.onSecondCall().resolves("ok");
+
+        const promise = retryWithBackoff(op, { ...baseOptions, deadlineMs: 1100 });
+        await clock.tickAsync(1100);
+
+        sinon.assert.calledTwice(op);
+        assert.strictEqual(await promise, "ok");
+      });
+
+      it("should still retry when a wait cut short to the deadline fires a few ms late", async () => {
+        // jitter at the top of the 1000-1200ms window, so the wait is cut to the 1100ms deadline
+        (Math.random as sinon.SinonStub).returns(0.999);
+        const op = sandbox.stub();
+        op.onFirstCall().rejects(failure(503));
+        op.onSecondCall().resolves("ok");
+
+        const promise = retryWithBackoff(op, { ...baseOptions, deadlineMs: 1100 });
+        await clock.tickAsync(0);
+        // ordinary timer lateness
+        clock.setSystemTime(Date.now() + 5);
+        await clock.tickAsync(1100);
+
+        sinon.assert.calledTwice(op);
+        assert.strictEqual(await promise, "ok");
+      });
+
+      it("should give up when a late timer ends the wait past deadlineMs", async () => {
+        (Math.random as sinon.SinonStub).returns(0);
+        const original = failure(503);
+        const op = sandbox.stub();
+        op.onFirstCall().rejects(original);
+        op.onSecondCall().resolves("ok");
+
+        const promise = retryWithBackoff(op, { ...baseOptions, deadlineMs: 1100 });
+        const rejected = assert.rejects(promise, (err) => err === original);
+        await clock.tickAsync(0);
+        // the event loop stalls for 200ms mid-wait, so the 1000ms timer fires at 1200ms
+        clock.setSystemTime(Date.now() + 200);
+        await clock.tickAsync(1000);
+
+        await rejected;
+        sinon.assert.calledOnce(op);
+      });
+
+      it("should rethrow the original error when aborted mid-wait", async () => {
+        const original = failure(503);
+        const controller = new AbortController();
+        const op = sandbox.stub().rejects(original);
+
+        const promise = retryWithBackoff(op, { ...baseOptions, signal: controller.signal });
+        const rejected = assert.rejects(promise, (err) => err === original);
+        await clock.tickAsync(10);
+        controller.abort();
+
+        await rejected;
+        sinon.assert.calledOnce(op);
+      });
     });
 
     describe("raceWithTimeout", () => {
@@ -93,6 +423,47 @@ describe("utils/timing", () => {
           assert.strictEqual(err.message, "Timeout exceeded");
           return true;
         });
+      });
+    });
+  });
+
+  describe("backoffWindow", () => {
+    it("should grow by 1.6x from a 1s base, with up to 20% jitter on top", () => {
+      const windows = [0, 1, 2, 3].map((attempt) => backoffWindow(attempt, { capMs: 30_000 }));
+
+      assert.deepStrictEqual(windows, [
+        { minMs: 1000, maxMs: 1200 },
+        { minMs: 1600, maxMs: 1920 },
+        { minMs: 2560, maxMs: 3072 },
+        { minMs: 4096, maxMs: 4915 },
+      ]);
+    });
+
+    it("should stop growing at capMs", () => {
+      assert.deepStrictEqual(backoffWindow(20, { capMs: 30_000 }), {
+        minMs: 30_000,
+        maxMs: 36_000,
+      });
+    });
+
+    it("should start from baseMs when given", () => {
+      assert.deepStrictEqual(backoffWindow(1, { capMs: 2000, baseMs: 100 }), {
+        minMs: 160,
+        maxMs: 192,
+      });
+    });
+
+    it("should use a server delay as the floor when it is longer than the curve", () => {
+      assert.deepStrictEqual(backoffWindow(0, { capMs: 30_000 }, 5000), {
+        minMs: 5000,
+        maxMs: 6000,
+      });
+    });
+
+    it("should keep the curve when it is longer than the server delay", () => {
+      assert.deepStrictEqual(backoffWindow(3, { capMs: 30_000 }, 1000), {
+        minMs: 4096,
+        maxMs: 4915,
       });
     });
   });
