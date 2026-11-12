@@ -197,3 +197,27 @@ export function proxyTimeoutBody(title: string) {
     errors: [{ code: "proxy_timeout", title, detail: title }],
   };
 }
+
+/** A `fetch` stand-in that never answers, rejecting with its signal's reason once that aborts. */
+export function hungFetch(_url: string | URL | Request, init?: RequestInit): Promise<Response> {
+  return new Promise((_resolve, reject) => {
+    const signal = init?.signal;
+    if (signal?.aborted) {
+      reject(signal.reason);
+    }
+    signal?.addEventListener("abort", () => reject(signal.reason));
+  });
+}
+
+/** A `fetch` stand-in whose headers arrive at once but whose body never finishes until aborted. */
+export function stalledBodyFetch(contentType: string, status: number = 200) {
+  return async (_url: string | URL | Request, init?: RequestInit): Promise<Response> =>
+    new Response(
+      new ReadableStream({
+        start(controller) {
+          init?.signal?.addEventListener("abort", () => controller.error(init.signal!.reason));
+        },
+      }),
+      { status, headers: { "Content-Type": contentType } },
+    );
+}

@@ -231,6 +231,56 @@ export function timeoutSignal(
   };
 }
 
+/** A request got no answer within its time budget. */
+export class RequestTimeoutError extends Error {
+  constructor(what: string, timeoutMs: number, cause: unknown) {
+    super(`${what} timed out after ${timeoutMs / 1000}s`, { cause });
+    this.name = "RequestTimeoutError";
+  }
+}
+
+/**
+ * Run `request` with a signal that aborts after `timeoutMs`, turning that timeout into a
+ * {@link RequestTimeoutError} naming `what`. Read the body inside `request` so the timeout covers it.
+ * A failed response's body is buffered within the budget before the error is rethrown, so `request`
+ * must pass `signal` to its fetch for a stalled body to be cut off.
+ */
+export async function withRequestTimeout<T>(
+  what: string,
+  timeoutMs: number,
+  request: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const { signal, clear } = timeoutSignal(timeoutMs);
+  try {
+    try {
+      return await request(signal);
+    } catch (e) {
+      // callers read a failed response's body for its error message, so buffer it while the
+      // timeout still covers it
+      await bufferResponseBody(e);
+      throw e;
+    }
+  } catch (e) {
+    if (isTimeoutReason(signal.reason)) {
+      // a failed response whose body stalled still says which error the server sent
+      const status = responseOf(e)?.status;
+      throw new RequestTimeoutError(status ? `${what} (HTTP ${status})` : what, timeoutMs, e);
+    }
+    throw e;
+  } finally {
+    clear();
+  }
+}
+
+/** Read a clone of the failure's response body, so the original reads from what's buffered. */
+async function bufferResponseBody(err: unknown): Promise<void> {
+  try {
+    await responseOf(err)?.clone().text();
+  } catch {
+    // the caller's own read of the body fails the same way, so there's nothing to add here
+  }
+}
+
 /** Whether an abort reason came from a timeout rather than a caller's own abort. */
 export function isTimeoutReason(reason: unknown): boolean {
   return reason instanceof DOMException && reason.name === "TimeoutError";
