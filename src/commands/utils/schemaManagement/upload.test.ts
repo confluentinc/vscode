@@ -739,6 +739,28 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       );
     });
 
+    it("should keep a sidecar 504 as the cause when its body can't be read", async function () {
+      const unreadable = new ResponseError(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(new TypeError("terminated"));
+            },
+          }),
+          { status: 504 },
+        ),
+      );
+      mockSchemaSubjectsApi.listVersions.rejects(unreadable);
+
+      await assert.rejects(
+        getHighestRegisteredVersion(mockSchemaSubjectsApi, "test-subject"),
+        (error) =>
+          error instanceof Error &&
+          error.message === "Timed out waiting for Schema Registry" &&
+          error.cause === unreadable,
+      );
+    });
+
     it("should fail on a sidecar 504, naming the host that didn't respond", async function () {
       const title = "Schema Registry didn't respond within 20s";
       const proxyTimeout = new ResponseError(
