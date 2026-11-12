@@ -704,8 +704,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
     });
 
     it("should return undefined when subject doesn't exist (404 error)", async function () {
-      const error = new Error("Subject not found");
-      (error as any).status = 404;
+      const error = new ResponseError(new Response("Subject not found", { status: 404 }));
       mockSchemaSubjectsApi.listVersions.rejects(error);
 
       const result = await getHighestRegisteredVersion(
@@ -724,6 +723,16 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       await assert.rejects(
         async () => await getHighestRegisteredVersion(mockSchemaSubjectsApi, "test-subject"),
         (error) => error instanceof ResponseError && error.response.status === 500,
+      );
+    });
+
+    it("should re-throw a timeout instead of treating the subject as new", async function () {
+      const timeout = new SidecarRequestTimeoutError("GET /subjects", 30_000, undefined);
+      mockSchemaSubjectsApi.listVersions.rejects(timeout);
+
+      await assert.rejects(
+        getHighestRegisteredVersion(mockSchemaSubjectsApi, "test-subject"),
+        (error) => error === timeout,
       );
     });
   });
