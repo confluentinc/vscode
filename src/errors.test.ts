@@ -11,8 +11,8 @@ import {
   logError,
 } from "./errors";
 import { Logger } from "./logging";
-import { SidecarRequestTimeoutError } from "./sidecar/errors";
 import * as sentryClient from "./telemetry/sentryClient";
+import { RequestTimeoutError } from "./utils/timing";
 
 describe("errors.ts logError()", () => {
   let sandbox: sinon.SinonSandbox;
@@ -109,7 +109,7 @@ describe("errors.ts logError()", () => {
     sinon.assert.calledOnce(captureStub);
   });
 
-  const timeout = new SidecarRequestTimeoutError("GET /test", 30_000, undefined);
+  const timeout = new RequestTimeoutError("GET /test", 30_000, undefined);
   for (const [label, error] of [
     ["a request timeout", timeout],
     ["an error caused by a request timeout", new Error("fetch failed", { cause: timeout })],
