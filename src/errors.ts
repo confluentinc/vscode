@@ -9,7 +9,7 @@ import { ResponseError as ScaffoldingServiceResponseError } from "./clients/scaf
 import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRegistryRest";
 import { ResponseError as SidecarResponseError } from "./clients/sidecar";
 import { Logger } from "./logging";
-import { SidecarRequestTimeoutError } from "./sidecar/errors";
+import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "./sidecar/errors";
 import { sentryCaptureException } from "./telemetry/sentryClient";
 
 const logger = new Logger("errors");
@@ -114,10 +114,13 @@ export function getNestedErrorChain(error: Error): Record<string, string | undef
   return chain;
 }
 
-function isOrWrapsRequestTimeout(error: Error): boolean {
+function isOrWrapsTimeout(error: Error): boolean {
   let current: Error | undefined = error;
   while (current) {
-    if (current instanceof SidecarRequestTimeoutError) {
+    if (
+      current instanceof SidecarRequestTimeoutError ||
+      current instanceof CCloudReconnectTimeoutError
+    ) {
       return true;
     }
     current = hasErrorCause(current) ? current.cause : undefined;
@@ -142,8 +145,8 @@ export class CustomError extends Error {
  *
  * `ResponseError` variants will be handled to extract more information from the response itself.
  * Nested errors (with `cause` properties) will be handled to extract the error chain for
- * additional error context. A request timeout, or an error caused by one, is logged but never
- * sent to Sentry.
+ * additional error context. A request or reconnect timeout, or an error caused by one, is logged
+ * but never sent to Sentry.
  *
  * @param e Error to log
  * @param message Text to add in the logger.error() message and top-level Sentry error message
@@ -221,7 +224,7 @@ async function _logError(
 
   logger.error(logErrorMessage, { ...errorContext, ...sentryContext });
   // timeouts are expected during network trouble, so they'd only add noise to Sentry
-  if (Object.keys(sentryContext).length && !isOrWrapsRequestTimeout(e)) {
+  if (Object.keys(sentryContext).length && !isOrWrapsTimeout(e)) {
     sentryCaptureException(wrappedError, {
       captureContext: {
         ...sentryContext,
