@@ -16,7 +16,11 @@ import { getResourceManager } from "../storage/resourceManager";
 import * as storageUtils from "../storage/utils";
 import { CCLOUD_RECONNECT_TIMEOUT_MS, SIDECAR_CONNECTION_ID_HEADER } from "./constants";
 import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "./errors";
-import { CCloudAuthStatusMiddleware, TimeoutMiddleware } from "./middlewares";
+import {
+  CCloudAuthStatusMiddleware,
+  ErrorResponseMiddleware,
+  TimeoutMiddleware,
+} from "./middlewares";
 
 function fakeRequestWithHeader(key: string, value: string): RequestContext {
   return {
@@ -330,5 +334,31 @@ describe("TimeoutMiddleware", () => {
     await api.gatewayV1PreferencesGet();
 
     assert.strictEqual(clock.countTimers(), timersBefore);
+  });
+
+  it("should fail with a SidecarRequestTimeoutError when an error body stalls past its budget", async () => {
+    /** Error headers at once, then a body that never finishes until the signal aborts. */
+    const stalledErrorFetch = async (_url: string | URL | Request, init?: RequestInit) =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            init?.signal?.addEventListener("abort", () => controller.error(init.signal!.reason));
+          },
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    const api = new PreferencesResourceApi(
+      new Configuration({
+        basePath: "http://sidecar.test",
+        fetchApi: stalledErrorFetch,
+        // the real order: the error logger reads the body before the timeout's post hook runs
+        middleware: [new ErrorResponseMiddleware(), new TimeoutMiddleware(30_000)],
+      }),
+    );
+
+    const rejected = assert.rejects(api.gatewayV1PreferencesGet(), SidecarRequestTimeoutError);
+    await clock.tickAsync(30_000);
+
+    await rejected;
   });
 });
