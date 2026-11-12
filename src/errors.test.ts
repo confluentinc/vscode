@@ -11,7 +11,7 @@ import {
   logError,
 } from "./errors";
 import { Logger } from "./logging";
-import { SidecarRequestTimeoutError } from "./sidecar/errors";
+import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "./sidecar/errors";
 import * as sentryClient from "./telemetry/sentryClient";
 
 describe("errors.ts logError()", () => {
@@ -113,6 +113,7 @@ describe("errors.ts logError()", () => {
   for (const [label, error] of [
     ["a request timeout", timeout],
     ["an error caused by a request timeout", new Error("fetch failed", { cause: timeout })],
+    ["a reconnect timeout", new CCloudReconnectTimeoutError("Timed out reconnecting")],
   ] as const) {
     it(`should log ${label} locally but keep it out of Sentry`, async () => {
       const captureStub = sandbox.stub(sentryClient, "sentryCaptureException");
