@@ -186,3 +186,14 @@ function wrapResponseError(response: Response, source: ResponseErrorSource): Any
       throw new Error(`Unknown ResponseError source: ${source}`);
   }
 }
+
+/** The body the sidecar sends when an upstream request it proxied timed out. */
+export function proxyTimeoutBody(title: string) {
+  return {
+    status: "504",
+    code: "proxy_error",
+    title,
+    id: "test-failure",
+    errors: [{ code: "proxy_timeout", title, detail: title }],
+  };
+}

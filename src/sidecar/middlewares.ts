@@ -1,5 +1,11 @@
 import * as vscode from "vscode";
-import type { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
+import type {
+  ErrorContext,
+  FetchParams,
+  Middleware,
+  RequestContext,
+  ResponseContext,
+} from "../clients/sidecar";
 import { ConnectedState } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated, stableCCloudConnectedState } from "../emitters";
@@ -7,7 +13,9 @@ import { Logger } from "../logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
-import { SIDECAR_CONNECTION_ID_HEADER } from "./constants";
+import { isTimeoutReason, timeoutSignal } from "../utils/timing";
+import { CCLOUD_RECONNECT_TIMEOUT_MS, SIDECAR_CONNECTION_ID_HEADER } from "./constants";
+import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "./errors";
 
 const logger = new Logger("sidecar.middlewares");
 
@@ -130,6 +138,8 @@ export class ErrorResponseMiddleware implements Middleware {
 
 /** Used to prevent multiple instances of the `EXPIRED` progress notification stacking up. */
 let problematicStateNotificationOpen: boolean = false;
+/** Requests still blocked in the reconnect wait, which share the one progress notification. */
+let reconnectWaiters = 0;
 
 /** Check if a request is for Confluent Cloud handle different connected state scenarios. */
 export class CCloudAuthStatusMiddleware implements Middleware {
@@ -195,18 +205,41 @@ export class CCloudAuthStatusMiddleware implements Middleware {
       );
     }
 
-    // block the request that got us into this flow until the connected state "secret" changes
-    await new Promise((resolve) => {
-      const secretSubscriber: vscode.Disposable = getSecretStorage().onDidChange(
-        async ({ key }: vscode.SecretStorageChangeEvent) => {
-          // any change (other state or the "secret" being deleted entirely) will resolve and unblock requests
-          if (key === SecretStorageKeys.CCLOUD_STATE) {
-            secretSubscriber.dispose();
-            resolve(void 0);
-          }
-        },
-      );
-    });
+    // block the request that got us into this flow until the connected state "secret" changes, or
+    // fail it once the deadline passes
+    let secretSubscriber: vscode.Disposable | undefined;
+    let timedOut = false;
+    const deadline = timeoutSignal(CCLOUD_RECONNECT_TIMEOUT_MS);
+    reconnectWaiters++;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        deadline.signal.addEventListener("abort", () => {
+          timedOut = true;
+          reject(
+            new CCloudReconnectTimeoutError(
+              `Timed out after ${CCLOUD_RECONNECT_TIMEOUT_MS / 1000}s waiting to reconnect to Confluent Cloud. Sign in again.`,
+            ),
+          );
+        });
+        secretSubscriber = getSecretStorage().onDidChange(
+          async ({ key }: vscode.SecretStorageChangeEvent) => {
+            // any change (other state or the "secret" being deleted entirely) will resolve and unblock requests
+            if (key === SecretStorageKeys.CCLOUD_STATE) {
+              resolve();
+            }
+          },
+        );
+      });
+    } finally {
+      reconnectWaiters--;
+      deadline.clear();
+      secretSubscriber?.dispose();
+      if (timedOut && reconnectWaiters === 0) {
+        // stop claiming a reconnect is underway, and let a later EXPIRED state show it again
+        stableCCloudConnectedState.fire();
+        problematicStateNotificationOpen = false;
+      }
+    }
   }
 }
 
@@ -222,4 +255,54 @@ function hasCCloudConnectionIdHeader(headers: HeadersInit | Headers | undefined)
     headers.has(SIDECAR_CONNECTION_ID_HEADER) &&
     headers.get(SIDECAR_CONNECTION_ID_HEADER) === CCLOUD_CONNECTION_ID
   );
+}
+
+/**
+ * Fail a sidecar request that gets no answer within {@linkcode timeoutMs}, combined with any signal
+ * the caller passed. Belongs last in the middleware list, so its timer starts after earlier `pre`
+ * hooks (like the CCloud reconnect wait) and its throwing `onError` can't skip theirs.
+ */
+export class TimeoutMiddleware implements Middleware {
+  /** Per-request cleanup, keyed by the `init` that `pre` hands to `fetch` and later hooks. */
+  private readonly pending = new WeakMap<RequestInit, () => void>();
+
+  constructor(readonly timeoutMs: number) {}
+
+  async pre(context: RequestContext): Promise<FetchParams> {
+    const { signal, clear } = timeoutSignal(this.timeoutMs, context.init.signal);
+    const init = { ...context.init, signal };
+    this.pending.set(init, clear);
+    return { url: context.url, init };
+  }
+
+  async post(context: ResponseContext): Promise<void> {
+    // headers are in; release the timer and the caller's signal rather than pile listeners onto a
+    // long-lived caller signal, at the cost of leaving the (short) body read uncovered
+    this.settle(context.init);
+    // an earlier post hook (the error logger) may have read a body that stalled until the timer fired
+    this.throwIfTimedOut(context, undefined, context.response.status);
+  }
+
+  async onError(context: ErrorContext): Promise<Response | void> {
+    this.settle(context.init);
+    this.throwIfTimedOut(context, context.error);
+  }
+
+  private throwIfTimedOut(context: RequestContext, cause: unknown, status?: number): void {
+    // a caller's own abort carries an AbortError reason, and passes through as before
+    if (isTimeoutReason(context.init.signal?.reason)) {
+      // a response whose body stalled still says which status the sidecar sent
+      const answered = status ? ` (HTTP ${status})` : "";
+      throw new SidecarRequestTimeoutError(
+        `Request to the sidecar (${context.init.method ?? "GET"} ${context.url})${answered}`,
+        this.timeoutMs,
+        cause,
+      );
+    }
+  }
+
+  private settle(init: RequestInit): void {
+    this.pending.get(init)?.();
+    this.pending.delete(init);
+  }
 }
