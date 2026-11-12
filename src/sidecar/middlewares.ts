@@ -280,7 +280,7 @@ export class TimeoutMiddleware implements Middleware {
     // long-lived caller signal, at the cost of leaving the (short) body read uncovered
     this.settle(context.init);
     // an earlier post hook (the error logger) may have read a body that stalled until the timer fired
-    this.throwIfTimedOut(context, undefined);
+    this.throwIfTimedOut(context, undefined, context.response.status);
   }
 
   async onError(context: ErrorContext): Promise<Response | void> {
@@ -288,11 +288,13 @@ export class TimeoutMiddleware implements Middleware {
     this.throwIfTimedOut(context, context.error);
   }
 
-  private throwIfTimedOut(context: RequestContext, cause: unknown): void {
+  private throwIfTimedOut(context: RequestContext, cause: unknown, status?: number): void {
     // a caller's own abort carries an AbortError reason, and passes through as before
     if (isTimeoutReason(context.init.signal?.reason)) {
+      // a response whose body stalled still says which status the sidecar sent
+      const answered = status ? ` (HTTP ${status})` : "";
       throw new SidecarRequestTimeoutError(
-        `Request to the sidecar (${context.init.method ?? "GET"} ${context.url})`,
+        `Request to the sidecar (${context.init.method ?? "GET"} ${context.url})${answered}`,
         this.timeoutMs,
         cause,
       );
