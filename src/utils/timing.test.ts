@@ -140,7 +140,14 @@ describe("utils/timing", () => {
         assert.strictEqual(delay, undefined);
       });
 
-      for (const malformed of ["soon", "-5", "1.5", "1e3", "garbage 99"]) {
+      for (const malformed of [
+        "soon",
+        "-5",
+        "1.5",
+        "1e3",
+        "garbage 99",
+        "Sun, 99 Nov 2026 08:49:37 GMT",
+      ]) {
         it(`should fall back to X-RateLimit-Reset when Retry-After is malformed ("${malformed}")`, () => {
           const delay = serverRequestedDelayMs(
             headers({ "retry-after": malformed, "x-ratelimit-reset": "20" }),

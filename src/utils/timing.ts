@@ -71,7 +71,8 @@ export interface RetryWithBackoffOptions extends BackoffOptions {
   signal?: AbortSignal;
   /**
    * Budget in ms, counted from the first attempt, for starting retries. A wait that would end past
-   * it rethrows the failure instead. It doesn't cut short an attempt already running.
+   * it (or whose timer fires more than 50ms late, past it) rethrows the failure instead. It doesn't
+   * cut short an attempt already running.
    */
   deadlineMs?: number;
 }
@@ -149,12 +150,16 @@ export function backoffWindow(
 }
 
 /**
- * The delay a response asked for, in ms: `Retry-After` as seconds or an HTTP-date (RFC 9110
- * section 10.2.3), else, on a 429, `X-RateLimit-Reset`, which Confluent Cloud sends as seconds until
+ * The delay a response asked for, in ms: `Retry-After` as seconds or an IMF-fixdate HTTP-date
+ * (RFC 9110 section 10.2.3), else, on a 429, `X-RateLimit-Reset`, which Confluent Cloud sends as seconds until
  * the rate limit window resets. Undefined when the header in use holds no delay in the future.
  */
 export function serverRequestedDelayMs(response: Response): number | undefined {
-  const retryAfterMs = retryAfterToMs(response.headers.get("retry-after"));
+  const retryAfter = response.headers.get("retry-after");
+  const retryAfterMs = retryAfterToMs(retryAfter);
+  if (retryAfter && retryAfterMs === undefined) {
+    logger.debug(`Ignoring malformed Retry-After "${retryAfter}"`);
+  }
   if (retryAfterMs !== undefined) {
     // a zero or past Retry-After means "retry now", so it still outranks X-RateLimit-Reset
     return retryAfterMs > 0 ? retryAfterMs : undefined;
@@ -188,8 +193,13 @@ function retryAfterToMs(header: string | null): number | undefined {
   if (RETRY_AFTER_SECONDS.test(value)) {
     return Number(value) * 1000;
   }
-  // Date.parse accepts nearly anything, so check the shape first
-  return RETRY_AFTER_DATE.test(value) ? Date.parse(value) - Date.now() : undefined;
+  // Date.parse accepts nearly anything, so check the shape first; the obsolete RFC 850 and
+  // asctime forms are left out, since servers send IMF-fixdate
+  if (!RETRY_AFTER_DATE.test(value)) {
+    return undefined;
+  }
+  const date = Date.parse(value);
+  return Number.isNaN(date) ? undefined : date - Date.now();
 }
 
 /**
