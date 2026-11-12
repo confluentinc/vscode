@@ -279,16 +279,22 @@ export class TimeoutMiddleware implements Middleware {
     // headers are in; release the timer and the caller's signal rather than pile listeners onto a
     // long-lived caller signal, at the cost of leaving the (short) body read uncovered
     this.settle(context.init);
+    // an earlier post hook (the error logger) may have read a body that stalled until the timer fired
+    this.throwIfTimedOut(context, undefined);
   }
 
   async onError(context: ErrorContext): Promise<Response | void> {
     this.settle(context.init);
+    this.throwIfTimedOut(context, context.error);
+  }
+
+  private throwIfTimedOut(context: RequestContext, cause: unknown): void {
     // a caller's own abort carries an AbortError reason, and passes through as before
     if (isTimeoutReason(context.init.signal?.reason)) {
       throw new SidecarRequestTimeoutError(
         `Request to the sidecar (${context.init.method ?? "GET"} ${context.url})`,
         this.timeoutMs,
-        context.error,
+        cause,
       );
     }
   }
