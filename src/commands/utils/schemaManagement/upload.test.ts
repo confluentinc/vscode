@@ -726,13 +726,16 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       );
     });
 
-    it("should re-throw a timeout instead of treating the subject as new", async function () {
+    it("should fail on a timeout, naming Schema Registry, instead of treating the subject as new", async function () {
       const timeout = new SidecarRequestTimeoutError("GET /subjects", 30_000, undefined);
       mockSchemaSubjectsApi.listVersions.rejects(timeout);
 
       await assert.rejects(
         getHighestRegisteredVersion(mockSchemaSubjectsApi, "test-subject"),
-        (error) => error === timeout,
+        (error) =>
+          error instanceof Error &&
+          error.message === "Timed out waiting for Schema Registry" &&
+          error.cause === timeout,
       );
     });
   });
