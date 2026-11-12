@@ -442,8 +442,9 @@ export async function getHighestRegisteredVersion(
       throw new Error(timedOutWaitingFor("Schema Registry"), { cause: e });
     }
     if (isResponseErrorWithStatus(e, 504)) {
-      // the sidecar's timeout body names the host that didn't respond
-      const body = await extractResponseBody(e);
+      // the sidecar's timeout body names the host that didn't respond; an unreadable body still
+      // gets the Schema Registry fallback
+      const body = await extractResponseBody(e).catch(() => undefined);
       throw new Error(sidecarTimeoutMessage(504, body, "Schema Registry"), { cause: e });
     }
     if (!(e instanceof ResponseError && e.response.status === 404)) {
