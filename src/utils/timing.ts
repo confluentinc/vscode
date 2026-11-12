@@ -242,6 +242,7 @@ export class RequestTimeoutError extends Error {
 /**
  * Run `request` with a signal that aborts after `timeoutMs`, turning that timeout into a
  * {@link RequestTimeoutError} naming `what`. Read the body inside `request` so the timeout covers it.
+ * A failed response's body is buffered within the budget before the error is rethrown.
  */
 export async function withRequestTimeout<T>(
   what: string,
@@ -250,7 +251,14 @@ export async function withRequestTimeout<T>(
 ): Promise<T> {
   const { signal, clear } = timeoutSignal(timeoutMs);
   try {
-    return await request(signal);
+    try {
+      return await request(signal);
+    } catch (e) {
+      // callers read a failed response's body for its error message, so buffer it while the
+      // timeout still covers it
+      await bufferResponseBody(e);
+      throw e;
+    }
   } catch (e) {
     if (isTimeoutReason(signal.reason)) {
       throw new RequestTimeoutError(what, timeoutMs, e);
@@ -258,6 +266,15 @@ export async function withRequestTimeout<T>(
     throw e;
   } finally {
     clear();
+  }
+}
+
+/** Read a clone of the failure's response body, so the original reads from what's buffered. */
+async function bufferResponseBody(err: unknown): Promise<void> {
+  try {
+    await responseOf(err)?.clone().text();
+  } catch {
+    // the caller's own read of the body fails the same way, so there's nothing to add here
   }
 }
 
