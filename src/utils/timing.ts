@@ -193,6 +193,40 @@ function retryAfterToMs(header: string | null): number | undefined {
 }
 
 /**
+ * A signal that aborts with a `TimeoutError` after `ms`, or with the caller's reason if their signal
+ * aborts first. Call `clear()` once the work settles, which stops the timer and detaches from the
+ * caller's signal (unlike `AbortSignal.timeout()`, whose timer can't be cancelled).
+ */
+export function timeoutSignal(
+  ms: number,
+  callerSignal?: AbortSignal | null,
+): { signal: AbortSignal; clear: () => void } {
+  const controller = new AbortController();
+  const onCallerAbort = () => controller.abort(callerSignal?.reason);
+  const timer = setTimeout(
+    () => controller.abort(new DOMException(`Timed out after ${ms}ms`, "TimeoutError")),
+    ms,
+  );
+  if (callerSignal?.aborted) {
+    onCallerAbort();
+  } else {
+    callerSignal?.addEventListener("abort", onCallerAbort, { once: true });
+  }
+  return {
+    signal: controller.signal,
+    clear: () => {
+      clearTimeout(timer);
+      callerSignal?.removeEventListener("abort", onCallerAbort);
+    },
+  };
+}
+
+/** Whether an abort reason came from a timeout rather than a caller's own abort. */
+export function isTimeoutReason(reason: unknown): boolean {
+  return reason instanceof DOMException && reason.name === "TimeoutError";
+}
+
+/**
  * Race the given promise against a timeout.
  * @param promise The promise to race against the timeout.
  * @param ms The timeout in milliseconds.

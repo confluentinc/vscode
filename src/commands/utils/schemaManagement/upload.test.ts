@@ -9,6 +9,7 @@ import {
   getStubbedLocalResourceLoader,
 } from "../../../../tests/stubs/resourceLoaders";
 import { getSidecarStub } from "../../../../tests/stubs/sidecar";
+import { proxyTimeoutBody } from "../../../../tests/unit/testUtils";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
@@ -41,6 +42,7 @@ import { KafkaTopic } from "../../../models/topic";
 import * as notifications from "../../../notifications";
 import * as quickPicksSchemas from "../../../quickpicks/schemas";
 import type { SidecarHandle } from "../../../sidecar";
+import { SidecarRequestTimeoutError } from "../../../sidecar/errors";
 import { getSchemasViewProvider } from "../../../viewProviders/schemas";
 import {
   chooseSubject,
@@ -702,8 +704,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
     });
 
     it("should return undefined when subject doesn't exist (404 error)", async function () {
-      const error = new Error("Subject not found");
-      (error as any).status = 404;
+      const error = new ResponseError(new Response("Subject not found", { status: 404 }));
       mockSchemaSubjectsApi.listVersions.rejects(error);
 
       const result = await getHighestRegisteredVersion(
@@ -722,6 +723,19 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       await assert.rejects(
         async () => await getHighestRegisteredVersion(mockSchemaSubjectsApi, "test-subject"),
         (error) => error instanceof ResponseError && error.response.status === 500,
+      );
+    });
+
+    it("should fail on a timeout, naming Schema Registry, instead of treating the subject as new", async function () {
+      const timeout = new SidecarRequestTimeoutError("GET /subjects", 30_000, undefined);
+      mockSchemaSubjectsApi.listVersions.rejects(timeout);
+
+      await assert.rejects(
+        getHighestRegisteredVersion(mockSchemaSubjectsApi, "test-subject"),
+        (error) =>
+          error instanceof Error &&
+          error.message === "Timed out waiting for Schema Registry" &&
+          error.cause === timeout,
       );
     });
   });
@@ -799,6 +813,55 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
         showErrorStub,
         `Error ${errorStatus} uploading schema: ${errorMessage}`,
       );
+    });
+
+    it("should say the upload timed out for a sidecar proxy timeout", async function () {
+      const title = "Schema Registry didn't respond within 20s";
+      stubbedSubjectsV1Api.register.rejects(
+        new ResponseError(new Response(JSON.stringify(proxyTimeoutBody(title)), { status: 504 })),
+      );
+
+      await assert.rejects(
+        registerSchema(stubbedSubjectsV1Api, "test-subject", SchemaType.Avro, "{}", true),
+        ResponseError,
+      );
+
+      sinon.assert.calledOnceWithExactly(showErrorStub, `Error uploading schema: ${title}`);
+    });
+
+    it("should name Schema Registry, not the sidecar URL, for a client-side timeout", async function () {
+      stubbedSubjectsV1Api.register.rejects(
+        new SidecarRequestTimeoutError(
+          "Request to the sidecar (POST http://127.0.0.1:26636/subjects/s/versions)",
+          30_000,
+          new Error("timeout"),
+        ),
+      );
+
+      await assert.rejects(
+        registerSchema(stubbedSubjectsV1Api, "test-subject", SchemaType.Avro, "{}", true),
+        SidecarRequestTimeoutError,
+      );
+
+      sinon.assert.calledOnceWithExactly(
+        showErrorStub,
+        "Error uploading schema: Timed out waiting for Schema Registry",
+      );
+    });
+
+    it("should fall back to the HTTP status text for a non-JSON error body", async function () {
+      stubbedSubjectsV1Api.register.rejects(
+        new ResponseError(
+          new Response("<html>Bad Gateway</html>", { status: 502, statusText: "Bad Gateway" }),
+        ),
+      );
+
+      await assert.rejects(
+        registerSchema(stubbedSubjectsV1Api, "test-subject", SchemaType.Avro, "{}", true),
+        ResponseError,
+      );
+
+      sinon.assert.calledOnceWithExactly(showErrorStub, "Error 502 uploading schema: Bad Gateway");
     });
 
     it("should show an error notification for non-ResponseErrors", async function () {
