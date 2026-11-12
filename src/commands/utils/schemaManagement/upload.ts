@@ -436,7 +436,11 @@ export async function getHighestRegisteredVersion(
     }
   } catch (e) {
     // a 404 means the subject doesn't exist yet, so leave existingVersion undefined; anything
-    // else (including a timeout) means we can't tell, so re-throw
+    // else means we can't tell, so fail the upload
+    if (e instanceof SidecarRequestTimeoutError) {
+      // its message is a diagnostic with the sidecar URL, so name Schema Registry instead
+      throw new Error(timedOutWaitingFor("Schema Registry"), { cause: e });
+    }
     if (!(e instanceof ResponseError && e.response.status === 404)) {
       throw e;
     }
