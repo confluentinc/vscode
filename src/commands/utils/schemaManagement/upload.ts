@@ -18,14 +18,10 @@ import { type KafkaTopic } from "../../../models/topic";
 import { showErrorNotificationWithButtons } from "../../../notifications";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../../../quickpicks/schemas";
 import { getSidecar } from "../../../sidecar";
-import {
-  SidecarRequestTimeoutError,
-  sidecarTimeoutMessage,
-  timedOutWaitingFor,
-} from "../../../sidecar/errors";
+import { sidecarTimeoutMessage, timedOutWaitingFor } from "../../../sidecar/errors";
 import { hashed, logUsage, UserEvent } from "../../../telemetry/events";
 import { fileUriExists } from "../../../utils/file";
-import { retryWithBackoff } from "../../../utils/timing";
+import { RequestTimeoutError, retryWithBackoff } from "../../../utils/timing";
 import { getSchemasViewProvider } from "../../../viewProviders/schemas";
 
 const logger = new Logger("commands.utils.schemaManagement.upload");
@@ -437,7 +433,7 @@ export async function getHighestRegisteredVersion(
   } catch (e) {
     // a 404 means the subject doesn't exist yet, so leave existingVersion undefined; anything
     // else means we can't tell, so fail the upload
-    if (e instanceof SidecarRequestTimeoutError) {
+    if (e instanceof RequestTimeoutError) {
       // its message is a diagnostic with the sidecar URL, so name Schema Registry instead
       throw new Error(timedOutWaitingFor("Schema Registry"), { cause: e });
     }
@@ -531,7 +527,7 @@ export async function registerSchema(
 
       logger.error(message);
       vscode.window.showErrorMessage(message);
-    } else if (e instanceof SidecarRequestTimeoutError) {
+    } else if (e instanceof RequestTimeoutError) {
       // its message is a diagnostic with the sidecar URL, so name Schema Registry instead
       logger.error("Error uploading schema", e);
       vscode.window.showErrorMessage(
