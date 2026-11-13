@@ -26,6 +26,11 @@ import {
 } from "../models/flinkStatement";
 import { showErrorNotificationWithButtons } from "../notifications";
 import type { SidecarHandle } from "../sidecar";
+import {
+  CCloudReconnectTimeoutError,
+  SidecarRequestTimeoutError,
+  sidecarTimeoutMessage,
+} from "../sidecar/errors";
 import type { ViewMode } from "./flinkStatementResultColumns";
 import type { StatementResultsRow } from "./flinkStatementResults";
 import { parseResults } from "./flinkStatementResults";
@@ -47,6 +52,8 @@ const MAX_TRANSIENT_RETRIES = 4;
  * reporting the error instead.
  */
 const TRANSIENT_BACKOFF_CAP_MS = 30_000;
+/** No transient retry starts after this long, so a failing fetch gives up in about a minute. */
+export const TRANSIENT_RETRY_DEADLINE_MS = 60_000;
 
 export type ResultCount = { total: number; filter: number | null };
 export type StreamState = "running" | "completed";
@@ -414,6 +421,12 @@ export class FlinkStatementResultsManager {
                 reportable = { message: "Too many requests. Try again later." };
                 break;
               }
+              case 504: {
+                const timeoutMessage = sidecarTimeoutMessage(status, payload, "Confluent Cloud");
+                reportable = { message: `${timeoutMessage}. Reopen the results to try again.` };
+                logError(error, "flink statement results timed out");
+                break;
+              }
               default: {
                 reportable = { message: "Something went wrong." };
                 logError(error, "flink statement results", {
@@ -429,6 +442,19 @@ export class FlinkStatementResultsManager {
               `An error occurred during statement results fetching. Status ${error.response.status}`,
             );
           }
+        } else if (error instanceof CCloudReconnectTimeoutError) {
+          logError(error, "flink statement results gave up reconnecting");
+          reportable = {
+            message:
+              "Timed out reconnecting to Confluent Cloud. Sign in again, then reopen the results.",
+          };
+          shouldComplete = true;
+        } else if (error instanceof SidecarRequestTimeoutError) {
+          logError(error, "flink statement results timed out");
+          reportable = {
+            message: "Timed out waiting for results. Reopen the results to try again.",
+          };
+          shouldComplete = true;
         } else if (error instanceof Error) {
           logger.error(error.message);
           reportable = { message: "An internal error occurred." };
@@ -521,6 +547,7 @@ export class FlinkStatementResultsManager {
       maxRetries: MAX_TRANSIENT_RETRIES,
       shouldRetry: isTransientResponseError,
       signal: this._getResultsAbortController.signal,
+      deadlineMs: TRANSIENT_RETRY_DEADLINE_MS,
     });
   }
 
