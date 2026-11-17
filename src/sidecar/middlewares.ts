@@ -13,9 +13,9 @@ import { Logger } from "../logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
-import { isTimeoutReason, timeoutSignal } from "../utils/timing";
+import { isTimeoutReason, RequestTimeoutError, timeoutSignal } from "../utils/timing";
 import { CCLOUD_RECONNECT_TIMEOUT_MS, SIDECAR_CONNECTION_ID_HEADER } from "./constants";
-import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "./errors";
+import { CCloudReconnectTimeoutError } from "./errors";
 
 const logger = new Logger("sidecar.middlewares");
 
@@ -293,7 +293,7 @@ export class TimeoutMiddleware implements Middleware {
     if (isTimeoutReason(context.init.signal?.reason)) {
       // a response whose body stalled still says which status the sidecar sent
       const answered = status ? ` (HTTP ${status})` : "";
-      throw new SidecarRequestTimeoutError(
+      throw new RequestTimeoutError(
         `Request to the sidecar (${context.init.method ?? "GET"} ${context.url})${answered}`,
         this.timeoutMs,
         cause,

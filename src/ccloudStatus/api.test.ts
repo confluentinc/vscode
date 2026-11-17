@@ -1,8 +1,9 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { TEST_CCLOUD_STATUS_SUMMARY } from "../../tests/unit/testResources/ccloudStatus";
+import { hungFetch } from "../../tests/unit/testUtils";
 import * as errors from "../errors";
-import { fetchCCloudStatus } from "./api";
+import { fetchCCloudStatus, STATUSPAGE_TIMEOUT_MS } from "./api";
 import * as types from "./types";
 
 describe("ccloudStatus/api.ts fetchCCloudStatus()", () => {
@@ -42,6 +43,20 @@ describe("ccloudStatus/api.ts fetchCCloudStatus()", () => {
     assert.strictEqual(result, TEST_CCLOUD_STATUS_SUMMARY);
     sinon.assert.calledWith(summaryFromJSONStub, fakeData);
     sinon.assert.notCalled(logErrorStub);
+  });
+
+  it("should give up, log, and return undefined when Statuspage doesn't answer in time", async () => {
+    const clock = sandbox.useFakeTimers();
+    fetchStub.callsFake(hungFetch);
+
+    const pending = fetchCCloudStatus();
+    await clock.tickAsync(STATUSPAGE_TIMEOUT_MS);
+
+    assert.strictEqual(await pending, undefined);
+    sinon.assert.calledOnceWithMatch(
+      logErrorStub,
+      sinon.match({ message: sinon.match(/timed out/i) }),
+    );
   });
 
   it("should return undefined and call logError() on a bad response", async () => {

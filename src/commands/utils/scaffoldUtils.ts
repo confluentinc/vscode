@@ -16,8 +16,10 @@ import { isResponseError, logError } from "../../errors";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { getTemplatesList, pickTemplate } from "../../projectGeneration/templates";
 import { getSidecar } from "../../sidecar";
+import { SCAFFOLDING_APPLY_TIMEOUT_MS } from "../../sidecar/constants";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { fileUriExists } from "../../utils/file";
+import { withRequestTimeout } from "../../utils/timing";
 import { WebviewPanelCache } from "../../webview-cache";
 import { handleWebviewMessage } from "../../webview/comms/comms";
 import type { post, PostResponse } from "../../webview/scaffold-form";
@@ -204,6 +206,7 @@ export async function applyTemplate(
   manifestOptionValues: { [key: string]: unknown },
   telemetrySource?: string,
 ): Promise<PostResponse> {
+  // no client timeout: the signal below covers the whole apply, ZIP download included
   const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
 
   const stringifiedOptions = Object.fromEntries(
@@ -221,10 +224,19 @@ export async function applyTemplate(
   let stage: string = "";
   try {
     stage = "performing scaffold service apply operation";
-    const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request);
+    // applying builds the project server-side and returns it as a ZIP, so it gets longer than listing
+    const arrayBuffer = await withRequestTimeout(
+      "Applying the template",
+      SCAFFOLDING_APPLY_TIMEOUT_MS,
+      async (signal) => {
+        const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request, {
+          signal,
+        });
 
-    stage = "downloading template files";
-    const arrayBuffer = await applyTemplateResponse.arrayBuffer();
+        stage = "downloading template files";
+        return await applyTemplateResponse.arrayBuffer();
+      },
+    );
 
     stage = "requesting a save location";
     const SAVE_LABEL = "Save to directory";
