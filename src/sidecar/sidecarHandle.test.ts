@@ -8,8 +8,10 @@ import { BASE_PATH as SCAFFOLDING_SERVICE_BASE_PATH } from "../clients/scaffoldi
 import { MicroProfileHealthApi, ResponseError } from "../clients/sidecar";
 import { consumeMessages } from "../consume";
 import * as constants from "../constants";
+import { extractResponseBody } from "../errors";
 import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
+import { isTimeoutReason } from "../utils/timing";
 import type { Message } from "../ws/messageTypes";
 import { MessageType, newMessageHeaders } from "../ws/messageTypes";
 import {
@@ -279,6 +281,101 @@ describe("sidecarHandle sandbox tests", () => {
       assert.ok(err instanceof ResponseError);
       assert.strictEqual(err.response.status, 504);
       assert.strictEqual((await err.response.json()).timedOut, true);
+    });
+
+    describe("consume error bodies", () => {
+      /**
+       * Answers with a 500 whose body never arrives, erroring it on abort as real `fetch` does.
+       * Resolves once `fetch` has been called.
+       */
+      function stubStalledErrorBody(): Promise<void> {
+        return new Promise((fetched) => {
+          sandbox.stub(global, "fetch").callsFake(async (_url, init?: RequestInit) => {
+            const signal = init?.signal;
+            const body = new ReadableStream({
+              start(controller) {
+                if (signal?.aborted) controller.error(signal.reason);
+                signal?.addEventListener("abort", () => controller.error(signal.reason));
+              },
+            });
+            fetched();
+            return new Response(body, { status: 500 });
+          });
+        });
+      }
+
+      it("should time out a consume whose error body stalls", async () => {
+        const clock = sandbox.useFakeTimers();
+        void stubStalledErrorBody();
+        const api = handle.getKafkaConsumeApi(constants.CCLOUD_CONNECTION_ID);
+
+        const failure = consumeMessages(
+          api,
+          TEST_CCLOUD_KAFKA_TOPIC,
+          {},
+          new AbortController().signal,
+        ).catch((err: unknown) => err);
+        await clock.tickAsync(CONSUME_TIMEOUT_MS);
+
+        assert.ok(isTimeoutReason(await failure));
+      });
+
+      it("should let the caller cancel a consume whose error body stalls", async () => {
+        const fetched = stubStalledErrorBody();
+        const api = handle.getKafkaConsumeApi(constants.CCLOUD_CONNECTION_ID);
+        const caller = new AbortController();
+
+        const failure = consumeMessages(api, TEST_CCLOUD_KAFKA_TOPIC, {}, caller.signal).catch(
+          (err: unknown) => err,
+        );
+        await fetched;
+        caller.abort();
+
+        const err = await failure;
+        assert.ok(err instanceof DOMException);
+        assert.strictEqual(err.name, "AbortError");
+      });
+
+      it("should keep a readable error body for the message viewer", async () => {
+        sandbox
+          .stub(global, "fetch")
+          .resolves(new Response(JSON.stringify({ message: "boom" }), { status: 500 }));
+        const api = handle.getKafkaConsumeApi(constants.CCLOUD_CONNECTION_ID);
+
+        const err = await consumeMessages(
+          api,
+          TEST_CCLOUD_KAFKA_TOPIC,
+          {},
+          new AbortController().signal,
+        ).catch((e: unknown) => e);
+
+        assert.ok(err instanceof ResponseError);
+        assert.strictEqual(err.response.status, 500);
+        assert.deepStrictEqual(await extractResponseBody(err), { message: "boom" });
+      });
+
+      it("should keep the status readable when the error body breaks mid-read", async () => {
+        const reset = new TypeError("terminated");
+        const body = new ReadableStream({
+          start(controller) {
+            controller.error(reset);
+          },
+        });
+        sandbox.stub(global, "fetch").resolves(new Response(body, { status: 503 }));
+        const api = handle.getKafkaConsumeApi(constants.CCLOUD_CONNECTION_ID);
+
+        const err = await consumeMessages(
+          api,
+          TEST_CCLOUD_KAFKA_TOPIC,
+          {},
+          new AbortController().signal,
+        ).catch((e: unknown) => e);
+
+        assert.ok(err instanceof ResponseError);
+        assert.strictEqual(err.response.status, 503);
+        assert.strictEqual(await extractResponseBody(err), "");
+        assert.strictEqual(err.cause, reset);
+      });
     });
 
     for (const [name, error, expected] of [
