@@ -231,6 +231,25 @@ export async function consumeMessages(
         { signal: timeout.signal },
       );
     return await response.raw.json();
+  } catch (error) {
+    if (error instanceof ResponseError) {
+      // read the error body inside the deadline so later reads of a clone don't wait on the network
+      await error.response
+        .clone()
+        .arrayBuffer()
+        .catch((readError: unknown) => {
+          if (timeout.signal.aborted) throw timeout.signal.reason;
+          // the body is gone, so keep the status readable over an empty one
+          const { status, statusText, headers } = error.response;
+          const unreadable = new ResponseError(
+            new Response(null, { status, statusText, headers }),
+            error.message,
+          );
+          unreadable.cause = readError;
+          throw unreadable;
+        });
+    }
+    throw error;
   } finally {
     timeout.clear();
   }
