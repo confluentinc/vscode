@@ -131,7 +131,7 @@ export async function fetchConsumerGroups(cluster: KafkaCluster): Promise<Consum
  * or return `undefined` for any other failure.
  */
 async function kafkaClusterTimeoutError(error: unknown): Promise<Error | undefined> {
-  if (error instanceof SidecarRequestTimeoutError) {
+  if (error instanceof RequestTimeoutError) {
     return new Error(timedOutWaitingFor("the Kafka cluster"), { cause: error });
   }
   if (isResponseError(error)) {

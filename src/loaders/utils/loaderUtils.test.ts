@@ -470,7 +470,7 @@ describe("loaderUtils.ts", () => {
     });
 
     it("should name the Kafka cluster, not the sidecar URL, for a client-side timeout", async () => {
-      const timeout = new SidecarRequestTimeoutError(
+      const timeout = new RequestTimeoutError(
         "Request to the sidecar (GET http://127.0.0.1:26636/kafka/v3/clusters/c/consumer-groups)",
         SIDECAR_REQUEST_TIMEOUT_MS,
         new Error("timeout"),
