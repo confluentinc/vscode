@@ -97,7 +97,7 @@ async function convertAvroSchemaToDataset(avroSchemaContent: string): Promise<Da
 
     // Extract better error message from ResponseError if available
     if (isResponseError(error)) {
-      const responseBody = await extractResponseBody(error);
+      const responseBody = await extractResponseBody<{ message?: string }>(error);
       const errorMessage = responseBody?.message || responseBody;
       throw new Error(`Medusa API error: ${errorMessage}`);
     }
