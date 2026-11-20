@@ -28,6 +28,11 @@ describe("ExtensionContext", () => {
   });
 
   after(() => {
+    // dispose the auth provider re-created during (re)activation below; it subscribes to
+    // process-global emitters (e.g. ccloudAuthSessionInvalidated), so leaving it live would
+    // leak listeners into other test files and double-fire handleSessionRemoved
+    ConfluentCloudAuthProvider["instance"]?.dispose();
+    ConfluentCloudAuthProvider["instance"] = null;
     if (origExtensionContext) {
       setExtensionContext(origExtensionContext);
     }
@@ -38,7 +43,12 @@ describe("ExtensionContext", () => {
       {
         callable: () => ConfluentCloudAuthProvider.getInstance(),
         source: "ConfluentCloudAuthProvider",
-        clear: () => (ConfluentCloudAuthProvider["instance"] = null),
+        // dispose before dropping the singleton so its process-global emitter subscriptions
+        // don't outlive it and contaminate other tests
+        clear: () => {
+          ConfluentCloudAuthProvider["instance"]?.dispose();
+          ConfluentCloudAuthProvider["instance"] = null;
+        },
       },
       {
         callable: () => ResourceManager.getInstance(),
