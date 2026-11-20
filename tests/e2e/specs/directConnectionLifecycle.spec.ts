@@ -248,7 +248,7 @@ test.describe("Direct Connection CRUD Lifecycle", { tag: [Tag.DirectConnectionCR
 
         test.beforeEach(async ({ electronApp, page, connectionItem }) => {
           // make sure the local item is expanded before we try to copy local resources properties
-          await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+          await expect(connectionItem.locator).toBeExpanded();
 
           // grant clipboard access to read the copied bootstrap servers and schema registry URL
           // from the local items' context menu actions

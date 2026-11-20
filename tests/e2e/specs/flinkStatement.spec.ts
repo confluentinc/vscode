@@ -21,7 +21,7 @@ test.describe("Flink Statements", { tag: [Tag.CCloud, Tag.FlinkStatements] }, ()
 
   test.beforeEach(async ({ connectionItem }) => {
     // ensure connection tree item has resources available to work with
-    await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+    await expect(connectionItem.locator).toBeExpanded();
     webview = undefined;
     statementName = undefined;
   });
