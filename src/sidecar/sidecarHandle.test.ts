@@ -3,14 +3,26 @@ import { graphql } from "gql.tada";
 import "mocha";
 import sinon from "sinon";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import { TEST_CCLOUD_KAFKA_TOPIC } from "../../tests/unit/testResources/topic";
 import { BASE_PATH as SCAFFOLDING_SERVICE_BASE_PATH } from "../clients/scaffoldingService";
 import { MicroProfileHealthApi, ResponseError } from "../clients/sidecar";
+import { consumeMessages } from "../consume";
 import * as constants from "../constants";
+import { extractResponseBody } from "../errors";
 import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
+import { isTimeoutReason } from "../utils/timing";
 import type { Message } from "../ws/messageTypes";
 import { MessageType, newMessageHeaders } from "../ws/messageTypes";
-import { SIDECAR_PROCESS_ID_HEADER } from "./constants";
+import {
+  CONSUME_TIMEOUT_MS,
+  FLINK_RESULTS_TIMEOUT_MS,
+  GRAPHQL_TIMEOUT_MS,
+  SIDECAR_PROCESS_ID_HEADER,
+  SIDECAR_REQUEST_TIMEOUT_MS,
+} from "./constants";
+import { SidecarRequestTimeoutError } from "./errors";
+import { CCloudAuthStatusMiddleware, TimeoutMiddleware } from "./middlewares";
 import type { GraphQLResponse } from "./sidecarHandle";
 import { WebsocketManager } from "./websocketManager";
 
@@ -222,6 +234,174 @@ describe("sidecarHandle sandbox tests", () => {
       assert.strictEqual(api.constructor.name, "RegionsFcpmV2Api");
     });
   });
+
+  describe("request timeouts", () => {
+    it("should time out default-config requests, after the CCloud auth status wait", () => {
+      const middleware = handle.defaultClientConfigParams.middleware!;
+
+      const timeout = middleware.at(-1);
+      const authIndex = middleware.findIndex((m) => m instanceof CCloudAuthStatusMiddleware);
+
+      assert.ok(timeout instanceof TimeoutMiddleware);
+      assert.strictEqual(timeout.timeoutMs, SIDECAR_REQUEST_TIMEOUT_MS);
+      assert.ok(authIndex >= 0 && authIndex < middleware.length - 1);
+    });
+
+    it("should give Flink statement results a longer timeout", () => {
+      const api = handle.getFlinkSqlStatementResultsApi(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+
+      const timeout = api["configuration"].middleware.at(-1);
+
+      assert.ok(timeout instanceof TimeoutMiddleware);
+      assert.strictEqual(timeout.timeoutMs, FLINK_RESULTS_TIMEOUT_MS);
+    });
+
+    it("should fail a hung consume with a 504 marked as timed out", async () => {
+      const clock = sandbox.useFakeTimers();
+      sandbox
+        .stub(global, "fetch")
+        .callsFake(
+          (_url: string | URL | Request, init?: RequestInit) =>
+            new Promise((_resolve, reject) =>
+              init?.signal?.addEventListener("abort", () => reject(init.signal!.reason)),
+            ),
+        );
+      const api = handle.getKafkaConsumeApi(constants.CCLOUD_CONNECTION_ID);
+
+      const consume = consumeMessages(
+        api,
+        TEST_CCLOUD_KAFKA_TOPIC,
+        {},
+        new AbortController().signal,
+      );
+      const failure = consume.catch((err: unknown) => err);
+      await clock.tickAsync(CONSUME_TIMEOUT_MS);
+
+      const err = await failure;
+      assert.ok(err instanceof ResponseError);
+      assert.strictEqual(err.response.status, 504);
+      assert.strictEqual((await err.response.json()).timedOut, true);
+    });
+
+    describe("consume error bodies", () => {
+      /**
+       * Answers with a 500 whose body never arrives, erroring it on abort as real `fetch` does.
+       * Resolves once `fetch` has been called.
+       */
+      function stubStalledErrorBody(): Promise<void> {
+        return new Promise((fetched) => {
+          sandbox.stub(global, "fetch").callsFake(async (_url, init?: RequestInit) => {
+            const signal = init?.signal;
+            const body = new ReadableStream({
+              start(controller) {
+                if (signal?.aborted) controller.error(signal.reason);
+                signal?.addEventListener("abort", () => controller.error(signal.reason));
+              },
+            });
+            fetched();
+            return new Response(body, { status: 500 });
+          });
+        });
+      }
+
+      it("should time out a consume whose error body stalls", async () => {
+        const clock = sandbox.useFakeTimers();
+        void stubStalledErrorBody();
+        const api = handle.getKafkaConsumeApi(constants.CCLOUD_CONNECTION_ID);
+
+        const failure = consumeMessages(
+          api,
+          TEST_CCLOUD_KAFKA_TOPIC,
+          {},
+          new AbortController().signal,
+        ).catch((err: unknown) => err);
+        await clock.tickAsync(CONSUME_TIMEOUT_MS);
+
+        assert.ok(isTimeoutReason(await failure));
+      });
+
+      it("should let the caller cancel a consume whose error body stalls", async () => {
+        const fetched = stubStalledErrorBody();
+        const api = handle.getKafkaConsumeApi(constants.CCLOUD_CONNECTION_ID);
+        const caller = new AbortController();
+
+        const failure = consumeMessages(api, TEST_CCLOUD_KAFKA_TOPIC, {}, caller.signal).catch(
+          (err: unknown) => err,
+        );
+        await fetched;
+        caller.abort();
+
+        const err = await failure;
+        assert.ok(err instanceof DOMException);
+        assert.strictEqual(err.name, "AbortError");
+      });
+
+      it("should keep a readable error body for the message viewer", async () => {
+        sandbox
+          .stub(global, "fetch")
+          .resolves(new Response(JSON.stringify({ message: "boom" }), { status: 500 }));
+        const api = handle.getKafkaConsumeApi(constants.CCLOUD_CONNECTION_ID);
+
+        const err = await consumeMessages(
+          api,
+          TEST_CCLOUD_KAFKA_TOPIC,
+          {},
+          new AbortController().signal,
+        ).catch((e: unknown) => e);
+
+        assert.ok(err instanceof ResponseError);
+        assert.strictEqual(err.response.status, 500);
+        assert.deepStrictEqual(await extractResponseBody(err), { message: "boom" });
+      });
+
+      it("should keep the status readable when the error body breaks mid-read", async () => {
+        const reset = new TypeError("terminated");
+        const body = new ReadableStream({
+          start(controller) {
+            controller.error(reset);
+          },
+        });
+        sandbox.stub(global, "fetch").resolves(new Response(body, { status: 503 }));
+        const api = handle.getKafkaConsumeApi(constants.CCLOUD_CONNECTION_ID);
+
+        const err = await consumeMessages(
+          api,
+          TEST_CCLOUD_KAFKA_TOPIC,
+          {},
+          new AbortController().signal,
+        ).catch((e: unknown) => e);
+
+        assert.ok(err instanceof ResponseError);
+        assert.strictEqual(err.response.status, 503);
+        assert.strictEqual(await extractResponseBody(err), "");
+        assert.strictEqual(err.cause, reset);
+      });
+    });
+
+    for (const [name, error, expected] of [
+      ["timeout", new DOMException("signal timed out", "TimeoutError"), { timedOut: true }],
+      ["caller abort", new DOMException("aborted", "AbortError"), { aborted: true }],
+    ] as const) {
+      it(`should turn a consume ${name} into a 504 the message viewer can tell apart`, async () => {
+        const api = handle.getKafkaConsumeApi(constants.CCLOUD_CONNECTION_ID);
+        const [middleware] = api["configuration"].middleware;
+
+        const response = await middleware.onError!({
+          fetch,
+          url: "http://sidecar.test",
+          init: {},
+          error,
+        });
+
+        assert.strictEqual(response?.status, 504);
+        const body = await response.json();
+        for (const [key, value] of Object.entries(expected)) {
+          assert.strictEqual(body[key], value);
+        }
+      });
+    }
+  });
+
   describe("query()", () => {
     let fetchStub: sinon.SinonStub;
 
@@ -443,6 +623,25 @@ describe("sidecarHandle sandbox tests", () => {
 
       sinon.assert.calledOnce(fetchStub);
       assert.strictEqual(handle["graphQlQueryPromises"].size, 0); // cache should be empty after queries resolve
+    });
+
+    it("should fail a hung query with a SidecarRequestTimeoutError and clear the cache", async () => {
+      const clock = sandbox.useFakeTimers();
+      fetchStub.callsFake(
+        (_url: string, init: RequestInit) =>
+          new Promise((_resolve, reject) =>
+            init.signal?.addEventListener("abort", () => reject(init.signal!.reason)),
+          ),
+      );
+
+      const query = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, {
+        id: "123",
+      });
+      const rejected = assert.rejects(query, SidecarRequestTimeoutError);
+      await clock.tickAsync(GRAPHQL_TIMEOUT_MS);
+
+      await rejected;
+      assert.strictEqual(handle["graphQlQueryPromises"].size, 0);
     });
 
     // If the fetch fails, the promise should reject and the cache should be cleared.

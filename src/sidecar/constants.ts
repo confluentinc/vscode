@@ -33,3 +33,21 @@ export const SIDECAR_LOGFILE_NAME = "vscode-confluent-sidecar.log";
 export const SIDECAR_FORMATTED_LOGFILE_NAME = "vscode-confluent-sidecar-formatted.log";
 
 export const MOMENTARY_PAUSE_MS = 500; // half a second.
+
+/**
+ * Per-attempt budget for a sidecar REST call to return its response headers, above the sidecar's
+ * own ~20s upstream timeout. Reading the body afterwards isn't covered.
+ */
+export const SIDECAR_REQUEST_TIMEOUT_MS = 30_000;
+/** {@link SIDECAR_REQUEST_TIMEOUT_MS} for a Flink results page, which can take longer to build. */
+export const FLINK_RESULTS_TIMEOUT_MS = 60_000;
+/** Above the sidecar's 60s CCloud consume hold, plus its follow-up schema fetches. */
+export const CONSUME_TIMEOUT_MS = 120_000;
+/** The sidecar may run two 40s-capped fetches in a row to answer one query, so up to 80s. */
+export const GRAPHQL_TIMEOUT_MS = 90_000;
+/**
+ * How long a request waits for an expired CCloud session to reconnect before failing. Long enough
+ * for one more sidecar token refresh: about 5-11s until the retry starts, its 90s deadline, then a
+ * 5s status check, so about 106s.
+ */
+export const CCLOUD_RECONNECT_TIMEOUT_MS = 120_000;

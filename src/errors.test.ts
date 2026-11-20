@@ -11,6 +11,9 @@ import {
   logError,
 } from "./errors";
 import { Logger } from "./logging";
+import { SIDECAR_REQUEST_TIMEOUT_MS } from "./sidecar/constants";
+import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "./sidecar/errors";
+import * as sentryClient from "./telemetry/sentryClient";
 
 describe("errors.ts logError()", () => {
   let sandbox: sinon.SinonSandbox;
@@ -98,6 +101,34 @@ describe("errors.ts logError()", () => {
       responseErrorType: error.name,
     });
   });
+
+  it("should send an error to Sentry when given Sentry context", async () => {
+    const captureStub = sandbox.stub(sentryClient, "sentryCaptureException");
+
+    await logError(new Error("uh oh"), "test message", { extra: { foo: "bar" } });
+
+    sinon.assert.calledOnce(captureStub);
+  });
+
+  const timeout = new SidecarRequestTimeoutError(
+    "GET /test",
+    SIDECAR_REQUEST_TIMEOUT_MS,
+    undefined,
+  );
+  for (const [label, error] of [
+    ["a request timeout", timeout],
+    ["an error caused by a request timeout", new Error("fetch failed", { cause: timeout })],
+    ["a reconnect timeout", new CCloudReconnectTimeoutError("Timed out reconnecting")],
+  ] as const) {
+    it(`should log ${label} locally but keep it out of Sentry`, async () => {
+      const captureStub = sandbox.stub(sentryClient, "sentryCaptureException");
+
+      await logError(error, "test message", { extra: { foo: "bar" } });
+
+      sinon.assert.calledOnce(loggerErrorSpy);
+      sinon.assert.notCalled(captureStub);
+    });
+  }
 });
 
 describe("errors.ts hasErrorCause()", () => {
