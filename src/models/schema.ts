@@ -9,7 +9,6 @@ import type {
   EnvironmentId,
   IResourceBase,
   ISchemaRegistryResource,
-  ISearchable,
 } from "./resource";
 import { connectionIdToType, isCCloud } from "./resource";
 
@@ -41,7 +40,7 @@ export function getLanguageTypes(schemaType: SchemaType): string[] {
  *
  * Depending on the constructor path, may also carry an array of Schema instances.
  */
-export class Subject implements IResourceBase, ISearchable, ISchemaRegistryResource {
+export class Subject implements IResourceBase, ISchemaRegistryResource {
   name!: string;
 
   connectionId!: ConnectionId;

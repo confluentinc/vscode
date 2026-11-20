@@ -15,7 +15,7 @@ export abstract class ResourceContainer<T extends ISearchable>
   extends TreeItem
   implements ISearchable
 {
-  // narrow TreeItem.id from `string | undefined` to satisfy IdItem (required by BaseViewProviderData)
+  // narrow TreeItem.id from `string | undefined` to satisfy IResourceBase.id (required by BaseViewProviderData)
   declare id: string;
 
   // IResourceBase fields required by BaseViewProviderData

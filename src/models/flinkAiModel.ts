@@ -2,11 +2,10 @@ import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { IconNames } from "../icons";
-import type { IdItem } from "./main";
 import { CustomMarkdownString } from "./main";
-import type { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
+import type { ConnectionId, EnvironmentId, IResourceBase } from "./resource";
 
-export class FlinkAIModel implements IResourceBase, IdItem, ISearchable {
+export class FlinkAIModel implements IResourceBase {
   connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
   connectionType: ConnectionType = ConnectionType.Ccloud;
 
