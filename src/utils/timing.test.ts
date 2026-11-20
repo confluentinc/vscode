@@ -1,6 +1,8 @@
 import * as assert from "assert";
 import "mocha";
 import * as sinon from "sinon";
+import { stalledBodyFetch } from "../../tests/unit/testUtils";
+import { ResponseError } from "../clients/scaffoldingService";
 import { Logger } from "../logging";
 import {
   backoffWindow,
@@ -8,9 +10,11 @@ import {
   isTimeoutReason,
   pauseWithJitter,
   raceWithTimeout,
+  RequestTimeoutError,
   retryWithBackoff,
   serverRequestedDelayMs,
   timeoutSignal,
+  withRequestTimeout,
 } from "./timing";
 
 describe("utils/timing", () => {
@@ -445,6 +449,78 @@ describe("utils/timing", () => {
 
         assert.strictEqual(clock.countTimers(), timersBefore);
         assert.strictEqual(signal.aborted, false);
+      });
+    });
+
+    describe("withRequestTimeout", () => {
+      // any value works; 1000ms shows as "1s" in the timeout messages below
+      const TIMEOUT_MS = 1000;
+
+      it("should fail a request that outlasts its timeout with a RequestTimeoutError", async () => {
+        const pending = withRequestTimeout(
+          "Test request",
+          TIMEOUT_MS,
+          (signal) =>
+            new Promise((_resolve, reject) =>
+              signal.addEventListener("abort", () => reject(signal.reason)),
+            ),
+        );
+        const rejected = assert.rejects(pending, (err) => {
+          assert.ok(err instanceof RequestTimeoutError);
+          assert.strictEqual(err.message, "Test request timed out after 1s");
+          return true;
+        });
+
+        await clock.tickAsync(TIMEOUT_MS);
+
+        await rejected;
+      });
+
+      it("should pass other errors through unchanged", async () => {
+        const failure = new Error("boom");
+
+        const pending = withRequestTimeout("Test request", TIMEOUT_MS, async () => {
+          throw failure;
+        });
+
+        await assert.rejects(pending, (err) => err === failure);
+      });
+
+      it("should keep timing a failed response's body, which callers read for the error", async () => {
+        const pending = withRequestTimeout("Test request", TIMEOUT_MS, async (signal) => {
+          const response = await stalledBodyFetch("application/json", 500)("test", { signal });
+          throw new ResponseError(response);
+        });
+        const rejected = assert.rejects(
+          pending,
+          (err) =>
+            err instanceof RequestTimeoutError &&
+            err.message === "Test request (HTTP 500) timed out after 1s",
+        );
+
+        await clock.tickAsync(TIMEOUT_MS);
+
+        await rejected;
+      });
+
+      it("should leave a failed response's body readable for the caller", async () => {
+        const failure = new ResponseError(new Response('{"message":"boom"}', { status: 500 }));
+
+        const pending = withRequestTimeout("Test request", TIMEOUT_MS, async () => {
+          throw failure;
+        });
+
+        await assert.rejects(pending, (err) => err === failure);
+        assert.deepStrictEqual(await failure.response.json(), { message: "boom" });
+      });
+
+      it("should stop its timer once the request settles", async () => {
+        const timersBefore = clock.countTimers();
+
+        const result = await withRequestTimeout("Test request", TIMEOUT_MS, async () => "done");
+
+        assert.strictEqual(result, "done");
+        assert.strictEqual(clock.countTimers(), timersBefore);
       });
     });
 

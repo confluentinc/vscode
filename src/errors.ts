@@ -9,8 +9,9 @@ import { ResponseError as ScaffoldingServiceResponseError } from "./clients/scaf
 import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRegistryRest";
 import { ResponseError as SidecarResponseError } from "./clients/sidecar";
 import { Logger } from "./logging";
-import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "./sidecar/errors";
+import { CCloudReconnectTimeoutError } from "./sidecar/errors";
 import { sentryCaptureException } from "./telemetry/sentryClient";
+import { RequestTimeoutError } from "./utils/timing";
 
 const logger = new Logger("errors");
 
@@ -117,10 +118,7 @@ export function getNestedErrorChain(error: Error): Record<string, string | undef
 function isOrWrapsTimeout(error: Error): boolean {
   let current: Error | undefined = error;
   while (current) {
-    if (
-      current instanceof SidecarRequestTimeoutError ||
-      current instanceof CCloudReconnectTimeoutError
-    ) {
+    if (current instanceof RequestTimeoutError || current instanceof CCloudReconnectTimeoutError) {
       return true;
     }
     current = hasErrorCause(current) ? current.cause : undefined;
