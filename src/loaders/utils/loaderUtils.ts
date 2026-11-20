@@ -115,15 +115,35 @@ export async function fetchConsumerGroups(cluster: KafkaCluster): Promise<Consum
     cluster.id,
     cluster.connectionId,
   );
-  const response: ConsumerGroupDataList = await client.listKafkaConsumerGroups({
-    cluster_id: cluster.id,
-  });
+  let response: ConsumerGroupDataList;
+  try {
+    response = await client.listKafkaConsumerGroups({ cluster_id: cluster.id });
+  } catch (error) {
+    throw (await kafkaClusterTimeoutError(error)) ?? error;
+  }
   const consumerGroups: ConsumerGroupData[] = response.data;
 
   logger.debug(
     `fetched ${consumerGroups.length} consumer group(s) for ${cluster.connectionType} Kafka cluster ${cluster.id}`,
   );
   return consumerGroups;
+}
+
+/**
+ * Turn a Kafka REST timeout into an error naming the host or the cluster instead of the sidecar URL,
+ * or return `undefined` for any other failure.
+ */
+async function kafkaClusterTimeoutError(error: unknown): Promise<Error | undefined> {
+  if (error instanceof SidecarRequestTimeoutError) {
+    return new Error(timedOutWaitingFor("the Kafka cluster"), { cause: error });
+  }
+  if (isResponseError(error)) {
+    // an unreadable body still gets the fallback message for a 504, and leaves other errors alone
+    const body = await extractResponseBody(error).catch(() => undefined);
+    const message = sidecarTimeoutMessage(error.response.status, body, "the Kafka cluster");
+    return message ? new Error(message, { cause: error }) : undefined;
+  }
+  return undefined;
 }
 
 /** Fetch the members (consumers) of a given Kafka cluster's consumer group ID. */

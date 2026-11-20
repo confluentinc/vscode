@@ -14,7 +14,7 @@ import {
   createTestTopicData,
   proxyTimeoutBody,
 } from "../../../tests/unit/testUtils";
-import { ConsumerGroupV3Api, TopicV3Api } from "../../clients/kafkaRest";
+import { ConsumerGroupV3Api, ResponseError, TopicV3Api } from "../../clients/kafkaRest";
 import type {
   ConsumerData,
   ConsumerDataList,
@@ -382,6 +382,16 @@ describe("loaderUtils.ts", () => {
       stubbedSidecar.getConsumerGroupV3Api.returns(stubbedClient);
     });
 
+    /** A response error whose body stream fails when read. */
+    function unreadableResponseError(status: number): ResponseError {
+      const body = new ReadableStream({
+        start(controller) {
+          controller.error(new TypeError("terminated"));
+        },
+      });
+      return new ResponseError(new Response(body, { status }));
+    }
+
     it("should return a ConsumerGroupData array from listKafkaConsumerGroups", async () => {
       const testGroups: ConsumerGroupData[] = [
         {
@@ -442,6 +452,71 @@ describe("loaderUtils.ts", () => {
       await assert.rejects(loaderUtils.fetchConsumerGroups(TEST_LOCAL_KAFKA_CLUSTER), {
         message: "Connection refused",
       });
+    });
+
+    it("should say which host timed out for a sidecar proxy timeout", async () => {
+      const title = "pkc-123.confluent.cloud didn't respond within 20s";
+      const proxyTimeout = createResponseError(
+        504,
+        "Gateway Timeout",
+        JSON.stringify(proxyTimeoutBody(title)),
+      );
+      stubbedClient.listKafkaConsumerGroups.rejects(proxyTimeout);
+
+      await assert.rejects(
+        loaderUtils.fetchConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER),
+        (err) => err instanceof Error && err.message === title && err.cause === proxyTimeout,
+      );
+    });
+
+    it("should name the Kafka cluster, not the sidecar URL, for a client-side timeout", async () => {
+      const timeout = new SidecarRequestTimeoutError(
+        "Request to the sidecar (GET http://127.0.0.1:26636/kafka/v3/clusters/c/consumer-groups)",
+        SIDECAR_REQUEST_TIMEOUT_MS,
+        new Error("timeout"),
+      );
+      stubbedClient.listKafkaConsumerGroups.rejects(timeout);
+
+      await assert.rejects(
+        loaderUtils.fetchConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER),
+        (err) =>
+          err instanceof Error &&
+          err.message === "Timed out waiting for the Kafka cluster" &&
+          err.cause === timeout,
+      );
+    });
+
+    it("should pass on a response error that isn't a timeout unchanged", async () => {
+      const serverError = createResponseError(500, "Internal Server Error", "{}");
+      stubbedClient.listKafkaConsumerGroups.rejects(serverError);
+
+      await assert.rejects(
+        loaderUtils.fetchConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER),
+        (err) => err === serverError,
+      );
+    });
+
+    it("should pass on a response error whose body can't be read unchanged", async () => {
+      const unreadable = unreadableResponseError(500);
+      stubbedClient.listKafkaConsumerGroups.rejects(unreadable);
+
+      await assert.rejects(
+        loaderUtils.fetchConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER),
+        (err) => err === unreadable,
+      );
+    });
+
+    it("should name the Kafka cluster for a sidecar 504 whose body can't be read", async () => {
+      const unreadable = unreadableResponseError(504);
+      stubbedClient.listKafkaConsumerGroups.rejects(unreadable);
+
+      await assert.rejects(
+        loaderUtils.fetchConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER),
+        (err) =>
+          err instanceof Error &&
+          err.message === "Timed out waiting for the Kafka cluster" &&
+          err.cause === unreadable,
+      );
     });
   });
 
