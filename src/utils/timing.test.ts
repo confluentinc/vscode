@@ -453,10 +453,13 @@ describe("utils/timing", () => {
     });
 
     describe("withRequestTimeout", () => {
+      // any value works; 1000ms shows as "1s" in the timeout messages below
+      const TIMEOUT_MS = 1000;
+
       it("should fail a request that outlasts its timeout with a RequestTimeoutError", async () => {
         const pending = withRequestTimeout(
           "Test request",
-          1000,
+          TIMEOUT_MS,
           (signal) =>
             new Promise((_resolve, reject) =>
               signal.addEventListener("abort", () => reject(signal.reason)),
@@ -468,7 +471,7 @@ describe("utils/timing", () => {
           return true;
         });
 
-        await clock.tickAsync(1000);
+        await clock.tickAsync(TIMEOUT_MS);
 
         await rejected;
       });
@@ -476,7 +479,7 @@ describe("utils/timing", () => {
       it("should pass other errors through unchanged", async () => {
         const failure = new Error("boom");
 
-        const pending = withRequestTimeout("Test request", 1000, async () => {
+        const pending = withRequestTimeout("Test request", TIMEOUT_MS, async () => {
           throw failure;
         });
 
@@ -484,7 +487,7 @@ describe("utils/timing", () => {
       });
 
       it("should keep timing a failed response's body, which callers read for the error", async () => {
-        const pending = withRequestTimeout("Test request", 1000, async (signal) => {
+        const pending = withRequestTimeout("Test request", TIMEOUT_MS, async (signal) => {
           const response = await stalledBodyFetch("application/json", 500)("test", { signal });
           throw new ResponseError(response);
         });
@@ -495,7 +498,7 @@ describe("utils/timing", () => {
             err.message === "Test request (HTTP 500) timed out after 1s",
         );
 
-        await clock.tickAsync(1000);
+        await clock.tickAsync(TIMEOUT_MS);
 
         await rejected;
       });
@@ -503,7 +506,7 @@ describe("utils/timing", () => {
       it("should leave a failed response's body readable for the caller", async () => {
         const failure = new ResponseError(new Response('{"message":"boom"}', { status: 500 }));
 
-        const pending = withRequestTimeout("Test request", 1000, async () => {
+        const pending = withRequestTimeout("Test request", TIMEOUT_MS, async () => {
           throw failure;
         });
 
@@ -514,7 +517,7 @@ describe("utils/timing", () => {
       it("should stop its timer once the request settles", async () => {
         const timersBefore = clock.countTimers();
 
-        const result = await withRequestTimeout("Test request", 1000, async () => "done");
+        const result = await withRequestTimeout("Test request", TIMEOUT_MS, async () => "done");
 
         assert.strictEqual(result, "done");
         assert.strictEqual(clock.countTimers(), timersBefore);
