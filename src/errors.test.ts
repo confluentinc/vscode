@@ -11,6 +11,7 @@ import {
   logError,
 } from "./errors";
 import { Logger } from "./logging";
+import { SIDECAR_REQUEST_TIMEOUT_MS } from "./sidecar/constants";
 import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "./sidecar/errors";
 import * as sentryClient from "./telemetry/sentryClient";
 
@@ -109,7 +110,11 @@ describe("errors.ts logError()", () => {
     sinon.assert.calledOnce(captureStub);
   });
 
-  const timeout = new SidecarRequestTimeoutError("GET /test", 30_000, undefined);
+  const timeout = new SidecarRequestTimeoutError(
+    "GET /test",
+    SIDECAR_REQUEST_TIMEOUT_MS,
+    undefined,
+  );
   for (const [label, error] of [
     ["a request timeout", timeout],
     ["an error caused by a request timeout", new Error("fetch failed", { cause: timeout })],

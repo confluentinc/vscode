@@ -205,14 +205,16 @@ describe("CCloudAuthStatusMiddleware.handleProblematicStatus() deadline", () => 
     const notificationClosed = sandbox.spy();
     const subscription = stableCCloudConnectedState.event(notificationClosed);
     const middleware = new CCloudAuthStatusMiddleware();
+    // any point before the first request's deadline
+    const secondRequestDelayMs = 50_000;
     const firstWait = assert.rejects(middleware.handleProblematicStatus());
-    await clock.tickAsync(50_000);
+    await clock.tickAsync(secondRequestDelayMs);
     const secondWait = assert.rejects(middleware.handleProblematicStatus());
 
-    await clock.tickAsync(CCLOUD_RECONNECT_TIMEOUT_MS - 50_000);
+    await clock.tickAsync(CCLOUD_RECONNECT_TIMEOUT_MS - secondRequestDelayMs);
     await firstWait;
     const closedAfterFirstDeadline = notificationClosed.callCount;
-    await clock.tickAsync(50_000);
+    await clock.tickAsync(secondRequestDelayMs);
     await secondWait;
     subscription.dispose();
 
@@ -227,10 +229,10 @@ describe("CCloudAuthStatusMiddleware.handleProblematicStatus() deadline", () => 
       .finally(() => (settled = true));
     const rejected = assert.rejects(waiting, CCloudReconnectTimeoutError);
 
-    // one more sidecar refresh attempt can take about 100s
-    await clock.tickAsync(100_000);
+    // one more sidecar refresh attempt can take about 106s (see CCLOUD_RECONNECT_TIMEOUT_MS)
+    await clock.tickAsync(106_000);
     assert.strictEqual(settled, false);
-    await clock.tickAsync(CCLOUD_RECONNECT_TIMEOUT_MS - 100_000);
+    await clock.tickAsync(CCLOUD_RECONNECT_TIMEOUT_MS - 106_000);
 
     await rejected;
   });
@@ -287,12 +289,15 @@ describe("TimeoutMiddleware", () => {
     });
   }
 
+  // any budget works; this is the same as SIDECAR_REQUEST_TIMEOUT_MS
+  const TIMEOUT_MS = 30_000;
+
   function preferencesApi(fetchApi: typeof fetch = hungFetch): PreferencesResourceApi {
     return new PreferencesResourceApi(
       new Configuration({
         basePath: "http://sidecar.test",
         fetchApi,
-        middleware: [new TimeoutMiddleware(30_000)],
+        middleware: [new TimeoutMiddleware(TIMEOUT_MS)],
       }),
     );
   }
@@ -304,10 +309,12 @@ describe("TimeoutMiddleware", () => {
       .finally(() => (settled = true));
     const rejected = assert.rejects(
       request,
-      (err) => err instanceof SidecarRequestTimeoutError && /timed out after 30s/.test(err.message),
+      (err) =>
+        err instanceof SidecarRequestTimeoutError &&
+        err.message.includes(`timed out after ${TIMEOUT_MS / 1000}s`),
     );
 
-    await clock.tickAsync(29_999);
+    await clock.tickAsync(TIMEOUT_MS - 1);
     assert.strictEqual(settled, false);
     await clock.tickAsync(1);
 
@@ -352,7 +359,7 @@ describe("TimeoutMiddleware", () => {
         basePath: "http://sidecar.test",
         fetchApi: stalledErrorFetch,
         // the real order: the error logger reads the body before the timeout's post hook runs
-        middleware: [new ErrorResponseMiddleware(), new TimeoutMiddleware(30_000)],
+        middleware: [new ErrorResponseMiddleware(), new TimeoutMiddleware(TIMEOUT_MS)],
       }),
     );
 
@@ -360,7 +367,7 @@ describe("TimeoutMiddleware", () => {
       api.gatewayV1PreferencesGet(),
       (err) => err instanceof SidecarRequestTimeoutError && err.message.includes("(HTTP 500)"),
     );
-    await clock.tickAsync(30_000);
+    await clock.tickAsync(TIMEOUT_MS);
 
     await rejected;
   });

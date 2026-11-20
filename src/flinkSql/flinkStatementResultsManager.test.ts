@@ -32,6 +32,7 @@ import type {
 } from "../webview/flink-statement-results";
 import type { StatementMeta } from "./flinkStatementResultsManager";
 import { TRANSIENT_RETRY_DEADLINE_MS } from "./flinkStatementResultsManager";
+import { FLINK_RESULTS_TIMEOUT_MS } from "../sidecar/constants";
 import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "../sidecar/errors";
 
 /** How long the sidecar waits on an upstream request before answering 504. */
@@ -795,7 +796,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       );
 
       const fetchPromise = ctx.manager.fetchResults();
-      await clock.tickAsync(11_200);
+      await clock.tickAsync(MAX_TRANSIENT_BACKOFFS_MS);
       await fetchPromise;
 
       assert.deepStrictEqual(ctx.manager["_latestError"](), {
@@ -817,6 +818,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       );
 
       const fetchPromise = ctx.manager.fetchResults();
+      // well past the ~63s the three attempts take
       await clock.tickAsync(TRANSIENT_RETRY_DEADLINE_MS * 2);
       await fetchPromise;
 
@@ -826,7 +828,11 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
     it("should tell the user a results fetch timed out", async () => {
       ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(
-        new SidecarRequestTimeoutError("Request to the sidecar", 60_000, new Error("timeout")),
+        new SidecarRequestTimeoutError(
+          "Request to the sidecar",
+          FLINK_RESULTS_TIMEOUT_MS,
+          new Error("timeout"),
+        ),
       );
 
       await ctx.manager.fetchResults();
@@ -839,7 +845,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
     it("should tell the user to sign in again when a results fetch gives up on reconnecting", async () => {
       ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(
-        new CCloudReconnectTimeoutError("Timed out after 60s waiting to reconnect"),
+        new CCloudReconnectTimeoutError("Timed out reconnecting"),
       );
 
       await ctx.manager.fetchResults();

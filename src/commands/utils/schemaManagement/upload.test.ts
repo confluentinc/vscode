@@ -42,6 +42,7 @@ import { KafkaTopic } from "../../../models/topic";
 import * as notifications from "../../../notifications";
 import * as quickPicksSchemas from "../../../quickpicks/schemas";
 import type { SidecarHandle } from "../../../sidecar";
+import { SIDECAR_REQUEST_TIMEOUT_MS } from "../../../sidecar/constants";
 import { SidecarRequestTimeoutError } from "../../../sidecar/errors";
 import { getSchemasViewProvider } from "../../../viewProviders/schemas";
 import {
@@ -727,7 +728,11 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
     });
 
     it("should fail on a timeout, naming Schema Registry, instead of treating the subject as new", async function () {
-      const timeout = new SidecarRequestTimeoutError("GET /subjects", 30_000, undefined);
+      const timeout = new SidecarRequestTimeoutError(
+        "GET /subjects",
+        SIDECAR_REQUEST_TIMEOUT_MS,
+        undefined,
+      );
       mockSchemaSubjectsApi.listVersions.rejects(timeout);
 
       await assert.rejects(
@@ -869,7 +874,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       stubbedSubjectsV1Api.register.rejects(
         new SidecarRequestTimeoutError(
           "Request to the sidecar (POST http://127.0.0.1:26636/subjects/s/versions)",
-          30_000,
+          SIDECAR_REQUEST_TIMEOUT_MS,
           new Error("timeout"),
         ),
       );

@@ -47,6 +47,7 @@ export const CONSUME_TIMEOUT_MS = 120_000;
 export const GRAPHQL_TIMEOUT_MS = 90_000;
 /**
  * How long a request waits for an expired CCloud session to reconnect before failing. Long enough
- * for one more sidecar token refresh: up to 5s of backoff, its 90s deadline, then a 5s status check.
+ * for one more sidecar token refresh: about 5-11s until the retry starts, its 90s deadline, then a
+ * 5s status check, so about 106s.
  */
 export const CCLOUD_RECONNECT_TIMEOUT_MS = 120_000;
