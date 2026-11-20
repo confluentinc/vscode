@@ -910,8 +910,10 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
         .resolves(subjectVersionPairs);
 
       const promise = getNewlyRegisteredVersion(stubbedSchemasV1Api, testSubjectName, testSchemaId);
+      // first wait is READ_BACK_BASE_BACKOFF_MS (100ms)
       await clock.tickAsync(100);
       sinon.assert.calledTwice(stubbedSchemasV1Api.getVersions);
+      // second wait is 100 * 1.6 = 160ms, so stop 1ms short of it
       await clock.tickAsync(159);
       sinon.assert.calledTwice(stubbedSchemasV1Api.getVersions);
       await clock.tickAsync(1);
@@ -934,9 +936,11 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
           error.message ===
             `Could not find subject "${testSubjectName}" in the list of bindings for schema id ${testSchemaId}`,
       );
+      // past the worst case of four jittered waits (120 + 192 + 307 + 492 = 1111ms)
       await clock.tickAsync(5000);
 
       await rejected;
+      // 1 initial attempt + MAX_READ_BACK_RETRIES
       sinon.assert.callCount(stubbedSchemasV1Api.getVersions, 5);
     });
 

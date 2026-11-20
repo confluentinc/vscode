@@ -39,6 +39,12 @@ const EMPTY_RESULTS_RESPONSE: GetSqlv1StatementResult200Response = {
   results: { data: [] },
 };
 
+/**
+ * Upper bound on the results manager's 4 transient backoffs: 1000 * 1.6^n for n = 0..3, plus 20%
+ * jitter, is 1200 + 1920 + 3072 + 4915 = 11107ms, rounded up.
+ */
+const MAX_TRANSIENT_BACKOFFS_MS = 11_200;
+
 function createMockStatement(): FlinkStatement {
   const fakeFlinkStatement = loadFixtureFromFile(
     "flink-statement-results-processing/fake-flink-statement.json",
@@ -672,7 +678,8 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       assert.equal(ctx.manager["_latestError"](), null);
     });
 
-    it("should wait out a Retry-After longer than the exponential curve's ceiling", async () => {
+    it("should wait out a Retry-After longer than the old 8s clamp", async () => {
+      // 20s is above any step of the curve (4096ms at most) and under the 30s TRANSIENT_BACKOFF_CAP_MS
       const stub = ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult;
       stub.onFirstCall().rejects(
         createResponseError(429, "Too Many Requests", "{}", ResponseErrorSource.Sidecar, {
@@ -701,6 +708,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       );
 
       const fetchPromise = ctx.manager.fetchResults();
+      // it fails without waiting; the tick only lets the promise settle
       await clock.tickAsync(10_000);
       await fetchPromise;
 
@@ -715,8 +723,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
       const fetchPromise = ctx.manager.fetchResults();
 
-      // 4 transient retries at up to 1200/1920/3072/4915ms
-      await clock.tickAsync(11_200);
+      await clock.tickAsync(MAX_TRANSIENT_BACKOFFS_MS);
 
       await fetchPromise;
 
@@ -766,8 +773,8 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
       const fetchPromise = ctx.manager.fetchResults();
 
-      // 11200ms covers the transient backoffs, then the 409 waits with a little margin
-      await clock.tickAsync(11_200 + 61 * 500);
+      // the transient backoffs, then (MAX_CONFLICT_RETRIES + 1) * CONFLICT_BACKOFF_MS of 409 waits
+      await clock.tickAsync(MAX_TRANSIENT_BACKOFFS_MS + 61 * 500);
 
       await fetchPromise;
 

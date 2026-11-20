@@ -146,6 +146,7 @@ describe("utils/timing", () => {
         "1.5",
         "1e3",
         "garbage 99",
+        // matches the IMF-fixdate shape but isn't a real date
         "Sun, 99 Nov 2026 08:49:37 GMT",
       ]) {
         it(`should fall back to X-RateLimit-Reset when Retry-After is malformed ("${malformed}")`, () => {
@@ -176,6 +177,8 @@ describe("utils/timing", () => {
         return new FakeResponseError(new Response("", { status, headers: h }));
       }
 
+      // cap and retries mirror the Flink results manager; the cap sits between the 20s and 600s
+      // Retry-After values tested below
       const baseOptions = {
         operationName: "test",
         capMs: 30_000,
@@ -194,6 +197,7 @@ describe("utils/timing", () => {
         op.onSecondCall().resolves("ok");
 
         const promise = retryWithBackoff(op, baseOptions);
+        // first wait is BACKOFF_BASE_MS (1s), with jitter pinned to 0
         await clock.tickAsync(1000);
 
         assert.strictEqual(await promise, "ok");
@@ -208,6 +212,7 @@ describe("utils/timing", () => {
 
         const promise = retryWithBackoff(op, { ...baseOptions, maxRetries: 2 });
         const rejected = assert.rejects(promise, (err) => err === last);
+        // past both waits (1000 + 1600ms)
         await clock.tickAsync(60_000);
 
         await rejected;
@@ -224,6 +229,8 @@ describe("utils/timing", () => {
       });
 
       it("should never retry sooner than a Retry-After in seconds", async () => {
+        // the Retry-After values in these tests are arbitrary: each only has to be over the 1s first
+        // step and under capMs, and the tick before the last stops 1ms short of it
         const op = sandbox.stub();
         op.onFirstCall().rejects(failure(429, { "retry-after": "7" }));
         op.onSecondCall().resolves("ok");
@@ -281,7 +288,7 @@ describe("utils/timing", () => {
       });
 
       it("should ignore X-RateLimit-Reset on a response that isn't a 429", async () => {
-        // CCloud sends the header on every response, so it says nothing about when a 503 clears
+        // the header reports when the rate-limit window resets, which says nothing about a 503
         const op = sandbox.stub();
         op.onFirstCall().rejects(failure(503, { "x-ratelimit-reset": "45" }));
         op.onSecondCall().resolves("ok");
@@ -362,7 +369,7 @@ describe("utils/timing", () => {
 
         const promise = retryWithBackoff(op, { ...baseOptions, deadlineMs: 1100 });
         await clock.tickAsync(0);
-        // ordinary timer lateness
+        // ordinary timer lateness, within LATE_TIMER_GRACE_MS (50ms)
         clock.setSystemTime(Date.now() + 5);
         await clock.tickAsync(1100);
 
@@ -380,7 +387,8 @@ describe("utils/timing", () => {
         const promise = retryWithBackoff(op, { ...baseOptions, deadlineMs: 1100 });
         const rejected = assert.rejects(promise, (err) => err === original);
         await clock.tickAsync(0);
-        // the event loop stalls for 200ms mid-wait, so the 1000ms timer fires at 1200ms
+        // the event loop stalls for 200ms mid-wait, so the 1000ms timer fires at 1200ms, past the
+        // 1100ms deadline plus LATE_TIMER_GRACE_MS (50ms)
         clock.setSystemTime(Date.now() + 200);
         await clock.tickAsync(1000);
 
@@ -447,6 +455,7 @@ describe("utils/timing", () => {
     });
 
     it("should stop growing at capMs", () => {
+      // 1000 * 1.6^20 is far past capMs; the top of the window is capMs plus 20% jitter
       assert.deepStrictEqual(backoffWindow(20, { capMs: 30_000 }), {
         minMs: 30_000,
         maxMs: 36_000,
@@ -454,6 +463,7 @@ describe("utils/timing", () => {
     });
 
     it("should start from baseMs when given", () => {
+      // the schema read-back's values: 100 * 1.6 = 160, plus 20% = 192
       assert.deepStrictEqual(backoffWindow(1, { capMs: 2000, baseMs: 100 }), {
         minMs: 160,
         maxMs: 192,
