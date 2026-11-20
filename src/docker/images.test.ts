@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import type { ApiResponse, ImageSummary } from "../clients/docker";
 import { ImageApi } from "../clients/docker";
+import * as errors from "../errors";
 import { imageExists, pullImage } from "./images";
 
 const fakeImageRepo = "repo";
@@ -25,9 +26,12 @@ describe("docker/images.ts ImageApi wrappers", () => {
 
   let imageListStub: sinon.SinonStub;
   let imageCreateRawStub: sinon.SinonStub;
+  let logErrorStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+
+    logErrorStub = sandbox.stub(errors, "logError");
 
     // need to stub the ImageApi class methods directly instead of using a stubbed instance,
     // because the functions below are constructing new instances of the ImageApi class each time
@@ -63,7 +67,7 @@ describe("docker/images.ts ImageApi wrappers", () => {
     sinon.assert.calledOnce(imageListStub);
   });
 
-  it("imageExists() should return false if there is a non-ResponseError error", async () => {
+  it("imageExists() should log via logError() and return false on error", async () => {
     const fakeError = new Error("Some other error");
     imageListStub.rejects(fakeError);
 
@@ -71,6 +75,7 @@ describe("docker/images.ts ImageApi wrappers", () => {
 
     assert.strictEqual(result, false);
     sinon.assert.calledOnce(imageListStub);
+    sinon.assert.calledOnceWithExactly(logErrorStub, fakeError, "listing images");
   });
 
   it("pullImage() should return nothing after successfully pulling an image", async () => {
@@ -89,11 +94,12 @@ describe("docker/images.ts ImageApi wrappers", () => {
     sinon.assert.calledOnceWithMatch(imageCreateRawStub, { fromImage: fakeImageRepoTag });
   });
 
-  it("pullImage() should re-throw any error from .imageCreate", async () => {
+  it("pullImage() should log via logError() and re-throw any error from .imageCreate", async () => {
     const fakeError = new Error("Error pulling image");
     imageCreateRawStub.rejects(fakeError);
 
     await assert.rejects(pullImage(fakeImageRepo, fakeImageTag), fakeError);
     sinon.assert.calledOnce(imageCreateRawStub);
+    sinon.assert.calledOnceWithExactly(logErrorStub, fakeError, "pulling image");
   });
 });

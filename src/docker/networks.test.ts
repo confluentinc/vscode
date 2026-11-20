@@ -1,15 +1,19 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { NetworkApi, ResponseError } from "../clients/docker";
+import * as errors from "../errors";
 import { createNetwork } from "./networks";
 
 describe("docker/networks.ts NetworkApi wrappers", () => {
   let sandbox: sinon.SinonSandbox;
 
   let networkCreateStub: sinon.SinonStub;
+  let logErrorStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+
+    logErrorStub = sandbox.stub(errors, "logError");
 
     // need to stub the NetworkApi class methods directly instead of using a stubbed instance,
     // because the functions below are constructing new instances of the NetworkApi class each time
@@ -46,9 +50,10 @@ describe("docker/networks.ts NetworkApi wrappers", () => {
 
     assert.strictEqual(result, undefined);
     sinon.assert.calledOnce(networkCreateStub);
+    sinon.assert.notCalled(logErrorStub);
   });
 
-  it("createNetwork() should re-throw any ResponseError that doesn't contain 'already exists' in the message", async () => {
+  it("createNetwork() should log via logError() and re-throw any ResponseError that doesn't contain 'already exists' in the message", async () => {
     const fakeError = new ResponseError(
       new Response("uh oh", {
         status: 500,
@@ -59,13 +64,15 @@ describe("docker/networks.ts NetworkApi wrappers", () => {
 
     await assert.rejects(createNetwork("test-network", "bridge"), fakeError);
     sinon.assert.calledOnce(networkCreateStub);
+    sinon.assert.calledOnceWithExactly(logErrorStub, fakeError, "creating network");
   });
 
-  it("createNetwork() should re-throw any non-ResponseError error", async () => {
+  it("createNetwork() should log via logError() and re-throw any non-ResponseError error", async () => {
     const fakeError = new Error("Some other error");
     networkCreateStub.rejects(fakeError);
 
     await assert.rejects(createNetwork("test-network", "bridge"), fakeError);
     sinon.assert.calledOnce(networkCreateStub);
+    sinon.assert.calledOnceWithExactly(logErrorStub, fakeError, "creating network");
   });
 });
