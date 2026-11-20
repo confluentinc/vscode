@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { type TadaDocumentNode } from "gql.tada";
-import { print } from "graphql";
+import { type GraphQLFormattedError, print } from "graphql";
 
 // OpenAPI generated static client classes
 
@@ -77,10 +77,25 @@ import { WebsocketManager } from "./websocketManager";
 
 const logger = new Logger("sidecarHandle");
 
+/**
+ * A GraphQL error as serialized in a response. Widens the library type's required `message` to
+ * optional: responses have been observed with an empty or absent `message`.
+ */
+export type SidecarGraphQLError = Partial<GraphQLFormattedError>;
+
 /** Shape of objects returned from a GraphQL response's .json(). The data portion will vary per the request. */
 export interface GraphQLResponse {
   data?: any;
-  errors?: Array<{ message: string }>;
+  errors?: SidecarGraphQLError[];
+}
+
+/**
+ * Render a GraphQL error as a human-readable string. Falls back to the serialized error when
+ * `message` is empty so the underlying cause (often carried in `extensions`) still surfaces
+ * instead of an empty string.
+ */
+function graphQLErrorMessage(error: SidecarGraphQLError): string {
+  return error.message?.trim() || JSON.stringify(error);
 }
 
 /**
@@ -544,8 +559,7 @@ export class SidecarHandle {
 
       if (payload.errors) {
         // combine all errors into a single error message, if there are multiple
-        const errorMessages: string[] = payload.errors.map((error) => error.message);
-        errorString = `GraphQL query failed: ${errorMessages.join("; ")}`;
+        errorString = `GraphQL query failed: ${payload.errors.map(graphQLErrorMessage).join("; ")}`;
       } else {
         // we got some other unexpected response structure back, don't attempt to parse it
         errorString = `GraphQL returned unexpected response structure: ${JSON.stringify(payload)}`;
@@ -560,7 +574,7 @@ export class SidecarHandle {
       // If we got a response with data but also errors, log the errors and then also perhaps show the
       // user a warning.
 
-      const errorMessages: string[] = payload.errors.map((error) => error.message);
+      const errorMessages: string[] = payload.errors.map(graphQLErrorMessage);
 
       // show the first error and the error count to the user.
       const firstError = errorMessages[0];
