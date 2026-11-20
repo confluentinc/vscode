@@ -1,11 +1,14 @@
 import type { Event, EventHint } from "@sentry/node";
 import {
-  NodeClient,
-  Scope,
   defaultStackParser,
-  getDefaultIntegrations,
+  eventFiltersIntegration,
+  linkedErrorsIntegration,
   makeNodeTransport,
+  NodeClient,
+  nodeContextIntegration,
   rewriteFramesIntegration,
+  Scope,
+  systemErrorIntegration,
 } from "@sentry/node";
 import { Logger } from "../logging";
 import { checkTelemetrySettings, includeObservabilityContext } from "./eventProcessors";
@@ -14,6 +17,9 @@ const logger = new Logger("sentry");
 let sentryScope: Scope | null = null;
 let sentryClient: NodeClient | null = null;
 const throttledEvents: Record<string, number> = {};
+
+type SentryClientOptions = ConstructorParameters<typeof NodeClient>[0];
+type SentryIntegrations = SentryClientOptions["integrations"];
 
 /**
  * Returns the Sentry Scope singleton, creating it if it doesn't exist
@@ -36,28 +42,31 @@ export function initSentry() {
     logger.debug("Sentry already initialized");
     return;
   }
-  // filter out integrations that use the global variable
-  const integrations = getDefaultIntegrations({}).filter((defaultIntegration) => {
-    return ![
-      "Breadcrumbs",
-      "BrowserAPIErrors",
-      "OnUnhandledRejection",
-      "OnUncaughtException",
-      "CaptureConsole",
-    ].includes(defaultIntegration.name);
-  });
 
-  sentryClient = new NodeClient({
-    // debug: true, // enable for local "prod" debugging with dev console
+  sentryClient = new NodeClient(buildSentryClientOptions());
+
+  const scope = getSentryScope();
+  scope.setClient(sentryClient);
+  scope.addEventProcessor(checkTelemetrySettings);
+  scope.addEventProcessor(includeObservabilityContext);
+
+  sentryClient.init();
+}
+
+export function buildSentryClientOptions(): SentryClientOptions {
+  return {
     dsn: process.env.SENTRY_DSN,
     environment: process.env.SENTRY_ENV,
     release: process.env.SENTRY_RELEASE,
-    integrations: [...integrations, rewriteFramesIntegration()],
+    // VS Code extensions share a process, so avoid Sentry's process-wide defaults.
+    integrations: getExtensionHostSafeIntegrations(),
     tracesSampleRate: 0, // We do not use Sentry tracing
     profilesSampleRate: 0, // We do not use Sentry profiling
     sampleRate: 1.0,
     attachStacktrace: true,
-    includeLocalVariables: true,
+    // Avoid process-wide inspector and ESM loader hooks.
+    includeLocalVariables: false,
+    registerEsmLoaderHooks: false,
     transport: makeNodeTransport,
     stackParser: defaultStackParser,
     ignoreErrors: ["Canceled"],
@@ -75,14 +84,7 @@ export function initSentry() {
       }
       return event;
     },
-  });
-
-  const scope = getSentryScope();
-  scope.setClient(sentryClient);
-  scope.addEventProcessor(checkTelemetrySettings);
-  scope.addEventProcessor(includeObservabilityContext);
-
-  sentryClient.init();
+  };
 }
 
 export function sentryCaptureException(ex: unknown, hint?: EventHint | undefined): unknown {
@@ -115,6 +117,17 @@ export function sentryCapture(
       logger.error("Unknown kind for Sentry capture", { kind });
       return e;
   }
+}
+
+/** Sentry integrations that do not install process-wide hooks in the shared extension host. */
+export function getExtensionHostSafeIntegrations(): SentryIntegrations {
+  return [
+    eventFiltersIntegration(),
+    linkedErrorsIntegration(),
+    systemErrorIntegration(),
+    nodeContextIntegration(),
+    rewriteFramesIntegration(),
+  ];
 }
 
 export async function closeSentryClient() {
