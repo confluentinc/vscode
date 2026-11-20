@@ -122,6 +122,27 @@ describe("panelProviders/flinkStatementResults.ts", () => {
         assert.strictEqual(provider.currentStatement, newStatement);
       });
 
+      it("should notify the webview when the panel becomes visible again", async () => {
+        const onVisibilityChange: () => void =
+          stubbedWebviewView.onDidChangeVisibility.lastCall.args[0];
+        const flushMicrotasks = () => new Promise<void>((resolve) => queueMicrotask(resolve));
+        stubbedWebviewView.webview.postMessage.resetHistory();
+        stubbedWebviewView.visible = false;
+        onVisibilityChange();
+        await flushMicrotasks();
+        sinon.assert.notCalled(stubbedWebviewView.webview.postMessage);
+
+        stubbedWebviewView.visible = true;
+        onVisibilityChange();
+        await flushMicrotasks();
+
+        sinon.assert.calledWithMatch(stubbedWebviewView.webview.postMessage, [
+          "Timestamp",
+          "Success",
+          sinon.match.number,
+        ]);
+      });
+
       it("should set the context value and focus the panel when .view hasn't been set yet", async () => {
         const providerWithoutView = new FlinkStatementResultsPanelProvider();
 
