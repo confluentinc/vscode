@@ -18,7 +18,7 @@ import { registerCommandWithLogging } from "./commands";
 import { LOCAL_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context/extension";
 import { showJsonPreview } from "./documentProviders/message";
-import { logError } from "./errors";
+import { extractResponseBody, logError } from "./errors";
 import type { ResourceLoader } from "./loaders";
 import { CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader } from "./loaders";
 import { Logger } from "./logging";
@@ -504,7 +504,9 @@ function messageViewerStartPollingCommand(
       /* In case of network issue, the current assumption is that the user is
       going to see auth related error alerts. Logging and error displays is WIP. */
       if (error instanceof ResponseError) {
-        const payload = await error.response.json();
+        // parse defensively: on an empty body a raw `.json()` throws `Unexpected end of JSON
+        // input`, which would abort this catch block before the stream pauses or the user is told.
+        const payload = await extractResponseBody(error);
         // FIXME: this response error coming from the middleware that has to be present to avoid openapi error about missing middlewares
         if (!payload?.aborted) {
           const status = error.response.status;
