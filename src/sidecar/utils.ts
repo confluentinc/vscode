@@ -8,13 +8,17 @@ import { CCLOUD_BASE_PATH, EXTENSION_VERSION } from "../constants";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import type { NotificationButtons } from "../notifications";
-import { showErrorNotificationWithButtons } from "../notifications";
+import {
+  showErrorNotificationWithButtons,
+  showWarningNotificationWithButtons,
+} from "../notifications";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { checkSidecarOsAndArch } from "./checkArchitecture";
 import { MOMENTARY_PAUSE_MS, SIDECAR_PORT } from "./constants";
 import { SidecarFatalError } from "./errors";
 import { getSidecarLogfilePath } from "./logging";
 import { SidecarStartupFailureReason } from "./types";
+import { WebsocketConnectionError } from "./websocketManager";
 
 const logger = new Logger("sidecar/utils.ts");
 
@@ -222,6 +226,24 @@ export function checkSidecarFile(executablePath: string) {
  * carrying a SidecarStartupFailureReason.
  */
 export async function triageSidecarStartupError(e: any): Promise<void> {
+  if (e instanceof WebsocketConnectionError) {
+    // The sidecar is healthy (its healthcheck passed); only its websocket event stream could not be
+    // (re)established after retries. REST/GraphQL still work, so this is a recoverable degradation,
+    // not a startup failure - surface it as a warning with a retry action, and bucket it under its
+    // own Sentry reason rather than the catch-all "Unknown".
+    logError(e, "Websocket connect failed after retries", {
+      extra: { reason: "WebsocketConnectFailed" },
+    });
+    void showWarningNotificationWithButtons(
+      "Connected to the sidecar, but its live event stream could not be established, so some " +
+        "updates may be delayed or missing. Reload the window to retry.",
+      {
+        "Reload Window": () => vscode.commands.executeCommand("workbench.action.reloadWindow"),
+      },
+    );
+    return;
+  }
+
   // Most of these are errors from the user's environment / OS, and we cannot fix.
   // So only send the rather oddball ones to Sentry so we could learn more.
 

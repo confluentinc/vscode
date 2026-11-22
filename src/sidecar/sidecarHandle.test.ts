@@ -2,6 +2,7 @@ import * as assert from "assert";
 import { graphql } from "gql.tada";
 import "mocha";
 import sinon from "sinon";
+import { eventually } from "../../tests/eventually";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { BASE_PATH as SCAFFOLDING_SERVICE_BASE_PATH } from "../clients/scaffoldingService";
 import { MicroProfileHealthApi, ResponseError } from "../clients/sidecar";
@@ -153,9 +154,14 @@ describe("sidecarHandle websocket tests", () => {
     const websocketManager = WebsocketManager.getInstance();
 
     after(async () => {
-      // restore the websocket as side-effect of getting sidecar handle
+      // This test disposed the shared singleton's websocket; restore it via getSidecar() so later
+      // suites aren't left disconnected. Poll for reconnection to absorb the reconnect race.
       await sidecar.getSidecar();
-      assert.equal(true, websocketManager.isConnected());
+      await eventually(
+        () => assert.strictEqual(websocketManager.isConnected(), true),
+        15_000,
+        "Websocket should be connected after reconnection",
+      );
     });
 
     it("wsSend() should raise exception when disconnected", async () => {

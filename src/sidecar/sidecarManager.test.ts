@@ -6,10 +6,12 @@ import * as errors from "../errors";
 import * as fsWrappers from "../utils/fsWrappers";
 import { SidecarFatalError } from "./errors";
 import * as sidecarLogging from "./logging";
-import { SidecarManager } from "./sidecarManager";
+import { SidecarHandle } from "./sidecarHandle";
+import { MAX_WEBSOCKET_CONNECT_ATTEMPTS, SidecarManager } from "./sidecarManager";
 import type { SidecarLogFormat, SidecarOutputs } from "./types";
 import { SidecarStartupFailureReason } from "./types";
 import * as utils from "./utils";
+import { WebsocketConnectionError, WebsocketStateEvent } from "./websocketManager";
 
 describe("sidecarManager.ts", () => {
   describe("class SidecarManager", () => {
@@ -284,6 +286,115 @@ describe("sidecarManager.ts", () => {
         sinon.assert.calledOnce(disposeStub);
         // and should be dereferenced.
         assert.strictEqual(manager["logTailer"], undefined);
+      });
+    });
+
+    describe("getHandlePromise()", () => {
+      let setupWebsocketManagerStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        // sidecar is healthy and already contacted; isolate the websocket-setup step under test.
+        manager["logTailer"] = {} as unknown as Tail;
+        manager["sidecarContacted"] = true;
+        sandbox.stub(manager, "getAuthTokenFromSecretStore").resolves("token");
+        // healthcheck and setupWebsocketManager are private, so stub via bracket-notation.
+        manager["healthcheck"] = sandbox.stub().resolves(true);
+        setupWebsocketManagerStub = sandbox.stub();
+        manager["setupWebsocketManager"] = setupWebsocketManagerStub;
+      });
+
+      it("retries and returns a handle when the websocket handshake fails once", async () => {
+        // the sidecar is healthy; only the websocket handshake fails the first time.
+        setupWebsocketManagerStub
+          .onFirstCall()
+          .rejects(new WebsocketConnectionError("handshake timed out"))
+          .onSecondCall()
+          .resolves();
+
+        const handlePromise = manager["getHandlePromise"](0);
+        await clock.runAllAsync(); // let the pause() between retries elapse
+        const handle = await handlePromise;
+
+        assert.ok(handle instanceof SidecarHandle);
+        sinon.assert.calledTwice(setupWebsocketManagerStub);
+      });
+
+      it("retries across multiple consecutive websocket handshake failures", async () => {
+        setupWebsocketManagerStub
+          .onFirstCall()
+          .rejects(new WebsocketConnectionError("stall 1"))
+          .onSecondCall()
+          .rejects(new WebsocketConnectionError("stall 2"))
+          .onThirdCall()
+          .resolves();
+
+        const handlePromise = manager["getHandlePromise"](0);
+        await clock.runAllAsync();
+        const handle = await handlePromise;
+
+        assert.ok(handle instanceof SidecarHandle);
+        sinon.assert.calledThrice(setupWebsocketManagerStub);
+      });
+
+      it("gives up after MAX_WEBSOCKET_CONNECT_ATTEMPTS consecutive handshake failures", async () => {
+        const triageStub = sandbox.stub(utils, "triageSidecarStartupError").resolves();
+        setupWebsocketManagerStub.rejects(new WebsocketConnectionError("persistent stall"));
+
+        const handlePromise = manager["getHandlePromise"](0);
+        const assertion = assert.rejects(handlePromise, WebsocketConnectionError);
+        await clock.runAllAsync();
+
+        await assertion;
+        sinon.assert.callCount(setupWebsocketManagerStub, MAX_WEBSOCKET_CONNECT_ATTEMPTS);
+        sinon.assert.called(triageStub);
+      });
+    });
+
+    describe("onWebsocketStateChange()", () => {
+      it("reconnects via getHandle() on DISCONNECTED", async () => {
+        const getHandleStub = sandbox.stub(manager, "getHandle").resolves();
+
+        await manager["onWebsocketStateChange"](WebsocketStateEvent.DISCONNECTED);
+
+        sinon.assert.calledOnce(getHandleStub);
+      });
+
+      it("logs and does not rethrow when the reconnect handshake keeps failing", async () => {
+        // getHandle() now rejects (a stalled handshake rejects instead of hanging); this
+        // fire-and-forget listener must swallow it rather than raise an unhandled rejection.
+        const reconnectError = new WebsocketConnectionError("reconnect exhausted");
+        sandbox.stub(manager, "getHandle").rejects(reconnectError);
+
+        await manager["onWebsocketStateChange"](WebsocketStateEvent.DISCONNECTED);
+
+        sinon.assert.calledOnceWithExactly(
+          logErrorStub,
+          reconnectError,
+          "Failed to reconnect sidecar handle after websocket disconnect",
+        );
+      });
+
+      it("reuses an in-flight reconnect instead of starting a second one", async () => {
+        // a reconnect is already in flight, so getHandle() must hand back the pending promise rather
+        // than kick off a second getHandlePromise - the single-flight dedup the DISCONNECTED path
+        // relies on to avoid overlapping reconnects.
+        const getHandlePromiseStub = sandbox.stub();
+        manager["getHandlePromise"] = getHandlePromiseStub;
+        manager["pendingHandlePromise"] = Promise.resolve(
+          sandbox.createStubInstance(SidecarHandle),
+        );
+
+        await manager["onWebsocketStateChange"](WebsocketStateEvent.DISCONNECTED);
+
+        sinon.assert.notCalled(getHandlePromiseStub);
+      });
+
+      it("does nothing on CONNECTED", async () => {
+        const getHandleStub = sandbox.stub(manager, "getHandle");
+
+        await manager["onWebsocketStateChange"](WebsocketStateEvent.CONNECTED);
+
+        sinon.assert.notCalled(getHandleStub);
       });
     });
   });
