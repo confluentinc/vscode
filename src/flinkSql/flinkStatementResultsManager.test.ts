@@ -33,7 +33,8 @@ import type {
 import type { StatementMeta } from "./flinkStatementResultsManager";
 import { TRANSIENT_RETRY_DEADLINE_MS } from "./flinkStatementResultsManager";
 import { FLINK_RESULTS_TIMEOUT_MS } from "../sidecar/constants";
-import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "../sidecar/errors";
+import { CCloudReconnectTimeoutError } from "../sidecar/errors";
+import { RequestTimeoutError } from "../utils/timing";
 
 /** How long the sidecar waits on an upstream request before answering 504. */
 const SIDECAR_PROXY_TIMEOUT_MS = 20_000;
@@ -828,7 +829,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
     it("should tell the user a results fetch timed out", async () => {
       ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(
-        new SidecarRequestTimeoutError(
+        new RequestTimeoutError(
           "Request to the sidecar",
           FLINK_RESULTS_TIMEOUT_MS,
           new Error("timeout"),

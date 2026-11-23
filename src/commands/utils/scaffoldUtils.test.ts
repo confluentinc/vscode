@@ -2,9 +2,18 @@ import * as sinon from "sinon";
 import * as unzipitModule from "unzipit";
 import * as vscode from "vscode";
 import { getSidecarStub } from "../../../tests/stubs/sidecar";
-import { createResponseError, ResponseErrorSource } from "../../../tests/unit/testUtils";
-import { TemplatesScaffoldV1Api } from "../../clients/scaffoldingService";
+import {
+  createResponseError,
+  ResponseErrorSource,
+  stalledBodyFetch,
+} from "../../../tests/unit/testUtils";
+import type { ScaffoldV1Template } from "../../clients/scaffoldingService";
+import {
+  Configuration as ScaffoldingConfiguration,
+  TemplatesScaffoldV1Api,
+} from "../../clients/scaffoldingService";
 import * as templatesModule from "../../projectGeneration/templates";
+import { SCAFFOLDING_APPLY_TIMEOUT_MS } from "../../sidecar/constants";
 import { WebviewPanelCache } from "../../webview-cache";
 import * as webviewCommsModule from "../../webview/comms/comms";
 
@@ -181,6 +190,36 @@ describe("scaffoldUtils", () => {
 
       sinon.assert.match(result.success, false);
       sinon.assert.match(result.message, sinon.match(/Network connection failed/));
+    });
+
+    it("should give up applying when the ZIP download stalls past its timeout", async () => {
+      const clock = sandbox.useFakeTimers();
+      stubbedSidecar.getTemplatesApi.returns(
+        new TemplatesScaffoldV1Api(
+          new ScaffoldingConfiguration({
+            basePath: "http://scaffolding.test",
+            fetchApi: stalledBodyFetch("application/zip"),
+          }),
+        ),
+      );
+      const template: ScaffoldV1Template = {
+        spec: {
+          name: TEST_TEMPLATE_NAME,
+          display_name: "Test Template",
+          template_collection: { id: TEST_TEMPLATE_COLLECTION, related: "", resource_name: "" },
+        },
+      };
+
+      const { applyTemplate } = await import("./scaffoldUtils");
+      const pending = applyTemplate(template, {}, "test");
+      await clock.tickAsync(SCAFFOLDING_APPLY_TIMEOUT_MS);
+      const result = await pending;
+
+      sinon.assert.match(result.success, false);
+      sinon.assert.match(
+        result.message,
+        sinon.match(`timed out after ${SCAFFOLDING_APPLY_TIMEOUT_MS / 1000}s`),
+      );
     });
 
     it("should handle errors during zip extraction", async () => {
