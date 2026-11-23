@@ -51,3 +51,9 @@ export const GRAPHQL_TIMEOUT_MS = 90_000;
  * 5s status check, so about 106s.
  */
 export const CCLOUD_RECONNECT_TIMEOUT_MS = 120_000;
+/**
+ * The sidecar's Schema Registry proxy deadline per request (Direct and Local connections). It's 10s
+ * under {@link SIDECAR_REQUEST_TIMEOUT_MS}, so the sidecar's error naming Schema Registry arrives
+ * before ours fires.
+ */
+export const SCHEMA_REGISTRY_PROXY_TIMEOUT_SECONDS = (SIDECAR_REQUEST_TIMEOUT_MS - 10_000) / 1000;

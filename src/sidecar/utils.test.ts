@@ -5,7 +5,7 @@ import * as notifications from "../notifications";
 import type { NotificationButtons } from "../notifications";
 import * as eventsModule from "../telemetry/events";
 import { WriteableTmpDir } from "../utils/file";
-import { MOMENTARY_PAUSE_MS } from "./constants";
+import { MOMENTARY_PAUSE_MS, SIDECAR_REQUEST_TIMEOUT_MS } from "./constants";
 import { SidecarFatalError } from "./errors";
 import { getSidecarLogfilePath } from "./logging";
 import { SidecarStartupFailureReason } from "./types";
@@ -45,6 +45,15 @@ describe("sidecar/utils.ts", () => {
       assert.strictEqual(result.QUARKUS_LOG_FILE_ENABLE, "true");
       assert.strictEqual(result.QUARKUS_LOG_FILE_ROTATION_ROTATE_ON_BOOT, "false");
       assert.strictEqual(result.QUARKUS_LOG_FILE_PATH, getSidecarLogfilePath());
+    });
+
+    it("Gives the Schema Registry proxy whole seconds that run out before our request timeout", () => {
+      const result = constructSidecarEnv({});
+
+      const seconds = Number(result.IDE_SIDECAR_CLUSTER_PROXY_SCHEMA_REGISTRY_TIMEOUT_SECONDS);
+
+      assert.ok(Number.isInteger(seconds) && seconds >= 1, `not whole seconds >= 1: ${seconds}`);
+      assert.ok(seconds * 1000 < SIDECAR_REQUEST_TIMEOUT_MS);
     });
 
     it("Other preset env vars are set as expected", () => {
