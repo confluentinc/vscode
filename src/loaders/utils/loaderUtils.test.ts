@@ -9,8 +9,12 @@ import {
 } from "../../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION_ID } from "../../../tests/unit/testResources/organization";
-import { createResponseError, createTestTopicData } from "../../../tests/unit/testUtils";
-import { ConsumerGroupV3Api, TopicV3Api } from "../../clients/kafkaRest";
+import {
+  createResponseError,
+  createTestTopicData,
+  proxyTimeoutBody,
+} from "../../../tests/unit/testUtils";
+import { ConsumerGroupV3Api, ResponseError, TopicV3Api } from "../../clients/kafkaRest";
 import type {
   ConsumerData,
   ConsumerDataList,
@@ -29,6 +33,8 @@ import { ConsumerGroupState } from "../../models/consumerGroup";
 import type { Schema } from "../../models/schema";
 import { SchemaType, Subject } from "../../models/schema";
 import type * as sidecar from "../../sidecar";
+import { SIDECAR_REQUEST_TIMEOUT_MS } from "../../sidecar/constants";
+import { SidecarRequestTimeoutError } from "../../sidecar/errors";
 import * as privateNetworking from "../../utils/privateNetworking";
 import * as loaderUtils from "./loaderUtils";
 
@@ -324,12 +330,41 @@ describe("loaderUtils.ts", () => {
         sinon.assert.notCalled(showPrivateNetworkingHelpNotificationStub);
       });
 
-      it("fetchTopics should throw TopicFetchError when not a ResponseError", async () => {
+      it("fetchTopics should say which host timed out for a sidecar proxy timeout", async () => {
+        const title = "pkc-123.confluent.cloud didn't respond within 20s";
+        mockClient.listKafkaTopics.rejects(
+          createResponseError(504, "Gateway Timeout", JSON.stringify(proxyTimeoutBody(title))),
+        );
+
+        await assert.rejects(
+          loaderUtils.fetchTopics(TEST_CCLOUD_KAFKA_CLUSTER),
+          (err) => err instanceof loaderUtils.TopicFetchError && err.message === title,
+        );
+      });
+
+      it("fetchTopics should name the Kafka cluster, not the sidecar URL, for a client-side timeout", async () => {
+        const timeout = new SidecarRequestTimeoutError(
+          "Request to the sidecar (GET http://127.0.0.1:26636/kafka/v3/clusters/c/topics)",
+          SIDECAR_REQUEST_TIMEOUT_MS,
+          new Error("timeout"),
+        );
+        mockClient.listKafkaTopics.rejects(timeout);
+
+        await assert.rejects(
+          loaderUtils.fetchTopics(TEST_CCLOUD_KAFKA_CLUSTER),
+          (err) =>
+            err instanceof loaderUtils.TopicFetchError &&
+            err.message === "Timed out waiting for the Kafka cluster" &&
+            err.cause === timeout,
+        );
+      });
+
+      it("fetchTopics should throw TopicFetchError with the original message when not a ResponseError", async () => {
         mockClient.listKafkaTopics.rejects(new Error("Some other error"));
 
         await assert.rejects(
           loaderUtils.fetchTopics(TEST_CCLOUD_KAFKA_CLUSTER),
-          loaderUtils.TopicFetchError,
+          (err) => err instanceof loaderUtils.TopicFetchError && err.message === "Some other error",
         );
 
         sinon.assert.notCalled(showPrivateNetworkingHelpNotificationStub);
@@ -346,6 +381,16 @@ describe("loaderUtils.ts", () => {
       stubbedClient = sandbox.createStubInstance(ConsumerGroupV3Api);
       stubbedSidecar.getConsumerGroupV3Api.returns(stubbedClient);
     });
+
+    /** A response error whose body stream fails when read. */
+    function unreadableResponseError(status: number): ResponseError {
+      const body = new ReadableStream({
+        start(controller) {
+          controller.error(new TypeError("terminated"));
+        },
+      });
+      return new ResponseError(new Response(body, { status }));
+    }
 
     it("should return a ConsumerGroupData array from listKafkaConsumerGroups", async () => {
       const testGroups: ConsumerGroupData[] = [
@@ -407,6 +452,71 @@ describe("loaderUtils.ts", () => {
       await assert.rejects(loaderUtils.fetchConsumerGroups(TEST_LOCAL_KAFKA_CLUSTER), {
         message: "Connection refused",
       });
+    });
+
+    it("should say which host timed out for a sidecar proxy timeout", async () => {
+      const title = "pkc-123.confluent.cloud didn't respond within 20s";
+      const proxyTimeout = createResponseError(
+        504,
+        "Gateway Timeout",
+        JSON.stringify(proxyTimeoutBody(title)),
+      );
+      stubbedClient.listKafkaConsumerGroups.rejects(proxyTimeout);
+
+      await assert.rejects(
+        loaderUtils.fetchConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER),
+        (err) => err instanceof Error && err.message === title && err.cause === proxyTimeout,
+      );
+    });
+
+    it("should name the Kafka cluster, not the sidecar URL, for a client-side timeout", async () => {
+      const timeout = new SidecarRequestTimeoutError(
+        "Request to the sidecar (GET http://127.0.0.1:26636/kafka/v3/clusters/c/consumer-groups)",
+        SIDECAR_REQUEST_TIMEOUT_MS,
+        new Error("timeout"),
+      );
+      stubbedClient.listKafkaConsumerGroups.rejects(timeout);
+
+      await assert.rejects(
+        loaderUtils.fetchConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER),
+        (err) =>
+          err instanceof Error &&
+          err.message === "Timed out waiting for the Kafka cluster" &&
+          err.cause === timeout,
+      );
+    });
+
+    it("should pass on a response error that isn't a timeout unchanged", async () => {
+      const serverError = createResponseError(500, "Internal Server Error", "{}");
+      stubbedClient.listKafkaConsumerGroups.rejects(serverError);
+
+      await assert.rejects(
+        loaderUtils.fetchConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER),
+        (err) => err === serverError,
+      );
+    });
+
+    it("should pass on a response error whose body can't be read unchanged", async () => {
+      const unreadable = unreadableResponseError(500);
+      stubbedClient.listKafkaConsumerGroups.rejects(unreadable);
+
+      await assert.rejects(
+        loaderUtils.fetchConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER),
+        (err) => err === unreadable,
+      );
+    });
+
+    it("should name the Kafka cluster for a sidecar 504 whose body can't be read", async () => {
+      const unreadable = unreadableResponseError(504);
+      stubbedClient.listKafkaConsumerGroups.rejects(unreadable);
+
+      await assert.rejects(
+        loaderUtils.fetchConsumerGroups(TEST_CCLOUD_KAFKA_CLUSTER),
+        (err) =>
+          err instanceof Error &&
+          err.message === "Timed out waiting for the Kafka cluster" &&
+          err.cause === unreadable,
+      );
     });
   });
 

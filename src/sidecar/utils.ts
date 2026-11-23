@@ -11,7 +11,11 @@ import type { NotificationButtons } from "../notifications";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { checkSidecarOsAndArch } from "./checkArchitecture";
-import { MOMENTARY_PAUSE_MS, SIDECAR_PORT } from "./constants";
+import {
+  MOMENTARY_PAUSE_MS,
+  SCHEMA_REGISTRY_PROXY_TIMEOUT_SECONDS,
+  SIDECAR_PORT,
+} from "./constants";
 import { SidecarFatalError } from "./errors";
 import { getSidecarLogfilePath } from "./logging";
 import { SidecarStartupFailureReason } from "./types";
@@ -47,6 +51,10 @@ export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   sidecar_env["VSCODE_VERSION"] = vscode.version;
   sidecar_env["VSCODE_EXTENSION_VERSION"] = EXTENSION_VERSION;
   sidecar_env["IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH"] = CCLOUD_BASE_PATH;
+  // a sidecar already running (started by another window) keeps the value it was spawned with
+  sidecar_env["IDE_SIDECAR_CLUSTER_PROXY_SCHEMA_REGISTRY_TIMEOUT_SECONDS"] = String(
+    SCHEMA_REGISTRY_PROXY_TIMEOUT_SECONDS,
+  );
 
   // For testing against CCloud staging (i.e. for testing pre-prod scaffolding server / templates changes)
   // uncomment this, but never for merging into main! Shame on you and PR reviewers if you do!

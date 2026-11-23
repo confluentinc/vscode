@@ -8,6 +8,7 @@ import { loadFixtureFromFile } from "../../tests/fixtures/utils";
 import {
   createResponseError,
   createSingleUseResponseError,
+  proxyTimeoutBody,
   ResponseErrorSource,
 } from "../../tests/unit/testUtils";
 import type { GetSqlv1StatementResult200Response } from "../clients/flinkSql";
@@ -30,6 +31,12 @@ import type {
   ResultsViewerStorageState,
 } from "../webview/flink-statement-results";
 import type { StatementMeta } from "./flinkStatementResultsManager";
+import { TRANSIENT_RETRY_DEADLINE_MS } from "./flinkStatementResultsManager";
+import { FLINK_RESULTS_TIMEOUT_MS } from "../sidecar/constants";
+import { CCloudReconnectTimeoutError, SidecarRequestTimeoutError } from "../sidecar/errors";
+
+/** How long the sidecar waits on an upstream request before answering 504. */
+const SIDECAR_PROXY_TIMEOUT_MS = 20_000;
 
 /** A successful results response carrying no rows. */
 const EMPTY_RESULTS_RESPONSE: GetSqlv1StatementResult200Response = {
@@ -780,6 +787,74 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
       // 4 transient calls + the 409s' full 60-attempt budget, untouched by them
       sinon.assert.callCount(stub, 64);
+    });
+
+    it("should tell the user which host timed out once transient retries run out", async () => {
+      const title = "flink.us-east-2.aws.confluent.cloud didn't respond within 20s";
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(
+        createResponseError(504, "Gateway Timeout", JSON.stringify(proxyTimeoutBody(title))),
+      );
+
+      const fetchPromise = ctx.manager.fetchResults();
+      await clock.tickAsync(MAX_TRANSIENT_BACKOFFS_MS);
+      await fetchPromise;
+
+      assert.deepStrictEqual(ctx.manager["_latestError"](), {
+        message: `${title}. Reopen the results to try again.`,
+      });
+      assert.equal(ctx.manager["_state"](), "completed");
+    });
+
+    it("should stop retrying a results fetch once another wait would pass its deadline", async () => {
+      // each attempt takes the sidecar's full 20s before it answers 504
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callsFake(
+        () =>
+          new Promise((_resolve, reject) =>
+            setTimeout(
+              () => reject(createResponseError(504, "Gateway Timeout", "{}")),
+              SIDECAR_PROXY_TIMEOUT_MS,
+            ),
+          ),
+      );
+
+      const fetchPromise = ctx.manager.fetchResults();
+      // well past the ~63s the three attempts take
+      await clock.tickAsync(TRANSIENT_RETRY_DEADLINE_MS * 2);
+      await fetchPromise;
+
+      // the third attempt fails after the deadline, so no fourth one starts
+      sinon.assert.callCount(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult, 3);
+    });
+
+    it("should tell the user a results fetch timed out", async () => {
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(
+        new SidecarRequestTimeoutError(
+          "Request to the sidecar",
+          FLINK_RESULTS_TIMEOUT_MS,
+          new Error("timeout"),
+        ),
+      );
+
+      await ctx.manager.fetchResults();
+
+      assert.deepStrictEqual(ctx.manager["_latestError"](), {
+        message: "Timed out waiting for results. Reopen the results to try again.",
+      });
+      assert.equal(ctx.manager["_state"](), "completed");
+    });
+
+    it("should tell the user to sign in again when a results fetch gives up on reconnecting", async () => {
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(
+        new CCloudReconnectTimeoutError("Timed out reconnecting"),
+      );
+
+      await ctx.manager.fetchResults();
+
+      assert.deepStrictEqual(ctx.manager["_latestError"](), {
+        message:
+          "Timed out reconnecting to Confluent Cloud. Sign in again, then reopen the results.",
+      });
+      assert.equal(ctx.manager["_state"](), "completed");
     });
 
     it("should leave the error response body readable for logging", async () => {
