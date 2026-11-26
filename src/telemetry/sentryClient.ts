@@ -64,9 +64,9 @@ export function buildSentryClientOptions(): SentryClientOptions {
     profilesSampleRate: 0, // We do not use Sentry profiling
     sampleRate: 1.0,
     attachStacktrace: true,
-    // Avoid process-wide inspector and ESM loader hooks.
+    // Local variable capture opens a node:inspector session and pauses the shared extension host on
+    // every thrown exception (including caught ones) to collect frame variables.
     includeLocalVariables: false,
-    registerEsmLoaderHooks: false,
     transport: makeNodeTransport,
     stackParser: defaultStackParser,
     ignoreErrors: ["Canceled"],

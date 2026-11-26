@@ -6,6 +6,10 @@ All notable changes to this extension will be documented in this file.
 
 ### Fixed
 
+- The extension no longer installs process-wide error-reporting hooks in VS Code's shared extension
+  host. Previously, activating another extension such as GitHub Copilot Chat after this one could
+  freeze the extension host at full CPU, leaving all extensions unresponsive. Caught errors in other
+  extensions are also no longer slowed down.
 - Flink statement results no longer stop loading when Confluent Cloud returns a temporary error
   right after a statement is submitted. The Results Viewer now retries before giving up, waiting as
   long as Confluent Cloud asks when it sends a rate-limit delay, instead of showing "Failed to load

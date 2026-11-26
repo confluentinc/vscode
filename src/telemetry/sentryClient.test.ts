@@ -82,11 +82,10 @@ describe("telemetry/sentryClient.ts getExtensionHostSafeIntegrations()", () => {
 });
 
 describe("telemetry/sentryClient.ts buildSentryClientOptions()", () => {
-  it("should not opt into local variable capture or ESM loader hooks", () => {
+  it("should not opt into local variable capture", () => {
     const options = buildSentryClientOptions();
 
     assert.strictEqual(options.includeLocalVariables, false);
-    assert.strictEqual(options.registerEsmLoaderHooks, false);
   });
 
   it("should leave extension host globals untouched while initialized and after closing", async () => {
